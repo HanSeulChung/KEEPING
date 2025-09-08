@@ -19,11 +19,13 @@ public class WalletStoreLot {
     @Column(name = "lot_id")
     private Long lotId;
 
-    @Column(name = "wallet_id", nullable = false)
-    private Long walletId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wallet_id", nullable = false)
+    private Wallet wallet;
 
-    @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Column(name = "amount_total", nullable = false, precision = 18, scale = 2)
     private BigDecimal amountTotal;
@@ -41,11 +43,13 @@ public class WalletStoreLot {
     @Column(name = "source_type", nullable = false)
     private SourceType sourceType;
 
-    @Column(name = "contributor_wallet_id")
-    private Long contributorWalletId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contributor_wallet_id")
+    private Wallet contributorWallet;
 
-    @Column(name = "origin_charge_tx_id", nullable = false)
-    private Long originChargeTxId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_charge_tx_id", nullable = false)
+    private Transaction originChargeTransaction;
 
     public enum SourceType {
         CHARGE,    // 직접 충전
