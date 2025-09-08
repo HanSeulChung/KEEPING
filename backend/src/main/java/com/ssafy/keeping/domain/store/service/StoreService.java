@@ -58,6 +58,14 @@ public class StoreService {
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
 
+        String taxId = store.getTaxId();
+        String address = requestDto.getAddress();
+
+        boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
+        if (exists) {
+            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+        }
+
         store.patchStore(requestDto, editImgUrl);
 
         return StoreResponseDto.fromEntity(
