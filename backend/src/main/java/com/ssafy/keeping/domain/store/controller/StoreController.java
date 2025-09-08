@@ -24,7 +24,7 @@ public class StoreController {
             @Valid @ModelAttribute StoreRequestDto requestDto
     ) {
         StoreResponseDto dto = storeService.createStore(requestDto);
-        return ResponseEntity.ok(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
     }
 
     @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

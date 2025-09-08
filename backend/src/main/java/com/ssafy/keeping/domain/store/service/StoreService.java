@@ -17,6 +17,15 @@ public class StoreService {
     private final StoreRepository storeRepository;
 
     public StoreResponseDto createStore(StoreRequestDto requestDto) {
+
+        String taxId = requestDto.getTaxId();
+        String address = requestDto.getAddress();
+
+        boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
+        if (exists) {
+            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+        }
+
         // TODO: 이미지 파일은 추후, principal 체크 추후
         String imgUrl = makeImgUrl(requestDto.getImgFile());
         return StoreResponseDto.fromEntity(
