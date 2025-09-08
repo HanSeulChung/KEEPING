@@ -18,6 +18,9 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "store", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"tax_id", "address"})
+})
 @EntityListeners(AuditingEntityListener.class)
 public class Store {
     @Id
