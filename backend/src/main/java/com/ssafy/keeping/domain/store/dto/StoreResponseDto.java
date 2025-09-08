@@ -36,6 +36,7 @@ public class StoreResponseDto {
                 .merchantId(store.getMerchantId())
                 .category(store.getCategory())
                 .createdAt(store.getCreatedAt())
+                .bankAccount(store.getBankAccount())
                 .imgUrl(store.getImgUrl())
                 .build();
     }

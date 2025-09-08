@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.store.dto;
 
 
-import jakarta.annotation.Nullable;
+import org.springframework.lang.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

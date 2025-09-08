@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/stores")
@@ -21,7 +20,7 @@ public class StoreController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> createStore(
-            @Valid StoreRequestDto requestDto
+            @Valid @ModelAttribute StoreRequestDto requestDto
     ) {
         StoreResponseDto dto = storeService.createStore(requestDto);
         return ResponseEntity.ok(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
