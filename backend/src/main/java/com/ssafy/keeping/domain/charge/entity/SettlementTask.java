@@ -20,8 +20,9 @@ public class SettlementTask {
     @Column(name = "task_id")
     private Long taskId;
 
-    @Column(name = "transaction_id", nullable = false)
-    private Long transactionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaction_id", nullable = false)
+    private Transaction transaction;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "Status", nullable = false)

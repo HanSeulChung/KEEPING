@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "customers")
@@ -60,6 +61,13 @@ public class Customer {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    // 연관관계
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Wallet> wallets;
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Transaction> transactions;
 
     public enum ProviderType {
         GOOGLE, KAKAO, NAVER

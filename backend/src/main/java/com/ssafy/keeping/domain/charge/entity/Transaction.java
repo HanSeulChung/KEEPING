@@ -20,17 +20,21 @@ public class Transaction {
     @Column(name = "transaction_id")
     private Long transactionId;
 
-    @Column(name = "wallet_id", nullable = false)
-    private Long walletId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wallet_id", nullable = false)
+    private Wallet wallet;
 
-    @Column(name = "related_wallet_id")
-    private Long relatedWalletId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "related_wallet_id")
+    private Wallet relatedWallet;
 
-    @Column(name = "customer_id", nullable = false)
-    private Long customerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
-    @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
@@ -46,7 +50,8 @@ public class Transaction {
     public enum TransactionType {
         CHARGE,    // 포인트 충전
         USE,       // 포인트 사용
-        TRANSFER_IN,    // 포인트 공유
-        TRANSFER_OUT,     // 포인트 회수
+        CANCEL,    // 결제 취소
+        SHARE,     // 포인트 공유
+        RECEIVE    // 포인트 받기
     }
 }

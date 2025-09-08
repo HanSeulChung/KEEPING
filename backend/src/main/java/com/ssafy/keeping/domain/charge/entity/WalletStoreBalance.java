@@ -20,11 +20,13 @@ public class WalletStoreBalance {
     @Column(name = "balance_id")
     private Long balanceId;
 
-    @Column(name = "wallet_id", nullable = false)
-    private Long walletId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wallet_id", nullable = false)
+    private Wallet wallet;
 
-    @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Column(name = "balance", nullable = false, precision = 18, scale = 2)
     private BigDecimal balance;
