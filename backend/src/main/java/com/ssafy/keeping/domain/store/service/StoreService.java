@@ -1,9 +1,12 @@
 package com.ssafy.keeping.domain.store.service;
 
+import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,5 +39,20 @@ public class StoreService {
 
     private String makeImgUrl(MultipartFile file) {
         return "random_img_url";
+    }
+
+    public StoreResponseDto editStore(Long storeId, StoreEditRequestDto requestDto) {
+        // TODO: 이미지 파일은 추후, principal 체크 추후
+        String editImgUrl = makeImgUrl(requestDto.getImgFile());
+
+        Store store = storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+
+        store.patchStore(requestDto, editImgUrl);
+
+        return StoreResponseDto.fromEntity(
+                storeRepository.save(store)
+        );
     }
 }

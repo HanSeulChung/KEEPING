@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.store.controller;
 
 
+import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.service.StoreService;
@@ -24,5 +25,14 @@ public class StoreController {
     ) {
         StoreResponseDto dto = storeService.createStore(requestDto);
         return ResponseEntity.ok(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
+    }
+
+    @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<StoreResponseDto>> editStore(
+            @PathVariable Long storeId,
+            @Valid @ModelAttribute StoreEditRequestDto requestDto
+    ) {
+        StoreResponseDto dto = storeService.editStore(storeId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK, dto));
     }
 }

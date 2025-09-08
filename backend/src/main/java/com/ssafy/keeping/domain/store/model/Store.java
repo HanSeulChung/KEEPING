@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.model;
 
+import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -52,4 +54,20 @@ public class Store {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+
+    public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
+        if (!Objects.equals(this.storeName, requestDto.getStoreName())) {
+            this.storeName = requestDto.getStoreName();
+        }
+        if (!Objects.equals(this.address, requestDto.getAddress())) {
+            this.address = requestDto.getAddress();
+        }
+        if (!Objects.equals(this.phoneNumber, requestDto.getPhoneNumber())) {
+            this.phoneNumber = requestDto.getPhoneNumber();
+        }
+        if (!Objects.equals(this.imgUrl, imgUrl)) {
+            this.imgUrl = imgUrl;
+        }
+    }
 }
