@@ -35,4 +35,11 @@ public class StoreController {
         StoreResponseDto dto = storeService.editStore(storeId, requestDto);
         return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK, dto));
     }
+
+    @DeleteMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
+            @PathVariable Long storeId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK, storeService.deleteStore(storeId)));
+    }
 }
