@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.store.controller;
 
 
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryRequestDto;
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
@@ -56,7 +58,21 @@ public class StoreController {
     }
 
     /*
+     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 등록
+     * */
+    @PostMapping("/{storeId}/menus/categories")
+    public ResponseEntity<ApiResponse<MenuCategoryResponseDto>> createMenuCategory(
+            @PathVariable Long storeId,
+            @RequestBody MenuCategoryRequestDto requestDto
+    ) {
+        MenuCategoryResponseDto dto = storeService.createMenuCategory(storeId, requestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴 카테고리가 등록되었습니다", HttpStatus.CREATED, dto));
+    }
+
+
+    /* =================================
      * 일반 고객이 가게 조회하는 api
+     * ==================================
      * */
     @GetMapping(params = "!name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
