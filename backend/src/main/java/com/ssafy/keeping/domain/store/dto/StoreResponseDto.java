@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.dto;
 
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.model.Store;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,8 @@ public class StoreResponseDto {
     private String bankAccount;
     private Long merchantId;
     private String category;
+    private StoreStatus storeStatus;
+    private String description;
     private LocalDateTime createdAt;
     private String imgUrl;
 
@@ -37,6 +40,8 @@ public class StoreResponseDto {
                 .category(store.getCategory())
                 .createdAt(store.getCreatedAt())
                 .bankAccount(store.getBankAccount())
+                .storeStatus(store.getStoreStatus())
+                .description(store.getDescription())
                 .imgUrl(store.getImgUrl())
                 .build();
     }

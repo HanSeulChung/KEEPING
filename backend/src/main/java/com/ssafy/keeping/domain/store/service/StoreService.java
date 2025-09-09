@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.service;
 
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
@@ -40,6 +41,8 @@ public class StoreService {
                                 .merchantId(requestDto.getMerchantId())
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())
+                                .description(requestDto.getDescription())
+                                .storeStatus(StoreStatus.APPROVED)
                                 .imgUrl(imgUrl)
                                 .build()
                 )
@@ -77,10 +80,15 @@ public class StoreService {
         Store store = storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
-        storeRepository.delete(store);
 
-        return StoreResponseDto.builder()
-                .storeId(storeId)
-                .build();
+        StoreStatus storeStatus = StoreStatus.DELETED;
+        // TODO: wallet_store_balance 에서 남아있는게 없어야 완전히 DELETE STATUS가 됨.
+
+
+        store.deleteStore(storeStatus);
+
+        return StoreResponseDto.fromEntity(
+                storeRepository.save(store)
+        );
     }
 }

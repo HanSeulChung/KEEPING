@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.model;
 
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -51,6 +52,8 @@ public class Store {
     // TODO file system은 나중에
     private String imgUrl;
 
+    private String description;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -58,6 +61,11 @@ public class Store {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    private StoreStatus storeStatus;
+
+    @Column(nullable = true)
+    private LocalDateTime deletedAt;
 
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
         if (!Objects.equals(this.storeName, requestDto.getStoreName())) {
@@ -72,5 +80,13 @@ public class Store {
         if (!Objects.equals(this.imgUrl, imgUrl)) {
             this.imgUrl = imgUrl;
         }
+    }
+
+    // TODO: 가게 삭제 뿐만아니라, 점주 탈퇴시에도 사용하여 유령가게가 없어야하는 메서드
+    public void deleteStore(StoreStatus storeStatus) {
+        if (!Objects.equals(StoreStatus.DELETED, storeStatus)) {
+            this.deletedAt = LocalDateTime.now();
+        }
+        this.storeStatus = storeStatus;
     }
 }

@@ -29,6 +29,8 @@ public class StoreRequestDto {
     private String category;
     @NotNull
     private Long merchantId;
+    @NotBlank
+    private String description;
     //TODO: 파일서버 구축 후 수정
     @Nullable
     private MultipartFile imgFile;
