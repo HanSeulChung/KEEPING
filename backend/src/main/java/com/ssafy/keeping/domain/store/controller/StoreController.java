@@ -22,6 +22,9 @@ import java.util.List;
 public class StoreController {
     private final StoreService storeService;
 
+    /*
+    * 가게 주인이 사용하는 api - 가게 등록 post
+    * */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> createStore(
             @Valid @ModelAttribute StoreRequestDto requestDto
@@ -30,6 +33,9 @@ public class StoreController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
     }
 
+    /*
+     * 가게 주인이 사용하는 api - 가게 수정 patch
+     * */
     @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> editStore(
             @PathVariable Long storeId,
@@ -39,6 +45,9 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK, dto));
     }
 
+    /*
+     * 가게 주인이 사용하는 api - 가게 삭제 delete
+     * */
     @DeleteMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
             @PathVariable Long storeId
@@ -46,6 +55,9 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK, storeService.deleteStore(storeId)));
     }
 
+    /*
+     * 일반 고객이 가게 조회하는 api
+     * */
     @GetMapping(params = "!name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
         return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK, storeService.getAllStore()));
