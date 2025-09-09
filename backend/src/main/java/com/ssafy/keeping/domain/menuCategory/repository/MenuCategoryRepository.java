@@ -1,10 +1,13 @@
 package com.ssafy.keeping.domain.menuCategory.repository;
 
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.menuCategory.model.MenuCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long> {
@@ -16,4 +19,16 @@ public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long
     and ( (:parentId is null and c.parent is null) or c.parent.categoryId = :parentId )
     """)
     Integer nextOrder(@Param("storeId") Long storeId, @Param("parentId") Long parentId);
+
+
+    @Query("""
+    select new com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto(
+        c.categoryId, c.store.storeId, c.parent.categoryId, c.categoryName,
+        c.displayOrder, c.createdAt
+    )
+    from MenuCategory c
+    where c.store.storeId = :storeId
+    and c.parent is null
+    """)
+    List<MenuCategoryResponseDto> findAllMajorCategoryByStoreId(@Param("storeId") Long storeId);
 }

@@ -116,6 +116,12 @@ public class StoreService {
         return menuCategoryService.createMenuCategory(storeId, requestDto);
     }
 
+    public List<MenuCategoryResponseDto> getAllMajorMenuCategory(Long storeId) {
+        StorePublicDto storePublicDto = storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        return menuCategoryService.getAllMajorCategory(storePublicDto.storeId());
+    }
+
 
 
     /*

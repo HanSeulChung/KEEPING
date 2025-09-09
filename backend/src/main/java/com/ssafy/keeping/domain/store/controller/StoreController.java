@@ -69,6 +69,19 @@ public class StoreController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴 카테고리가 등록되었습니다", HttpStatus.CREATED, dto));
     }
 
+    /*
+     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 전체 조회
+     * */
+    // TODO: front 화면이 세부 카테고리도 필요한 경우 api 추가 등록
+    // 현재는 parent id가 null인 대분류 카테고리만 보여지게 됩니다.
+    @GetMapping("/{storeId}/menus/categories")
+    public ResponseEntity<ApiResponse<List<MenuCategoryResponseDto>>> createMenuCategory(
+            @PathVariable Long storeId
+    ) {
+        List<MenuCategoryResponseDto> dtoList = storeService.getAllMajorMenuCategory(storeId);
+        return ResponseEntity.ok(ApiResponse.success("해당 가게의 메뉴 카테고리(대분류)가 전체 조회되었습니다.", HttpStatus.OK, dtoList));
+    }
+
 
     /* =================================
      * 일반 고객이 가게 조회하는 api

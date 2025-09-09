@@ -13,6 +13,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MenuCategoryService {
@@ -48,5 +50,9 @@ public class MenuCategoryService {
                 saved.getCategoryId(), saved.getStore().getStoreId(), saved.getParent()==null ? null : saved.getParent().getCategoryId(),
                 saved.getCategoryName(), saved.getDisplayOrder(), saved.getCreatedAt()
         );
+    }
+
+    public List<MenuCategoryResponseDto> getAllMajorCategory(Long storeId) {
+        return menuCategoryRepository.findAllMajorCategoryByStoreId(storeId);
     }
 }
