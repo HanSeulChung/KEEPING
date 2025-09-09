@@ -43,4 +43,12 @@ public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long
                           @Param("parentId") Long parentId,
                           @Param("name") String name,
                           @Param("categoryId") Long categoryId);
+
+    @Query("""
+    select (count(c) > 0) from MenuCategory c
+    where c.store.storeId = :storeId
+    and ( (:categoryId is null and c.parent is null) or c.parent.categoryId = :categoryId )
+    """)
+    boolean hasChildren(@Param("storeId") Long storeId,
+                          @Param("categoryId") Long categoryId);
 }

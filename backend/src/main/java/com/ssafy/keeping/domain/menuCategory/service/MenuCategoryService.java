@@ -81,6 +81,20 @@ public class MenuCategoryService {
         return toDto(menuCategory);
     }
 
+    public void deleteMenuCategory(Long storeId, Long categoryId) {
+        MenuCategory menuCategory = menuCategoryRepository.findById(categoryId).orElseThrow(
+                () -> new CustomException(ErrorCode.MENU_CATEGORY_NOT_FOUND)
+        );
+
+        if (!Objects.equals(storeId, menuCategory.getStore().getStoreId()))
+            throw new CustomException(ErrorCode.STORE_NOT_MATCH);
+
+        if (menuCategoryRepository.hasChildren(storeId, categoryId))
+            throw new CustomException(ErrorCode.MENU_CATEGORY_HAS_CHILDREN);
+
+        menuCategoryRepository.delete(menuCategory);
+    }
+
     private MenuCategoryResponseDto toDto(MenuCategory menuCategory) {
         Long pid = menuCategory.getParent()==null ? null : menuCategory.getParent().getCategoryId();
         return new MenuCategoryResponseDto(

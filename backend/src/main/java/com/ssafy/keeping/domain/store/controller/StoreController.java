@@ -84,7 +84,7 @@ public class StoreController {
     }
 
     /*
-     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 등록
+     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 수정
      * */
     @PatchMapping("/{storeId}/menus/categories/{categoryId}")
     public ResponseEntity<ApiResponse<MenuCategoryResponseDto>> editMenuCategory(
@@ -94,6 +94,18 @@ public class StoreController {
     ) {
         MenuCategoryResponseDto dto = storeService.editMenuCategory(storeId, categoryId, requestDto);
         return ResponseEntity.ok(ApiResponse.success("메뉴 카테고리가 수정되었습니다", HttpStatus.OK.value(), dto));
+    }
+
+    /*
+     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 삭제
+     * */
+    @DeleteMapping("/{storeId}/menus/categories/{categoryId}")
+    public ResponseEntity<ApiResponse<Void>> deleteMenuCategory(
+            @PathVariable Long storeId,
+            @PathVariable Long categoryId
+    ) {
+        storeService.deleteMenuCategory(storeId, categoryId);
+        return ResponseEntity.ok(ApiResponse.success("메뉴 카테고리가 삭제되었습니다", HttpStatus.OK.value(), null));
     }
 
     /* =================================

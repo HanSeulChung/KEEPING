@@ -132,6 +132,15 @@ public class StoreService {
         return menuCategoryService.editMenuCategory(storeId, categoryId, requestDto);
     }
 
+    public void deleteMenuCategory(Long storeId, Long categoryId) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
+
+        menuCategoryService.deleteMenuCategory(storeId, categoryId);
+    }
+
     /*
     * ==================================
     *  일반 고객 api 에서 사용할 service 로직
