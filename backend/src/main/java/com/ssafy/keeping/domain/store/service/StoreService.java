@@ -72,4 +72,15 @@ public class StoreService {
                 storeRepository.save(store)
         );
     }
+
+    public StoreResponseDto deleteStore(Long storeId) {
+        Store store = storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+        storeRepository.delete(store);
+
+        return StoreResponseDto.builder()
+                .storeId(storeId)
+                .build();
+    }
 }
