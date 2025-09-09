@@ -62,6 +62,7 @@ public class Store {
     private LocalDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)
+    @Column(updatable = false)
     private StoreStatus storeStatus;
 
     @Column(nullable = true)

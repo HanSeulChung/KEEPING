@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.store.controller;
 
 
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
+import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.service.StoreService;
@@ -43,5 +44,24 @@ public class StoreController {
             @PathVariable Long storeId
     ) {
         return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK, storeService.deleteStore(storeId)));
+    }
+
+    @GetMapping()
+    public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
+        return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK, storeService.getAllStore()));
+    }
+
+    @GetMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StorePublicDto>> getStore(
+            @PathVariable Long storeId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("해당 store id로 매장이 조회되었습니다.", HttpStatus.OK, storeService.getStoreByStoreId(storeId)));
+    }
+
+    @GetMapping(params = "name")
+    public ResponseEntity<ApiResponse<List<StorePublicDto>>> getStore(
+            @RequestParam String name
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("store name으로 매장이 조회되었습니다.", HttpStatus.OK, storeService.getStoreByStoreName(name)));
     }
 }
