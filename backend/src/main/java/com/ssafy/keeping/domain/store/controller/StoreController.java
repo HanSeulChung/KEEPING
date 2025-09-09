@@ -32,7 +32,7 @@ public class StoreController {
             @Valid @ModelAttribute StoreRequestDto requestDto
     ) {
         StoreResponseDto dto = storeService.createStore(requestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED, dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED.value(), dto));
     }
 
     /*
@@ -44,7 +44,7 @@ public class StoreController {
             @Valid @ModelAttribute StoreEditRequestDto requestDto
     ) {
         StoreResponseDto dto = storeService.editStore(storeId, requestDto);
-        return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK, dto));
+        return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK.value(), dto));
     }
 
     /*
@@ -54,7 +54,7 @@ public class StoreController {
     public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
             @PathVariable Long storeId
     ) {
-        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK, storeService.deleteStore(storeId)));
+        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(), storeService.deleteStore(storeId)));
     }
 
     /*
@@ -66,7 +66,7 @@ public class StoreController {
             @RequestBody MenuCategoryRequestDto requestDto
     ) {
         MenuCategoryResponseDto dto = storeService.createMenuCategory(storeId, requestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴 카테고리가 등록되었습니다", HttpStatus.CREATED, dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴 카테고리가 등록되었습니다", HttpStatus.CREATED.value(), dto));
     }
 
     /*
@@ -79,7 +79,7 @@ public class StoreController {
             @PathVariable Long storeId
     ) {
         List<MenuCategoryResponseDto> dtoList = storeService.getAllMajorMenuCategory(storeId);
-        return ResponseEntity.ok(ApiResponse.success("해당 가게의 메뉴 카테고리(대분류)가 전체 조회되었습니다.", HttpStatus.OK, dtoList));
+        return ResponseEntity.ok(ApiResponse.success("해당 가게의 메뉴 카테고리(대분류)가 전체 조회되었습니다.", HttpStatus.OK.value(), dtoList));
     }
 
 
@@ -89,20 +89,20 @@ public class StoreController {
      * */
     @GetMapping(params = "!name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
-        return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK, storeService.getAllStore()));
+        return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK.value(), storeService.getAllStore()));
     }
 
     @GetMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StorePublicDto>> getStore(
             @PathVariable Long storeId
     ) {
-        return ResponseEntity.ok(ApiResponse.success("해당 store id로 매장이 조회되었습니다.", HttpStatus.OK, storeService.getStoreByStoreId(storeId)));
+        return ResponseEntity.ok(ApiResponse.success("해당 store id로 매장이 조회되었습니다.", HttpStatus.OK.value(), storeService.getStoreByStoreId(storeId)));
     }
 
     @GetMapping(params = "name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getStore(
             @RequestParam String name
     ) {
-        return ResponseEntity.ok(ApiResponse.success("store name으로 매장이 조회되었습니다.", HttpStatus.OK, storeService.getStoreByStoreName(name)));
+        return ResponseEntity.ok(ApiResponse.success("store name으로 매장이 조회되었습니다.", HttpStatus.OK.value(), storeService.getStoreByStoreName(name)));
     }
 }
