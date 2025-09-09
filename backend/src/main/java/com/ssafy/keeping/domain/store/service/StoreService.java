@@ -110,8 +110,15 @@ public class StoreService {
     }
 
     public List<StorePublicDto> getStoreByStoreName(String storeName) {
+        String name = storeName == null ? "" : storeName.trim();
+        if (name.isEmpty()) {
+            // 이름이 비어있으면 전체 조회
+            return storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
+        }
+        name = name.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+
         List<StorePublicDto> similarityByNameStoreDto
-                = storeRepository.findPublicAllSimilarityByName(storeName, StoreStatus.APPROVED);
+                = storeRepository.findPublicAllSimilarityByName(name, StoreStatus.APPROVED);
 
         return similarityByNameStoreDto;
     }

@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.store.dto;
 
 
+import jakarta.validation.constraints.Pattern;
 import org.springframework.lang.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 public class StoreRequestDto {
     @NotBlank
+    @Pattern(regexp = "^[0-9]{3}-[0-9]{2}-[0-9]{5}$", message = "사업자 등록번호 형식은 XXX-XX-XXXXX 여야 합니다.")
     private String taxId;
     @NotBlank
     private String storeName;

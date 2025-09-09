@@ -46,7 +46,7 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK, storeService.deleteStore(storeId)));
     }
 
-    @GetMapping()
+    @GetMapping(params = "!name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
         return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK, storeService.getAllStore()));
     }

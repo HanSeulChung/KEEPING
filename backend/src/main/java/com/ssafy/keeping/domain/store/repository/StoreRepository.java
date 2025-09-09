@@ -45,9 +45,9 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     )
     from Store s
     where s.storeStatus = :status and s.deletedAt is null
-      and lower(s.storeName) like lower(concat('%', :name, '%'))
+      and lower(s.storeName) like lower(concat('%', :name, '%')) escape '\\'
     order by s.storeId desc
     """)
     List<StorePublicDto> findPublicAllSimilarityByName(@Param("name") String name,
-                                          @Param("status") StoreStatus status);
+                                                       @Param("status") StoreStatus status);
 }
