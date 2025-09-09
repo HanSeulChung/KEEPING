@@ -11,6 +11,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -50,4 +51,16 @@ public class MenuCategory {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public void changeNameAndParent(String name, MenuCategory parent) {
+        if (!Objects.equals(name, this.categoryName))
+            this.categoryName = name;
+        if (!Objects.equals(parent, this.parent))
+            this.parent = parent;
+    }
+
+    public void changeOrder(int order) {
+        if (!Objects.equals(order, this.displayOrder))
+            this.displayOrder = order;
+    }
 }

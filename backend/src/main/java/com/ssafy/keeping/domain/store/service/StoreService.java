@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.service;
 
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryEditRequestDto;
 import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryRequestDto;
 import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.menuCategory.service.MenuCategoryService;
@@ -108,7 +109,7 @@ public class StoreService {
     }
 
     public MenuCategoryResponseDto createMenuCategory(Long storeId, MenuCategoryRequestDto requestDto) {
-        StorePublicDto storePublicDto = storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
@@ -117,12 +118,19 @@ public class StoreService {
     }
 
     public List<MenuCategoryResponseDto> getAllMajorMenuCategory(Long storeId) {
-        StorePublicDto storePublicDto = storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
-        return menuCategoryService.getAllMajorCategory(storePublicDto.storeId());
+        return menuCategoryService.getAllMajorCategory(storeId);
     }
 
+    public MenuCategoryResponseDto editMenuCategory(Long storeId, Long categoryId, MenuCategoryEditRequestDto requestDto) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
+        // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
+
+        return menuCategoryService.editMenuCategory(storeId, categoryId, requestDto);
+    }
 
     /*
     * ==================================

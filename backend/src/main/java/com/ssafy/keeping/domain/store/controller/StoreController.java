@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.store.controller;
 
 
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryEditRequestDto;
 import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryRequestDto;
 import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
@@ -82,6 +83,18 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success("해당 가게의 메뉴 카테고리(대분류)가 전체 조회되었습니다.", HttpStatus.OK.value(), dtoList));
     }
 
+    /*
+     * 가게 주인이 가게 메뉴 카테고리를 위한 api - 가게 메뉴 카테고리 등록
+     * */
+    @PatchMapping("/{storeId}/menus/categories/{categoryId}")
+    public ResponseEntity<ApiResponse<MenuCategoryResponseDto>> editMenuCategory(
+            @PathVariable Long storeId,
+            @PathVariable Long categoryId,
+            @RequestBody MenuCategoryEditRequestDto requestDto
+    ) {
+        MenuCategoryResponseDto dto = storeService.editMenuCategory(storeId, categoryId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("메뉴 카테고리가 수정되었습니다", HttpStatus.OK.value(), dto));
+    }
 
     /* =================================
      * 일반 고객이 가게 조회하는 api
