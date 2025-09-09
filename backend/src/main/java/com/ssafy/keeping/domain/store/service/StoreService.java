@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,8 +40,6 @@ public class StoreService {
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
-                                .businessSector(requestDto.getBusinessSector())
-                                .businessType(requestDto.getBusinessType())
                                 .merchantId(requestDto.getMerchantId())
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())

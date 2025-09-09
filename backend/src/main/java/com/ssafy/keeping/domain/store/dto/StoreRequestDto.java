@@ -17,19 +17,13 @@ public class StoreRequestDto {
     private String storeName;
     @NotBlank
     private String address;
-    @NotBlank
     private String phoneNumber;
-    @NotBlank
-    private String businessSector;
-    @NotBlank
-    private String businessType;
     @NotBlank
     private String bankAccount;
     @NotBlank
     private String category;
     @NotNull
     private Long merchantId;
-    @NotBlank
     private String description;
     //TODO: 파일서버 구축 후 수정
     @Nullable

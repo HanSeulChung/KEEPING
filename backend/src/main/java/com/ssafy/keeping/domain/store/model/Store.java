@@ -36,12 +36,8 @@ public class Store {
     private String storeName;
     @Column(nullable = false)
     private String address;
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String phoneNumber;
-    @Column(nullable = false)
-    private String businessSector;
-    @Column(nullable = false)
-    private String businessType;
     @Column(nullable = false)
     private String bankAccount;
     @Column(nullable = false)
@@ -65,7 +61,6 @@ public class Store {
     @Column(updatable = false)
     private StoreStatus storeStatus;
 
-    @Column(nullable = true)
     private LocalDateTime deletedAt;
 
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
