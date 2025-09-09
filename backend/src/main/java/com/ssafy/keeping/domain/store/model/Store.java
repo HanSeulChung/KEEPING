@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.store.model;
 
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "store", uniqueConstraints = {
+@Table(name = "stores", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"tax_id", "address"})
 })
 @EntityListeners(AuditingEntityListener.class)
@@ -35,12 +36,8 @@ public class Store {
     private String storeName;
     @Column(nullable = false)
     private String address;
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String phoneNumber;
-    @Column(nullable = false)
-    private String businessSector;
-    @Column(nullable = false)
-    private String businessType;
     @Column(nullable = false)
     private String bankAccount;
     @Column(nullable = false)
@@ -51,6 +48,8 @@ public class Store {
     // TODO file system은 나중에
     private String imgUrl;
 
+    private String description;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -58,6 +57,11 @@ public class Store {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(updatable = false)
+    private StoreStatus storeStatus;
+
+    private LocalDateTime deletedAt;
 
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
         if (!Objects.equals(this.storeName, requestDto.getStoreName())) {
@@ -72,5 +76,13 @@ public class Store {
         if (!Objects.equals(this.imgUrl, imgUrl)) {
             this.imgUrl = imgUrl;
         }
+    }
+
+    // TODO: 가게 삭제 뿐만아니라, 점주 탈퇴시에도 사용하여 유령가게가 없어야하는 메서드
+    public void deleteStore(StoreStatus storeStatus) {
+        if (!Objects.equals(StoreStatus.DELETED, storeStatus)) {
+            this.deletedAt = LocalDateTime.now();
+        }
+        this.storeStatus = storeStatus;
     }
 }

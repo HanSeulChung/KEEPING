@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.store.service;
 
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
+import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.model.Store;
@@ -10,6 +12,9 @@ import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -35,11 +40,11 @@ public class StoreService {
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
-                                .businessSector(requestDto.getBusinessSector())
-                                .businessType(requestDto.getBusinessType())
                                 .merchantId(requestDto.getMerchantId())
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())
+                                .description(requestDto.getDescription())
+                                .storeStatus(StoreStatus.APPROVED)
                                 .imgUrl(imgUrl)
                                 .build()
                 )
@@ -57,6 +62,10 @@ public class StoreService {
         Store store = storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
+
+        if (!Objects.equals(store.getStoreStatus(), StoreStatus.APPROVED)) {
+            throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
+        }
 
         String taxId = store.getTaxId();
         String address = requestDto.getAddress();
@@ -77,10 +86,40 @@ public class StoreService {
         Store store = storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
-        storeRepository.delete(store);
 
-        return StoreResponseDto.builder()
-                .storeId(storeId)
-                .build();
+        StoreStatus storeStatus = StoreStatus.DELETED;
+        // TODO: wallet_store_balance 에서 남아있는게 없어야 완전히 DELETE STATUS가 됨.
+
+
+        store.deleteStore(storeStatus);
+
+        return StoreResponseDto.fromEntity(
+                storeRepository.save(store)
+        );
+    }
+
+    public List<StorePublicDto> getAllStore() {
+        List<StorePublicDto> allApprovedStoreDto =
+                storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
+        return allApprovedStoreDto;
+    }
+
+    public StorePublicDto getStoreByStoreId(Long storeId) {
+        return storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+    }
+
+    public List<StorePublicDto> getStoreByStoreName(String storeName) {
+        String name = storeName == null ? "" : storeName.trim();
+        if (name.isEmpty()) {
+            // 이름이 비어있으면 전체 조회
+            return storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
+        }
+        name = name.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+
+        List<StorePublicDto> similarityByNameStoreDto
+                = storeRepository.findPublicAllSimilarityByName(name, StoreStatus.APPROVED);
+
+        return similarityByNameStoreDto;
     }
 }
