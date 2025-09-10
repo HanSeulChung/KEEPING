@@ -46,4 +46,13 @@ public class MenuController {
         List<MenuResponseDto> dtos = menuService.getAllMenus(storeId);
         return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 조회되었습니다", HttpStatus.OK.value(), dtos));
     }
+
+    @DeleteMapping("/{menusId}")
+    public ResponseEntity<ApiResponse<Void>> deleteMenu(
+            @PathVariable Long storeId,
+            @PathVariable Long menusId
+    ) {
+        menuService.deleteMenu(storeId, menusId);
+        return ResponseEntity.ok(ApiResponse.success("메뉴가 삭제 되었습니다", HttpStatus.OK.value(), null));
+    }
 }

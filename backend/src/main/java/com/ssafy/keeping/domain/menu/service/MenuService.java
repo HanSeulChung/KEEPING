@@ -103,4 +103,11 @@ public class MenuService {
 
         return menuRepository.findAllMenusByStoreId(storeId);
     }
+
+    public void deleteMenu(Long storeId, Long menusId) {
+        Menu menu = menuRepository.findByMenuIdAndStore_StoreId(menusId, storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
+
+        menuRepository.deleteById(menusId);
+    }
 }
