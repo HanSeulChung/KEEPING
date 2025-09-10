@@ -1,0 +1,18 @@
+# ---- êall ---
+node_modules/
+dist/
+build/
+out/
+*.log
+
+# ---- IntelliJ (backend) ----
+.idea/
+*.iml
+
+# ---- VSCode (frontend) ----
+.vscode/
+*.code-workspace
+
+# ---- OS ----
+.DS_Store      # macOS
+Thumbs.db      # Windows
