@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -93,5 +94,13 @@ public class MenuService {
                 menu.getMenuId(), storeId, menu.getMenuName(),
                 menu.getCategory().getCategoryId(), menu.getCategory().getCategoryName(),
                 menu.getDisplayOrder(), menu.isSoldOut());
+    }
+
+    public List<MenuResponseDto> getAllMenus(Long storeId) {
+        storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+
+        return menuRepository.findAllMenusByStoreId(storeId);
     }
 }

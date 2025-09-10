@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/stores/{storeId}/menus")
 @RequiredArgsConstructor
@@ -35,5 +37,13 @@ public class MenuController {
     ) {
         MenuResponseDto dto = menuService.editMenu(storeId, menusId, requestDto);
         return ResponseEntity.ok(ApiResponse.success("메뉴가 수정되었습니다", HttpStatus.OK.value(), dto));
+    }
+
+    @GetMapping()
+    public ResponseEntity<ApiResponse<List<MenuResponseDto>>> getAllMenus(
+            @PathVariable Long storeId
+    ) {
+        List<MenuResponseDto> dtos = menuService.getAllMenus(storeId);
+        return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 조회되었습니다", HttpStatus.OK.value(), dtos));
     }
 }
