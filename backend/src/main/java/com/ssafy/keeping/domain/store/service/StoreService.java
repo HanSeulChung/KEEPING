@@ -61,7 +61,7 @@ public class StoreService {
         );
     }
 
-    private String makeImgUrl(MultipartFile file) {
+    public static String makeImgUrl(MultipartFile file) {
         return "random_img_url";
     }
 
