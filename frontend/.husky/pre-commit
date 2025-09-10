@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+# pre-commit은 저장소 루트에서 실행되므로,
+# 이 파일(.husky) 기준으로 한 단계 올라가서(frontend/)에서 lint-staged 실행
+cd "$(dirname -- "$0")/.."
+pnpm exec lint-staged

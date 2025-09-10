@@ -1,5 +1,5 @@
 {
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
@@ -15,7 +15,7 @@
   ],
   "emmet.includeLanguages": {
     "typescript": "html",
-    "typescriptreact": "html"
+    "typescriptreact": "html"F
   },
   "editor.quickSuggestions": {
     "strings": true
