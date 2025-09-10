@@ -1,5 +1,9 @@
 package com.ssafy.keeping.domain.store.service;
 
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryEditRequestDto;
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryRequestDto;
+import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
+import com.ssafy.keeping.domain.menuCategory.service.MenuCategoryService;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import com.ssafy.keeping.domain.store.dto.StorePublicDto;
@@ -20,7 +24,13 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class StoreService {
     private final StoreRepository storeRepository;
+    private final MenuCategoryService menuCategoryService;
 
+    /*
+     * ==================================
+     * 가게 주인(owner) role api 에서 사용할 service 로직
+     * ==================================
+     * */
     public StoreResponseDto createStore(StoreRequestDto requestDto) {
 
         String taxId = requestDto.getTaxId();
@@ -98,6 +108,44 @@ public class StoreService {
         );
     }
 
+    public MenuCategoryResponseDto createMenuCategory(Long storeId, MenuCategoryRequestDto requestDto) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
+
+        return menuCategoryService.createMenuCategory(storeId, requestDto);
+    }
+
+    public List<MenuCategoryResponseDto> getAllMajorMenuCategory(Long storeId) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        return menuCategoryService.getAllMajorCategory(storeId);
+    }
+
+    public MenuCategoryResponseDto editMenuCategory(Long storeId, Long categoryId, MenuCategoryEditRequestDto requestDto) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
+
+        return menuCategoryService.editMenuCategory(storeId, categoryId, requestDto);
+    }
+
+    public void deleteMenuCategory(Long storeId, Long categoryId) {
+        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
+
+        menuCategoryService.deleteMenuCategory(storeId, categoryId);
+    }
+
+    /*
+    * ==================================
+    *  일반 고객 api 에서 사용할 service 로직
+    * ==================================
+    * */
     public List<StorePublicDto> getAllStore() {
         List<StorePublicDto> allApprovedStoreDto =
                 storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);

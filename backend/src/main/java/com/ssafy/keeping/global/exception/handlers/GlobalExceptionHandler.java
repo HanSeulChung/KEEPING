@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.error(errorMessage, HttpStatus.BAD_REQUEST));
+                .body(ApiResponse.error(errorMessage, HttpStatus.BAD_REQUEST.value()));
     }
 
     // 2. @RequestParam, @PathVariable 검증 실패
@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.error(errorMessage, HttpStatus.BAD_REQUEST));
+                .body(ApiResponse.error(errorMessage, HttpStatus.BAD_REQUEST.value()));
     }
 
     // 3. 커스텀 예외
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .body(ApiResponse.error(errorCode.getMessage(), errorCode.getHttpStatus()));
+                .body(ApiResponse.error(errorCode.getMessage(), errorCode.getHttpStatus().value()));
     }
 
     // 4. 알 수 없는 예외 (최종 fallback)
@@ -77,6 +77,6 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+                .body(ApiResponse.error("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()));
     }
 }
