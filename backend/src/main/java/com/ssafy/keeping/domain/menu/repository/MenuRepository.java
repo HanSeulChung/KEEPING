@@ -29,7 +29,7 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     )
     from Menu m
     where m.store.storeId = :storeId
-    and m.active
+    and m.active and m.deletedAt is null
     """)
     List<MenuResponseDto> findAllMenusByStoreId(Long storeId);
 }
