@@ -8,6 +8,7 @@ import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -57,6 +58,29 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest()
                 .body(ApiResponse.error(errorMessage, HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDataIntegrity(DataIntegrityViolationException e) {
+        if (isUniqueViolation(e)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("중복되는 입력값입니다.", 409));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("무결성 제약 위반", 400));
+    }
+
+    private boolean isUniqueViolation(Throwable t) {
+        while (t != null) {
+            if (t instanceof org.hibernate.exception.ConstraintViolationException cve) {
+                String state = cve.getSQLState();    // MySQL/MariaDB: 23000, Postgres: 23505
+                int code = cve.getErrorCode();       // MySQL dup: 1062
+                if ("23000".equals(state) || "23505".equals(state) || code == 1062) return true;
+            }
+            if (t instanceof java.sql.SQLIntegrityConstraintViolationException) return true;
+            t = t.getCause();
+        }
+        return false;
     }
 
     // 3. 커스텀 예외
