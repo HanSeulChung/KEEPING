@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface MenuRepository extends JpaRepository<Menu, Long> {
     @Query("""
@@ -16,4 +18,5 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     """)
     Integer nextOrder(@Param("storeId") Long storeId, @Param("categoryId") Long categoryId);
 
+    Optional<Menu> findByMenuIdAndStore_StoreId(Long menuId, Long storeId);
 }

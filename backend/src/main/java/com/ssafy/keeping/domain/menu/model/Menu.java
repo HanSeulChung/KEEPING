@@ -15,6 +15,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -79,4 +80,22 @@ public class Menu {
     private LocalDateTime updatedAt;
 
     private LocalDateTime deletedAt;
+
+    public void editMenu(String menuName, String imgUrl,
+                         int price, String description, int order) {
+        if (!Objects.equals(menuName, this.menuName))
+            this.menuName = menuName;
+        if (!Objects.equals(imgUrl, this.imgUrl))
+            this.imgUrl = imgUrl;
+        if (!Objects.equals(price, this.price))
+            this.price = price;
+        if (!Objects.equals(description, this.description))
+            this.description = description;
+        if (!Objects.equals(order, this.displayOrder))
+            this.displayOrder = order;
+    }
+
+    public void changeCategory(MenuCategory category) {
+        if (category != null) this.category = category;
+    }
 }

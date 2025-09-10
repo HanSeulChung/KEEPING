@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.menu.service;
 
+import com.ssafy.keeping.domain.menu.dto.MenuEditRequestDto;
 import com.ssafy.keeping.domain.menu.dto.MenuRequestDto;
 import com.ssafy.keeping.domain.menu.dto.MenuResponseDto;
 import com.ssafy.keeping.domain.menu.model.Menu;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -47,7 +49,6 @@ public class MenuService {
                             .menuName(requestDto.getMenuName())
                             .store(store)
                             .category(category)
-                            .menuName(requestDto.getMenuName())
                             .price(requestDto.getPrice())
                             .description(requestDto.getDescription() == null ?
                                     "" : requestDto.getDescription())
@@ -60,5 +61,37 @@ public class MenuService {
                 saved.getStore().getStoreId(), saved.getMenuName(), saved.getCategory().getCategoryId(),
                 saved.getCategory().getCategoryName(), saved.getDisplayOrder(), saved.isSoldOut()
         );
+    }
+
+    public MenuResponseDto editMenu(Long storeId, Long menuId, MenuEditRequestDto requestDto) {
+        Menu menu = menuRepository.findByMenuIdAndStore_StoreId(menuId, storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
+
+        MenuCategory category = menuCategoryRepository.findById(requestDto.getCategoryId())
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_CATEGORY_NOT_FOUND));
+        if (!category.getStore().getStoreId().equals(storeId))
+            throw new CustomException(ErrorCode.STORE_NOT_MATCH);
+
+        boolean changed = !menu.getCategory().getCategoryId().equals(requestDto.getCategoryId());
+        int order = changed ? menuRepository.nextOrder(storeId, requestDto.getCategoryId())
+                : menu.getDisplayOrder();
+        if (changed) menu.changeCategory(category);
+
+        String imgUrl = menu.getImgUrl();
+        if (requestDto.getImgFile() != null && !requestDto.getImgFile().isEmpty()) {
+            imgUrl = StoreService.makeImgUrl(requestDto.getImgFile());
+        }
+
+        int price = requestDto.getPrice();
+        String desc = Optional.ofNullable(requestDto.getDescription())
+                .filter(s -> !s.isBlank()).orElse(menu.getDescription());
+        String name = Optional.ofNullable(requestDto.getMenuName()).orElse(menu.getMenuName());
+
+        menu.editMenu(name, imgUrl, price, desc, order);
+
+        return new MenuResponseDto(
+                menu.getMenuId(), storeId, menu.getMenuName(),
+                menu.getCategory().getCategoryId(), menu.getCategory().getCategoryName(),
+                menu.getDisplayOrder(), menu.isSoldOut());
     }
 }

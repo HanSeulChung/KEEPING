@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.menu.controller;
 
+import com.ssafy.keeping.domain.menu.dto.MenuEditRequestDto;
 import com.ssafy.keeping.domain.menu.dto.MenuRequestDto;
 import com.ssafy.keeping.domain.menu.dto.MenuResponseDto;
 import com.ssafy.keeping.domain.menu.service.MenuService;
@@ -26,5 +27,13 @@ public class MenuController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴가 등록되었습니다", HttpStatus.CREATED.value(), dto));
     }
 
-
+    @PatchMapping(value="/{menusId}" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<MenuResponseDto>> editMenus(
+            @PathVariable Long menusId,
+            @PathVariable Long storeId,
+            @Valid @ModelAttribute MenuEditRequestDto requestDto
+    ) {
+        MenuResponseDto dto = menuService.editMenu(storeId, menusId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("메뉴가 수정되었습니다", HttpStatus.OK.value(), dto));
+    }
 }
