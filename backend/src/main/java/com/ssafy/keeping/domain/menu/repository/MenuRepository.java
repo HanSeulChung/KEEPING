@@ -32,4 +32,6 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     and m.active and m.deletedAt is null
     """)
     List<MenuResponseDto> findAllMenusByStoreId(Long storeId);
+
+    int deleteAllByStore_StoreId(Long storeId);
 }

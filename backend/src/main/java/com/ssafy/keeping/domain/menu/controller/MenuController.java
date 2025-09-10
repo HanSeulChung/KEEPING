@@ -55,4 +55,12 @@ public class MenuController {
         menuService.deleteMenu(storeId, menusId);
         return ResponseEntity.ok(ApiResponse.success("메뉴가 삭제 되었습니다", HttpStatus.OK.value(), null));
     }
+
+    @DeleteMapping()
+    public ResponseEntity<ApiResponse<Void>> deleteMenu(
+            @PathVariable Long storeId
+    ) {
+        menuService.deleteAllMenu(storeId);
+        return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 삭제 되었습니다", HttpStatus.OK.value(), null));
+    }
 }

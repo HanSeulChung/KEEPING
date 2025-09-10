@@ -110,4 +110,12 @@ public class MenuService {
 
         menuRepository.deleteById(menusId);
     }
+
+    public void deleteAllMenu(Long storeId) {
+        storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+
+        menuRepository.deleteAllByStore_StoreId(storeId);
+    }
 }
