@@ -36,14 +36,19 @@ public class PrepaymentService {
      */
     public PrepaymentResponseDto processPayment(Long storeId, PrepaymentRequestDto requestDto) {
         // 1. 사용자 정보 조회 및 검증
-        Customer customer = findCustomerByUserId(requestDto.getUserId());
+        Customer customer = customerRepository.findById(requestDto.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
+
         String userKey = customer.getUserKey();
+
         if (userKey == null || userKey.trim().isEmpty()) {
             throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
         }
 
         // 2. 가게 정보 조회 및 검증
-        Store store = findStoreByStoreId(storeId);
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
         String merchantId = String.valueOf(store.getMerchantId());
 
         // 3. 사용자의 개인 지갑 조회 또는 생성
@@ -60,22 +65,6 @@ public class PrepaymentService {
 
         // 5. DB 업데이트 (트랜잭션 처리)
         return updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
-    }
-
-    /**
-     * 사용자 ID로 Customer 조회
-     */
-    private Customer findCustomerByUserId(Long userId) {
-        return customerRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
-    }
-
-    /**
-     * 가게 ID로 Store 조회
-     */
-    private Store findStoreByStoreId(Long storeId) {
-        return storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
     /**
@@ -126,9 +115,18 @@ public class PrepaymentService {
         walletStoreLotRepository.save(lot);
 
         // 3. WalletStoreBalance 업데이트 또는 생성
-        updateWalletStoreBalance(wallet, store, paymentAmount);
+        WalletStoreBalance balance = walletStoreBalanceRepository
+                .findByWalletAndStore(wallet, store)
+                .orElseGet(() -> WalletStoreBalance.builder()
+                        .wallet(wallet)
+                        .store(store)
+                        .balance(BigDecimal.ZERO)
+                        .build());
 
-        // 4. SettlementTask 생성 (3일 후 정산 예정)
+        balance.addBalance(paymentAmount);
+        walletStoreBalanceRepository.save(balance);
+
+        // 4. SettlementTask 생성 (후에 정산 예정)
         SettlementTask settlementTask = SettlementTask.builder()
                 .transaction(transaction)
                 .status(SettlementTask.Status.PENDING)
@@ -136,7 +134,7 @@ public class PrepaymentService {
         settlementTaskRepository.save(settlementTask);
 
         // 5. 응답 생성
-        BigDecimal updatedBalance = getCurrentStoreBalance(wallet, store);
+        BigDecimal updatedBalance = balance.getBalance();
         
         PrepaymentData responseData = PrepaymentData.builder()
                 .transactionId(transaction.getTransactionId())
@@ -149,30 +147,5 @@ public class PrepaymentService {
                 .build();
 
         return PrepaymentResponseDto.success(responseData);
-    }
-
-    /**
-     * WalletStoreBalance 업데이트 또는 생성
-     */
-    private void updateWalletStoreBalance(Wallet wallet, Store store, BigDecimal amount) {
-        WalletStoreBalance balance = walletStoreBalanceRepository
-                .findByWalletAndStore(wallet, store)
-                .orElseGet(() -> WalletStoreBalance.builder()
-                        .wallet(wallet)
-                        .store(store)
-                        .balance(BigDecimal.ZERO)
-                        .build());
-        
-        balance.addBalance(amount);
-        walletStoreBalanceRepository.save(balance);
-    }
-
-    /**
-     * 현재 가게별 잔액 조회
-     */
-    private BigDecimal getCurrentStoreBalance(Wallet wallet, Store store) {
-        return walletStoreBalanceRepository.findByWalletAndStore(wallet, store)
-                .map(WalletStoreBalance::getBalance)
-                .orElse(BigDecimal.ZERO);
     }
 }

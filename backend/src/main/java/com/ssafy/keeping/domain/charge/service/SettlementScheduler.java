@@ -34,7 +34,7 @@ public class SettlementScheduler {
      * 싸피은행 청구서 발행에 맞춰 결제취소 불가 상태로 전환
      * cron 표현식: "0 30 7 * * MON" = 매주 월요일 오전 7시 30분 0초
      */
-    @Scheduled(cron = "0 30 7 * * MON")
+    @Scheduled(cron = "0 30 7 * * MON", zone = "Asia/Seoul")
     @Transactional
     public void lockPreviousWeekTasks() {
         log.info("=== 결제취소 차단 스케줄러 시작 ===");
@@ -76,7 +76,7 @@ public class SettlementScheduler {
      * 매주 화요일 오전 01:00에 LOCKED 상태 작업들에 대해 점주 정산 처리
      * cron 표현식: "0 0 1 * * TUE" = 매주 화요일 오전 1시 0분 0초
      */
-    @Scheduled(cron = "0 0 1 * * TUE")
+    @Scheduled(cron = "0 0 1 * * TUE", zone = "Asia/Seoul")
     @Transactional
     public void processLockedSettlements() {
         log.info("=== 정산 처리 스케줄러 시작 ===");
@@ -135,7 +135,7 @@ public class SettlementScheduler {
                 return;
             }
             
-            // 3. 외부 API 호출 (계좌 입금) - CustomException이 자동으로 던져짐
+            // 3. 외부 API 호출 (계좌 입금) - CustomException이 자동으로 던져짐 (SsafyFinanceApiService 에서 알아서 예외 처리)
             String transactionSummary = String.format("정산 입금 - %s", store.getStoreName());
             SsafyAccountDepositResponseDto response = ssafyFinanceApiService.requestAccountDeposit(
                     owner.getUserKey(),
@@ -177,21 +177,5 @@ public class SettlementScheduler {
             settlementTaskRepository.save(task);
         }
         log.error("정산 작업 실패 처리 완료. 작업 수: {}, 사유: {}", tasks.size(), reason);
-    }
-
-    /**
-     * 수동 결제취소 차단 처리 (테스트용)
-     */
-    public void lockTasksManually() {
-        log.info("=== 수동 결제취소 차단 처리 시작 ===");
-        lockPreviousWeekTasks();
-    }
-
-    /**
-     * 수동 정산 처리 (테스트용)
-     */
-    public void processSettlementManually() {
-        log.info("=== 수동 정산 처리 시작 ===");
-        processLockedSettlements();
     }
 }
