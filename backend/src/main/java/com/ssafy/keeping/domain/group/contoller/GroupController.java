@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.group.contoller;
 
+import com.ssafy.keeping.domain.group.dto.GroupAddRequestResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
 import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
@@ -56,10 +57,21 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("해당 모임에 추가 신청을 완료했습니다.", HttpStatus.OK.value(), null));
     }
 
+    // 임의 user id로 체킹
+    @GetMapping("/{groupId}/{userId}/add-requests")
+    public ResponseEntity<ApiResponse<List<GroupAddRequestResponseDto>>> getAllGroupAddRequest(
+            @PathVariable Long userId,
+            @PathVariable Long groupId
+    ) {
+        List<GroupAddRequestResponseDto> dtos = groupService.getAllGroupAddRequest(groupId, userId);
+        return ResponseEntity.ok(ApiResponse.success("모임 신청 내역을 조회했습니다.", HttpStatus.OK.value(), dtos));
+    }
+
 //    // TODO: 회원 Principal 적용할 controller,
 //        1. 모임 정보 조회,
 //        2. 모임원 조회
 //        3. 모임 추가 신청
+//        4. 모임 추가 신청 목록 조회
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId

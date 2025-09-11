@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.group.service;
 
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
+import com.ssafy.keeping.domain.group.dto.GroupAddRequestResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
 import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
@@ -145,5 +146,17 @@ public class GroupService {
                 .replace("-", "")
                 .substring(0, 12)
                 .toUpperCase();
+    }
+
+    public List<GroupAddRequestResponseDto> getAllGroupAddRequest(Long groupId, Long customerId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isGroupLeader = groupMemberRepository
+                .existsLeader(groupId, customerId);
+        if (!isGroupLeader)
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        return groupAddRequestRepository.findAllAddRequestInPending(groupId, RequestStatus.PENDING);
     }
 }

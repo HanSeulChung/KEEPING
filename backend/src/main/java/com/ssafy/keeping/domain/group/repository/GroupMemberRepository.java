@@ -20,6 +20,14 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     """)
     boolean existsMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
+    @Query("""
+    select count(gm) > 0
+    from GroupMember gm
+    where gm.group.groupId = :groupId
+      and gm.user.userId  = :userId
+      and gm.isLeader = true
+    """)
+    boolean existsLeader(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Query("""
     select new com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto(
