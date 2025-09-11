@@ -29,7 +29,7 @@ import java.util.Objects;
                 @UniqueConstraint(name="uq_order_per_cat", columnNames={"store_id","category_id","display_order"})
         },
         indexes = {
-                @Index(name="idx_store_active_order", columnList="store_id,active,display_order")
+                @Index(name="idx_store_isActive_order", columnList="store_id, is_active,display_order")
         }
 )
 @SQLDelete(sql = "update menus set deleted_at=now() where menu_id=?")
