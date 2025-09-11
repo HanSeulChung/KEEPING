@@ -5,6 +5,8 @@ import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardPaymentRequ
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyAccountDepositRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,36 +52,39 @@ public class SsafyFinanceApiService {
             String merchantId,
             BigDecimal paymentBalance) {
         
+        // API 헤더 생성
+        SsafyApiHeaderDto header = createCardPaymentHeader(userKey);
+        
+        // 요청 DTO 생성
+        SsafyCardPaymentRequestDto requestDto = SsafyCardPaymentRequestDto.create(
+                header, cardNo, cvc, merchantId, paymentBalance);
+        
+        // HTTP 요청 생성
+        HttpEntity<SsafyCardPaymentRequestDto> requestEntity = createHttpEntity(requestDto);
+        
+        // API 호출
+        String url = baseUrl + "/ssafy/api/v1/edu/creditCard/createCreditCardTransaction";
+        
+        ResponseEntity<SsafyCardPaymentResponseDto> response;
         try {
-            // API 헤더 생성
-            SsafyApiHeaderDto header = createCardPaymentHeader(userKey);
-            
-            // 요청 DTO 생성
-            SsafyCardPaymentRequestDto requestDto = SsafyCardPaymentRequestDto.create(
-                    header, cardNo, cvc, merchantId, paymentBalance);
-            
-            // HTTP 요청 생성
-            HttpEntity<SsafyCardPaymentRequestDto> requestEntity = createHttpEntity(requestDto);
-            
-            // API 호출
-            String url = baseUrl + "/ssafy/api/v1/edu/creditCard/createCreditCardTransaction";
-            ResponseEntity<SsafyCardPaymentResponseDto> response = restTemplate.postForEntity(
-                    url, requestEntity, SsafyCardPaymentResponseDto.class);
-            
-            SsafyCardPaymentResponseDto responseDto = response.getBody();
-            
-            if (responseDto != null && responseDto.isSuccess()) {
-                log.info("카드 결제 성공 - 거래고유번호: {}", responseDto.getRec().getTransactionUniqueNo());
-            } else {
-                log.error("카드 결제 실패 - 응답: {}", responseDto);
-            }
-            
-            return responseDto;
-            
+            response = restTemplate.postForEntity(url, requestEntity, SsafyCardPaymentResponseDto.class);
         } catch (Exception e) {
-            log.error("카드 결제 API 호출 중 오류 발생", e);
-            throw new RuntimeException("카드 결제 처리 중 오류가 발생했습니다.", e);
+            log.error("카드 결제 API 통신 오류", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
+        
+        SsafyCardPaymentResponseDto responseDto = response.getBody();
+        
+        if (responseDto == null || !responseDto.isSuccess()) {
+            String errorMessage = (responseDto != null && responseDto.getHeader() != null) 
+                    ? responseDto.getHeader().getResponseMessage() 
+                    : "응답 없음";
+            log.error("카드 결제 실패 - {}", errorMessage);
+            throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
+        }
+        
+        log.info("카드 결제 성공 - 거래고유번호: {}", responseDto.getRec().getTransactionUniqueNo());
+        return responseDto;
     }
 
     /**
@@ -118,37 +123,40 @@ public class SsafyFinanceApiService {
             BigDecimal transactionBalance,
             String transactionSummary) {
         
+        // API 헤더 생성
+        SsafyApiHeaderDto header = createAccountDepositHeader(userKey);
+        
+        // 요청 DTO 생성
+        SsafyAccountDepositRequestDto requestDto = SsafyAccountDepositRequestDto.create(
+                header, accountNo, transactionBalance, transactionSummary);
+        
+        // HTTP 요청 생성
+        HttpEntity<SsafyAccountDepositRequestDto> requestEntity = createHttpEntity(requestDto);
+        
+        // API 호출
+        String url = baseUrl + "/ssafy/api/v1/edu/demandDeposit/updateDemandDepositAccountDeposit";
+        
+        ResponseEntity<SsafyAccountDepositResponseDto> response;
         try {
-            // API 헤더 생성
-            SsafyApiHeaderDto header = createAccountDepositHeader(userKey);
-            
-            // 요청 DTO 생성
-            SsafyAccountDepositRequestDto requestDto = SsafyAccountDepositRequestDto.create(
-                    header, accountNo, transactionBalance, transactionSummary);
-            
-            // HTTP 요청 생성
-            HttpEntity<SsafyAccountDepositRequestDto> requestEntity = createHttpEntity(requestDto);
-            
-            // API 호출
-            String url = baseUrl + "/ssafy/api/v1/edu/demandDeposit/updateDemandDepositAccountDeposit";
-            ResponseEntity<SsafyAccountDepositResponseDto> response = restTemplate.postForEntity(
-                    url, requestEntity, SsafyAccountDepositResponseDto.class);
-            
-            SsafyAccountDepositResponseDto responseDto = response.getBody();
-            
-            if (responseDto != null && responseDto.isSuccess()) {
-                log.info("계좌 입금 성공 - 거래고유번호: {}, 계좌번호: {}, 금액: {}", 
-                        responseDto.getRec().getTransactionUniqueNo(), accountNo, transactionBalance);
-            } else {
-                log.error("계좌 입금 실패 - 응답: {}", responseDto);
-            }
-            
-            return responseDto;
-            
+            response = restTemplate.postForEntity(url, requestEntity, SsafyAccountDepositResponseDto.class);
         } catch (Exception e) {
-            log.error("계좌 입금 API 호출 중 오류 발생", e);
-            throw new RuntimeException("계좌 입금 처리 중 오류가 발생했습니다.", e);
+            log.error("계좌 입금 API 통신 오류", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
+        
+        SsafyAccountDepositResponseDto responseDto = response.getBody();
+        
+        if (responseDto == null || !responseDto.isSuccess()) {
+            String errorMessage = (responseDto != null && responseDto.getHeader() != null) 
+                    ? responseDto.getHeader().getResponseMessage() 
+                    : "응답 없음";
+            log.error("계좌 입금 실패 - {}", errorMessage);
+            throw new CustomException(ErrorCode.ACCOUNT_DEPOSIT_FAILED);
+        }
+        
+        log.info("계좌 입금 성공 - 거래고유번호: {}, 계좌번호: {}, 금액: {}", 
+                responseDto.getRec().getTransactionUniqueNo(), accountNo, transactionBalance);
+        return responseDto;
     }
 
     /**
