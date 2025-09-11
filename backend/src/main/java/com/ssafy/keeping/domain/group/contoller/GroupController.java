@@ -46,7 +46,20 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("해당 모임의 모임원들이 조회되었습니다.", HttpStatus.OK.value(), dtos));
     }
 
-//    // TODO: 회원 Principal 적용할 controller, 모임 정보 조회, 모임원 조회
+    // 임의 user id로 체킹
+    @PostMapping("/{groupId}/{userId}/add-requests")
+    public ResponseEntity<ApiResponse<Void>> createGroupAddRequest(
+            @PathVariable Long userId,
+            @PathVariable Long groupId
+    ) {
+        groupService.createGroupAddRequest(groupId, userId);
+        return ResponseEntity.ok(ApiResponse.success("해당 모임에 추가 신청을 완료했습니다.", HttpStatus.OK.value(), null));
+    }
+
+//    // TODO: 회원 Principal 적용할 controller,
+//        1. 모임 정보 조회,
+//        2. 모임원 조회
+//        3. 모임 추가 신청
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId

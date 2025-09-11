@@ -1,11 +1,14 @@
 package com.ssafy.keeping.domain.group.service;
 
+import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
 import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
 import com.ssafy.keeping.domain.group.model.Group;
+import com.ssafy.keeping.domain.group.model.GroupAddRequest;
 import com.ssafy.keeping.domain.group.model.GroupMember;
 import com.ssafy.keeping.domain.group.model.TmpUser;
+import com.ssafy.keeping.domain.group.repository.GroupAddRequestRepository;
 import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;
 import com.ssafy.keeping.domain.group.repository.TmpUserRepository;
@@ -26,6 +29,7 @@ public class GroupService {
     private final TmpUserRepository userRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final GroupAddRequestRepository groupAddRequestRepository;
 
     public GroupResponseDto createGroup(GroupRequestDto requestDto) {
         // TODO: 회원부분 연동되면 바꿔야하는 부분
@@ -102,6 +106,37 @@ public class GroupService {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
         return groupMemberRepository.findAllGroupMembers(groupId);
+    }
+
+    public void createGroupAddRequest(Long groupId, Long customerId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isGroupMember = groupMemberRepository
+                .existsMember(groupId, customerId);
+        if (isGroupMember)
+            throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
+
+        TmpUser customer = userRepository.findById(customerId).orElseThrow(
+                () -> new CustomException(ErrorCode.USER_NOT_FOUND)
+        );
+
+        if ("OWNER".equalsIgnoreCase(customer.getRole())) {
+            throw new CustomException(ErrorCode.INVALID_ROLE);
+        }
+
+        boolean alreadyRequest = groupAddRequestRepository
+                .existsRequest(groupId, customerId, RequestStatus.PENDING);
+
+        if (alreadyRequest) throw new CustomException(ErrorCode.ALREADY_GROUP_REQUEST);
+
+        groupAddRequestRepository.save(
+                GroupAddRequest.builder()
+                        .user(customer)
+                        .group(group)
+                        .build()
+        );
+
     }
 
     private String makeGroupCode() {
