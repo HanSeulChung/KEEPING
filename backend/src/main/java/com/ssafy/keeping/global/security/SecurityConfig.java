@@ -77,7 +77,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // 인증 없이 접근 가능한 URL, 우선 회원 기능을 추가하고 난 뒤 나누기
                         .requestMatchers(
-                               "/stores/**"
+                               "/stores/**", "/groups/**"
                         ).permitAll()
                         // 가게 주인만 접근 가능한 URL
 //                        .requestMatchers("/api/admin/**").hasRole("OWNER")
