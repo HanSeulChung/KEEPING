@@ -31,7 +31,7 @@ public class SsafyFinanceApiService {
     // GET, POST 등 다양한 방식의 HTTP 요청을 보내고, 그 응답을 받아오는 모든 과정을 담당
     private final RestTemplate restTemplate;
     
-    @Value("${ssafy.finance.api.base-url:https://finopenapi.ssafy.io}")
+    @Value("${ssafy.finance.api.base-url}")
     private String baseUrl;
     
     @Value("${ssafy.finance.api.key}")
@@ -66,9 +66,11 @@ public class SsafyFinanceApiService {
         String url = baseUrl + "/ssafy/api/v1/edu/creditCard/createCreditCardTransaction";
         
         ResponseEntity<SsafyCardPaymentResponseDto> response;
+
         try {
             response = restTemplate.postForEntity(url, requestEntity, SsafyCardPaymentResponseDto.class);
         } catch (Exception e) {
+            // 여기서 연결 처리를 해주는게 맞다 생각해서 try-catch로 잡았음
             log.error("카드 결제 API 통신 오류", e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
@@ -140,6 +142,7 @@ public class SsafyFinanceApiService {
         try {
             response = restTemplate.postForEntity(url, requestEntity, SsafyAccountDepositResponseDto.class);
         } catch (Exception e) {
+            // 여기서 연결 처리를 해주는게 맞다 생각해서 try-catch로 잡았음
             log.error("계좌 입금 API 통신 오류", e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
@@ -182,7 +185,9 @@ public class SsafyFinanceApiService {
      */
     private <T> HttpEntity<T> createHttpEntity(T requestDto) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.APPLICATION_JSON); // JSON으로 보낼 것이다
         return new HttpEntity<>(requestDto, headers);
+        // 여기서의 headers는 진짜 header이고,
+        // requestDto에 들어있는 header는 단지 이름이 header임
     }
 }

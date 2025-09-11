@@ -16,7 +16,7 @@ public interface SettlementTaskRepository extends JpaRepository<SettlementTask, 
 
     /**
      * 이전 주의 PENDING 상태 정산 작업 조회 (월요일 07:30 실행용)
-     * 지난 주 월요일 00:00부터 일요일 23:59까지의 PENDING 상태 작업
+     * 지난 주 월요일 07:30부터 월요일 07:30까지의 PENDING 상태 작업
      */
     @Query("SELECT st FROM SettlementTask st WHERE st.status = 'PENDING' " +
            "AND st.createdAt >= :weekStart AND st.createdAt < :weekEnd ORDER BY st.createdAt ASC")
