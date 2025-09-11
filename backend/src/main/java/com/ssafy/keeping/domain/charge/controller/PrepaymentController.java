@@ -38,28 +38,10 @@ public class PrepaymentController {
         log.info("선결제 요청 수신 - 가게ID: {}, 사용자ID: {}, 금액: {}", 
                 storeId, requestDto.getUserId(), requestDto.getPaymentBalance());
 
-        try {
-            PrepaymentResponseDto responseDto = prepaymentService.processPayment(storeId, requestDto);
-            
-            if (responseDto.isSuccess()) {
-                log.info("선결제 처리 성공 - 거래ID: {}", responseDto.getData().getTransactionId());
-                return ResponseEntity.ok(ApiResponse.success("선결제가 성공적으로 완료되었습니다.", HttpStatus.OK, responseDto));
-            } else {
-                log.warn("선결제 처리 실패 - 사유: {}", responseDto.getMessage());
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(responseDto.getMessage(), HttpStatus.BAD_REQUEST));
-            }
-            
-        } catch (IllegalArgumentException e) {
-            log.error("선결제 요청 검증 실패", e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST));
-                    
-        } catch (Exception e) {
-            log.error("선결제 처리 중 서버 오류 발생", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("선결제 처리 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
-        }
+        PrepaymentResponseDto responseDto = prepaymentService.processPayment(storeId, requestDto);
+        
+        log.info("선결제 처리 성공 - 거래ID: {}", responseDto.getData().getTransactionId());
+        return ResponseEntity.ok(ApiResponse.success("선결제가 성공적으로 완료되었습니다.", HttpStatus.OK, responseDto));
     }
 
 }

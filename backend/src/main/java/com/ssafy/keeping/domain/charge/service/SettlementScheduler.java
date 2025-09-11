@@ -3,6 +3,8 @@ package com.ssafy.keeping.domain.charge.service;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
 import com.ssafy.keeping.domain.charge.entity.*;
 import com.ssafy.keeping.domain.charge.repository.*;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -123,18 +125,17 @@ public class SettlementScheduler {
                 return;
             }
             
-            // 2. 점주 정보 조회
+            // 2. 점주 정보 조회 - CustomException 활용
             Owner owner = ownerRepository.findById(store.getOwnerId())
-                    .orElseThrow(() -> new IllegalArgumentException("점주를 찾을 수 없습니다. ID: " + store.getOwnerId()));
+                    .orElseThrow(() -> new CustomException(ErrorCode.OWNER_NOT_FOUND));
             
             if (owner.getUserKey() == null || owner.getUserKey().trim().isEmpty()) {
                 log.error("점주의 userKey가 없습니다. 점주 ID: {}", store.getOwnerId());
                 markTasksAsFailed(tasks, "점주의 SSAFY 은행 계정이 없습니다.");
-                // 실패했을 때, 각 회원들에게 다시 입금하는 과정이 필요함 (to do list)
                 return;
             }
             
-            // 3. 외부 API 호출 (계좌 입금)
+            // 3. 외부 API 호출 (계좌 입금) - CustomException이 자동으로 던져짐
             String transactionSummary = String.format("정산 입금 - %s", store.getStoreName());
             SsafyAccountDepositResponseDto response = ssafyFinanceApiService.requestAccountDeposit(
                     owner.getUserKey(),
@@ -143,19 +144,16 @@ public class SettlementScheduler {
                     transactionSummary
             );
             
-            // 4. 정산 결과 처리
-            if (response.isSuccess()) {
-                markTasksAsCompleted(tasks);
-                log.info("가게 정산 완료 - 가게: {}, 금액: {}, 거래번호: {}", 
-                        store.getStoreName(), totalAmount, response.getRec().getTransactionUniqueNo());
-            } else {
-                markTasksAsFailed(tasks, "계좌 입금 실패: " + response.getHeader().getResponseMessage());
-                log.error("가게 정산 실패 - 가게: {}, 사유: {}", 
-                        store.getStoreName(), response.getHeader().getResponseMessage());
-            }
+            // 4. 정산 완료 처리
+            markTasksAsCompleted(tasks);
+            log.info("가게 정산 완료 - 가게: {}, 금액: {}, 거래번호: {}", 
+                    store.getStoreName(), totalAmount, response.getRec().getTransactionUniqueNo());
             
+        } catch (CustomException e) {
+            log.error("가게 정산 처리 중 비즈니스 오류 - 가게: {}, 에러: {}", store.getStoreName(), e.getMessage());
+            markTasksAsFailed(tasks, e.getMessage());
         } catch (Exception e) {
-            log.error("가게 정산 처리 중 오류 발생 - 가게: {}", store.getStoreName(), e);
+            log.error("가게 정산 처리 중 시스템 오류 - 가게: {}", store.getStoreName(), e);
             markTasksAsFailed(tasks, "정산 처리 중 시스템 오류 발생");
         }
     }

@@ -6,6 +6,8 @@ import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto.Prepay
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
 import com.ssafy.keeping.domain.charge.entity.*;
 import com.ssafy.keeping.domain.charge.repository.*;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,42 +35,31 @@ public class PrepaymentService {
      * 선결제 처리
      */
     public PrepaymentResponseDto processPayment(Long storeId, PrepaymentRequestDto requestDto) {
-        try {
-            // 1. 사용자 정보 조회 및 검증
-            Customer customer = findCustomerByUserId(requestDto.getUserId());
-            String userKey = customer.getUserKey();
-            if (userKey == null || userKey.trim().isEmpty()) {
-                return PrepaymentResponseDto.fail("SSAFY 은행에 등록되지 않은 사용자입니다.");
-            }
-
-            // 2. 가게 정보 조회 및 검증
-            Store store = findStoreByStoreId(storeId);
-            String merchantId = String.valueOf(store.getMerchantId());
-
-            // 3. 사용자의 개인 지갑 조회 또는 생성
-            Wallet wallet = findOrCreateIndividualWallet(customer);
-
-            // 4. 외부 API 호출 (카드 결제)
-            SsafyCardPaymentResponseDto apiResponse = ssafyFinanceApiService.requestCardPayment(
-                    userKey,
-                    requestDto.getCardNo(),
-                    requestDto.getCvc(),
-                    merchantId,
-                    requestDto.getPaymentBalance()
-            );
-
-            if (!apiResponse.isSuccess()) {
-                log.error("카드 결제 API 실패 - 응답: {}", apiResponse.getHeader().getResponseMessage());
-                return PrepaymentResponseDto.fail("카드 결제에 실패했습니다: " + apiResponse.getHeader().getResponseMessage());
-            }
-
-            // 5. DB 업데이트 (트랜잭션 처리)
-            return updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
-
-        } catch (Exception e) {
-            log.error("선결제 처리 중 오류 발생", e);
-            return PrepaymentResponseDto.fail("선결제 처리 중 오류가 발생했습니다.");
+        // 1. 사용자 정보 조회 및 검증
+        Customer customer = findCustomerByUserId(requestDto.getUserId());
+        String userKey = customer.getUserKey();
+        if (userKey == null || userKey.trim().isEmpty()) {
+            throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
         }
+
+        // 2. 가게 정보 조회 및 검증
+        Store store = findStoreByStoreId(storeId);
+        String merchantId = String.valueOf(store.getMerchantId());
+
+        // 3. 사용자의 개인 지갑 조회 또는 생성
+        Wallet wallet = findOrCreateIndividualWallet(customer);
+
+        // 4. 외부 API 호출 (카드 결제) - CustomException이 자동으로 던져짐
+        SsafyCardPaymentResponseDto apiResponse = ssafyFinanceApiService.requestCardPayment(
+                userKey,
+                requestDto.getCardNo(),
+                requestDto.getCvc(),
+                merchantId,
+                requestDto.getPaymentBalance()
+        );
+
+        // 5. DB 업데이트 (트랜잭션 처리)
+        return updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
     }
 
     /**
@@ -76,7 +67,7 @@ public class PrepaymentService {
      */
     private Customer findCustomerByUserId(Long userId) {
         return customerRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다. ID: " + userId));
+                .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
     }
 
     /**
@@ -84,7 +75,7 @@ public class PrepaymentService {
      */
     private Store findStoreByStoreId(Long storeId) {
         return storeRepository.findById(storeId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 가게입니다. ID: " + storeId));
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
     /**
