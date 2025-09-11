@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.group.service;
 
+import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
 import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
 import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
 import com.ssafy.keeping.domain.group.model.Group;
@@ -13,6 +14,8 @@ import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -72,12 +75,12 @@ public class GroupService {
         );
     }
 
-    public GroupResponseDto getGroup(Long groupId, Long customerId) {
+    public GroupResponseDto getGroup(Long groupId, Long userId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         boolean isGroupMember = groupMemberRepository
-                                .existsByGroup_GroupIdAndUser_CustomerId(groupId, customerId);
+                                .existsByGroup_GroupIdAndUser_UserId(groupId, userId);
         if (!isGroupMember)
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
@@ -86,6 +89,19 @@ public class GroupService {
                 group.getGroupDescription(), group.getGroupCode(),
                 group.getGroupId() // TODO: 지갑 ID로 교체
         );
+    }
+
+    public List<GroupMemberResponseDto> getGroupMembers(Long groupId, Long customerId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isGroupMember = groupMemberRepository
+                .existsByGroup_GroupIdAndUser_UserId(groupId, customerId);
+
+        if (!isGroupMember)
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+
+        return groupMemberRepository.findAllGroupMembers(groupId);
     }
 
     private String makeGroupCode() {
