@@ -1,9 +1,7 @@
 package com.ssafy.keeping.domain.group.contoller;
 
-import com.ssafy.keeping.domain.group.dto.GroupAddRequestResponseDto;
-import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
-import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
-import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
+import com.ssafy.keeping.domain.group.constant.RequestStatus;
+import com.ssafy.keeping.domain.group.dto.*;
 import com.ssafy.keeping.domain.group.service.GroupService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -59,12 +57,24 @@ public class GroupController {
 
     // 임의 user id로 체킹
     @GetMapping("/{groupId}/{userId}/add-requests")
-    public ResponseEntity<ApiResponse<List<GroupAddRequestResponseDto>>> getAllGroupAddRequest(
+    public ResponseEntity<ApiResponse<List<AddRequestResponseDto>>> getAllGroupAddRequest(
             @PathVariable Long userId,
             @PathVariable Long groupId
     ) {
-        List<GroupAddRequestResponseDto> dtos = groupService.getAllGroupAddRequest(groupId, userId);
+        List<AddRequestResponseDto> dtos = groupService.getAllGroupAddRequest(groupId, userId);
         return ResponseEntity.ok(ApiResponse.success("모임 신청 내역을 조회했습니다.", HttpStatus.OK.value(), dtos));
+    }
+
+    // 임의 user id로 체킹
+    @PatchMapping("/{groupId}/{userId}/add-requests")
+    public ResponseEntity<ApiResponse<AddRequestResponseDto>> updateAddRequestStatus(
+            @PathVariable Long userId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody AddRequestDecisionDto request
+    ) {
+        AddRequestResponseDto dto = groupService.updateAddRequestStatus(groupId, userId, request);
+        String message = String.format("모임 추가 신청 %s 성공", dto.status() == RequestStatus.ACCEPT ? "승인" : "거절");
+        return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dto));
     }
 
 //    // TODO: 회원 Principal 적용할 controller,
@@ -72,6 +82,7 @@ public class GroupController {
 //        2. 모임원 조회
 //        3. 모임 추가 신청
 //        4. 모임 추가 신청 목록 조회
+//        5. 모임 추가 신청 승인 및 거절
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId

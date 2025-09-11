@@ -1,10 +1,7 @@
 package com.ssafy.keeping.domain.group.service;
 
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
-import com.ssafy.keeping.domain.group.dto.GroupAddRequestResponseDto;
-import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
-import com.ssafy.keeping.domain.group.dto.GroupRequestDto;
-import com.ssafy.keeping.domain.group.dto.GroupResponseDto;
+import com.ssafy.keeping.domain.group.dto.*;
 import com.ssafy.keeping.domain.group.model.Group;
 import com.ssafy.keeping.domain.group.model.GroupAddRequest;
 import com.ssafy.keeping.domain.group.model.GroupMember;
@@ -15,9 +12,11 @@ import com.ssafy.keeping.domain.group.repository.GroupRepository;
 import com.ssafy.keeping.domain.group.repository.TmpUserRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -148,7 +147,7 @@ public class GroupService {
                 .toUpperCase();
     }
 
-    public List<GroupAddRequestResponseDto> getAllGroupAddRequest(Long groupId, Long customerId) {
+    public List<AddRequestResponseDto> getAllGroupAddRequest(Long groupId, Long customerId) {
         Group group = groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
@@ -158,5 +157,50 @@ public class GroupService {
             throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
 
         return groupAddRequestRepository.findAllAddRequestInPending(groupId, RequestStatus.PENDING);
+    }
+
+    @Transactional
+    public AddRequestResponseDto updateAddRequestStatus(Long groupId, Long customerId, @Valid AddRequestDecisionDto request) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        Long groupAddRequestId = request.getGroupAddRequestId();
+
+        GroupAddRequest groupAddRequest = groupAddRequestRepository.findById(groupAddRequestId)
+                .orElseThrow(
+                () -> new CustomException(ErrorCode.ADD_REQUEST_NOT_FOUND)
+        );
+
+
+        TmpUser customer = userRepository.findById(groupAddRequest.getUser().getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        boolean isGroupLeader = groupMemberRepository
+                .existsLeader(groupId, customerId);
+        if (!isGroupLeader)
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+
+        if (groupAddRequest.getRequestStatus() != RequestStatus.PENDING)
+            throw new CustomException(ErrorCode.ALREADY_PROCESS_REQUEST);
+
+        RequestStatus changeStatus = request.getIsAccept() == Boolean.TRUE
+                ? RequestStatus.ACCEPT : RequestStatus.REJECT;
+        groupAddRequest.changeStatus(changeStatus);
+
+        if (groupAddRequest.getRequestStatus() == RequestStatus.ACCEPT) {
+            groupMemberRepository.save(
+                    GroupMember.builder()
+                            .group(group)
+                            .isLeader(false)
+                            .user(customer)
+                            .build()
+            );
+        }
+
+        return new AddRequestResponseDto(
+            groupAddRequest.getGroupAddRequestId(), groupAddRequest.getUser().getName(),
+                groupAddRequest.getRequestStatus()
+        );
     }
 }
