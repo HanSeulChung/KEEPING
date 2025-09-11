@@ -80,7 +80,7 @@ public class GroupService {
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         boolean isGroupMember = groupMemberRepository
-                                .existsByGroup_GroupIdAndUser_UserId(groupId, userId);
+                                .existsMember(groupId, userId);
         if (!isGroupMember)
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
@@ -96,7 +96,7 @@ public class GroupService {
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         boolean isGroupMember = groupMemberRepository
-                .existsByGroup_GroupIdAndUser_UserId(groupId, customerId);
+                .existsMember(groupId, customerId);
 
         if (!isGroupMember)
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
