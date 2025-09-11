@@ -43,7 +43,8 @@ public class SettlementTask {
         PENDING,    // 대기 중 (3일 후 처리 예정)
         COMPLETED,  // 정산 완료
         CANCELED,   // 취소됨 (결제 취소로 인해)
-        FAILED      // 정산 실패
+        FAILED,      // 정산 실패
+        LOCKED // 청구서 발행한 뒤 상태
     }
 
     // 정산 완료 처리
@@ -61,6 +62,12 @@ public class SettlementTask {
     // 정산 실패 처리
     public void markAsFailed() {
         this.status = Status.FAILED;
+        this.processedAt = LocalDateTime.now();
+    }
+
+    // 정산 잠금 처리 (결제취소 불가)
+    public void markAsLocked() {
+        this.status = Status.LOCKED;
         this.processedAt = LocalDateTime.now();
     }
 
