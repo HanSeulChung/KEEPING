@@ -2,7 +2,9 @@ package com.ssafy.keeping.domain.charge.service;
 
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyApiHeaderDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardPaymentRequestDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyAccountDepositRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -105,6 +107,66 @@ public class SsafyFinanceApiService {
         String dateTimeStr = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         long counter = transactionCounter.incrementAndGet() % 1000000; // 6자리로 제한
         return String.format("%s%06d", dateTimeStr, counter);
+    }
+
+    /**
+     * 계좌 입금 API 호출 (정산용)
+     */
+    public SsafyAccountDepositResponseDto requestAccountDeposit(
+            String userKey,
+            String accountNo,
+            BigDecimal transactionBalance,
+            String transactionSummary) {
+        
+        try {
+            // API 헤더 생성
+            SsafyApiHeaderDto header = createAccountDepositHeader(userKey);
+            
+            // 요청 DTO 생성
+            SsafyAccountDepositRequestDto requestDto = SsafyAccountDepositRequestDto.create(
+                    header, accountNo, transactionBalance, transactionSummary);
+            
+            // HTTP 요청 생성
+            HttpEntity<SsafyAccountDepositRequestDto> requestEntity = createHttpEntity(requestDto);
+            
+            // API 호출
+            String url = baseUrl + "/ssafy/api/v1/edu/demandDeposit/updateDemandDepositAccountDeposit";
+            ResponseEntity<SsafyAccountDepositResponseDto> response = restTemplate.postForEntity(
+                    url, requestEntity, SsafyAccountDepositResponseDto.class);
+            
+            SsafyAccountDepositResponseDto responseDto = response.getBody();
+            
+            if (responseDto != null && responseDto.isSuccess()) {
+                log.info("계좌 입금 성공 - 거래고유번호: {}, 계좌번호: {}, 금액: {}", 
+                        responseDto.getRec().getTransactionUniqueNo(), accountNo, transactionBalance);
+            } else {
+                log.error("계좌 입금 실패 - 응답: {}", responseDto);
+            }
+            
+            return responseDto;
+            
+        } catch (Exception e) {
+            log.error("계좌 입금 API 호출 중 오류 발생", e);
+            throw new RuntimeException("계좌 입금 처리 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    /**
+     * 계좌 입금용 API 헤더 생성
+     */
+    private SsafyApiHeaderDto createAccountDepositHeader(String userKey) {
+        LocalDateTime now = LocalDateTime.now();
+        String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
+        
+        return SsafyApiHeaderDto.createAccountDepositHeader(
+                transmissionDate,
+                transmissionTime,
+                institutionTransactionUniqueNo,
+                apiKey,
+                userKey
+        );
     }
 
     /**
