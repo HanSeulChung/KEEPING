@@ -10,6 +10,8 @@
 # Gradle / 빌드 산출물
 .gradle
 build/
+!build/libs/
+!build/libs/*.jar
 out/
 
 # 로그/잡파일
