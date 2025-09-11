@@ -72,6 +72,22 @@ public class GroupService {
         );
     }
 
+    public GroupResponseDto getGroup(Long groupId, Long customerId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isGroupMember = groupMemberRepository
+                                .existsByGroup_GroupIdAndUser_CustomerId(groupId, customerId);
+        if (!isGroupMember)
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+
+        return new GroupResponseDto(
+                group.getGroupId(), group.getGroupName(),
+                group.getGroupDescription(), group.getGroupCode(),
+                group.getGroupId() // TODO: 지갑 ID로 교체
+        );
+    }
+
     private String makeGroupCode() {
         return UUID.randomUUID()
                 .toString()
