@@ -62,6 +62,10 @@ public class Customer {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column
+    private String userKey;
+
+
     // 연관관계
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Wallet> wallets;
