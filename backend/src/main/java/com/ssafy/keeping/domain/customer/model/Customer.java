@@ -40,7 +40,7 @@ public class Customer {
     @Column(name = "phone_number", nullable = false, length = 50)
     private String phoneNumber;
 
-    @Column
+    @Column(nullable = false)
     private LocalDate birth;
 
     @Column(nullable = false, length = 50)
@@ -67,22 +67,10 @@ public class Customer {
     @Column(name = "phone_verified_at")
     private LocalDateTime phoneVerifiedAt;
 
-    public void verifyPhone() {
-        this.phoneVerifiedAt = LocalDateTime.now();
-    }
+    @Column(name = "user_key")
+    private String userKey;
 
-    public static Customer of(String providerId, ProviderType providerType, String email, String phoneNumber,
-                              LocalDate birth, String name, Gender gender, String imgUrl) {
-        return Customer.builder()
-                .providerId(providerId)
-                .providerType(providerType)
-                .email(email)
-                .phoneNumber(phoneNumber)
-                .birth(birth)
-                .name(name)
-                .gender(gender)
-                .imgUrl(imgUrl)
-                .build();
-    }
-
+//    public void verifyPhone() {
+//        this.phoneVerifiedAt = LocalDateTime.now();
+//    }
 }

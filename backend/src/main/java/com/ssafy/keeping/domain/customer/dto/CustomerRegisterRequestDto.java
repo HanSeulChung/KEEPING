@@ -24,4 +24,9 @@ public class CustomerRegisterRequestDto {
     @NotBlank
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private Long paymentPin;
+
+    @NotBlank
+    private String imgUrl;
+
+    private String userKey;
 }

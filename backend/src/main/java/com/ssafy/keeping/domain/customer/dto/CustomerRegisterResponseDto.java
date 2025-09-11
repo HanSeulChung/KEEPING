@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 @Getter
 public class CustomerRegisterResponseDto {
-
+    private Long customerId;
     private String providerId;
     private ProviderType providerType;
     private String name;
@@ -21,16 +21,19 @@ public class CustomerRegisterResponseDto {
     private LocalDate birth;
     private Gender gender;
     private String imgUrl;
+    private LocalDateTime phoneVerifiedAt;
 
     public static CustomerRegisterResponseDto register(Customer customer) {
         return CustomerRegisterResponseDto.builder()
                 .providerId(customer.getProviderId())
                 .providerType(customer.getProviderType())
+                .phoneNumber(customer.getPhoneNumber())
                 .name(customer.getName())
                 .email(customer.getEmail())
                 .gender(customer.getGender())
                 .birth(customer.getBirth())
                 .imgUrl(customer.getImgUrl())
+                .phoneVerifiedAt(customer.getPhoneVerifiedAt())
                 .build();
     }
 }
