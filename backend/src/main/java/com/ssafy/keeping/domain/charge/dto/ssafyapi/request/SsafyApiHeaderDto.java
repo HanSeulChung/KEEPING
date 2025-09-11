@@ -15,7 +15,7 @@ public class SsafyApiHeaderDto {
     private String fintechAppNo;
     private String apiServiceCode;
     private String institutionTransactionUniqueNo;
-    private String apiKey;
+    private String API_KEY;
     private String userKey;
 
     public static SsafyApiHeaderDto createCardPaymentHeader(
@@ -33,7 +33,7 @@ public class SsafyApiHeaderDto {
                 .fintechAppNo("001")
                 .apiServiceCode("createCreditCardTransaction")
                 .institutionTransactionUniqueNo(institutionTransactionUniqueNo)
-                .apiKey(apiKey)
+                .API_KEY(apiKey)
                 .userKey(userKey)
                 .build();
     }
@@ -53,7 +53,7 @@ public class SsafyApiHeaderDto {
                 .fintechAppNo("001")
                 .apiServiceCode("updateDemandDepositAccountDeposit")
                 .institutionTransactionUniqueNo(institutionTransactionUniqueNo)
-                .apiKey(apiKey)
+                .API_KEY(apiKey)
                 .userKey(userKey)
                 .build();
     }
