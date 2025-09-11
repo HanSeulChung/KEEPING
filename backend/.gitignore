@@ -47,4 +47,6 @@ application.yml
 CLAUDE.md
 SSAFY_ACCURENCY_API.md
 data_erd.md
+todoList.md
+card_payment.md
 .env
