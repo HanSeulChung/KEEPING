@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   reverse-proxy:
     image: nginx:1.27-alpine
@@ -26,7 +24,7 @@ services:
     restart: always
     env_file:
       - ./env/backend.prod.env
-      - ./etc/keeping/env/redis.prod.env
+      - ./env/redis.prod.env
     expose:
       - "8080"
     depends_on:
