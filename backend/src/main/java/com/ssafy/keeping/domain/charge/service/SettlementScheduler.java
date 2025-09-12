@@ -50,12 +50,14 @@ public class SettlementScheduler {
                     .withHour(7).withMinute(30).withSecond(0).withNano(0);
             LocalDateTime lastWeekMondayBilling = thisWeekMondayBilling.minusWeeks(1);
             
+//            log.info("청구서 발행 주기 범위: {} ~ {}", lastWeekMondayBilling, thisWeekMondayBilling);
             log.info("청구서 발행 주기 범위: {} ~ {}", lastWeekMondayBilling, thisWeekMondayBilling);
-            
+
             // 2. 해당 범위의 PENDING 상태 작업 조회
             List<SettlementTask> pendingTasks = settlementTaskRepository
                     .findPendingTasksFromPreviousWeek(lastWeekMondayBilling, thisWeekMondayBilling);
-            
+
+
             if (pendingTasks.isEmpty()) {
                 log.info("LOCKED로 변경할 작업이 없습니다.");
                 return;
