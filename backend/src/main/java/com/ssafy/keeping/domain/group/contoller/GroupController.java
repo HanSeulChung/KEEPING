@@ -26,6 +26,16 @@ public class GroupController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success( "모임이 생성되었습니다.", HttpStatus.CREATED.value(), dto));
     }
 
+    @GetMapping()
+    public ResponseEntity<ApiResponse<List<GroupMaskingResponseDto>>> getSearchGroup(
+            @RequestParam String name
+    ) {
+        List<GroupMaskingResponseDto> dtos = groupService.getSearchGroup(name);
+        String message = dtos.size() == 0 ?
+                "해당 이름으로 조회되는 모임이 존재하지 않습니다." : "해당 모임이 조회되었습니다.";
+        return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dtos));
+    }
+
     // 임의 user id로 체킹
     @GetMapping("/{groupId}/{userId}")
     public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
@@ -77,12 +87,25 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dto));
     }
 
+    // 임의 user id로 체킹
+    @PostMapping("/{groupId}/{userId}/entrance")
+    public ResponseEntity<ApiResponse<GroupResponseDto>> createGroupMember(
+            @PathVariable Long userId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupEntranceRequestDto requestDto
+    ) {
+        GroupResponseDto dto = groupService.createGroupMember(groupId, userId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("해당 모임에 입장을 완료했습니다.", HttpStatus.OK.value(), dto));
+    }
+
 //    // TODO: 회원 Principal 적용할 controller,
 //        1. 모임 정보 조회,
 //        2. 모임원 조회
 //        3. 모임 추가 신청
 //        4. 모임 추가 신청 목록 조회
 //        5. 모임 추가 신청 승인 및 거절
+//        6. 모임 입장(모임 코드를 이용하여)
+//        7. 모임 검색 (와일드 카드 X)
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId

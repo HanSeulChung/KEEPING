@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -202,5 +203,54 @@ public class GroupService {
             groupAddRequest.getGroupAddRequestId(), groupAddRequest.getUser().getName(),
                 groupAddRequest.getRequestStatus()
         );
+    }
+
+    public GroupResponseDto createGroupMember(Long groupId, Long userId, GroupEntranceRequestDto requestDto) {
+        Group group = groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        boolean isGroupMember = groupMemberRepository
+                .existsMember(groupId, userId);
+        if (isGroupMember) {
+            return new GroupResponseDto(
+                    group.getGroupId(), group.getGroupName(),
+                    group.getGroupDescription(), group.getGroupCode(),
+                    group.getGroupId());// TODO: 지갑 ID로 교체
+        }
+
+        /* TODO: 복사해서 줄때 복사 날짜 시간을 접미사로 얹어서 주면,
+            일정 시간이 지나면 안되게도 할 건지 논의 필요
+        * */
+        String groupCode = groupRepository.findGroupCodeById(groupId);
+        if (!Objects.equals(groupCode, requestDto.getInviteCode()))
+            throw new CustomException(ErrorCode.CODE_NOT_MATCH);
+
+        TmpUser user = userRepository.findById(userId).orElseThrow(
+                () -> new CustomException(ErrorCode.USER_NOT_FOUND)
+        );
+
+        if ("OWNER".equalsIgnoreCase(user.getRole())) {
+            throw new CustomException(ErrorCode.INVALID_ROLE);
+        }
+
+        groupMemberRepository.save(
+                GroupMember.builder()
+                        .group(group)
+                        .isLeader(false)
+                        .user(user)
+                        .build()
+        );
+
+        return new GroupResponseDto(
+                group.getGroupId(), group.getGroupName(),
+                group.getGroupDescription(), group.getGroupCode(),
+                group.getGroupId() // TODO: 지갑 ID로 교체
+        );
+
+    }
+
+    public List<GroupMaskingResponseDto> getSearchGroup(String name) {
+        // TODO: 고객만 모임을 검색할 수 있게 change
+        return groupRepository.findGroupsByName(name);
     }
 }
