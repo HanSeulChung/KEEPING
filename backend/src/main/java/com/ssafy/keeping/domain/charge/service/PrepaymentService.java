@@ -2,7 +2,6 @@ package com.ssafy.keeping.domain.charge.service;
 
 import com.ssafy.keeping.domain.charge.dto.request.PrepaymentRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto;
-import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto.PrepaymentData;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
@@ -148,7 +147,7 @@ public class PrepaymentService {
         // 5. 응답 생성
         BigDecimal updatedBalance = balance.getBalance();
         
-        PrepaymentData responseData = PrepaymentData.builder()
+        return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .storeId(store.getStoreId())
@@ -157,7 +156,5 @@ public class PrepaymentService {
                 .transactionTime(transaction.getCreatedAt())
                 .remainingBalance(updatedBalance)
                 .build();
-
-        return PrepaymentResponseDto.success(responseData);
     }
 }
