@@ -248,4 +248,9 @@ public class GroupService {
         );
 
     }
+
+    public List<GroupMaskingResponseDto> getSearchGroup(String name) {
+        // TODO: 고객만 모임을 검색할 수 있게 change
+        return groupRepository.findGroupsByName(name);
+    }
 }
