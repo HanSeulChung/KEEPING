@@ -5,8 +5,8 @@ import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
 import com.ssafy.keeping.domain.core.owner.model.Owner;
 import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
-import com.ssafy.keeping.domain.core.store.model.Store;
-import com.ssafy.keeping.domain.core.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -129,12 +129,17 @@ public class SettlementScheduler {
                 return;
             }
             
-            // 2. 점주 정보 조회 - CustomException 활용
-            Owner owner = ownerRepository.findById(store.getOwnerId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.OWNER_NOT_FOUND));
+            // 2. 점주 정보 조회 - 연관관계 활용
+            Owner owner = store.getOwner();
+            
+            if (owner == null) {
+                log.error("가게에 연결된 점주가 없습니다. 가게 ID: {}", store.getStoreId());
+                markTasksAsFailed(tasks, "가게에 연결된 점주가 없습니다.");
+                return;
+            }
             
             if (owner.getUserKey() == null || owner.getUserKey().trim().isEmpty()) {
-                log.error("점주의 userKey가 없습니다. 점주 ID: {}", store.getOwnerId());
+                log.error("점주의 userKey가 없습니다. 점주 ID: {}", owner.getOwnerId());
                 markTasksAsFailed(tasks, "점주의 SSAFY 은행 계정이 없습니다.");
                 return;
             }

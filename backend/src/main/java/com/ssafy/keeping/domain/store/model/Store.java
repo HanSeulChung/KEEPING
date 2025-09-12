@@ -1,5 +1,9 @@
 package com.ssafy.keeping.domain.store.model;
 
+import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;
@@ -12,6 +16,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -28,7 +33,10 @@ public class Store {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long storeId;
 
-    //TODO: 사업자 owner와 연관관계
+    // Store N : 1 Owner 연관관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private Owner owner;
 
     @Column(nullable = false)
     private String taxId;
@@ -62,6 +70,17 @@ public class Store {
     private StoreStatus storeStatus;
 
     private LocalDateTime deletedAt;
+
+    // 연관관계
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<WalletStoreBalance> walletStoreBalances;
+
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<WalletStoreLot> walletStoreLots;
+
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Transaction> transactions;
+
 
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
         if (!Objects.equals(this.storeName, requestDto.getStoreName())) {
