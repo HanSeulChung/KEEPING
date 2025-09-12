@@ -1,29 +1,33 @@
 package com.ssafy.keeping.domain.group.model;
 
+import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "group_members",
+@Table(name = "group_add_requests",
         indexes = {
-                @Index(name="idx_customer_group", columnList="customer_id, group_id"),
-                @Index(name="idx_group_leader", columnList="group_id, is_leader")
+                @Index(name="idx_user_group_status_created_at", columnList="customer_id, group_id, status, created_at"),
+                @Index(name="idx_group_status_created_at", columnList="group_id, status, created_at")
         })
 @EntityListeners(AuditingEntityListener.class)
-public class GroupMember {
+public class GroupAddRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long groupMemberId;
+    private Long groupAddRequestId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
@@ -33,8 +37,10 @@ public class GroupMember {
     @JoinColumn(name = "customer_id", nullable = false)
     private TmpUser user;
 
-    @Column(nullable = false, name="is_leader")
-    private boolean isLeader;
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private RequestStatus requestStatus = RequestStatus.PENDING;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -42,5 +48,10 @@ public class GroupMember {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
-}
 
+
+    public void changeStatus(RequestStatus status) {
+        if (!Objects.equals(this.requestStatus, status))
+            this.requestStatus = status;
+    }
+}
