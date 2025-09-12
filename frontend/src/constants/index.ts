@@ -12,7 +12,7 @@ export const API = {
  * 애플리케이션 설정
  */
 export const APP_CONFIG = {
-  NAME: 'A605 공통 프로젝트',
+  NAME: '특화 프로젝트',
   VERSION: '1.0.0',
   DESCRIPTION: 'Next.js 기반 프론트엔드 애플리케이션',
 } as const

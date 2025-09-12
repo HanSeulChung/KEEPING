@@ -1,16 +1,17 @@
 import type { Metadata } from 'next'
-import localFont from 'next/font/local'
+
+import SWRegister from '@/providers/SWRegister'
 import './globals.css'
 
-// Tenada 폰트 설정
-const tenada = localFont({
+// Tenada 폰트 설정 (미사용 시 비활성화)
+/* const tenada = localFont({
   src: './fonts/Tenada.ttf',
   variable: '--font-tenada',
   display: 'swap',
-})
+}) */
 
 // NanumSquareNeo 시리즈 폰트 설정
-const nanumSquareNeo = localFont({
+/* const nanumSquareNeo = localFont({
   src: [
     {
       path: './fonts/NanumSquareNeo-aLt.ttf',
@@ -40,7 +41,7 @@ const nanumSquareNeo = localFont({
   ],
   variable: '--font-nanum-square-neo',
   display: 'swap',
-})
+}) */
 
 export const metadata: Metadata = {
   title: 'Keeping',
@@ -49,15 +50,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${tenada.variable} ${nanumSquareNeo.variable} antialiased`}
-      >
+      <body className="antialiased">
+        {/* 브라우저에서만 실행되는 SW 등록기 */}
         {children}
+        <SWRegister />
       </body>
     </html>
   )
