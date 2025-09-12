@@ -1,13 +1,18 @@
 package com.ssafy.keeping.global.security;
 
 
+import com.ssafy.keeping.domain.auth.security.OAuth2ProviderRouter;
+import com.ssafy.keeping.domain.auth.handler.OAuth2SuccessHandler;
+import com.ssafy.keeping.domain.auth.security.RoleAwareAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -19,6 +24,19 @@ import java.util.Arrays;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    public static final String[] ALLOW_URLS = {
+            "/auth/kakao/callback",
+            "/auth/google/callback",
+            "/otp/**",
+            "/stores/**"
+    };
+
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final OAuth2ProviderRouter oAuth2ProviderRouter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final StringRedisTemplate redis;
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -51,6 +69,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .oauth2Login(o -> o.authorizationEndpoint(
+                        ae -> ae.authorizationRequestResolver(
+                                new RoleAwareAuthorizationRequestResolver(redis, clientRegistrationRepository,
+                                        "/oauth2/authorization")
+                        )).redirectionEndpoint(re -> re.baseUri("/auth/*/callback"))
+                        .userInfoEndpoint(ue -> ue.userService(oAuth2ProviderRouter))
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
                 // CSRF 비활성화 (JWT 사용으로 불필요)
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -76,9 +103,7 @@ public class SecurityConfig {
                 // URL별 접근 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
                         // 인증 없이 접근 가능한 URL, 우선 회원 기능을 추가하고 난 뒤 나누기
-                        .requestMatchers(
-                               "/stores/**"
-                        ).permitAll()
+                        .requestMatchers(ALLOW_URLS).permitAll()
                         // 가게 주인만 접근 가능한 URL
 //                        .requestMatchers("/api/admin/**").hasRole("OWNER")
 
@@ -93,4 +118,5 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 }

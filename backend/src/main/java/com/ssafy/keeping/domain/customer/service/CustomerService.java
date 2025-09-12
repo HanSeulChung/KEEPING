@@ -3,29 +3,26 @@ package com.ssafy.keeping.domain.customer.service;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequestDto;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponseDto;
 import com.ssafy.keeping.domain.customer.dto.PrefillResponseDto;
-import com.ssafy.keeping.domain.otp.session.RedisSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.customer.model.Customer;
 import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
+import com.ssafy.keeping.global.client.FinOpenApiClient;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final PasswordEncoder pinEncoder;
+//    private final PasswordEncoder pinEncoder;
     private final RegSessionStore sessionStore;
-    private final RestTemplate restTemplate;
+    private final FinOpenApiClient apiClient;
 
     // 고객 등록
     @Transactional
@@ -35,8 +32,8 @@ public class CustomerService {
             throw new IllegalStateException("휴대폰 인증이 필요합니다.");
         }
 
-        // TODO: userkey
-
+        // userKey
+        String userKey = apiClient.searchUserKey(dto.getEmail()).getUserKey();
 
         // 고객 생성
         Customer customer = Customer.builder()
@@ -49,6 +46,7 @@ public class CustomerService {
                 .phoneVerifiedAt(session.getPhoneVerifiedAt())
                 .imgUrl(dto.getImgUrl())
                 .phoneNumber(session.getPhoneNumber())
+                .userKey(userKey)
                 .build();
 
         try {

@@ -6,6 +6,7 @@ import com.ssafy.keeping.domain.otp.dto.OtpVerifyRequestDto;
 import com.ssafy.keeping.domain.otp.dto.OtpVerifyResponseDto;
 import com.ssafy.keeping.domain.otp.service.OtpService;
 import com.ssafy.keeping.global.response.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class OtpController {
 
     // otp 검증
     @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<OtpVerifyResponseDto>> verify(@RequestBody OtpVerifyRequestDto dto) {
+    public ResponseEntity<ApiResponse<OtpVerifyResponseDto>> verify(@Valid @RequestBody OtpVerifyRequestDto dto) {
         OtpVerifyResponseDto responseDto = otpService.verifyOtp(dto);
         return ResponseEntity.ok(ApiResponse.success("OTP를 검증합니다.", HttpStatus.OK, responseDto));
     }
