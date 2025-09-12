@@ -42,15 +42,9 @@ public class Wallet {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // 연관관계
-    @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Transaction> transactions;
-
+    // 지갑에서 특정 가게의 잔액을 조회할 수도 있으니 OneToMany로 남김
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<WalletStoreBalance> walletStoreBalances;
-
-    @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<WalletStoreLot> walletStoreLots;
 
     public enum WalletType {
         INDIVIDUAL, GROUP
