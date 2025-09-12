@@ -1,5 +1,7 @@
-package com.ssafy.keeping.domain.charge.entity;
+package com.ssafy.keeping.domain.core.customer.model;
 
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.core.wallet.model.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -65,8 +67,6 @@ public class Customer {
     @Column
     private String userKey;
 
-
-    // 연관관계
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Wallet> wallets;
 

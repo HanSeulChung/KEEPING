@@ -1,5 +1,6 @@
-package com.ssafy.keeping.domain.charge.entity;
+package com.ssafy.keeping.domain.charge.model;
 
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

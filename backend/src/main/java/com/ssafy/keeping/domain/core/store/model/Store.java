@@ -1,5 +1,8 @@
-package com.ssafy.keeping.domain.charge.entity;
+package com.ssafy.keeping.domain.core.store.model;
 
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

@@ -1,11 +1,10 @@
-package com.ssafy.keeping.domain.charge.repository;
+package com.ssafy.keeping.domain.core.wallet.repository;
 
-import com.ssafy.keeping.domain.charge.entity.Customer;
-import com.ssafy.keeping.domain.charge.entity.Wallet;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.wallet.model.Wallet;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository

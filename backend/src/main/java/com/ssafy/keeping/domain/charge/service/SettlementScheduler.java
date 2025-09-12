@@ -1,8 +1,12 @@
 package com.ssafy.keeping.domain.charge.service;
 
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
-import com.ssafy.keeping.domain.charge.entity.*;
-import com.ssafy.keeping.domain.charge.repository.*;
+import com.ssafy.keeping.domain.charge.model.SettlementTask;
+import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
+import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.core.store.model.Store;
+import com.ssafy.keeping.domain.core.store.repository.StoreRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;

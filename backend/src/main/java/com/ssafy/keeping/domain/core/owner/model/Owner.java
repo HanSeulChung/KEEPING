@@ -1,6 +1,7 @@
-package com.ssafy.keeping.domain.charge.entity;
+package com.ssafy.keeping.domain.core.owner.model;
 
-
+import com.ssafy.keeping.domain.core.store.model.Store;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -66,7 +67,6 @@ public class Owner {
     @Column
     private String userKey;
 
-    // 연관관계
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Store> stores;
 

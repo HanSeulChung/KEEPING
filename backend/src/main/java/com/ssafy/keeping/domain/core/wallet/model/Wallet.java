@@ -1,5 +1,7 @@
-package com.ssafy.keeping.domain.charge.entity;
+package com.ssafy.keeping.domain.core.wallet.model;
 
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -21,7 +23,7 @@ public class Wallet {
     @Column(name = "wallet_id")
     private Long walletId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
