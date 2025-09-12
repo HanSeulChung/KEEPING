@@ -25,8 +25,8 @@ services:
     container_name: keeping-backend
     restart: always
     env_file:
-      - /env/backend.prod.env
-      - /etc/keeping/env/redis.prod.env
+      - ./env/backend.prod.env
+      - ./etc/keeping/env/redis.prod.env
     expose:
       - "8080"
     depends_on:
@@ -79,6 +79,8 @@ services:
     image: redis:7-alpine
     container_name: keeping-redis
     restart: always
+    env_file:
+      - ./env/redis.prod.env
     command: >
       sh -c 'exec redis-server /usr/local/etc/redis/redis.conf
              --requirepass "$REDIS_PASSWORD"'
@@ -107,7 +109,6 @@ services:
 
 volumes:
   db_data: {}
-  frontend_build: {}
   redis_data: {}
   certs: {}
   certbot_challenges: {}
