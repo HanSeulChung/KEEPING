@@ -77,12 +77,24 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dto));
     }
 
+    // 임의 user id로 체킹
+    @PostMapping("/{groupId}/{userId}/entrance")
+    public ResponseEntity<ApiResponse<GroupResponseDto>> createGroupMember(
+            @PathVariable Long userId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupEntranceRequestDto requestDto
+    ) {
+        GroupResponseDto dto = groupService.createGroupMember(groupId, userId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("해당 모임에 입장을 완료했습니다.", HttpStatus.OK.value(), dto));
+    }
+
 //    // TODO: 회원 Principal 적용할 controller,
 //        1. 모임 정보 조회,
 //        2. 모임원 조회
 //        3. 모임 추가 신청
 //        4. 모임 추가 신청 목록 조회
 //        5. 모임 추가 신청 승인 및 거절
+//        6. 모임 입장(모임 코드를 이용하여)
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId
