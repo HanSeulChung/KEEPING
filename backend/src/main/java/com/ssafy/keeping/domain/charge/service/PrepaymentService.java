@@ -108,6 +108,7 @@ public class PrepaymentService {
                 .store(store)
                 .transactionType(Transaction.TransactionType.CHARGE)
                 .amount(paymentAmount)
+                .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
         transaction = transactionRepository.save(transaction);
 
