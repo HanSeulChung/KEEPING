@@ -1,9 +1,8 @@
-// import Image from 'next/image'
+import Header from "@/components/common/Header"
 
 export default function Home() {
   return (
     <div>
-      <h1>키빵이와 함께하는 프로젝트 </h1>
     </div>
   )
 }
