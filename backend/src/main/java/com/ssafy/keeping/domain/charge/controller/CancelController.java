@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.charge.controller;
 
+import com.ssafy.keeping.domain.charge.dto.request.CancelRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.CancelListResponseDto;
+import com.ssafy.keeping.domain.charge.dto.response.CancelResponseDto;
 import com.ssafy.keeping.domain.charge.service.CancelService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 
 @RestController
@@ -51,6 +54,33 @@ public class CancelController {
                     "취소 가능한 거래 목록 조회가 완료되었습니다.", 
                     HttpStatus.OK.value(), 
                     cancelableTransactions
+                )
+        );
+    }
+
+    /**
+     * 카드 결제 취소 처리
+     * 
+     * @param cancelRequestDto 취소 요청 정보 (transactionUniqueNo, cardNo, cvc)
+     * @return 취소 처리 결과
+     */
+    @PostMapping("/payments/cancel")
+    public ResponseEntity<ApiResponse<CancelResponseDto>> cancelPayment(
+            @RequestBody @Valid CancelRequestDto cancelRequestDto) {
+        
+        log.info("카드 결제 취소 요청 - 거래번호: {}, 카드번호: {}", 
+                cancelRequestDto.getTransactionUniqueNo(), 
+                cancelRequestDto.getCardNo().substring(0, 4) + "****"); // 카드번호 마스킹
+
+        CancelResponseDto response = cancelService.cancelPayment(cancelRequestDto);
+        
+        log.info("카드 결제 취소 완료 - 취소 거래ID: {}", response.getCancelTransactionId());
+        
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                    "결제 취소가 성공적으로 완료되었습니다.", 
+                    HttpStatus.OK.value(), 
+                    response
                 )
         );
     }
