@@ -1,2 +1,2 @@
-// Provider 관련 export
-// 예시: export { ThemeProvider } from './ThemeProvider'
+// React Context API 또는 UI에 직접적인 영향을 주는
+// 전역적인 설정, 기능, 또는 서비스를 주입하는 래퍼 컴포넌트들을 관리합니다.

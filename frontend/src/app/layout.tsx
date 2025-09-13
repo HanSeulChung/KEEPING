@@ -1,64 +1,45 @@
-import type { Metadata } from 'next'
-import localFont from 'next/font/local'
-import './globals.css'
+import type { Metadata } from "next";
+import React from "react";
 
-// Tenada 폰트 설정
-const tenada = localFont({
-  src: './fonts/Tenada.ttf',
-  variable: '--font-tenada',
-  display: 'swap',
-})
-
-// NanumSquareNeo 시리즈 폰트 설정
-const nanumSquareNeo = localFont({
-  src: [
-    {
-      path: './fonts/NanumSquareNeo-aLt.ttf',
-      weight: '300',
-      style: 'normal',
-    },
-    {
-      path: './fonts/NanumSquareNeo-bRg.ttf',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: './fonts/NanumSquareNeo-cBd.ttf',
-      weight: '700',
-      style: 'normal',
-    },
-    {
-      path: './fonts/NanumSquareNeo-dEb.ttf',
-      weight: '800',
-      style: 'normal',
-    },
-    {
-      path: './fonts/NanumSquareNeo-eHv.ttf',
-      weight: '900',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-nanum-square-neo',
-  display: 'swap',
-})
+import Header from "@/components/common/Header";
+import SWRegister from "@/providers/SWRegister";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Keeping',
-  description: '선결제 디지털 플랫폼',
-}
+  title: "Keeping",
+  description: "선결제 디지털 플랫폼",
+};
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${tenada.variable} ${nanumSquareNeo.variable} antialiased`}
-      >
-        {children}
+      <head>
+        {/* 폰트 preload로 로딩 최적화 */}
+        <link
+          rel="preload"
+          href="/src/app/fonts/NanumSquareNeo-bRg.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/src/app/fonts/Tenada.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body className="antialiased bg-white text-black">
+        {/* 공통 Header */}
+        <Header />
+
+        {/* 페이지별 컨텐츠 */}
+        <main className="min-h-screen">{children}</main>
+        <SWRegister />
       </body>
     </html>
-  )
+  );
 }
