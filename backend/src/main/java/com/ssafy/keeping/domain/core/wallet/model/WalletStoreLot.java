@@ -55,7 +55,8 @@ public class WalletStoreLot {
 
     public enum SourceType {
         CHARGE,    // 직접 충전
-        TRANSFER_IN     // 다른 지갑에서 공유받음
+        TRANSFER_IN,     // 다른 지갑에서 공유받음
+        CANCELED   // 취소됨
     }
 
     // 포인트 사용 메서드

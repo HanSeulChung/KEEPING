@@ -46,6 +46,9 @@ public class Transaction {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "transaction_unique_no", length = 50)
+    private String transactionUniqueNo;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
