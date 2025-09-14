@@ -63,6 +63,8 @@ services:
       --collation-server=utf8mb4_unicode_ci
     volumes:
       - db_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
     expose:
       - "3306"
     networks:
