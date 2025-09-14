@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class OtpVerifyRequestDto {
+public class OtpVerifyRequest {
 
     private String regSessionId;
 

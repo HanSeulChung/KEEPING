@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
-public class PrefillResponseDto {
+public class PrefillResponse {
 
     @NotBlank
     private String name;

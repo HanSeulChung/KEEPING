@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class OtpVerifyResponseDto {
+public class OtpVerifyResponse {
 
     private boolean verified;
 }

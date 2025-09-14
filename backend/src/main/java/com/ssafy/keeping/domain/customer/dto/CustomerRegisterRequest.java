@@ -1,17 +1,13 @@
 package com.ssafy.keeping.domain.customer.dto;
 
 import com.ssafy.keeping.domain.customer.model.Gender;
-import com.ssafy.keeping.domain.customer.model.ProviderType;
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.LocalDate;
-
 @Data
 @AllArgsConstructor
-public class CustomerRegisterRequestDto {
+public class CustomerRegisterRequest {
 
     private String regSessionId;
 

@@ -1,8 +1,7 @@
 package com.ssafy.keeping.domain.customer.service;
 
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequestDto;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponseDto;
-import com.ssafy.keeping.domain.customer.dto.PrefillResponseDto;
+import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
+import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
@@ -12,6 +11,7 @@ import com.ssafy.keeping.global.client.FinOpenApiClient;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 
@@ -24,10 +24,12 @@ public class CustomerService {
     private final RegSessionStore sessionStore;
     private final FinOpenApiClient apiClient;
 
+    private static final String SIGN_UP_INFO_KEY = "signup:info:";
+
     // 고객 등록
     @Transactional
-    public CustomerRegisterResponseDto RegisterCustomer(CustomerRegisterRequestDto dto) {
-        RegSession session = sessionStore.getSession(dto.getRegSessionId());
+    public CustomerRegisterResponse RegisterCustomer(CustomerRegisterRequest dto) {
+        RegSession session = sessionStore.getSession(SIGN_UP_INFO_KEY, dto.getRegSessionId());
         if(session.getRegStep() != RegStep.PHONE_VERIFIED) {
             throw new IllegalStateException("휴대폰 인증이 필요합니다.");
         }
@@ -37,8 +39,6 @@ public class CustomerService {
 
         // 고객 생성
         Customer customer = Customer.builder()
-                .providerId(session.getProviderId())
-                .providerType(session.getProviderType())
                 .name(session.getName())
                 .email(dto.getEmail())
                 .gender(dto.getGender())
@@ -59,13 +59,9 @@ public class CustomerService {
         // TODO: 결제 비밀번호 저장
         // pinService.save(dto.getPaymentPin());
 
-        return CustomerRegisterResponseDto.register(customer);
-    }
-
-    public PrefillResponseDto prefillInfo(String regSessionId) {
-        RegSession session = sessionStore.getSession(regSessionId);
-
-        return new PrefillResponseDto(session.getName(), session.getBirth(), session.getPhoneNumber());
+        // 세션 만료
+        sessionStore.deleteSession(SIGN_UP_INFO_KEY, dto.getRegSessionId());
+        return CustomerRegisterResponse.register(customer);
     }
 
 }

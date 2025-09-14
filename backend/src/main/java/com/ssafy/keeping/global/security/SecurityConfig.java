@@ -1,7 +1,7 @@
 package com.ssafy.keeping.global.security;
 
 
-import com.ssafy.keeping.domain.auth.security.OAuth2ProviderRouter;
+import com.ssafy.keeping.domain.auth.handler.OAuth2ProviderRouter;
 import com.ssafy.keeping.domain.auth.handler.OAuth2SuccessHandler;
 import com.ssafy.keeping.domain.auth.security.RoleAwareAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;

@@ -23,7 +23,7 @@ public class StoreService {
 
         boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
         if (exists) {
-            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+//            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
         // TODO: 이미지 파일은 추후, principal 체크 추후
@@ -63,7 +63,7 @@ public class StoreService {
 
         boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
         if (exists) {
-            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+//            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
         store.patchStore(requestDto, editImgUrl);

@@ -25,7 +25,7 @@ public class OtpSmsSender implements SmsSender {
     public SingleMessageSentResponse send(String to, String text) {
         Message message = new Message();
 
-        message.setFrom(props.sendNumber);
+        message.setFrom(props.getSendNumber());
         message.setTo(to);
         message.setText(text);
 

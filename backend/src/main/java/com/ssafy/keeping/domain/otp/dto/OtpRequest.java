@@ -1,6 +1,5 @@
 package com.ssafy.keeping.domain.otp.dto;
 
-import com.ssafy.keeping.domain.customer.model.ProviderType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -10,7 +9,7 @@ import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
-public class OtpRequestDto {
+public class OtpRequest {
 
     @NotBlank
     private String name;

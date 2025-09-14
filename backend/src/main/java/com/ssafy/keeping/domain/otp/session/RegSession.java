@@ -1,7 +1,6 @@
 package com.ssafy.keeping.domain.otp.session;
 
-import com.ssafy.keeping.domain.otp.dto.OtpRequestDto;
-import com.ssafy.keeping.domain.customer.model.ProviderType;
+import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,15 +15,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class RegSession {
     private String regSessionId;
-    private String providerId;
-    private ProviderType providerType;
+//    private String providerId;
+//    private ProviderType providerType;
     private String name;
     private String phoneNumber;
     private LocalDate birth;
     private LocalDateTime phoneVerifiedAt;
     private RegStep regStep;
 
-    public static RegSession fromOtpRequest(OtpRequestDto dto, String regSessionId) {
+    public static RegSession fromOtpRequest(OtpRequest dto, String regSessionId) {
         return RegSession.builder()
                 .regSessionId(regSessionId)
                 .name(dto.getName())

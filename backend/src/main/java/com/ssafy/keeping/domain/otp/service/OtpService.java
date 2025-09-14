@@ -2,10 +2,10 @@ package com.ssafy.keeping.domain.otp.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.otp.dto.OtpRequestDto;
-import com.ssafy.keeping.domain.otp.dto.OtpRequestResponseDto;
-import com.ssafy.keeping.domain.otp.dto.OtpVerifyRequestDto;
-import com.ssafy.keeping.domain.otp.dto.OtpVerifyResponseDto;
+import com.ssafy.keeping.domain.otp.dto.OtpRequest;
+import com.ssafy.keeping.domain.otp.dto.OtpRequestResponse;
+import com.ssafy.keeping.domain.otp.dto.OtpVerifyRequest;
+import com.ssafy.keeping.domain.otp.dto.OtpVerifyResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.sms.SmsSender;
@@ -35,10 +35,11 @@ public class OtpService {
     private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final String OTP_CODE_KEY = "otp:code:";
     private static final String OTP_TRY_KEY = "otp:try:";
+    private static final String OTP_KEY_PREFIX = "otp:info:";
     private static final int OTP_MAX_TRIES = 5;
 
     // OTP 요청
-    public OtpRequestResponseDto requestDto(OtpRequestDto dto) {
+    public OtpRequestResponse requestDto(OtpRequest dto) {
         // 중복 가입 체크 (핸드폰 번호)
         if(customerRepository.existsByPhoneNumberAndDeletedAtIsNull(dto.getPhoneNumber())) {
             throw new IllegalStateException("이미 가입된 계정이 있습니다.");
@@ -55,7 +56,7 @@ public class OtpService {
         // 세선 져장
         String regSessionId = UUID.randomUUID().toString();
         RegSession session = RegSession.fromOtpRequest(dto, regSessionId);
-        sessionStore.setSession(regSessionId, session, REG_TTL);
+        sessionStore.setSession(OTP_KEY_PREFIX, regSessionId, session, REG_TTL);
 
         // OTP 전송
         String otp = createNumberKey();
@@ -67,12 +68,12 @@ public class OtpService {
 
         smsSender.send(dto.getPhoneNumber(), text);
 
-        return new OtpRequestResponseDto(regSessionId);
+        return new OtpRequestResponse(regSessionId);
     }
 
     // OTP 검증
-    public OtpVerifyResponseDto verifyOtp(OtpVerifyRequestDto dto) {
-        RegSession regSession = sessionStore.getSession(dto.getRegSessionId());
+    public OtpVerifyResponse verifyOtp(OtpVerifyRequest dto) {
+        RegSession regSession = sessionStore.getSession(OTP_KEY_PREFIX, dto.getRegSessionId());
 
         // OTP 검증
         String keyCode = OTP_CODE_KEY + dto.getRegSessionId();
@@ -111,9 +112,9 @@ public class OtpService {
 
         // 업데이트
         regSession.markVerifiedAt();
-        sessionStore.setSession(dto.getRegSessionId(), regSession, sessionStore.remainingTtl(dto.getRegSessionId()));
+        sessionStore.setSession(OTP_KEY_PREFIX, dto.getRegSessionId(), regSession, sessionStore.remainingTtl(OTP_KEY_PREFIX, dto.getRegSessionId()));
 
-        return new OtpVerifyResponseDto(true);
+        return new OtpVerifyResponse(true);
     }
 
     private String createNumberKey() {

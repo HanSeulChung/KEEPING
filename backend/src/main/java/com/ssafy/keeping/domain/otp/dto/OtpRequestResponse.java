@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class OtpRequestResponseDto {
+public class OtpRequestResponse {
 
     @NotBlank
     private String regSessionId;

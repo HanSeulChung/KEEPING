@@ -9,9 +9,9 @@ import lombok.Getter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Builder
 @Getter
-public class CustomerRegisterResponseDto {
+@Builder
+public class CustomerRegisterResponse {
     private Long customerId;
     private String providerId;
     private ProviderType providerType;
@@ -23,8 +23,9 @@ public class CustomerRegisterResponseDto {
     private String imgUrl;
     private LocalDateTime phoneVerifiedAt;
 
-    public static CustomerRegisterResponseDto register(Customer customer) {
-        return CustomerRegisterResponseDto.builder()
+    public static CustomerRegisterResponse register(Customer customer) {
+        return CustomerRegisterResponse.builder()
+                .customerId(customer.getCustomerId())
                 .providerId(customer.getProviderId())
                 .providerType(customer.getProviderType())
                 .phoneNumber(customer.getPhoneNumber())
