@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class CancelResponseDto {
     
     private Long cancelTransactionId;
-    private String TransactionUniqueNo;
+    private String transactionUniqueNo;
     private BigDecimal cancelAmount;
     private LocalDateTime cancelTime;
     private BigDecimal remainingBalance;
