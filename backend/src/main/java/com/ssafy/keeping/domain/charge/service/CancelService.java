@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.charge.service;
 import com.ssafy.keeping.domain.charge.dto.request.CancelRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.CancelListResponseDto;
 import com.ssafy.keeping.domain.charge.dto.response.CancelResponseDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardCancelResponseDto;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
@@ -29,6 +30,7 @@ public class CancelService {
     private final SettlementTaskRepository settlementTaskRepository;
     private final CustomerRepository customerRepository;
     private final TransactionRepository transactionRepository;
+    private final SsafyFinanceApiService ssafyFinanceApiService;
 
     /**
      * 취소 가능한 거래 목록 조회 (페이지네이션)
@@ -59,15 +61,33 @@ public class CancelService {
         // 1. 취소 가능 검증
         Transaction originalTransaction = validateCancellation(requestDto.getTransactionUniqueNo());
         
-        // 2. 외부 API 호출 (여기서 실제 취소 처리)
-        // TODO: 5단계에서 구현 예정
-        log.info("외부 API 취소 호출 예정 - 거래번호: {}", requestDto.getTransactionUniqueNo());
+        // 2. 고객 정보 조회 (userKey 필요)
+        Customer customer = originalTransaction.getCustomer();
+        String userKey = customer.getUserKey();
         
-        // 3. DB 반영 (외부 API 성공 후)
+        if (userKey == null || userKey.trim().isEmpty()) {
+            throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
+        }
+        
+        // 3. 외부 API 호출 (실제 취소 처리)
+        log.info("외부 API 취소 호출 시작 - 거래번호: {}, userKey: {}", 
+                requestDto.getTransactionUniqueNo(), userKey);
+        
+        SsafyCardCancelResponseDto apiResponse = ssafyFinanceApiService.requestCardCancel(
+                userKey,
+                requestDto.getCardNo(),
+                requestDto.getCvc(),
+                requestDto.getTransactionUniqueNo()
+        );
+        
+        log.info("외부 API 취소 성공 - 취소 거래번호: {}", 
+                apiResponse.getRec().getTransactionUniqueNo());
+        
+        // 4. DB 반영 (외부 API 성공 후)
         // TODO: 6단계에서 구현 예정
         log.info("DB 반영 로직 실행 예정");
         
-        // 임시 응답 (실제 구현 후 수정 예정)
+        // 임시 응답 (6단계에서 실제 구현 후 수정 예정)
         return CancelResponseDto.builder()
                 .cancelTransactionId(999L)
                 .TransactionUniqueNo(requestDto.getTransactionUniqueNo())
