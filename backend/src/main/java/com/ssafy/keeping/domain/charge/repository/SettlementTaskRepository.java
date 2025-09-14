@@ -1,13 +1,13 @@
 package com.ssafy.keeping.domain.charge.repository;
 
-import com.ssafy.keeping.domain.charge.entity.SettlementTask;
-import com.ssafy.keeping.domain.charge.entity.Store;
+import com.ssafy.keeping.domain.charge.model.SettlementTask;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,4 +28,19 @@ public interface SettlementTaskRepository extends JpaRepository<SettlementTask, 
      */
     @Query("SELECT st FROM SettlementTask st WHERE st.status = 'LOCKED' ORDER BY st.createdAt ASC")
     List<SettlementTask> findLockedTasks();
+
+    /**
+     * 특정 고객의 취소 가능한 거래 목록 조회 (페이지네이션)
+     * 조건: 1) PENDING 상태, 2) CHARGE 타입 wallet_store_lot, 3) 미사용 포인트 (총량=잔액)
+     */
+    @Query("SELECT st FROM SettlementTask st " +
+           "JOIN st.transaction t " +
+           "JOIN WalletStoreLot wsl ON wsl.originChargeTransaction = t " +
+           "WHERE st.status = 'PENDING' " +
+           "AND t.customer.customerId = :customerId " +
+           "AND t.transactionType = 'CHARGE' " +
+           "AND wsl.sourceType = 'CHARGE' " +
+           "AND wsl.amountTotal = wsl.amountRemaining " +
+           "ORDER BY t.createdAt DESC")
+    Page<SettlementTask> findCancelableTransactions(@Param("customerId") Long customerId, Pageable pageable);
 }

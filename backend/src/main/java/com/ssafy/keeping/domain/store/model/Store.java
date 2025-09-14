@@ -1,5 +1,10 @@
 package com.ssafy.keeping.domain.store.model;
 
+import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,6 +16,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -18,7 +24,7 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "store", uniqueConstraints = {
+@Table(name = "stores", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"tax_id", "address"})
 })
 @EntityListeners(AuditingEntityListener.class)
@@ -27,7 +33,10 @@ public class Store {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long storeId;
 
-    //TODO: 사업자 owner와 연관관계
+    // Store N : 1 Owner 연관관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private Owner owner;
 
     @Column(nullable = false)
     private String taxId;
@@ -35,12 +44,8 @@ public class Store {
     private String storeName;
     @Column(nullable = false)
     private String address;
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String phoneNumber;
-    @Column(nullable = false)
-    private String businessSector;
-    @Column(nullable = false)
-    private String businessType;
     @Column(nullable = false)
     private String bankAccount;
     @Column(nullable = false)
@@ -51,12 +56,30 @@ public class Store {
     // TODO file system은 나중에
     private String imgUrl;
 
+    private String description;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(updatable = false)
+    private StoreStatus storeStatus;
+
+    private LocalDateTime deletedAt;
+
+    // 연관관계
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<WalletStoreBalance> walletStoreBalances;
+
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<WalletStoreLot> walletStoreLots;
+
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Transaction> transactions;
 
 
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
@@ -72,5 +95,13 @@ public class Store {
         if (!Objects.equals(this.imgUrl, imgUrl)) {
             this.imgUrl = imgUrl;
         }
+    }
+
+    // TODO: 가게 삭제 뿐만아니라, 점주 탈퇴시에도 사용하여 유령가게가 없어야하는 메서드
+    public void deleteStore(StoreStatus storeStatus) {
+        if (!Objects.equals(StoreStatus.DELETED, storeStatus)) {
+            this.deletedAt = LocalDateTime.now();
+        }
+        this.storeStatus = storeStatus;
     }
 }

@@ -28,14 +28,14 @@ public class OtpController {
     public ResponseEntity<ApiResponse<OtpRequestResponse>> request(@RequestBody OtpRequest dto) {
         OtpRequestResponse responseDto = otpService.requestDto(dto);
 
-        return ResponseEntity.ok(ApiResponse.success("OTP가 정상적으로 전송되었습니다", HttpStatus.OK, responseDto));
+        return ResponseEntity.ok(ApiResponse.success("OTP가 정상적으로 전송되었습니다", HttpStatus.OK.value(), responseDto));
     }
 
     // otp 검증
     @PostMapping("/verify")
     public ResponseEntity<ApiResponse<OtpVerifyResponse>> verify(@Valid @RequestBody OtpVerifyRequest dto) {
         OtpVerifyResponse responseDto = otpService.verifyOtp(dto);
-        return ResponseEntity.ok(ApiResponse.success("OTP를 검증합니다.", HttpStatus.OK, responseDto));
+        return ResponseEntity.ok(ApiResponse.success("OTP를 검증합니다.", HttpStatus.OK.value(), responseDto));
     }
 
 

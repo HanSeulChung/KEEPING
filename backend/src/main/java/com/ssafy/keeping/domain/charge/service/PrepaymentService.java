@@ -2,10 +2,21 @@ package com.ssafy.keeping.domain.charge.service;
 
 import com.ssafy.keeping.domain.charge.dto.request.PrepaymentRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto;
-import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto.PrepaymentData;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
-import com.ssafy.keeping.domain.charge.entity.*;
-import com.ssafy.keeping.domain.charge.repository.*;
+import com.ssafy.keeping.domain.charge.model.SettlementTask;
+import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
+import com.ssafy.keeping.domain.core.wallet.model.Wallet;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -97,6 +108,7 @@ public class PrepaymentService {
                 .store(store)
                 .transactionType(Transaction.TransactionType.CHARGE)
                 .amount(paymentAmount)
+                .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
         transaction = transactionRepository.save(transaction);
 
@@ -136,7 +148,7 @@ public class PrepaymentService {
         // 5. 응답 생성
         BigDecimal updatedBalance = balance.getBalance();
         
-        PrepaymentData responseData = PrepaymentData.builder()
+        return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .storeId(store.getStoreId())
@@ -145,7 +157,5 @@ public class PrepaymentService {
                 .transactionTime(transaction.getCreatedAt())
                 .remainingBalance(updatedBalance)
                 .build();
-
-        return PrepaymentResponseDto.success(responseData);
     }
 }

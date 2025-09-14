@@ -6,13 +6,11 @@ import com.ssafy.keeping.domain.auth.Util.CookieUtil;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.charge.entity.Owner;
 import com.ssafy.keeping.domain.charge.repository.OwnerRepository;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.customer.dto.PrefillResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.model.ProviderType;
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,7 +59,7 @@ public class AuthService {
 
 
     public boolean userExists(UserRole role, String providerId, String provider) {
-        ProviderType providerType = toProviderType(provider);
+        Customer.ProviderType providerType = toProviderType(provider);
 
         return switch (role) {
             case CUSTOMER -> customerExists(providerType, providerId);
@@ -72,7 +70,7 @@ public class AuthService {
 
     // userId 꺼내기
     public Long getUserId(String providerId, String provider, UserRole userRole) {
-        ProviderType providerType = toProviderType(provider);
+        Customer.ProviderType providerType = toProviderType(provider);
 
         return switch (userRole) {
             case CUSTOMER -> customerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
@@ -164,19 +162,19 @@ public class AuthService {
 
 
 
-    private boolean ownerExists(ProviderType providerType, String providerId) {
+    private boolean ownerExists(Customer.ProviderType providerType, String providerId) {
         return ownerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
                 .isPresent();
     }
 
-    private boolean customerExists(ProviderType providerType, String providerId) {
+    private boolean customerExists(Customer.ProviderType providerType, String providerId) {
         return customerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
                 .isPresent();
     }
 
     // ProviderType 으로 변경
-    private ProviderType toProviderType(String provider) {
-        return ProviderType.valueOf(provider.toUpperCase());
+    private Customer.ProviderType toProviderType(String provider) {
+        return Customer.ProviderType.valueOf(provider.toUpperCase());
     }
 
 

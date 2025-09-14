@@ -40,8 +40,8 @@ public class PrepaymentController {
 
         PrepaymentResponseDto responseDto = prepaymentService.processPayment(storeId, requestDto);
         
-        log.info("선결제 처리 성공 - 거래ID: {}", responseDto.getData().getTransactionId());
-        return ResponseEntity.ok(ApiResponse.success("선결제가 성공적으로 완료되었습니다.", HttpStatus.OK, responseDto));
+        log.info("선결제 처리 성공 - 거래ID: {}", responseDto.getTransactionId());
+        return ResponseEntity.ok(ApiResponse.success("선결제가 성공적으로 완료되었습니다.", HttpStatus.OK.value(), responseDto));
     }
 
 }

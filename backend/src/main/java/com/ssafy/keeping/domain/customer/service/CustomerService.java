@@ -1,17 +1,16 @@
 package com.ssafy.keeping.domain.customer.service;
 
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 

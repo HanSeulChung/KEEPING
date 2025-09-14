@@ -1,19 +1,19 @@
-package com.ssafy.keeping.domain.customer.repository;
+package com.ssafy.keeping.domain.core.customer.repository;
 
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.model.ProviderType;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
-
     // 아이디로 조회
     Optional<Customer> findByCustomerIdAndDeletedAtIsNull(Long customerId);
 
     // 소셜 타입과 id 로 조회
-    Optional<Customer> findByProviderTypeAndProviderIdAndDeletedAtIsNull(ProviderType providerType, String providerId);
+    Optional<Customer> findByProviderTypeAndProviderIdAndDeletedAtIsNull(Customer.ProviderType providerType, String providerId);
 
     // 중복 가입 방지
     boolean existsByPhoneNumberAndDeletedAtIsNull(String phoneNumber);

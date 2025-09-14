@@ -15,25 +15,25 @@ import java.time.LocalDateTime;
 public class ApiResponse<T> {
 
     private boolean success;
-    private HttpStatus httpStatus;
+    private int status;
     private String message;
     private T data;
     private LocalDateTime timestamp;
 
-    public static <T> ApiResponse<T> success(String message, HttpStatus httpStatus, T data) {
+    public static <T> ApiResponse<T> success(String message, int statusCode, T data) {
         return ApiResponse.<T>builder()
                 .success(true)
-                .httpStatus(httpStatus)
+                .status(statusCode)
                 .message(message)
                 .data(data)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message, HttpStatus httpStatus) {
+    public static <T> ApiResponse<T> error(String message, int statusCode) {
         return ApiResponse.<T>builder()
                 .success(false)
-                .httpStatus(httpStatus)
+                .status(statusCode)
                 .message(message)
                 .data(null)
                 .timestamp(LocalDateTime.now())

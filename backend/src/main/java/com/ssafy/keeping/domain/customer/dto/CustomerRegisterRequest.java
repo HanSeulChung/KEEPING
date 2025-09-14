@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.customer.dto;
 
-import com.ssafy.keeping.domain.customer.model.Gender;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,7 +15,7 @@ public class CustomerRegisterRequest {
     private String email;
 
     @NotBlank
-    private Gender gender;
+    private Customer.Gender gender;
 
     @NotBlank
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)

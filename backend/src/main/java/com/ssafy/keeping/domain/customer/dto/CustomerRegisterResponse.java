@@ -1,8 +1,6 @@
 package com.ssafy.keeping.domain.customer.dto;
 
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.model.Gender;
-import com.ssafy.keeping.domain.customer.model.ProviderType;
+import com.ssafy.keeping.domain.core.customer.model.Customer;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -14,12 +12,12 @@ import java.time.LocalDateTime;
 public class CustomerRegisterResponse {
     private Long customerId;
     private String providerId;
-    private ProviderType providerType;
+    private Customer.ProviderType providerType;
     private String name;
     private String email;
     private String phoneNumber;
     private LocalDate birth;
-    private Gender gender;
+    private Customer.Gender gender;
     private String imgUrl;
     private LocalDateTime phoneVerifiedAt;
 

@@ -54,8 +54,7 @@ public class AuthController {
         // 토큰 발급 및 쿠키에 저장
         SignupCustomerResponse response = authService.signUpTokenForCustomer(responseDto, httpResponse);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.CREATED, response));
+        return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.OK.value(), response));
     }
 
 

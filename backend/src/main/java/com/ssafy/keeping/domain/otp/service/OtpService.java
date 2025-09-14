@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.otp.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import com.ssafy.keeping.domain.otp.dto.OtpRequestResponse;
 import com.ssafy.keeping.domain.otp.dto.OtpVerifyRequest;
