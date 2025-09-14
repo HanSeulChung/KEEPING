@@ -10,6 +10,10 @@ import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,8 @@ public class CancelService {
     private final SettlementTaskRepository settlementTaskRepository;
     private final CustomerRepository customerRepository;
     private final TransactionRepository transactionRepository;
+    private final WalletStoreLotRepository walletStoreLotRepository;
+    private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SsafyFinanceApiService ssafyFinanceApiService;
 
     /**
@@ -55,13 +61,18 @@ public class CancelService {
      * 카드 결제 취소 처리
      */
     @Transactional
-    public CancelResponseDto cancelPayment(CancelRequestDto requestDto) {
-        log.info("카드 결제 취소 처리 시작 - 거래번호: {}", requestDto.getTransactionUniqueNo());
+    public CancelResponseDto cancelPayment(Long customerId, CancelRequestDto requestDto) {
+        log.info("카드 결제 취소 처리 시작 - 고객ID: {}, 거래번호: {}", customerId, requestDto.getTransactionUniqueNo());
 
         // 1. 취소 가능 검증
         Transaction originalTransaction = validateCancellation(requestDto.getTransactionUniqueNo());
         
-        // 2. 고객 정보 조회 (userKey 필요)
+        // 2. 권한 검증 (본인의 거래인지 확인)
+        if (!originalTransaction.getCustomer().getCustomerId().equals(customerId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+        
+        // 3. 고객 정보 조회 (userKey 필요)
         Customer customer = originalTransaction.getCustomer();
         String userKey = customer.getUserKey();
         
@@ -84,17 +95,7 @@ public class CancelService {
                 apiResponse.getRec().getTransactionUniqueNo());
         
         // 4. DB 반영 (외부 API 성공 후)
-        // TODO: 6단계에서 구현 예정
-        log.info("DB 반영 로직 실행 예정");
-        
-        // 임시 응답 (6단계에서 실제 구현 후 수정 예정)
-        return CancelResponseDto.builder()
-                .cancelTransactionId(999L)
-                .TransactionUniqueNo(requestDto.getTransactionUniqueNo())
-                .cancelAmount(originalTransaction.getAmount())
-                .cancelTime(LocalDateTime.now())
-                .remainingBalance(originalTransaction.getAmount())
-                .build();
+        return updateDatabaseAfterCancel(originalTransaction, apiResponse);
     }
 
     /**
@@ -119,6 +120,63 @@ public class CancelService {
                 originalTransaction.getTransactionId(), originalTransaction.getAmount());
 
         return originalTransaction;
+    }
+
+    /**
+     * 취소 성공 후 DB 업데이트
+     */
+    private CancelResponseDto updateDatabaseAfterCancel(
+            Transaction originalTransaction, 
+            SsafyCardCancelResponseDto apiResponse) {
+        
+        log.info("DB 반영 로직 시작 - 원본 거래ID: {}", originalTransaction.getTransactionId());
+
+        // 1. settlement_tasks 상태를 CANCELED로 변경
+        SettlementTask settlementTask = settlementTaskRepository
+                .findByTransaction(originalTransaction)
+                .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_TASK_NOT_FOUND));
+        
+        settlementTask.markAsCanceled();
+        log.info("SettlementTask 상태 CANCELED로 변경 완료");
+
+        // 2. 새로운 취소 Transaction 레코드 생성 (CANCEL 타입)
+        Transaction cancelTransaction = Transaction.builder()
+                .wallet(originalTransaction.getWallet())
+                .customer(originalTransaction.getCustomer())
+                .store(originalTransaction.getStore())
+                .transactionType(Transaction.TransactionType.CANCEL)
+                .amount(originalTransaction.getAmount().negate()) // 음수로 저장
+                .transactionUniqueNo(originalTransaction.getTransactionUniqueNo()) // 동일한 거래번호
+                .build();
+
+        cancelTransaction = transactionRepository.save(cancelTransaction);
+        log.info("취소 Transaction 생성 완료 - ID: {}", cancelTransaction.getTransactionId());
+
+        // 3. wallet_store_lot 상태를 CANCELED로 변경
+        WalletStoreLot lot = walletStoreLotRepository
+                .findByOriginChargeTransaction(originalTransaction)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        
+        lot.markAsCanceled(); // sourceType을 CANCELED로 변경
+        log.info("WalletStoreLot 상태 CANCELED로 변경 완료 - Lot ID: {}", lot.getLotId());
+
+        // 4. wallet_store_balance 금액 차감
+        WalletStoreBalance balance = walletStoreBalanceRepository
+                .findByWalletAndStore(originalTransaction.getWallet(), originalTransaction.getStore())
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        
+        balance.subtractBalance(originalTransaction.getAmount());
+        log.info("WalletStoreBalance 차감 완료 - 차감 금액: {}, 잔여 잔액: {}", 
+                originalTransaction.getAmount(), balance.getBalance());
+
+        // 5. 응답 생성
+        return CancelResponseDto.builder()
+                .cancelTransactionId(cancelTransaction.getTransactionId())
+                .transactionUniqueNo(originalTransaction.getTransactionUniqueNo())
+                .cancelAmount(originalTransaction.getAmount())
+                .cancelTime(LocalDateTime.now())
+                .remainingBalance(balance.getBalance())
+                .build();
     }
 
     /**

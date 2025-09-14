@@ -37,7 +37,7 @@ public class CancelController {
      */
     @GetMapping("/{customerId}/cancel-list")
     public ResponseEntity<ApiResponse<Page<CancelListResponseDto>>> getCancelableTransactions(
-            @PathVariable Long customerId,
+            @PathVariable Long customerId, // JWT 들오면 바꿔야함
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         log.info("취소 가능한 거래 목록 조회 요청 - 고객ID: {}, 페이지: {}, 크기: {}", 
@@ -64,15 +64,16 @@ public class CancelController {
      * @param cancelRequestDto 취소 요청 정보 (transactionUniqueNo, cardNo, cvc)
      * @return 취소 처리 결과
      */
-    @PostMapping("/payments/cancel")
+    @PostMapping("/{customerId}/payments/cancel")
     public ResponseEntity<ApiResponse<CancelResponseDto>> cancelPayment(
+            @PathVariable Long customerId, // JWT 들오면 바꿔야함
             @RequestBody @Valid CancelRequestDto cancelRequestDto) {
         
         log.info("카드 결제 취소 요청 - 거래번호: {}, 카드번호: {}", 
                 cancelRequestDto.getTransactionUniqueNo(), 
                 cancelRequestDto.getCardNo().substring(0, 4) + "****"); // 카드번호 마스킹
 
-        CancelResponseDto response = cancelService.cancelPayment(cancelRequestDto);
+        CancelResponseDto response = cancelService.cancelPayment(customerId, cancelRequestDto);
         
         log.info("카드 결제 취소 완료 - 취소 거래ID: {}", response.getCancelTransactionId());
         
