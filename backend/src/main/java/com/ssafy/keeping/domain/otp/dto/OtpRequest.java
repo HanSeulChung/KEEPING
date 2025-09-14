@@ -12,6 +12,9 @@ import java.time.LocalDate;
 public class OtpRequest {
 
     @NotBlank
+    private String regSessionId;
+
+    @NotBlank
     private String name;
 
     @NotBlank

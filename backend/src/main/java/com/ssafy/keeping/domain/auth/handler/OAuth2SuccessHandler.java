@@ -38,8 +38,28 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        System.out.println("=== OAUTH SUCCESS HANDLER START ===");
+        System.out.println("[OAUTH SUCCESS] Request URI: " + request.getRequestURI());
+        System.out.println("[OAUTH SUCCESS] Query String: " + request.getQueryString());
+        System.out.println("[OAUTH SUCCESS] State parameter: " + request.getParameter("state"));
+        System.out.println("[OAUTH SUCCESS] Code parameter: " + request.getParameter("code"));
+
         // role 복원
         UserRole role = authService.extractRoleFromState(request);
+        System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
+        
+        // role이 null인 경우 처리
+        if (role == null) {
+            System.out.println("[OAUTH] Role is null - redirecting to role selection");
+            if (devFallback()) {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Role not found\", \"message\":\"Please select your role and try again\"}");
+                return;
+            }
+            // 프론트엔드의 role 선택 페이지로 리다이렉트
+            response.sendRedirect(feBaseUrl + "/#/auth/select-role");
+            return;
+        }
 
         // provider, providerId 추출
         OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;

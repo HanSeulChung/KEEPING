@@ -4,15 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.Util.CookieUtil;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
-import com.ssafy.keeping.domain.charge.entity.Owner;
-import com.ssafy.keeping.domain.charge.repository.OwnerRepository;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.customer.dto.PrefillResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
+import com.ssafy.keeping.domain.otp.session.RegStep;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,21 +37,21 @@ public class AuthService {
     private final CookieUtil cookieUtil;
 
     private final String SIGN_UP_INFO_KEY = "signup:info:";
-    private final String OTP_KEY_PREFIX = "otp:session:";
+    private final String OTP_KEY_PREFIX = "otp:info:";
 
     public UserRole extractRoleFromState(HttpServletRequest request) {
-        String state = request.getParameter("state");
-        if(state == null || state.isBlank()) {
-            return null;
+        // 세션에서 role 가져오기
+        String role = (String) request.getSession().getAttribute("oauth_role");
+        System.out.println("[AUTH SERVICE] Session ID: " + request.getSession().getId());
+        System.out.println("[AUTH SERVICE] Found role in session: " + role);
 
+        if (role != null) {
+            request.getSession().removeAttribute("oauth_role"); // 한 번 사용 후 삭제
+            return toUserRole(role);
         }
-        String key = "oauth:state:" + state;
-        String role = redis.opsForValue().get(key);
-        if(role == null) {
-            return null;
-        }
-        redis.delete(key);
-        return toUserRole(role);
+
+        System.out.println("[AUTH SERVICE] No role found in session, returning null");
+        return null;
     }
 
     public UserRole toUserRole(String role) {
@@ -59,6 +60,11 @@ public class AuthService {
 
 
     public boolean userExists(UserRole role, String providerId, String provider) {
+        // role이 null인 경우 체크
+        if (role == null) {
+            throw new IllegalArgumentException("Role cannot be null");
+        }
+        
         Customer.ProviderType providerType = toProviderType(provider);
 
         return switch (role) {
@@ -85,7 +91,7 @@ public class AuthService {
     public void storeSingUpInfo(String regSessionId, String providerId, String provider, String email, String imgUrl, UserRole role) {
         Map<String, Object> socialSignUpInfo = new HashMap<>();
         socialSignUpInfo.put("providerId", providerId);
-        socialSignUpInfo.put("provider", provider);
+        socialSignUpInfo.put("provider", provider.toUpperCase());
         socialSignUpInfo.put("UserRole", role == null ? null : role.name());
         socialSignUpInfo.put("email", email);
         socialSignUpInfo.put("imgUrl", imgUrl);
@@ -105,18 +111,29 @@ public class AuthService {
         String otpKey = OTP_KEY_PREFIX + regSessionId;
         String otpValue = redis.opsForValue().get(otpKey);
 
+        System.out.println("[ATTACH OTP] otpKey: " + otpKey);
+        System.out.println("[ATTACH OTP] otpValue: " + otpValue);
+
         RegSession regSession = new RegSession();
         if(otpValue != null) {
             try {
                 regSession = om.readValue(otpValue, RegSession.class);
-
+                System.out.println("[ATTACH OTP] regSession name: " + regSession.getName());
+                System.out.println("[ATTACH OTP] regSession birth: " + regSession.getBirth());
+                System.out.println("[ATTACH OTP] regSession phone: " + regSession.getPhoneNumber());
+                System.out.println("[ATTACH OTP] regSession regStep: " + regSession.getRegStep());
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
+        } else {
+            System.out.println("[ATTACH OTP] otpValue is null!");
         }
 
         String signUpKey = SIGN_UP_INFO_KEY + regSessionId;
         String signUpValue = redis.opsForValue().get(signUpKey);
+
+        System.out.println("[ATTACH OTP] signUpKey: " + signUpKey);
+        System.out.println("[ATTACH OTP] signUpValue before: " + signUpValue);
 
         Map<String, Object> map = new HashMap<>();
 
@@ -131,9 +148,13 @@ public class AuthService {
         map.put("name", regSession.getName());
         map.put("birth", regSession.getBirth());
         map.put("phoneNumber", regSession.getPhoneNumber());
+        map.put("regStep", RegStep.PHONE_VERIFIED);
+        map.put("phoneVerfiedAt", regSession.getPhoneVerifiedAt());
 
         try {
-            redis.opsForValue().set(signUpKey, om.writeValueAsString(map), Duration.ofMinutes(15));
+            String finalValue = om.writeValueAsString(map);
+            System.out.println("[ATTACH OTP] signUpValue after: " + finalValue);
+            redis.opsForValue().set(signUpKey, finalValue, Duration.ofMinutes(15));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

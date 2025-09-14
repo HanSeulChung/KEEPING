@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.otp.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import com.ssafy.keeping.domain.otp.dto.OtpRequestResponse;
@@ -29,6 +30,7 @@ public class OtpService {
     private final CustomerRepository customerRepository;
     private final RegSessionStore sessionStore;
     private final SmsSender smsSender;
+    private final AuthService authService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     private static final Duration REG_TTL = Duration.ofMinutes(30);
@@ -54,25 +56,27 @@ public class OtpService {
                 });
 
         // 세선 져장
-        String regSessionId = UUID.randomUUID().toString();
-        RegSession session = RegSession.fromOtpRequest(dto, regSessionId);
-        sessionStore.setSession(OTP_KEY_PREFIX, regSessionId, session, REG_TTL);
+        RegSession session = RegSession.fromOtpRequest(dto, dto.getRegSessionId());
+        sessionStore.setSession(OTP_KEY_PREFIX, dto.getRegSessionId(), session, REG_TTL);
 
         // OTP 전송
         String otp = createNumberKey();
 
-        redis.opsForValue().set(OTP_CODE_KEY + regSessionId, otp, OTP_TTL);
-        redis.opsForValue().set(OTP_TRY_KEY + regSessionId, "0", OTP_TTL);
+        redis.opsForValue().set(OTP_CODE_KEY + dto.getRegSessionId(), otp, OTP_TTL);
+        redis.opsForValue().set(OTP_TRY_KEY + dto.getRegSessionId(), "0", OTP_TTL);
 
         String text = "[keeping] 본인인증 인증번호는 " + otp + " 입니다. 정확히 입력해주세요.";
 
         smsSender.send(dto.getPhoneNumber(), text);
 
-        return new OtpRequestResponse(regSessionId);
+        return new OtpRequestResponse(dto.getRegSessionId());
     }
 
     // OTP 검증
     public OtpVerifyResponse verifyOtp(OtpVerifyRequest dto) {
+        System.out.println("[OTP VERIFY] Received regSessionId: " + dto.getRegSessionId());
+        System.out.println("[OTP VERIFY] Looking for key: " + OTP_KEY_PREFIX + dto.getRegSessionId());
+
         RegSession regSession = sessionStore.getSession(OTP_KEY_PREFIX, dto.getRegSessionId());
 
         // OTP 검증
@@ -86,7 +90,16 @@ public class OtpService {
 
         // 실패 횟수 확인
         String triesStr = redis.opsForValue().get(keyTry);
-        int tries = (triesStr == null) ? 0 : Integer.parseInt(triesStr);
+
+        int tries = 0;
+        if (triesStr != null) {
+            try {
+                tries = Integer.parseInt(triesStr);
+            } catch (NumberFormatException e) {
+                tries = 0; // 파싱 실패 시 0으로 초기화
+            }
+        }
+
         if(tries >= OTP_MAX_TRIES) {
             redis.delete(keyCode);
             redis.delete(keyTry);
@@ -97,22 +110,30 @@ public class OtpService {
         Long remains = redis.getExpire(keyCode);
         if(remains == null || remains <= 0) {
             redis.opsForValue().set(keyTry, "0", OTP_TTL);
+            redis.delete(keyCode);
+            redis.delete(keyTry);
             throw new IllegalStateException("인증이 만료되었습니다. 다시 시도해주세요.");
         }
 
         // 코드 검증 오류
         if(!savedCode.equals(dto.getCode())) {
-            redis.opsForValue().set(keyTry, String.valueOf(tries + 1), redis.getExpire(keyTry));
+            // increment 사용으로 안전하게 증가
+            redis.opsForValue().increment(keyTry);
+            // 기존 TTL 유지
+            redis.expire(keyTry, Duration.ofSeconds(redis.getExpire(keyCode)));
             throw new IllegalStateException("인증번호가 일치하지 않습니다.");
         }
 
         // 코드 검증 성공
+        regSession.markVerifiedAt();
+        sessionStore.setSession(OTP_KEY_PREFIX, dto.getRegSessionId(), regSession, sessionStore.remainingTtl(OTP_KEY_PREFIX, dto.getRegSessionId()));
+
+        authService.attachOtpInfo(dto.getRegSessionId());
+
         redis.delete(keyCode);
         redis.delete(keyTry);
 
         // 업데이트
-        regSession.markVerifiedAt();
-        sessionStore.setSession(OTP_KEY_PREFIX, dto.getRegSessionId(), regSession, sessionStore.remainingTtl(OTP_KEY_PREFIX, dto.getRegSessionId()));
 
         return new OtpVerifyResponse(true);
     }

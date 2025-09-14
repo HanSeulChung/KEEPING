@@ -62,6 +62,7 @@ public class Customer {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @CreationTimestamp
     @Column(name = "phone_verified_at")
     private LocalDateTime phoneVerifiedAt;
 
@@ -78,10 +79,10 @@ public class Customer {
     private List<Transaction> transactions;
 
     public enum ProviderType {
-        GOOGLE, KAKAO
+        GOOGLE, KAKAO;
     }
 
     public enum Gender {
-        MALE, FEMALE
+        MALE, FEMALE;
     }
 }

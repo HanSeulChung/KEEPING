@@ -26,8 +26,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     public static final String[] ALLOW_URLS = {
-            "/auth/kakao/callback",
-            "/auth/google/callback",
+            "/auth/**",
             "/otp/**",
             "/stores/**"
     };
@@ -91,7 +90,7 @@ public class SecurityConfig {
 
                 // 세션 관리 정책: STATELESS (세션 사용 안함)
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
 
                 .headers(headers -> headers

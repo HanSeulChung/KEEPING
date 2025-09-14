@@ -10,12 +10,16 @@ import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
@@ -34,16 +38,25 @@ public class CustomerService {
         }
 
         // userKey
-        String userKey = apiClient.searchUserKey(dto.getEmail()).getUserKey();
+        String userKey = null;
+        try {
+            userKey = apiClient.searchUserKey(session.getEmail()).getUserKey();
+        } catch (Exception e) {
+            // 사용자를 찾을 수 없는 경우 null로 설정하고 계속 진행
+            log.info("FinOpenAPI에서 사용자를 찾을 수 없음: {}", session.getEmail());
+            userKey = null;
+        }
 
         // 고객 생성
         Customer customer = Customer.builder()
+                .providerType(session.getProvider())
+                .providerId(session.getProviderId())
                 .name(session.getName())
-                .email(dto.getEmail())
+                .email(session.getEmail())
                 .gender(dto.getGender())
                 .birth(session.getBirth())
                 .phoneVerifiedAt(session.getPhoneVerifiedAt())
-                .imgUrl(dto.getImgUrl())
+                .imgUrl(session.getImgUrl())
                 .phoneNumber(session.getPhoneNumber())
                 .userKey(userKey)
                 .build();

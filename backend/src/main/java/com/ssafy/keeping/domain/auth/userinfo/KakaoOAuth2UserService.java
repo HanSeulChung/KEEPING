@@ -44,7 +44,7 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
         return new DefaultOAuth2User(
                 List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 mapped,
-                providerId
+                "id"
         );
     }
 }

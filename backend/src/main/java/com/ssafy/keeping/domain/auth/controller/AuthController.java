@@ -1,61 +1,183 @@
 package com.ssafy.keeping.domain.auth.controller;
 
-import com.ssafy.keeping.domain.auth.Util.CookieUtil;
-import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.auth.service.AuthService;
-import com.ssafy.keeping.domain.auth.service.TokenResponse;
-import com.ssafy.keeping.domain.auth.service.TokenService;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
-import com.ssafy.keeping.domain.customer.dto.PrefillResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.customer.service.CustomerService;
 import com.ssafy.keeping.global.response.ApiResponse;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
+    private final StringRedisTemplate redis;
     private final AuthService authService;
-    private final TokenService tokenService;
     private final CustomerService customerService;
-    private final CookieUtil cookieUtil;
 
-    // 로그인
-    @GetMapping("/{role}/{provider}/login")
-    public void login(@PathVariable String role, @PathVariable String provider, HttpServletResponse response) throws IOException {
-        response.sendRedirect("/oauth2/authorization/" + provider + "?role=" + role);
+    @GetMapping("/kakao/customer")
+    public void kakaoLoginAsCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // 세션에 role 저장
+        request.getSession().setAttribute("oauth_role", "CUSTOMER");
+        System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
-    // 회원가입 시 정보 미리 채워두기
-    @GetMapping("/prefill")
-    public ResponseEntity<PrefillResponse> prefillInfo(@RequestParam @NotBlank String regSessionId) {
-        PrefillResponse responseDto = authService.prefillInfo(regSessionId);
-
-        return ResponseEntity.ok(responseDto);
+    @GetMapping("/kakao/owner")
+    public void kakaoLoginAsOwner(HttpServletResponse response) throws IOException {
+        String state = UUID.randomUUID().toString();
+        redis.opsForValue().set("oauth:state:" + state, "OWNER", Duration.ofMinutes(10));
+        System.out.println("[AUTH CONTROLLER] Manually saved role=OWNER with state=" + state);
+        String kakaoUrl = "/oauth2/authorization/kakao?role=OWNER&state=" + state;
+        response.sendRedirect(kakaoUrl);
     }
+
 
     @PostMapping("/signup/customer")
-    public ResponseEntity<ApiResponse<SignupCustomerResponse>> completeCustomer(@RequestBody @Valid CustomerRegisterRequest dto,
-                                                                                HttpServletResponse httpResponse) {
-        CustomerRegisterResponse responseDto =  customerService.RegisterCustomer(dto);
+    public ResponseEntity<ApiResponse<SignupCustomerResponse>> completeCustomer(
+            @RequestBody @Valid CustomerRegisterRequest dto,
+            HttpServletResponse httpResponse
+    ) {
+        CustomerRegisterResponse response = customerService.RegisterCustomer(dto);
+        SignupCustomerResponse signUpResponse = authService.signUpTokenForCustomer(response, httpResponse);
 
-        // 토큰 발급 및 쿠키에 저장
-        SignupCustomerResponse response = authService.signUpTokenForCustomer(responseDto, httpResponse);
-
-        return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.OK.value(), response));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.CREATED.value(), signUpResponse));
     }
 
 
+    @GetMapping("/select-role")
+    public String selectRole() {
+        return """
+                <html>
+                <head>
+                    <title>역할 선택</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 50px; }
+                        .button { 
+                            display: inline-block; 
+                            padding: 15px 30px; 
+                            margin: 10px; 
+                            background-color: #007bff; 
+                            color: white; 
+                            text-decoration: none; 
+                            border-radius: 5px; 
+                        }
+                        .button:hover { background-color: #0056b3; }
+                    </style>
+                </head>
+                <body>
+                    <h2>카카오 로그인 - 역할을 선택하세요</h2>
+                    <p>아래 버튼 중 하나를 클릭하여 로그인하세요:</p>
+                    
+                    <a href="/auth/kakao/customer" class="button">🛒 고객으로 로그인</a>
+                    <br><br>
+                    <a href="/auth/kakao/owner" class="button">🏪 점주로 로그인</a>
+                    
+                    <hr>
+                    <h3>디버깅 정보:</h3>
+                    <p><a href="/auth/debug/redis">Redis 상태 확인</a></p>
+                </body>
+                </html>
+                """;
+    }
+
+    @GetMapping("/debug/redis")
+    public String debugRedis() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<h3>Redis 전체 Keys:</h3>");
+
+        try {
+            // 모든 키 조회
+            var allKeys = redis.keys("*");
+            if (allKeys.isEmpty()) {
+                sb.append("<p>Redis에 저장된 키가 없습니다.</p>");
+            } else {
+                sb.append("<p>총 ").append(allKeys.size()).append("개의 키가 있습니다.</p>");
+
+                // 키를 패턴별로 분류해서 보여주기
+                var oauthKeys = allKeys.stream().filter(key -> key.startsWith("oauth:")).toList();
+                var signupKeys = allKeys.stream().filter(key -> key.startsWith("signup:")).toList();
+                var otpKeys = allKeys.stream().filter(key -> key.startsWith("otp:")).toList();
+                var otherKeys = allKeys.stream().filter(key ->
+                        !key.startsWith("oauth:") &&
+                                !key.startsWith("signup:") &&
+                                !key.startsWith("otp:")
+                ).toList();
+
+                // OAuth 관련 키들
+                if (!oauthKeys.isEmpty()) {
+                    sb.append("<h4>OAuth State Keys:</h4>");
+                    for (String key : oauthKeys) {
+                        String value = redis.opsForValue().get(key);
+                        sb.append("<p><strong>").append(key).append("</strong> = ").append(value).append("</p>");
+                    }
+                }
+
+                // 회원가입 관련 키들
+                if (!signupKeys.isEmpty()) {
+                    sb.append("<h4>Signup Info Keys:</h4>");
+                    for (String key : signupKeys) {
+                        String value = redis.opsForValue().get(key);
+                        sb.append("<div style='border: 1px solid #ccc; margin: 10px; padding: 10px;'>");
+                        sb.append("<strong>").append(key).append("</strong><br>");
+                        sb.append("<pre>").append(value).append("</pre>");
+                        sb.append("</div>");
+                    }
+                }
+
+                // OTP 관련 키들
+                if (!otpKeys.isEmpty()) {
+                    sb.append("<h4>OTP Keys:</h4>");
+                    for (String key : otpKeys) {
+                        String value = redis.opsForValue().get(key);
+                        sb.append("<p><strong>").append(key).append("</strong> = ").append(value).append("</p>");
+                    }
+                }
+
+                // 기타 키들
+                if (!otherKeys.isEmpty()) {
+                    sb.append("<h4>Other Keys:</h4>");
+                    for (String key : otherKeys) {
+                        String value = redis.opsForValue().get(key);
+                        sb.append("<p><strong>").append(key).append("</strong> = ").append(value).append("</p>");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            sb.append("<p>Error: ").append(e.getMessage()).append("</p>");
+        }
+
+        sb.append("<hr>");
+        sb.append("<p><a href='/auth/debug/clear-redis'>OAuth keys 삭제</a></p>");
+        sb.append("<p><a href='/auth/select-role'>Back to role selection</a></p>");
+
+        return sb.toString();
+    }
+
+    @GetMapping("/debug/clear-redis")
+    public String clearRedis() {
+        try {
+            var keys = redis.keys("oauth:state:*");
+            if (!keys.isEmpty()) {
+                redis.delete(keys);
+            }
+            return "<p>OAuth state keys cleared!</p><a href='/auth/select-role'>Back to role selection</a>";
+        } catch (Exception e) {
+            return "<p>Error: " + e.getMessage() + "</p>";
+        }
+    }
 }
