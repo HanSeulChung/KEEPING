@@ -11,20 +11,13 @@ import lombok.Data;
 @AllArgsConstructor
 public class CustomerRegisterRequest {
 
+    @NotBlank
     private String regSessionId;
-//
-//    @NotBlank
-//    private String email;
-//
-    @NotNull
-    private Gender gender;
 
 //    @NotBlank
 //    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
 //    private Long paymentPin;
 
-//    @NotBlank
-//    private String imgUrl;
 
     private String userKey;
 }
