@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.payment.intent.controller;
 
+import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.payment.intent.dto.PaymentInitiateRequest;
 import com.ssafy.keeping.domain.payment.intent.dto.PaymentIntentDetailResponse;
 import com.ssafy.keeping.domain.payment.intent.service.PaymentIntentService;
@@ -30,13 +31,16 @@ public class PaymentIntentController {
             @PathVariable UUID qrTokenId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKeyHeader,
             // @AuthenticationPrincipal Owner owner,
-            // @AuthenticationPrincipal(expression = "id") Long ownerId,
+            @AuthenticationPrincipal(expression = "id") Long ownerId,
             @Valid @RequestBody PaymentInitiateRequest body
     ) {
-        PaymentIntentDetailResponse res = service.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);
+        IdempotentResult<PaymentIntentDetailResponse> res = service.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);
         return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("결제 요청이 생성되었습니다.", HttpStatus.CREATED.value(), res));
+                .status(res.getHttpStatus())
+                .body(ApiResponse.success(
+                        res.isReplay() ? "이전에 처리된 요청의 결과입니다." : "결제 요청이 생성되었습니다.",
+                        res.getHttpStatus().value(),
+                        res.getBody()));
     }
 
     /**

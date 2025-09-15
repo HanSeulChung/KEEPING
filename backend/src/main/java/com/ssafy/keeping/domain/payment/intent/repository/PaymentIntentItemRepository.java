@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PaymentIntentItemRepository extends JpaRepository<PaymentIntentItem, Long> {
-    List<PaymentIntentItem> findByIntentId(Long intentId);
+    List<PaymentIntentItem> findByIntent_IntentId(Long intentId);
 }

@@ -34,6 +34,7 @@ public class PaymentIntent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "intent_id")
     private Long intentId;
 
     @Column(name = "public_id", nullable = false, unique = true, columnDefinition = "BINARY(16)")

@@ -218,7 +218,7 @@ public class PaymentIntentService {
     public PaymentIntentDetailResponse getDetail(UUID intentPublicId) {
         PaymentIntent intent = intentRepository.findByPublicId(intentPublicId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_INTENT_NOT_FOUND));
-        List<PaymentIntentItem> rows = itemRepository.findByIntentId(intent.getIntentId());
+        List<PaymentIntentItem> rows = itemRepository.findByIntent_IntentId(intent.getIntentId());
         List<PaymentIntentItemView> itemViews = new ArrayList<>();
         for (PaymentIntentItem it : rows) {
             itemViews.add(toItemView(it)); // 또는 this.toItemView(it)
