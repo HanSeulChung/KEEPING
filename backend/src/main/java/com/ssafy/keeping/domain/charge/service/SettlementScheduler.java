@@ -133,13 +133,13 @@ public class SettlementScheduler {
             
             // 2. 점주 정보 조회 - 연관관계 활용
             Owner owner = store.getOwner();
-            
+
             if (owner == null) {
                 log.error("가게에 연결된 점주가 없습니다. 가게 ID: {}", store.getStoreId());
                 markTasksAsFailed(tasks, "가게에 연결된 점주가 없습니다.");
                 return;
             }
-            
+
             if (owner.getUserKey() == null || owner.getUserKey().trim().isEmpty()) {
                 log.error("점주의 userKey가 없습니다. 점주 ID: {}", owner.getOwnerId());
                 markTasksAsFailed(tasks, "점주의 SSAFY 은행 계정이 없습니다.");
