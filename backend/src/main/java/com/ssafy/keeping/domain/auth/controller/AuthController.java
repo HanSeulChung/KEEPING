@@ -1,6 +1,11 @@
 package com.ssafy.keeping.domain.auth.controller;
 
+import com.ssafy.keeping.domain.auth.Util.CookieUtil;
+import com.ssafy.keeping.domain.auth.enums.UserRole;
+import com.ssafy.keeping.domain.auth.security.JwtProvider;
 import com.ssafy.keeping.domain.auth.service.AuthService;
+import com.ssafy.keeping.domain.auth.service.TokenResponse;
+import com.ssafy.keeping.domain.auth.service.TokenService;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
@@ -32,6 +37,9 @@ public class AuthController {
     private final AuthService authService;
     private final CustomerService customerService;
     private final OwnerService ownerService;
+    private final CookieUtil cookieUtil;
+    private final JwtProvider jwtProvider;
+    private final TokenService tokenService;
 
     @GetMapping("/kakao/customer")
     public void kakaoLoginAsCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -73,12 +81,67 @@ public class AuthController {
                 .body(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.CREATED.value(), signUpResponse));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
+
+            if(refreshToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("refreshToken 이 없습니다", HttpStatus.UNAUTHORIZED.value()));
+            }
+
+            if(!jwtProvider.validateToken(refreshToken)) {
+                cookieUtil.removeRefreshTokenFromCookie(response);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("유효하지 않은 refreshToken 입니다.", HttpStatus.UNAUTHORIZED.value()));
+            }
+
+            // 현재 정보 추출
+            Long userId = jwtProvider.getUserIdFromRefresh(refreshToken);
+            UserRole role = jwtProvider.getUserRole(refreshToken);
+
+            TokenResponse newTokens = tokenService.reissueToken(userId, refreshToken, role);
+
+            cookieUtil.addHttpOnlyRefreshCookie(response, newTokens.getRefreshToken(), Duration.ofDays(7));
+
+            return ResponseEntity.ok()
+                    .body(ApiResponse.success("토큰 갱신", HttpStatus.OK.value(), newTokens.withoutRefreshToken()));
+
+        } catch (Exception e) {
+            cookieUtil.removeRefreshTokenFromCookie(response);
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("토큰 갱신 실패 ", HttpStatus.UNAUTHORIZED.value()));
+        }
+    }
+
     @GetMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> userLogout() {
-        return null;
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
+
+            if(refreshToken != null && jwtProvider.validateToken(refreshToken)) {
+                Long userId = jwtProvider.getUserIdFromRefresh(refreshToken);
+                UserRole role = jwtProvider.getUserRole(refreshToken);
+                String key = "auth:rt:" + role + ":" + userId;
+                redis.delete(key);
+            }
+            cookieUtil.removeRefreshTokenFromCookie(response);
+
+            return ResponseEntity.ok()
+                    .body(ApiResponse.success("로그아웃 성공", HttpStatus.OK.value(), null));
+
+        } catch (Exception e) {
+            cookieUtil.removeRefreshTokenFromCookie(response);
+
+            return ResponseEntity.ok()
+                    .body(ApiResponse.success("로그아웃 완료", HttpStatus.OK.value(), null));
+        }
     }
 
 
+    // 현재는 페이지가 없어서 /auth/select-role 활용
     @GetMapping("/select-role")
     public String selectRole() {
         return """

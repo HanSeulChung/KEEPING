@@ -18,27 +18,18 @@ public class TokenService {
     // 토큰 발급
     public TokenResponse issueTokens(Long userId, UserRole userRole) {
         String accessToken = jwtProvider.generateAccessToken(userId, userRole);
-        String refreshToken = jwtProvider.generateRefreshToken(userId);
+        String refreshToken = jwtProvider.generateRefreshToken(userId, userRole);
 
-        String key = buildKey(userId);
+        String key = buildKey(userId, userRole);
         redis.opsForValue().set(key, refreshToken, Duration.ofDays(7));
 
         return TokenResponse.builder().userId(userId).role(userRole).accessToken(accessToken).refreshToken(refreshToken).build();
     }
 
-//    public TokenResponse issueTokens(Long userId, UserRole userRole, String deviceId) {
-//        String accessToken = jwtProvider.generateAccessToken(userId, userRole);
-//        String refreshToken = jwtProvider.generateRefreshToken(userId);
-//
-//        String key = buildKey(userId, deviceId);
-//        redis.opsForValue().set(key, refreshToken, Duration.ofDays(7));
-//
-//        return TokenResponse.builder().userId(userId).role(userRole).accessToken(accessToken).refreshToken(refreshToken).build();
-//    }
 
     // refreshtoken 처리
     public TokenResponse reissueToken(Long userId, String oldRefreshToken, UserRole userRole) {
-        String key = buildKey(userId);
+        String key = buildKey(userId, userRole);
         String saved = redis.opsForValue().get(key);
 
         if (saved == null || !saved.equals(oldRefreshToken) || !jwtProvider.validateToken(oldRefreshToken)) {
@@ -48,38 +39,21 @@ public class TokenService {
         redis.delete(key);
 
         String newAccessToken = jwtProvider.generateAccessToken(userId, userRole);
-        String newRefreshToken = jwtProvider.generateRefreshToken(userId);
+        String newRefreshToken = jwtProvider.generateRefreshToken(userId, userRole);
 
         redis.opsForValue().set(key, newRefreshToken, Duration.ofDays(7));
 
-        return TokenResponse.builder().accessToken(newAccessToken).refreshToken(newRefreshToken).build();
+        return TokenResponse.builder()
+                .userId(userId)
+                .role(userRole)
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build();
     }
 
 
-//    public TokenResponse reissueToken(Long userId, String oldRefreshToken, UserRole userRole, String deviceId) {
-//        String key = buildKey(userId, deviceId);
-//        String saved = redis.opsForValue().get(key);
-//
-//        if (saved == null || !saved.equals(oldRefreshToken) || !jwtProvider.validateToken(oldRefreshToken)) {
-//            throw new RuntimeException("Invalid refresh token");
-//        }
-//
-//        redis.delete(key);
-//
-//        String newAccessToken = jwtProvider.generateAccessToken(userId, userRole);
-//        String newRefreshToken = jwtProvider.generateRefreshToken(userId);
-//
-//        redis.opsForValue().set(key, newRefreshToken, Duration.ofDays(7));
-//
-//        return TokenResponse.builder().accessToken(newAccessToken).refreshToken(newRefreshToken).build();
-//    }
-
-
-    private String buildKey(Long userId) {
-        return "auth:rt:" + userId;
+    private String buildKey(Long userId, UserRole userRole) {
+        return "auth:rt:" + userRole + ":" + userId;
     }
 
-//    private String buildKey(Long userId, String deviceId) {
-//        return "auth:rt" + userId + ":" + deviceId;
-//    }
 }

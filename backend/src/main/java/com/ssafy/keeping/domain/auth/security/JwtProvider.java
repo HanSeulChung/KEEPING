@@ -34,15 +34,17 @@ public class JwtProvider {
     public String generateAccessToken(Long userId, UserRole role) {
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .claim("role", role.name())
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS384)
                 .compact();
     }
 
     // refresh token 발급
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(Long userId, UserRole role) {
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .claim("role", role.name())
                 .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS384)
                 .compact();
@@ -61,12 +63,35 @@ public class JwtProvider {
     // userRole 꺼내기
     public UserRole getUserRole(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-        return claims.get("role", UserRole.class);
+        String roleStr = claims.get("role", String.class);
+        return roleStr != null ? UserRole.valueOf(roleStr) : null;
+
     }
 
     // userId 꺼내기
     public Long getUserId(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         return Long.valueOf(claims.getSubject());
+    }
+
+    // refreshToken 에서 userId 꺼내기
+    public Long getUserIdFromRefresh(String token) {
+        return getUserId(token);
+    }
+
+    // 토큰 만료시간 확인
+    public Date getExpirationDate(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        return claims.getExpiration();
+    }
+
+    // 토큰 만료 확인
+    public boolean isTokenExpired(String token) {
+        try{
+            Date expiration = getExpirationDate(token);
+            return expiration.before(new Date());
+        } catch (Exception e) {
+            return true;
+        }
     }
 }
