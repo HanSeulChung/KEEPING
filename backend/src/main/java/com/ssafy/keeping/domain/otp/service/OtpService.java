@@ -1,15 +1,17 @@
 package com.ssafy.keeping.domain.otp.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import com.ssafy.keeping.domain.otp.dto.OtpRequestResponse;
 import com.ssafy.keeping.domain.otp.dto.OtpVerifyRequest;
 import com.ssafy.keeping.domain.otp.dto.OtpVerifyResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
-import com.ssafy.keeping.domain.otp.sms.SmsSender;
+import com.ssafy.keeping.domain.otp.adapter.SmsSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,7 +20,6 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class OtpService {
     private final StringRedisTemplate redis;
     private final ObjectMapper om;
     private final CustomerRepository customerRepository;
+    private final OwnerRepository ownerRepository;
     private final RegSessionStore sessionStore;
     private final SmsSender smsSender;
     private final AuthService authService;
@@ -42,18 +44,32 @@ public class OtpService {
 
     // OTP 요청
     public OtpRequestResponse requestDto(OtpRequest dto) {
-        // 중복 가입 체크 (핸드폰 번호)
-        if(customerRepository.existsByPhoneNumberAndDeletedAtIsNull(dto.getPhoneNumber())) {
-            throw new IllegalStateException("이미 가입된 계정이 있습니다.");
+
+        if(dto.getUserRole() == UserRole.CUSTOMER) {
+            // 중복 가입 체크 (핸드폰 번호)
+            if(customerRepository.existsByPhoneNumberAndDeletedAtIsNull(dto.getPhoneNumber())) {
+                throw new IllegalStateException("이미 가입된 CUSTOMER 계정이 있습니다.");
+            }
+            // 탈퇴한 사용자라면, 7일 경과했는지 확인
+            customerRepository.findByPhoneNumberAndDeletedAtIsNotNullOrderByDeletedAtDesc(dto.getPhoneNumber())
+                    .ifPresent(last -> {
+                        if(LocalDateTime.now().isBefore(last.getDeletedAt().plusDays(7))) {
+                            throw new IllegalStateException("탈퇴 후 7일이 지나야 재가입 가능합니다.");
+                        }
+                    });
         }
 
-        // 탈퇴한 사용자라면, 7일 경과했는지 확인
-        customerRepository.findByPhoneNumberAndDeletedAtIsNotNullOrderByDeletedAtDesc(dto.getPhoneNumber())
-                .ifPresent(last -> {
-                    if(LocalDateTime.now().isBefore(last.getDeletedAt().plusDays(7))) {
-                        throw new IllegalStateException("탈퇴 후 7일이 지나야 재가입 가능합니다.");
-                    }
-                });
+        if(dto.getUserRole() == UserRole.OWNER) {
+            if(ownerRepository.existsByPhoneNumberAndDeletedAtIsNull(dto.getPhoneNumber())) {
+                throw new IllegalStateException("이미 가입된 OWNER 계정이 있습니다");
+            }
+            ownerRepository.findByPhoneNumberAndDeletedAtIsNotNullOrderByDeletedAtDesc(dto.getPhoneNumber())
+                    .ifPresent(last -> {
+                        if(LocalDateTime.now().isBefore(last.getDeletedAt().plusDays(7))) {
+                            throw new IllegalStateException("탈퇴 후 7일이 지나야 재가입 가능합니다.");
+                        }
+                    });
+        }
 
         // 세선 져장
         RegSession session = RegSession.fromOtpRequest(dto, dto.getRegSessionId());
@@ -132,8 +148,6 @@ public class OtpService {
 
         redis.delete(keyCode);
         redis.delete(keyTry);
-
-        // 업데이트
 
         return new OtpVerifyResponse(true);
     }

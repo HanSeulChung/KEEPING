@@ -76,7 +76,7 @@ public class TokenService {
 
 
     private String buildKey(Long userId) {
-        return "auth:rt" + userId;
+        return "auth:rt:" + userId;
     }
 
 //    private String buildKey(Long userId, String deviceId) {

@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.core.customer.model;
 
+import com.ssafy.keeping.domain.auth.enums.AuthProvider;
+import com.ssafy.keeping.domain.auth.enums.Gender;
 import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import com.ssafy.keeping.domain.core.wallet.model.Wallet;
 import jakarta.persistence.*;
@@ -33,7 +35,7 @@ public class Customer {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "provider_type", nullable = false)
-    private ProviderType providerType;
+    private AuthProvider providerType;
 
     @Column(name = "email", nullable = false, length = 250)
     private String email;
@@ -78,11 +80,4 @@ public class Customer {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaction> transactions;
 
-    public enum ProviderType {
-        GOOGLE, KAKAO;
-    }
-
-    public enum Gender {
-        MALE, FEMALE;
-    }
 }

@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.otp.sms;
+package com.ssafy.keeping.domain.otp.adapter;
 
 import net.nurigo.sdk.message.response.SingleMessageSentResponse;
 

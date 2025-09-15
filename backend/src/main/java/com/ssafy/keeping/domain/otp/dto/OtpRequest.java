@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.otp.dto;
 
+import com.ssafy.keeping.domain.auth.enums.UserRole;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -10,9 +11,11 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 public class OtpRequest {
-
     @NotBlank
     private String regSessionId;
+
+    @NotBlank
+    private UserRole userRole;
 
     @NotBlank
     private String name;

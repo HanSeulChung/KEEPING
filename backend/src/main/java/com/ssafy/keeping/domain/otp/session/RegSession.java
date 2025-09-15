@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.otp.session;
 
+import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import lombok.AllArgsConstructor;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 public class RegSession {
     private String regSessionId;
     private String providerId;
-    private Customer.ProviderType provider;
+    private AuthProvider provider;
     private String email;
     private String imgUrl;
     private String name;

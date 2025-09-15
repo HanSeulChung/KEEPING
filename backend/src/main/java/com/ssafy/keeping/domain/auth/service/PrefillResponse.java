@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.customer.dto;
+package com.ssafy.keeping.domain.auth.service;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

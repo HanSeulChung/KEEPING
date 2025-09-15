@@ -5,6 +5,10 @@ import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.customer.service.CustomerService;
+import com.ssafy.keeping.domain.owner.dto.OwnerRegisterRequest;
+import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.owner.dto.SignupOwnerResponse;
+import com.ssafy.keeping.domain.owner.service.OwnerService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -27,6 +31,7 @@ public class AuthController {
     private final StringRedisTemplate redis;
     private final AuthService authService;
     private final CustomerService customerService;
+    private final OwnerService ownerService;
 
     @GetMapping("/kakao/customer")
     public void kakaoLoginAsCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -37,12 +42,10 @@ public class AuthController {
     }
 
     @GetMapping("/kakao/owner")
-    public void kakaoLoginAsOwner(HttpServletResponse response) throws IOException {
-        String state = UUID.randomUUID().toString();
-        redis.opsForValue().set("oauth:state:" + state, "OWNER", Duration.ofMinutes(10));
-        System.out.println("[AUTH CONTROLLER] Manually saved role=OWNER with state=" + state);
-        String kakaoUrl = "/oauth2/authorization/kakao?role=OWNER&state=" + state;
-        response.sendRedirect(kakaoUrl);
+    public void kakaoLoginAsOwner(HttpServletRequest request,HttpServletResponse response) throws IOException {
+        request.getSession().setAttribute("oauth_role", "OWNER");
+        System.out.println("[AUTH CONTROLLER] Saved role=OWNER to session: " + request.getSession().getId());
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
 
@@ -56,6 +59,23 @@ public class AuthController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.CREATED.value(), signUpResponse));
+    }
+
+    @PostMapping("/signup/owner")
+    public ResponseEntity<ApiResponse<SignupOwnerResponse>> completeOwner(
+            @RequestBody @Valid OwnerRegisterRequest dto,
+            HttpServletResponse httpResponse
+    ) {
+        OwnerRegisterResponse response = ownerService.RegisterOwner(dto);
+        SignupOwnerResponse signUpResponse = authService.signUpTokenForOwner(response, httpResponse);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("회원가입이 완료되었습니다", HttpStatus.CREATED.value(), signUpResponse));
+    }
+
+    @GetMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> userLogout() {
+        return null;
     }
 
 

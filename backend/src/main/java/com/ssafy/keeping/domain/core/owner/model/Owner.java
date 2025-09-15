@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.core.owner.model;
 
+import com.ssafy.keeping.domain.auth.enums.AuthProvider;
+import com.ssafy.keeping.domain.auth.enums.Gender;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import jakarta.persistence.*;
@@ -29,7 +31,7 @@ public class Owner {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "provider_type", nullable = false)
-    private ProviderType providerType;
+    private AuthProvider providerType;
 
     @Column(name = "email", nullable = false, length = 250)
     private String email;
@@ -58,6 +60,7 @@ public class Owner {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @CreationTimestamp
     @Column(name = "phone_verified_at")
     private LocalDateTime phoneVerifiedAt;
 
@@ -70,11 +73,4 @@ public class Owner {
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Store> stores;
 
-    public enum ProviderType {
-        GOOGLE, KAKAO, NAVER
-    }
-
-    public enum Gender {
-        MALE, FEMALE
-    }
 }

@@ -7,7 +7,6 @@ import java.security.SecureRandom;
 
 @Configuration
 public class AppCryptoConfig {
-
     @Bean
     public SecureRandom secureRandom() {
         return new SecureRandom();

@@ -3,17 +3,19 @@ package com.ssafy.keeping.domain.auth.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.Util.CookieUtil;
+import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.owner.model.Owner;
 import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
-import com.ssafy.keeping.domain.customer.dto.PrefillResponse;
 import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
+import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.owner.dto.SignupOwnerResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +67,7 @@ public class AuthService {
             throw new IllegalArgumentException("Role cannot be null");
         }
         
-        Customer.ProviderType providerType = toProviderType(provider);
+        AuthProvider providerType = toProviderType(provider);
 
         return switch (role) {
             case CUSTOMER -> customerExists(providerType, providerId);
@@ -76,7 +78,7 @@ public class AuthService {
 
     // userId 꺼내기
     public Long getUserId(String providerId, String provider, UserRole userRole) {
-        Customer.ProviderType providerType = toProviderType(provider);
+        AuthProvider providerType = toProviderType(provider);
 
         return switch (userRole) {
             case CUSTOMER -> customerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
@@ -168,34 +170,47 @@ public class AuthService {
 
     // 고객 회원가입
     public SignupCustomerResponse signUpTokenForCustomer(CustomerRegisterResponse customerResponse, HttpServletResponse response) {
-        // 2) 토큰 발급
+        // 토큰 발급
         TokenResponse token = tokenService.issueTokens(
                 customerResponse.getCustomerId(),
                 UserRole.CUSTOMER
         );
 
-        // 3) 쿠키 세팅
+        // 쿠키 세팅
         cookieUtil.addHttpOnlyRefreshCookie(response, token.getRefreshToken(), Duration.ofDays(7));
 
         return SignupCustomerResponse.builder().user(customerResponse).token(token.withoutRefreshToken()).build();
 
     }
 
+    public SignupOwnerResponse signUpTokenForOwner(OwnerRegisterResponse ownerResponse, HttpServletResponse response) {
+        TokenResponse token = tokenService.issueTokens(
+                ownerResponse.getOwnerId(),
+                UserRole.OWNER
+        );
+
+        // 쿠키 세팅
+        cookieUtil.addHttpOnlyRefreshCookie(response, token.getRefreshToken(), Duration.ofDays(7));
+
+        return SignupOwnerResponse.builder().user(ownerResponse).token(token.withoutRefreshToken()).build();
+
+    }
 
 
-    private boolean ownerExists(Customer.ProviderType providerType, String providerId) {
+
+    private boolean ownerExists(AuthProvider providerType, String providerId) {
         return ownerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
                 .isPresent();
     }
 
-    private boolean customerExists(Customer.ProviderType providerType, String providerId) {
+    private boolean customerExists(AuthProvider providerType, String providerId) {
         return customerRepository.findByProviderTypeAndProviderIdAndDeletedAtIsNull(providerType, providerId)
                 .isPresent();
     }
 
     // ProviderType 으로 변경
-    private Customer.ProviderType toProviderType(String provider) {
-        return Customer.ProviderType.valueOf(provider.toUpperCase());
+    private AuthProvider toProviderType(String provider) {
+        return AuthProvider.valueOf(provider.toUpperCase());
     }
 
 

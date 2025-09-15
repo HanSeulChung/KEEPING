@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.customer.dto;
 
+import com.ssafy.keeping.domain.auth.enums.AuthProvider;
+import com.ssafy.keeping.domain.auth.enums.Gender;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,12 +14,12 @@ import java.time.LocalDateTime;
 public class CustomerRegisterResponse {
     private Long customerId;
     private String providerId;
-    private Customer.ProviderType providerType;
+    private AuthProvider providerType;
     private String name;
     private String email;
     private String phoneNumber;
     private LocalDate birth;
-    private Customer.Gender gender;
+    private Gender gender;
     private String imgUrl;
     private LocalDateTime phoneVerifiedAt;
 

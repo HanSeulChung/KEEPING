@@ -1,15 +1,13 @@
-package com.ssafy.keeping.domain.customer.dto;
+package com.ssafy.keeping.domain.owner.dto;
 
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class CustomerRegisterRequest {
+public class OwnerRegisterRequest {
 
     private String regSessionId;
 //
@@ -18,10 +16,6 @@ public class CustomerRegisterRequest {
 //
     @NotNull
     private Gender gender;
-
-//    @NotBlank
-//    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
-//    private Long paymentPin;
 
 //    @NotBlank
 //    private String imgUrl;
