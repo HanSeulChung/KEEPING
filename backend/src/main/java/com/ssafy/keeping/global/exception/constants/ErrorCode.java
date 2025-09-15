@@ -32,6 +32,8 @@ public enum ErrorCode {
 
     // Menu 관련
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 메뉴를 찾을 수 없습니다."),
+    MENU_CROSS_STORE_CONFLICT(HttpStatus.CONFLICT, "다른 매장의 메뉴가 포함되어 있습니다."),
+    MENU_UNAVAILABLE(HttpStatus.CONFLICT, "품절/비활성 메뉴가 포함되어 있습니다."),
 
     // Group 관련
     INVALID_ROLE(HttpStatus.BAD_REQUEST, "고객 사용자만 모임을 생성할 수 있습니다."),
@@ -46,7 +48,29 @@ public enum ErrorCode {
 
 
     // user 관련
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다.");
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
+
+    // 결제 의도(Payment Intent) / 검증
+    PAYMENT_INIT_ORDER_EMPTY(HttpStatus.BAD_REQUEST, "주문 항목이 비어 있습니다."),
+    PAYMENT_INIT_STORE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "storeId는 필수입니다."),
+    PAYMENT_INIT_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "수량은 1 이상이어야 합니다."),
+    PAYMENT_INTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "의도를 찾을 수 없습니다."),
+
+    // 멱등성(Idempotency)
+    IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "Idempotency-Key 헤더가 필요합니다."),
+    IDEMPOTENCY_BEGIN_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "멱등성 처리 시작에 실패했습니다."),
+    IDEMPOTENCY_BODY_CONFLICT(HttpStatus.CONFLICT, "Idempotency-Key 충돌: 요청 내용이 처음과 다릅니다."),
+    IDEMPOTENCY_REPLAY_UNAVAILABLE(HttpStatus.CONFLICT, "이미 처리된 요청이나 응답을 복원할 수 없습니다."),
+
+    // QR
+    QR_NOT_FOUND(HttpStatus.NOT_FOUND, "QR 토큰을 찾을 수 없거나 사용 불가 상태입니다."),
+    QR_EXPIRED(HttpStatus.GONE, "QR 토큰이 만료되었습니다."),
+    QR_MODE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "지원하지 않는 QR 모드입니다."),
+    QR_STORE_MISMATCH(HttpStatus.FORBIDDEN, "바인딩된 매장과 일치하지 않는 요청입니다."),
+
+    // 스냅샷/직렬화
+    REQUEST_CANONICALIZE_FAILED(HttpStatus.BAD_REQUEST, "요청 본문 직렬화에 실패했습니다."),
+    RESPONSE_SNAPSHOT_PARSE_FAILED(HttpStatus.CONFLICT, "이전에 처리된 응답을 복원할 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

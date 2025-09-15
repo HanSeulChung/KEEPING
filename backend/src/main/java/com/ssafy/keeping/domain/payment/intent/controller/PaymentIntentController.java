@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.payment.intent.controller;
 
 import com.ssafy.keeping.domain.payment.intent.dto.PaymentInitiateRequest;
 import com.ssafy.keeping.domain.payment.intent.dto.PaymentIntentDetailResponse;
+import com.ssafy.keeping.domain.payment.intent.service.PaymentIntentService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,12 @@ public class PaymentIntentController {
     @PostMapping("/cpqr/{qrTokenId}/initiate")
     public ResponseEntity<ApiResponse<PaymentIntentDetailResponse>> initiate(
             @PathVariable UUID qrTokenId,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKeyHeader,
             // @AuthenticationPrincipal Owner owner,
             // @AuthenticationPrincipal(expression = "id") Long ownerId,
             @Valid @RequestBody PaymentInitiateRequest body
     ) {
-        PaymentIntentDetailResponse res = service.initiate(qrTokenId, idempotencyKey, ownerId, body);
+        PaymentIntentDetailResponse res = service.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("결제 요청이 생성되었습니다.", HttpStatus.CREATED.value(), res));

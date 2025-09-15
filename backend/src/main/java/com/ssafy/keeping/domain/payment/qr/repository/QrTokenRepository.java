@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface QrTokenRepository extends JpaRepository<QrToken, UUID> {
 
-    Optional<QrToken> findByIdAndState(UUID qrTokenId, QrState state);
+    Optional<QrToken> findByQrTokenIdAndState(UUID qrTokenId, QrState state);
     long deleteByStateAndExpiresAtBefore(QrState state, LocalDateTime threshold); // 청소용
 
 }

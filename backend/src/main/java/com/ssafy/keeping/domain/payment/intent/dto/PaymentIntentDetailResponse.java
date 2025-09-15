@@ -54,27 +54,27 @@ public class PaymentIntentDetailResponse {
     @Schema(description = "주문 항목 스냅샷 목록")
     private List<PaymentIntentItemView> items;
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter ISO_OFFSET = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+
+    private static String toIsoKst(LocalDateTime t) {
+        return (t == null) ? null : t.atZone(KST).toOffsetDateTime().format(ISO_OFFSET);
+    }
+
     /** 엔티티 + 아이템뷰 목록 → 상세 응답으로 변환 (KST ISO) */
     public static PaymentIntentDetailResponse from(PaymentIntent e, List<PaymentIntentItemView> items) {
-        ZoneId zone = ZoneId.of("Asia/Seoul");
-        DateTimeFormatter fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
-
-        String toIso(LocalDateTime t) {
-            return (t == null) ? null : t.atZone(zone).toOffsetDateTime().format(fmt);
-        }
-
         return PaymentIntentDetailResponse.builder()
                 .intentId(e.getPublicId().toString())
                 .storeId(e.getStoreId())
                 .customerId(e.getCustomerId())
                 .amount(e.getAmount())
                 .status(e.getStatus())
-                .createdAt(toIso.apply(e.getCreatedAt()))
-                .expiresAt(toIso.apply(e.getExpiresAt()))
-                .approvedAt(toIso.apply(e.getApprovedAt()))
-                .declinedAt(toIso.apply(e.getDeclinedAt()))
-                .canceledAt(toIso.apply(e.getCanceledAt()))
-                .completedAt(toIso.apply(e.getCompletedAt()))
+                .createdAt(toIsoKst(e.getCreatedAt()))
+                .expiresAt(toIsoKst(e.getExpiresAt()))
+                .approvedAt(toIsoKst(e.getApprovedAt()))
+                .declinedAt(toIsoKst(e.getDeclinedAt()))
+                .canceledAt(toIsoKst(e.getCanceledAt()))
+                .completedAt(toIsoKst(e.getCompletedAt()))
                 .items(items)
                 .build();
     }
