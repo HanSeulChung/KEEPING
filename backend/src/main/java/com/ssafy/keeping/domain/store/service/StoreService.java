@@ -38,7 +38,7 @@ public class StoreService {
 
         boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
         if (exists) {
-//            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
         // TODO: 이미지 파일은 추후, principal 체크 추후
@@ -82,7 +82,7 @@ public class StoreService {
 
         boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
         if (exists) {
-//            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
+            throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
         store.patchStore(requestDto, editImgUrl);
@@ -109,10 +109,10 @@ public class StoreService {
     }
 
     /*
-    * ==================================
-    *  일반 고객 api 에서 사용할 service 로직
-    * ==================================
-    * */
+     * ==================================
+     *  일반 고객 api 에서 사용할 service 로직
+     * ==================================
+     * */
     public List<StorePublicDto> getAllStore() {
         List<StorePublicDto> allApprovedStoreDto =
                 storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
