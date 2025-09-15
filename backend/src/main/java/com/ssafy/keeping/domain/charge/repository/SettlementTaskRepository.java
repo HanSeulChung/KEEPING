@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.charge.repository;
 
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
+import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SettlementTaskRepository extends JpaRepository<SettlementTask, Long> {
@@ -43,4 +45,9 @@ public interface SettlementTaskRepository extends JpaRepository<SettlementTask, 
            "AND wsl.amountTotal = wsl.amountRemaining " +
            "ORDER BY t.createdAt DESC")
     Page<SettlementTask> findCancelableTransactions(@Param("customerId") Long customerId, Pageable pageable);
+
+    /**
+     * Transaction으로 SettlementTask 조회
+     */
+    Optional<SettlementTask> findByTransaction(Transaction transaction);
 }
