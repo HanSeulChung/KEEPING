@@ -148,6 +148,7 @@ public class OtpService {
 
         redis.delete(keyCode);
         redis.delete(keyTry);
+        redis.delete(OTP_KEY_PREFIX + dto.getRegSessionId());
 
         return new OtpVerifyResponse(true);
     }
