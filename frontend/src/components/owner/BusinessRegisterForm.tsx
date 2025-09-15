@@ -1,5 +1,5 @@
 'use client'
-
+// 사업자 등록 폼
 import { useOwnerRegisterStore } from '@/store/useOwnerRegisterStore'
 import { useState } from 'react'
 

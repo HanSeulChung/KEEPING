@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 type Stat = { label: string; value: string }
 type Highlight =
@@ -8,9 +8,10 @@ type Highlight =
   | { day: number; variant: 'today' } // 파랑
 
 interface CalendarProps {
-  year: number
-  month: number
-  stats: [Stat, Stat, Stat] // 선결제 금액, 개인 고객, 그룹 고객
+  year?: number
+  month?: number
+  storeId?: string
+  stats?: [Stat, Stat, Stat] // 선결제 금액, 개인 고객, 그룹 고객
   highlights?: Highlight[]
 }
 
@@ -38,17 +39,81 @@ function buildMonthMatrix(year: number, month: number) {
 }
 
 export default function Calendar({
-  year,
-  month,
-  stats,
-  highlights = [],
+  year: propYear,
+  month: propMonth,
+  storeId = '1',
+  stats: propStats,
+  highlights: propHighlights = [],
 }: CalendarProps) {
+  const [year, setYear] = useState(propYear || new Date().getFullYear())
+  const [month, setMonth] = useState(propMonth || new Date().getMonth() + 1)
+  const [stats, setStats] = useState<[Stat, Stat, Stat]>(propStats || [
+    { label: '선결제 금액', value: '0 원' },
+    { label: '개인 고객', value: '0명' },
+    { label: '그룹 고객', value: '0팀' }
+  ])
+  const [highlights, setHighlights] = useState<Highlight[]>(propHighlights)
+  const [loading, setLoading] = useState(true)
+
+  // API 호출 함수
+  const fetchSalesData = async () => {
+    try {
+      const response = await fetch(`/api/owners/stores/${storeId}/sales/calendar?year=${year}&month=${month}`)
+      if (response.ok) {
+        const data = await response.json()
+        
+        // 통계 데이터 업데이트
+        setStats([
+          { label: '선결제 금액', value: `${data.totalPrepaidAmount.toLocaleString()} 원` },
+          { label: '개인 고객', value: `${data.personalCustomers}명` },
+          { label: '그룹 고객', value: `${data.groupCustomers}팀` }
+        ])
+
+        // 일별 매출 데이터를 하이라이트로 변환
+        const newHighlights: Highlight[] = data.dailySales.map((sale: any) => ({
+          day: new Date(sale.date).getDate(),
+          variant: 'event' as const
+        }))
+
+        // 오늘 날짜 추가
+        const today = new Date()
+        if (today.getFullYear() === year && today.getMonth() + 1 === month) {
+          newHighlights.push({
+            day: today.getDate(),
+            variant: 'today'
+          })
+        }
+
+        setHighlights(newHighlights)
+      }
+    } catch (error) {
+      console.error('매출 데이터 조회 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    fetchSalesData()
+  }, [year, month, storeId])
+
   const weeks = useMemo(() => buildMonthMatrix(year, month), [year, month])
   const hlMap = useMemo(() => {
     const map = new Map<number, Highlight['variant']>()
     for (const h of highlights) map.set(h.day, h.variant)
     return map
   }, [highlights])
+
+  if (loading) {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">로딩 중...</div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">

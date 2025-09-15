@@ -1,7 +1,25 @@
 "use client"
 import Image from "next/image"
+import Link from "next/link"
+import { useRouter, usePathname } from "next/navigation"
+import { useAuthStore } from "@/store/useAuthStore"
 
 export default function Header() {
+    const router = useRouter()
+    const pathname = usePathname()
+    const { isLoggedIn, user, logout } = useAuthStore()
+    
+    // 홈페이지인지 확인
+    const isHomePage = pathname === '/'
+
+    const handleLogout = () => {
+        logout()
+        // 로컬 스토리지에서 토큰 제거
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        router.push('/owner/login')
+    }
     return (
         <div className="w-full bg-white pt-2 sm:pt-3 md:pt-4">
             {/* 상단 검은색 가로선 */}
@@ -32,16 +50,46 @@ export default function Header() {
                     </span>
                 </div>
 
-                {/* Right: 구분선 + 알림 버튼 */}
-                <div className="flex items-center">
+                {/* Right: 구분선 + 알림 버튼 + 로그인/로그아웃 */}
+                <div className="flex items-center gap-2">
                     <div className="self-stretch border-l border-border mx-3"></div>
-                        <Image
-                            src="/bell.svg"
-                            alt="알림"
-                            width={48}
-                            height={48}
-                            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
-                        />
+                    
+                    {/* 홈페이지가 아닐 때만 로그인/로그아웃 버튼 표시 */}
+                    {!isHomePage && (
+                        <>
+                            {/* 로그인 상태일 때만 알림 버튼 표시 */}
+                            {isLoggedIn && (
+                                <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <Image
+                                        src="/bell.svg"
+                                        alt="알림"
+                                        width={48}
+                                        height={48}
+                                        className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+                                    />
+                                    {/* 알림 뱃지 */}
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                                </button>
+                            )}
+                            
+                            {/* 로그인 상태에 따른 버튼 */}
+                            {isLoggedIn ? (
+                                <button 
+                                    onClick={handleLogout}
+                                    className="text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    로그아웃
+                                </button>
+                            ) : (
+                                <Link 
+                                    href="/owner/login"
+                                    className="text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    로그인
+                                </Link>
+                            )}
+                        </>
+                    )}
                 </div>
             </header>
         </div>

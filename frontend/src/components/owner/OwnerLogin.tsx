@@ -2,8 +2,57 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function OwnerLogin() {
+  const router = useRouter();
+  const { login } = useAuthStore();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+    setLoading(provider);
+    
+    try {
+      const response = await fetch(`/api/auth/${provider}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // 실제 구현에서는 소셜 로그인 토큰이나 코드를 전달
+          token: `${provider}-mock-token-${Date.now()}`
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // 토큰 저장 (실제로는 secure storage 사용)
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Auth store 업데이트
+        login({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email
+        });
+        
+        // 대시보드로 리다이렉트
+        router.push('/owner/dashboard');
+      } else {
+        alert('로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      alert('로그인 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-6">
       {/* 캐릭터 일러스트 */}
@@ -21,7 +70,11 @@ export default function OwnerLogin() {
       <h1 className="font-display text-xl font-bold text-gray-900 mb-6">사장님 로그인</h1>
 
       {/* Google 버튼 */}
-      <button className="flex items-center w-72 h-12 border border-[#DADCE0] rounded-lg mb-4 bg-white hover:shadow-md transition">
+      <button 
+        onClick={() => handleSocialLogin('google')}
+        disabled={loading !== null}
+        className="flex items-center w-72 h-12 border border-[#DADCE0] rounded-lg mb-4 bg-white hover:shadow-md transition disabled:opacity-50"
+      >
         <Image
           src="/google-icon.png"
           alt="Google"
@@ -30,12 +83,16 @@ export default function OwnerLogin() {
           className="ml-4"
         />
         <span className="flex-1 text-center text-[#3C4043] font-medium text-sm">
-          Google로 시작하기
+          {loading === 'google' ? '로그인 중...' : 'Google로 시작하기'}
         </span>
       </button>
 
       {/* Kakao 버튼 */}
-      <button className="flex items-center w-72 h-12 rounded-lg mb-8 bg-[#FEE500] hover:brightness-95 transition">
+      <button 
+        onClick={() => handleSocialLogin('kakao')}
+        disabled={loading !== null}
+        className="flex items-center w-72 h-12 rounded-lg mb-8 bg-[#FEE500] hover:brightness-95 transition disabled:opacity-50"
+      >
         <Image
           src="/kakao-icon.png"
           alt="Kakao"
@@ -44,7 +101,7 @@ export default function OwnerLogin() {
           className="ml-4"
         />
         <span className="flex-1 text-center text-black font-medium text-sm">
-          Kakao로 시작하기
+          {loading === 'kakao' ? '로그인 중...' : 'Kakao로 시작하기'}
         </span>
       </button>
 

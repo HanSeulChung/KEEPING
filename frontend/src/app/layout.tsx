@@ -3,6 +3,8 @@ import React from "react";
 
 import Header from "@/components/common/Header";
 import SWRegister from "@/providers/SWRegister";
+import MSWProvider from "../providers/MSWProvider";
+import AuthProvider from "../providers/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,12 +35,16 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-white text-black">
-        {/* 공통 Header */}
-        <Header />
+        <MSWProvider>
+          <AuthProvider>
+            {/* 공통 Header */}
+            <Header />
 
-        {/* 페이지별 컨텐츠 */}
-        <main className="min-h-screen">{children}</main>
-        <SWRegister />
+            {/* 페이지별 컨텐츠 */}
+            <main className="min-h-screen">{children}</main>
+            <SWRegister />
+          </AuthProvider>
+        </MSWProvider>
       </body>
     </html>
   );
