@@ -26,4 +26,7 @@ public class OtpRequest {
 
     @NotBlank
     private LocalDate birth;
+
+    @NotBlank
+    private String genderDigit;
 }

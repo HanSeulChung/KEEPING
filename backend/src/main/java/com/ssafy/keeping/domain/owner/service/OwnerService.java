@@ -54,7 +54,7 @@ public class OwnerService {
                 .providerId(session.getProviderId())
                 .name(session.getName())
                 .email(session.getEmail())
-                .gender(dto.getGender())
+                .gender(session.getGender())
                 .birth(session.getBirth())
                 .phoneVerifiedAt(session.getPhoneVerifiedAt())
                 .imgUrl(session.getImgUrl())
