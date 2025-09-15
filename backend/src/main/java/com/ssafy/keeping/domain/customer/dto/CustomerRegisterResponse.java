@@ -21,7 +21,6 @@ public class CustomerRegisterResponse {
     private LocalDate birth;
     private Gender gender;
     private String imgUrl;
-    private LocalDateTime phoneVerifiedAt;
 
     public static CustomerRegisterResponse register(Customer customer) {
         return CustomerRegisterResponse.builder()
@@ -34,7 +33,6 @@ public class CustomerRegisterResponse {
                 .gender(customer.getGender())
                 .birth(customer.getBirth())
                 .imgUrl(customer.getImgUrl())
-                .phoneVerifiedAt(customer.getPhoneVerifiedAt())
                 .build();
     }
 }

@@ -55,7 +55,6 @@ public class CustomerService {
                 .email(session.getEmail())
                 .gender(session.getGender())
                 .birth(session.getBirth())
-                .phoneVerifiedAt(session.getPhoneVerifiedAt())
                 .imgUrl(session.getImgUrl())
                 .phoneNumber(session.getPhoneNumber())
                 .userKey(userKey)

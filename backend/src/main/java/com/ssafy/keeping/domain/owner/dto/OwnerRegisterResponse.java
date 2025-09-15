@@ -22,7 +22,6 @@ public class OwnerRegisterResponse {
     private LocalDate birth;
     private Gender gender;
     private String imgUrl;
-    private LocalDateTime phoneVerifiedAt;
 
     public static OwnerRegisterResponse register(Owner owner) {
         return OwnerRegisterResponse.builder()
@@ -35,7 +34,6 @@ public class OwnerRegisterResponse {
                 .gender(owner.getGender())
                 .birth(owner.getBirth())
                 .imgUrl(owner.getImgUrl())
-                .phoneVerifiedAt(owner.getPhoneVerifiedAt())
                 .build();
     }
 }
