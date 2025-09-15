@@ -19,14 +19,14 @@ export default function RootLayout({
         {/* 폰트 preload로 로딩 최적화 */}
         <link
           rel="preload"
-          href="/src/app/fonts/NanumSquareNeo-bRg.ttf"
+          href="/fonts/NanumSquareNeo-bRg.ttf"
           as="font"
           type="font/ttf"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/src/app/fonts/Tenada.ttf"
+          href="/fonts/Tenada.ttf"
           as="font"
           type="font/ttf"
           crossOrigin="anonymous"
