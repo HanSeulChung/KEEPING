@@ -15,6 +15,8 @@ export default function OwnerLogin() {
     setLoading(provider);
     
     try {
+      console.log(`로그인 시도: ${provider}`);
+      
       const response = await fetch(`/api/auth/${provider}/login`, {
         method: 'POST',
         headers: {
@@ -26,8 +28,13 @@ export default function OwnerLogin() {
         }),
       });
 
+      console.log('응답 상태:', response.status);
+      console.log('응답 OK:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('로그인 성공 데이터:', data);
+        
         // 토큰 저장 (실제로는 secure storage 사용)
         localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
@@ -40,14 +47,17 @@ export default function OwnerLogin() {
           email: data.user.email
         });
         
+        console.log('대시보드로 리다이렉트');
         // 대시보드로 리다이렉트
         router.push('/owner/dashboard');
       } else {
-        alert('로그인에 실패했습니다.');
+        const errorData = await response.text();
+        console.error('로그인 실패 응답:', errorData);
+        alert(`로그인에 실패했습니다. (상태: ${response.status})`);
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      alert('로그인 중 오류가 발생했습니다.');
+      alert(`로그인 중 오류가 발생했습니다: ${error}`);
     } finally {
       setLoading(null);
     }

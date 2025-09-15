@@ -8,5 +8,9 @@ export const worker = setupWorker(...handlers)
 if (typeof window !== 'undefined') {
   worker.start({
     onUnhandledRequest: 'bypass',
+  }).then(() => {
+    console.log('MSW Worker started successfully')
+  }).catch((error) => {
+    console.error('MSW Worker failed to start:', error)
   })
 }

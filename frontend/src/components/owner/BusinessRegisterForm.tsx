@@ -13,8 +13,9 @@ export default function BusinessRegisterForm({
   const { businessNumber, openDate, ceoName, setRegister } =
     useOwnerRegisterStore()
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [isVerifying, setIsVerifying] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: { [key: string]: string } = {}
     if (!businessNumber)
@@ -24,7 +25,39 @@ export default function BusinessRegisterForm({
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length > 0) return
-    onNext() //
+
+    // 사업자 등록 확인 API 호출
+    setIsVerifying(true)
+    try {
+      const response = await fetch('/api/business/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessNumber,
+          openDate,
+          ceoName
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.isValid) {
+          alert('사업자 등록 확인이 완료되었습니다.')
+          onNext()
+        } else {
+          alert('사업자 등록 정보가 올바르지 않습니다. 다시 확인해주세요.')
+        }
+      } else {
+        alert('사업자 등록 확인 중 오류가 발생했습니다.')
+      }
+    } catch (error) {
+      console.error('사업자 등록 확인 오류:', error)
+      alert('사업자 등록 확인 중 오류가 발생했습니다.')
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   return (
@@ -72,9 +105,10 @@ export default function BusinessRegisterForm({
         </button>
         <button
           type="submit"
-          className="rounded bg-gray-800 px-4 py-2 text-white"
+          disabled={isVerifying}
+          className="rounded bg-gray-800 px-4 py-2 text-white disabled:opacity-50"
         >
-          다음
+          {isVerifying ? '확인 중...' : '다음'}
         </button>
       </div>
     </form>

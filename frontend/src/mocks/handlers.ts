@@ -181,12 +181,17 @@ export const handlers = [
     const { provider } = params
     const body = await request.json()
     
+    console.log(`MSW: 소셜 로그인 요청 - Provider: ${provider}`, body)
+    
     // Mock 응답
-    return HttpResponse.json({
+    const response = {
       accessToken: `${provider}-access-token`,
       refreshToken: `${provider}-refresh-token`,
       user: provider === 'kakao' ? mockUsers.customer : mockUsers.owner
-    })
+    }
+    
+    console.log('MSW: 소셜 로그인 응답:', response)
+    return HttpResponse.json(response)
   }),
 
   // OTP 요청
@@ -882,5 +887,46 @@ export const handlers = [
       message: '설정이 업데이트되었습니다.',
       settings: updatedSettings
     })
+  }),
+
+  // ===== 사업자 등록 확인 API =====
+  
+  // 사업자 등록 확인
+  http.post('/api/business/verify', async ({ request }) => {
+    const { businessNumber, openDate, ceoName } = await request.json() as {
+      businessNumber: string
+      openDate: string
+      ceoName: string
+    }
+    
+    console.log('사업자 등록 확인 요청:', { businessNumber, openDate, ceoName })
+    
+    // Mock 사업자 등록 확인 로직
+    // 실제로는 정부 API나 사업자 등록 확인 서비스를 사용해야 함
+    const isValid = validateBusinessRegistration(businessNumber, openDate, ceoName)
+    
+    return HttpResponse.json({
+      isValid,
+      message: isValid ? '사업자 등록 확인이 완료되었습니다.' : '사업자 등록 정보가 올바르지 않습니다.',
+      businessInfo: isValid ? {
+        businessNumber,
+        businessName: '서울 초밥',
+        ceoName,
+        openDate,
+        businessType: '일반음식점',
+        businessStatus: '계속사업자'
+      } : null
+    })
   })
 ]
+
+// 사업자 등록 확인 함수 (Mock)
+function validateBusinessRegistration(businessNumber: string, openDate: string, ceoName: string): boolean {
+  // 간단한 검증 로직 (실제로는 더 복잡한 검증 필요)
+  const validBusinessNumbers = ['123-45-67890', '987-65-43210']
+  const validCeoNames = ['박사장', '김대표', '이사장']
+  
+  return validBusinessNumbers.includes(businessNumber) && 
+         validCeoNames.includes(ceoName) &&
+         openDate.length === 10 // YYYY-MM-DD 형식
+}

@@ -1,10 +1,10 @@
 self.addEventListener('install', event => {
-  console.log('📥 Service Worker installing...')
+  console.log('Service Worker installing...')
   self.skipWaiting() // 바로 활성화 원하면
 })
 
 self.addEventListener('activate', event => {
-  console.log('🚀 Service Worker activating...')
+  console.log('Service Worker activating...')
   clients.claim()
 })
 

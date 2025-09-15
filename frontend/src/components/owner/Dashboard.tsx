@@ -188,7 +188,7 @@ export default function OwnerHome({
           <h2 className="text-lg font-bold">설정</h2>
         </Link>
 
-        {/* OR 인식하기 */}
+        {/* QR 인식하기 */}
         <Link
           href="/owner/scan"
           className="group rounded-xl border border-gray-300 bg-white p-5 hover:shadow-sm"
@@ -197,7 +197,7 @@ export default function OwnerHome({
           <p className="mt-3 text-sm text-gray-600">
             손님의 QR을 인식합니다.
             <br />
-            (해당 기기의 카메라로 인식 → URL로 넘어감)
+            (카메라로 QR 코드 스캔)
           </p>
         </Link>
 
