@@ -28,7 +28,7 @@ public class SecurityConfig {
     public static final String[] ALLOW_URLS = {
             "/auth/**",
             "/otp/**",
-            "/stores/**"
+            "/api/v1/stores/**"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
