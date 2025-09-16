@@ -29,7 +29,8 @@ public class SecurityConfig {
             "/auth/**",
             "/otp/**",
             "/stores/**",
-            "/groups/**"
+            "/groups/**",
+            "/wallets/**"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
