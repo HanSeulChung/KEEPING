@@ -44,6 +44,7 @@ application.yml
 ### generated ###
 src/main/generated/
 
+.DS_Store
 /src/docs/card_payment.md
 /src/docs/card_canceled.md
 /src/docs/notification.md

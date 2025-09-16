@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
@@ -38,4 +39,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     where gm.group.groupId = :groupId
     """)
     List<GroupMemberResponseDto> findAllGroupMembers(@Param("groupId") Long groupId);
+
+    @Query("""
+    select gm
+    from GroupMember gm
+    where gm.group.groupId = :groupId
+      and gm.user.userId  = :userId
+    """)
+    Optional<GroupMember> findGroupMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 }
