@@ -9,9 +9,12 @@ import com.ssafy.keeping.domain.notification.entity.Notification;
 import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.domain.notification.repository.EmitterRepository;
 import com.ssafy.keeping.domain.notification.repository.NotificationRepository;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -305,6 +308,54 @@ public class NotificationService {
                 
         log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
     }
-    
-    
+
+    /**
+     * 고객 알림 읽음 처리
+     * @param customerId 고객 ID
+     * @param notificationId 알림 ID
+     */
+    @Transactional
+    public void markAsReadForCustomer(Long customerId, Long notificationId) {
+        log.info("고객 알림 읽음 처리 요청 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
+        
+        // 권한 검증 및 알림 조회
+        Notification notification = notificationRepository.findByNotificationIdAndCustomerId(notificationId, customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+        
+        // 이미 읽은 알림인지 확인
+        if (Boolean.TRUE.equals(notification.getIsRead())) {
+            throw new CustomException(ErrorCode.NOTIFICATION_ALREADY_READ);
+        }
+        
+        // 읽음 처리
+        notification.markAsRead();
+        notificationRepository.save(notification);
+        
+        log.info("고객 알림 읽음 처리 성공 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
+    }
+
+    /**
+     * 점주 알림 읽음 처리
+     * @param ownerId 점주 ID
+     * @param notificationId 알림 ID
+     */
+    @Transactional
+    public void markAsReadForOwner(Long ownerId, Long notificationId) {
+        log.info("점주 알림 읽음 처리 요청 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
+        
+        // 권한 검증 및 알림 조회
+        Notification notification = notificationRepository.findByNotificationIdAndOwnerId(notificationId, ownerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+        
+        // 이미 읽은 알림인지 확인
+        if (Boolean.TRUE.equals(notification.getIsRead())) {
+            throw new CustomException(ErrorCode.NOTIFICATION_ALREADY_READ);
+        }
+        
+        // 읽음 처리
+        notification.markAsRead();
+        notificationRepository.save(notification);
+        
+        log.info("점주 알림 읽음 처리 성공 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
+    }
 }

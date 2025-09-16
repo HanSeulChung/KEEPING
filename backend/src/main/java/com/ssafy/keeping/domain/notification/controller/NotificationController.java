@@ -7,13 +7,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import jakarta.validation.constraints.Positive;
 
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -93,5 +97,49 @@ public class NotificationController {
             return ResponseEntity.internalServerError()
                 .body(ApiResponse.error("알림 전송 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
+    }
+
+    /**
+     * 고객 알림 읽음 처리
+     * 
+     * @param customerId 고객 ID
+     * @param notificationId 알림 ID
+     * @return 읽음 처리 결과
+     */
+    @PutMapping("/customer/{customerId}/{notificationId}/read")
+    public ResponseEntity<ApiResponse<String>> markAsReadForCustomer(
+            @PathVariable @Positive(message = "고객 ID는 양수여야 합니다.") Long customerId,
+            @PathVariable @Positive(message = "알림 ID는 양수여야 합니다.") Long notificationId) {
+        
+        log.info("고객 알림 읽음 처리 요청 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
+        
+        notificationService.markAsReadForCustomer(customerId, notificationId);
+        
+        log.info("고객 알림 읽음 처리 성공 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
+        return ResponseEntity.ok(
+            ApiResponse.success("알림이 읽음 처리되었습니다.", HttpStatus.OK.value(), "success")
+        );
+    }
+
+    /**
+     * 점주 알림 읽음 처리
+     * 
+     * @param ownerId 점주 ID
+     * @param notificationId 알림 ID
+     * @return 읽음 처리 결과
+     */
+    @PutMapping("/owner/{ownerId}/{notificationId}/read")
+    public ResponseEntity<ApiResponse<String>> markAsReadForOwner(
+            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @PathVariable @Positive(message = "알림 ID는 양수여야 합니다.") Long notificationId) {
+        
+        log.info("점주 알림 읽음 처리 요청 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
+        
+        notificationService.markAsReadForOwner(ownerId, notificationId);
+        
+        log.info("점주 알림 읽음 처리 성공 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
+        return ResponseEntity.ok(
+            ApiResponse.success("알림이 읽음 처리되었습니다.", HttpStatus.OK.value(), "success")
+        );
     }
 }

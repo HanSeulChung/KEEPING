@@ -93,6 +93,11 @@ public enum ErrorCode {
     OAUTH_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth 인증에 실패하였습니다."),
     OAUTH_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보를 가져올 수 없습니다."),
 
+    // 알림 관련
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 알림을 찾을 수 없습니다."),
+    NOTIFICATION_UNAUTHORIZED_ACCESS(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
+    NOTIFICATION_ALREADY_READ(HttpStatus.BAD_REQUEST, "이미 읽은 알림입니다."),
+
     // global
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다.");
 
