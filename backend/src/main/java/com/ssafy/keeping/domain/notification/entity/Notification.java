@@ -31,9 +31,11 @@ public class Notification {
 
     @Column(name = "content", nullable = false, length = 500)
     private String content;
+    // 알림 메시지 내용 (사용자가 실제로 보는 텍스트)
 
     @Column(name = "url", length = 255)
     private String url;
+    // 알림을 클릭했을 때, 이동할 페이지 주소
 
     @Column(name = "is_read", nullable = false)
     @Builder.Default
