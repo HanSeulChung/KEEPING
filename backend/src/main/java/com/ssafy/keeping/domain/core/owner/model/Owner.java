@@ -69,8 +69,4 @@ public class Owner {
 
     @Column
     private String userKey;
-
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Store> stores;
-
 }

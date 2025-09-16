@@ -48,6 +48,7 @@ public class SecurityConfig {
     public static final String[] TEMP_ALLOW_URLS = {
             "/stores/**",
             "/api/**",
+            "/stores/**",
             "/groups/**"
     };
 

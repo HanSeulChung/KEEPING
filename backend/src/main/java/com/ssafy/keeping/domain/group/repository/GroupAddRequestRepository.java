@@ -17,7 +17,7 @@ public interface GroupAddRequestRepository extends JpaRepository<GroupAddRequest
     select count(gr) > 0
     from GroupAddRequest gr
     where gr.group.groupId = :groupId
-      and gr.user.userId  = :userId
+      and gr.user.customerId  = :userId
       and gr.requestStatus = :status
     """)
     boolean existsRequest(@Param("groupId") Long groupId, @Param("userId") Long userId,
