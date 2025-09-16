@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.notification.controller;
 
 import com.ssafy.keeping.domain.notification.dto.NotificationResponseDto;
 import com.ssafy.keeping.domain.notification.service.NotificationService;
+import com.ssafy.keeping.domain.notification.service.NotificationQueryService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final NotificationQueryService notificationQueryService;
 
     /**
      * 고객용 SSE 구독
@@ -33,6 +35,7 @@ public class NotificationController {
      * @param customerId 고객 ID
      * @param lastEventId 마지막으로 받은 이벤트 ID (재연결용)
      * @return SseEmitter
+     * 이거는 사용하지 않고, 로그인 시에 notificationService.subscribe를 해서 사용하도록 할 예정
      */
     @GetMapping(value = "/subscribe/customer/{customerId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeCustomer(@PathVariable Long customerId,
@@ -49,6 +52,7 @@ public class NotificationController {
      * @param ownerId 점주 ID
      * @param lastEventId 마지막으로 받은 이벤트 ID (재연결용)
      * @return SseEmitter
+     * 이거는 사용하지 않고, 로그인 시에 notificationService.subscribe를 해서 사용하도록 할 예정
      */
     @GetMapping(value = "/subscribe/owner/{ownerId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeOwner(@PathVariable Long ownerId,
@@ -57,51 +61,6 @@ public class NotificationController {
         log.info("점주 SSE 구독 요청 - 점주ID: {}, Last-Event-ID: {}", ownerId, lastEventId);
         
         return notificationService.subscribe("owner", ownerId, lastEventId);
-    }
-
-    /**
-     * 테스트용 알림 전송 API (개발/테스트 환경용)
-     * 
-     * @param receiverType "customer" 또는 "owner"
-     * @param receiverId 수신자 ID
-     * @param message 알림 메시지
-     */
-    @PostMapping("/test/{receiverType}/{receiverId}")
-    public ResponseEntity<ApiResponse<String>> sendTestNotification(@PathVariable String receiverType,
-                                                                   @PathVariable Long receiverId,
-                                                                   @RequestParam String message) {
-        
-        log.info("테스트 알림 전송 - {}:{}, 메시지: {}", receiverType, receiverId, message);
-        
-        try {
-            if ("customer".equals(receiverType)) {
-                notificationService.sendToCustomer(receiverId, 
-                    com.ssafy.keeping.domain.notification.entity.NotificationType.SYSTEM_NOTICE, 
-                    "[테스트] " + message, 
-                    "/test");
-            } else if ("owner".equals(receiverType)) {
-                notificationService.sendToOwner(receiverId, 
-                    com.ssafy.keeping.domain.notification.entity.NotificationType.SYSTEM_NOTICE, 
-                    "[테스트] " + message, 
-                    "/test");
-            } else {
-                return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("잘못된 수신자 타입입니다. (customer 또는 owner)", HttpStatus.BAD_REQUEST.value()));
-            }
-            
-            return ResponseEntity.ok(
-                ApiResponse.success(
-                    "테스트 알림 전송 완료", 
-                    HttpStatus.OK.value(), 
-                    "알림이 성공적으로 전송되었습니다."
-                )
-            );
-            
-        } catch (Exception e) {
-            log.error("테스트 알림 전송 실패", e);
-            return ResponseEntity.internalServerError()
-                .body(ApiResponse.error("알림 전송 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()));
-        }
     }
 
     /**
@@ -118,7 +77,7 @@ public class NotificationController {
         
         log.info("고객 알림 읽음 처리 요청 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
         
-        notificationService.markAsReadForCustomer(customerId, notificationId);
+        notificationQueryService.markAsReadForCustomer(customerId, notificationId);
         
         log.info("고객 알림 읽음 처리 성공 - 고객ID: {}, 알림ID: {}", customerId, notificationId);
         return ResponseEntity.ok(
@@ -140,7 +99,7 @@ public class NotificationController {
         
         log.info("점주 알림 읽음 처리 요청 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
         
-        notificationService.markAsReadForOwner(ownerId, notificationId);
+        notificationQueryService.markAsReadForOwner(ownerId, notificationId);
         
         log.info("점주 알림 읽음 처리 성공 - 점주ID: {}, 알림ID: {}", ownerId, notificationId);
         return ResponseEntity.ok(
@@ -165,7 +124,7 @@ public class NotificationController {
         log.info("고객 알림 목록 조회 요청 - 고객ID: {}, 페이지: {}, 크기: {}", customerId, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
-        Page<NotificationResponseDto> notifications = notificationService.getNotificationListForCustomer(customerId, pageable);
+        Page<NotificationResponseDto> notifications = notificationQueryService.getNotificationListForCustomer(customerId, pageable);
         
         log.info("고객 알림 목록 조회 성공 - 고객ID: {}, 총 개수: {}, 현재 페이지 개수: {}", 
                 customerId, notifications.getTotalElements(), notifications.getNumberOfElements());
@@ -196,7 +155,7 @@ public class NotificationController {
         log.info("점주 알림 목록 조회 요청 - 점주ID: {}, 페이지: {}, 크기: {}", ownerId, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
-        Page<NotificationResponseDto> notifications = notificationService.getNotificationListForOwner(ownerId, pageable);
+        Page<NotificationResponseDto> notifications = notificationQueryService.getNotificationListForOwner(ownerId, pageable);
         
         log.info("점주 알림 목록 조회 성공 - 점주ID: {}, 총 개수: {}, 현재 페이지 개수: {}", 
                 ownerId, notifications.getTotalElements(), notifications.getNumberOfElements());
@@ -222,7 +181,7 @@ public class NotificationController {
         
         log.info("고객 읽지 않은 알림 개수 조회 요청 - 고객ID: {}", customerId);
         
-        long unreadCount = notificationService.getUnreadCountForCustomer(customerId);
+        long unreadCount = notificationQueryService.getUnreadCountForCustomer(customerId);
         
         log.info("고객 읽지 않은 알림 개수 조회 성공 - 고객ID: {}, 읽지 않은 개수: {}", customerId, unreadCount);
         
@@ -247,7 +206,7 @@ public class NotificationController {
         
         log.info("점주 읽지 않은 알림 개수 조회 요청 - 점주ID: {}", ownerId);
         
-        long unreadCount = notificationService.getUnreadCountForOwner(ownerId);
+        long unreadCount = notificationQueryService.getUnreadCountForOwner(ownerId);
         
         log.info("점주 읽지 않은 알림 개수 조회 성공 - 점주ID: {}, 읽지 않은 개수: {}", ownerId, unreadCount);
         
