@@ -241,9 +241,38 @@ public class GroupService {
         // TODO: 고객만 모임을 검색할 수 있게 change
         return groupRepository.findGroupsByName(name);
     }
+
+    @Transactional
+    public GroupLeaderChangeResponseDto changeGroupLeader(Long groupId, Long userId, @Valid GroupLeaderChangeRequestDto requestDto) {
+        validGroup(groupId);
+        validUser(userId);
+
+        Long newLeaderUserId = requestDto.getNewGroupLeaderId();
+        GroupMember originGroupLeader = validGroupMember(groupId, userId);
+        GroupMember newGroupLeader = validGroupMember(groupId, newLeaderUserId);
+
+        if (!originGroupLeader.isLeader())
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        if (!originGroupLeader.changeLeader(false)
+                || !newGroupLeader.changeLeader(true)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        return new GroupLeaderChangeResponseDto(
+                groupId, newGroupLeader.getGroupMemberId(), newGroupLeader.getUser().getName()
+        );
+    }
+
     private Group validGroup(Long groupId) {
         return groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    private GroupMember validGroupMember(Long groupId, Long userId) {
+        return groupMemberRepository.findGroupMember(groupId, userId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND)
+        );
     }
 
     private TmpUser validUser(Long customerId) {
