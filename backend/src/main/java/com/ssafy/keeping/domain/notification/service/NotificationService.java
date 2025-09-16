@@ -63,6 +63,17 @@ public class NotificationService {
             emitterRepository.deleteById(emitterId);
         });
 
+        //   ❌ if문의 문제점:
+        //  ├─ 언제 체크할지 모름 (계속 polling?)
+        //  ├─ 비효율적 (주기적으로 상태 확인 필요)
+        //  └─ 놓칠 가능성 (체크하는 순간 외에 발생하면)
+        //
+        //  ✅ 이벤트 리스너의 장점:
+        //  ├─ 이벤트 발생 즉시 반응
+        //  ├─ 효율적 (대기하고 있다가 반응)
+        //  └─ 놓칠 일 없음 (Spring이 보장)
+
+
         // 503 에러 방지를 위한 더미 이벤트 전송
         try {
             String eventId = makeTimeIncludeId(receiverType, receiverId);
@@ -104,7 +115,8 @@ public class NotificationService {
                         customerId, notificationType, content);
                 return;
             }
-            
+
+            // user 검증
             Customer customer = customerRepository.findById(customerId).orElse(null);
             if (customer == null) {
                 log.warn("고객 알림 전송 실패 - 존재하지 않는 고객 ID: {}", customerId);
@@ -124,7 +136,7 @@ public class NotificationService {
                     customerId, notification.getNotificationId(), notificationType);
 
             // 실시간 알림 전송
-            sendRealTimeNotification("customer", customerId, NotificationResponseDto.from(notification));
+            sendRealTimeNotification(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("고객 알림 전송 중 예상치 못한 오류 - 고객ID: {}, 타입: {}", customerId, notificationType, e);
@@ -166,7 +178,7 @@ public class NotificationService {
                     ownerId, notification.getNotificationId(), notificationType);
 
             // 실시간 알림 전송
-            sendRealTimeNotification("owner", ownerId, NotificationResponseDto.from(notification));
+            sendRealTimeNotification(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("점주 알림 전송 중 예상치 못한 오류 - 점주ID: {}, 타입: {}", ownerId, notificationType, e);
@@ -177,7 +189,10 @@ public class NotificationService {
      * 실시간 알림 전송 (SSE) - 총괄 메니저 역할
      */
     // receiverType : customer, owner
-    private void sendRealTimeNotification(String receiverType, Long receiverId, NotificationResponseDto data) {
+    private void sendRealTimeNotification(NotificationResponseDto data) {
+        String receiverType = data.getReceiverType().toLowerCase();
+        Long receiverId = data.getReceiverId();
+
         try {
             Map<String, SseEmitter> emitters = emitterRepository.findAllEmitterStartWithByReceiver(receiverType, receiverId);
             
@@ -186,34 +201,36 @@ public class NotificationService {
                 return;
             }
             
+            // 하나의 알림에 대해 단일 eventId 생성 (모든 연결에서 동일하게 사용)
+            String eventId = makeTimeIncludeId(receiverType, receiverId);
+            
+            // 이벤트 캐시에 한 번만 저장 (중복 저장 방지)
+            emitterRepository.saveEventCache(eventId, data);
+            
+            // 단순 카운터
             int successCount = 0;
             int failCount = 0;
             
+            // 모든 emitter에 순차 전송
             for (Map.Entry<String, SseEmitter> entry : emitters.entrySet()) {
-                String emitterId = entry.getKey(); // 통로ID
-                SseEmitter emitter = entry.getValue(); // 통로
-                String eventId = makeTimeIncludeId(receiverType, receiverId); // 이벤트 식별 번호
+                String emitterId = entry.getKey();
+                SseEmitter emitter = entry.getValue();
                 
                 try {
-                    // 이벤트 캐시에 저장 (재연결 시 사용)
-                    emitterRepository.saveEventCache(emitterId, data);
-                    
-                    // 실제 SSE 전송
                     boolean success = sendNotification(emitter, eventId, emitterId, data);
                     if (success) {
                         successCount++;
                     } else {
                         failCount++;
                     }
-                    
                 } catch (Exception e) {
                     failCount++;
                     log.warn("개별 SSE 전송 실패 - EmitterID: {}, 사유: {}", emitterId, e.getMessage());
                 }
             }
             
-            log.info("실시간 알림 전송 완료 - {}:{}, 총 연결: {}, 성공: {}, 실패: {}", 
-                    receiverType, receiverId, emitters.size(), successCount, failCount);
+            log.info("실시간 알림 전송 완료 - {}:{}, EventID: {}, 총 연결: {}, 성공: {}, 실패: {}", 
+                    receiverType, receiverId, eventId, emitters.size(), successCount, failCount);
                     
         } catch (Exception e) {
             log.error("실시간 알림 전송 중 예상치 못한 오류 - {}:{}", receiverType, receiverId, e);
@@ -230,7 +247,6 @@ public class NotificationService {
                     .id(eventId)
                     .name("notification")
                     .data(data));
-            log.debug("SSE 전송 성공 - EmitterID: {}, EventID: {}", emitterId, eventId);
             return true;
             
         } catch (IOException e) {
@@ -257,7 +273,6 @@ public class NotificationService {
     private void cleanupEmitter(String emitterId) {
         try {
             emitterRepository.deleteById(emitterId);
-            log.debug("Emitter 정리 완료 - EmitterID: {}", emitterId);
         } catch (Exception e) {
             log.warn("Emitter 정리 중 오류 - EmitterID: {}, 오류: {}", emitterId, e.getMessage());
         }
@@ -290,4 +305,6 @@ public class NotificationService {
                 
         log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
     }
+    
+    
 }
