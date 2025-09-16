@@ -3,9 +3,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 
 // 가게 정보 컴포넌트
-const StoreInfo = () => {
-  const [activeTab, setActiveTab] = useState<'charge' | 'menu'>('charge')
-
+const StoreInfo = ({ activeTab, setActiveTab }: { activeTab: 'charge' | 'menu', setActiveTab: (tab: 'charge' | 'menu') => void }) => {
   return (
     <div className="mx-auto w-full max-w-4xl">
       {/* 가게 이름 */}
@@ -125,18 +123,21 @@ interface ChargeOptionProps {
   discount: string
   points: string
   isSelected?: boolean
+  onClick?: () => void
 }
 
 const ChargeOption = ({
   discount,
   points,
   isSelected = false,
+  onClick,
 }: ChargeOptionProps) => {
   return (
     <div
       className={`flex h-14 w-full cursor-pointer items-center border border-black px-5 transition-colors ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
+      onClick={onClick}
     >
       <span className="text-sm font-bold text-red-500">{discount}</span>
       <span className="ml-24 text-sm font-bold text-black">{points}</span>
@@ -144,15 +145,121 @@ const ChargeOption = ({
   )
 }
 
+// 메뉴 아이템 컴포넌트
+interface MenuItemProps {
+  name: string
+  description: string
+  price: number
+}
+
+const MenuItem = ({ name, description, price }: MenuItemProps) => {
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h3 className="mb-2 text-lg font-bold text-gray-800">{name}</h3>
+          <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
+        </div>
+        <div className="ml-4">
+          <span className="text-lg font-bold text-gray-800">{price.toLocaleString()}원</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 메뉴 섹션 컴포넌트
+const MenuSection = () => {
+  const [activeCategory, setActiveCategory] = useState<'meal' | 'course' | 'alacarte'>('course')
+
+  const menuData = {
+    meal: [
+      { name: '도미정식 1人', description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥', price: 39000 },
+      { name: '도미정식 2人', description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥', price: 75000 },
+    ],
+    course: [
+      { name: '도미정식 1人', description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥', price: 39000 },
+      { name: '도미정식 1人', description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥', price: 39000 },
+      { name: '도미정식 1人', description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥', price: 39000 },
+    ],
+    alacarte: [
+      { name: '도미숙성회', description: '신선한 도미를 숙성하여 만든 회', price: 25000 },
+      { name: '도미머리구이', description: '도미 머리를 구워낸 특별 요리', price: 18000 },
+      { name: '도미해물라면', description: '도미와 해물이 들어간 라면', price: 12000 },
+    ]
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-4xl">
+      {/* 메뉴 카테고리 탭 */}
+      <div className="mb-6 flex justify-center gap-4">
+        <button
+          onClick={() => setActiveCategory('meal')}
+          className={`px-6 py-3 text-sm font-bold transition-colors ${
+            activeCategory === 'meal' 
+              ? 'bg-gray-200 text-black' 
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          식사
+        </button>
+        <button
+          onClick={() => setActiveCategory('course')}
+          className={`px-6 py-3 text-sm font-bold transition-colors ${
+            activeCategory === 'course' 
+              ? 'bg-gray-200 text-black' 
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          도미코스
+        </button>
+        <button
+          onClick={() => setActiveCategory('alacarte')}
+          className={`px-6 py-3 text-sm font-bold transition-colors ${
+            activeCategory === 'alacarte' 
+              ? 'bg-gray-200 text-black' 
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          단품
+        </button>
+      </div>
+
+      {/* 메뉴 아이템들 */}
+      <div className="px-4">
+        {menuData[activeCategory].map((item, index) => (
+          <MenuItem
+            key={index}
+            name={item.name}
+            description={item.description}
+            price={item.price}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // 충전 섹션 컴포넌트
 const ChargeSection = () => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  
   const chargeOptions = [
-    { discount: '5% 할인', points: '50,000 포인트' },
-    { discount: '5% 할인', points: '100,000 포인트' },
-    { discount: '5% 할인', points: '150,000 포인트' },
-    { discount: '5% 할인', points: '200,000 포인트' },
-    { discount: '5% 할인', points: '250,000 포인트' },
+    { discount: '5% 할인', points: '50,000 포인트', originalPrice: 50000, discountRate: 0.05 },
+    { discount: '5% 할인', points: '100,000 포인트', originalPrice: 100000, discountRate: 0.05 },
+    { discount: '5% 할인', points: '150,000 포인트', originalPrice: 150000, discountRate: 0.05 },
+    { discount: '5% 할인', points: '200,000 포인트', originalPrice: 200000, discountRate: 0.05 },
+    { discount: '5% 할인', points: '250,000 포인트', originalPrice: 250000, discountRate: 0.05 },
   ]
+
+  // 선택된 옵션의 결제 금액 계산
+  const calculatePaymentAmount = () => {
+    if (selectedIndex === null) return 0
+    const selectedOption = chargeOptions[selectedIndex]
+    return Math.round(selectedOption.originalPrice * (1 - selectedOption.discountRate))
+  }
+
+  const paymentAmount = calculatePaymentAmount()
 
   return (
     <div className="mx-auto w-full max-w-md">
@@ -163,7 +270,8 @@ const ChargeSection = () => {
             key={index}
             discount={option.discount}
             points={option.points}
-            isSelected={index === 0}
+            isSelected={selectedIndex === index}
+            onClick={() => setSelectedIndex(index)}
           />
         ))}
       </div>
@@ -171,7 +279,7 @@ const ChargeSection = () => {
       {/* 결제 금액 */}
       <div className="mb-6">
         <span className="text-sm font-bold text-black">
-          결제 금액: 47,500원
+          결제 금액: {paymentAmount > 0 ? `${paymentAmount.toLocaleString()}원` : '옵션을 선택해주세요'}
         </span>
       </div>
 
@@ -185,11 +293,13 @@ const ChargeSection = () => {
 
 // 메인 컴포넌트
 export const StoreDetailPage = () => {
+  const [activeTab, setActiveTab] = useState<'charge' | 'menu'>('charge')
+
   return (
     <div className="min-h-screen bg-white py-8">
       <div className="container mx-auto px-4">
-        <StoreInfo />
-        <ChargeSection />
+        <StoreInfo activeTab={activeTab} setActiveTab={setActiveTab} />
+        {activeTab === 'charge' ? <ChargeSection /> : <MenuSection />}
       </div>
     </div>
   )
