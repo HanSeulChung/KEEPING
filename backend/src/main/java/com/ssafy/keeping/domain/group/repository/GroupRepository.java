@@ -24,18 +24,18 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     @Query(
     """
     select new com.ssafy.keeping.domain.group.dto.GroupMaskingResponseDto(
-        g.groupId, g.groupName, g.groupDescription, 
+        g.groupId, g.groupName, g.groupDescription,
         case
-            when length(m.name) = 1 then '*'
-            when length(m.name) = 2 then concat('*', substring(m.name, 2, 1))
-            else concat('*', substring(m.name, 2, 1), '*', substring(m.name, length(m.name), 1))
+            when length(c.name) = 1 then '*'
+            when length(c.name) = 2 then concat('*', substring(c.name, 2, 1))
+            else concat('*', substring(c.name, 2, 1), '*', substring(c.name, length(c.name), 1))
         end
     )
     from Group g
     join GroupMember gm
     on gm.group.groupId=g.groupId
-    join TmpUser m
-    on gm.user.userId=m.userId
+    join Customer c
+    on gm.user.customerId=c.customerId
     where g.groupName=:name
     and gm.isLeader=true
     """
