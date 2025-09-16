@@ -15,6 +15,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   const [authForm, setAuthForm] = useState({
     name: '',
     residentNumber: '',
+    phoneNumber: '',
     birthDate: '',
     genderCode: '',
   })
@@ -38,7 +39,16 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     }))
   }
 
-  const handleResidentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const formatPhoneNumber = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  }
+
+  const handleResidentNumberChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const input = e.target.value.replace(/\D/g, '')
 
     if (input.length <= 7) {
@@ -156,18 +166,21 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
                 <div>
                   <div className="mb-2 rounded-lg bg-gray-100 px-3 py-2">
                     <label className="text-sm font-medium text-gray-700">
-                      생년월일
+                      전화번호
                     </label>
                   </div>
                   <input
-                    type="text"
-                    value={authForm.birthDate}
+                    type="tel"
+                    value={authForm.phoneNumber}
                     onChange={e =>
-                      handleFormChange('birthDate', e.target.value)
+                      handleFormChange(
+                        'phoneNumber',
+                        formatPhoneNumber(e.target.value)
+                      )
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="YYYY-MM-DD ('-' 포함)"
-                    maxLength={10}
+                    placeholder="010-1234-5678"
+                    maxLength={13}
                   />
                 </div>
               </div>
