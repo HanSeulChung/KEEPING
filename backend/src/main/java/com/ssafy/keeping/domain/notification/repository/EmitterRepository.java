@@ -38,7 +38,6 @@ public class EmitterRepository {
      */
     public void saveEventCache(String eventCacheId, Object event) {
         eventCache.put(eventCacheId, event);
-        log.debug("이벤트 캐시 저장 - ID: {}", eventCacheId);
     }
 
     /**
@@ -49,15 +48,12 @@ public class EmitterRepository {
      */
     public Map<String, SseEmitter> findAllEmitterStartWithByReceiver(String receiverType, Long receiverId) {
         String prefix = receiverType + "-" + receiverId;
-        Map<String, SseEmitter> result = emitters.entrySet().stream()
+        return emitters.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(prefix))
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue
                 ));
-        
-        log.debug("사용자별 Emitter 조회 완료 - {}:{}, 연결 수: {}", receiverType, receiverId, result.size());
-        return result;
     }
 
     /**
@@ -68,15 +64,12 @@ public class EmitterRepository {
      */
     public Map<String, Object> findAllEventCacheStartWithByReceiver(String receiverType, Long receiverId) {
         String prefix = receiverType + "-" + receiverId;
-        Map<String, Object> result = eventCache.entrySet().stream()
+        return eventCache.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(prefix))
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue
                 ));
-        
-        log.debug("사용자별 이벤트 캐시 조회 완료 - {}:{}, 캐시 수: {}", receiverType, receiverId, result.size());
-        return result;
     }
 
     /**
@@ -88,25 +81,5 @@ public class EmitterRepository {
         log.info("Emitter 제거 완료 - ID: {}, 남은 연결 수: {}", id, emitters.size());
     }
 
-    /**
-     * 특정 사용자의 모든 Emitter 제거
-     * @param receiverType "customer" 또는 "owner"
-     * @param receiverId 사용자 ID
-     */
-    public void deleteAllEmitterStartWithReceiver(String receiverType, Long receiverId) {
-        String prefix = receiverType + "-" + receiverId;
-        emitters.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
-        log.info("사용자별 모든 Emitter 제거 완료 - {}:{}", receiverType, receiverId);
-    }
-
-    /**
-     * 특정 사용자의 모든 이벤트 캐시 제거
-     * @param receiverType "customer" 또는 "owner"  
-     * @param receiverId 사용자 ID
-     */
-    public void deleteAllEventCacheStartWithReceiver(String receiverType, Long receiverId) {
-        String prefix = receiverType + "-" + receiverId;
-        eventCache.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
-        log.info("사용자별 모든 이벤트 캐시 제거 완료 - {}:{}", receiverType, receiverId);
-    }
+    
 }
