@@ -98,6 +98,17 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("해당 모임에 입장을 완료했습니다.", HttpStatus.OK.value(), dto));
     }
 
+    // 임의 user id로 체킹
+    @PatchMapping("/{groupId}/{userId}/group-leader")
+    public ResponseEntity<ApiResponse<GroupLeaderChangeResponseDto>> changeGroupLeader(
+            @PathVariable Long userId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupLeaderChangeRequestDto requestDto
+    ) {
+        GroupLeaderChangeResponseDto dto = groupService.changeGroupLeader(groupId, userId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("모임장 위임에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
 //    // TODO: 회원 Principal 적용할 controller,
 //        1. 모임 정보 조회,
 //        2. 모임원 조회
@@ -106,6 +117,7 @@ public class GroupController {
 //        5. 모임 추가 신청 승인 및 거절
 //        6. 모임 입장(모임 코드를 이용하여)
 //        7. 모임 검색 (와일드 카드 X)
+//        8. 모임장 위임
 //    @GetMapping("/{groupId}")
 //    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
 //            @PathVariable Long groupId

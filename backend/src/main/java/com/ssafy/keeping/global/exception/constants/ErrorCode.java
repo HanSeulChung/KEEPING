@@ -49,7 +49,10 @@ public enum ErrorCode {
     ALREADY_PROCESS_REQUEST(HttpStatus.BAD_REQUEST, "이미 처리된 요청입니다."),
     ADD_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 추가 요청을 찾을 수 없습니다."),
     CODE_NOT_MATCH(HttpStatus.BAD_REQUEST, "코드가 일치하지 않습니다."),
+    GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 모임원을 찾을 수 없습니다."),
 
+    // user 관련
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
 
     // 인증 관련
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
@@ -66,7 +69,9 @@ public enum ErrorCode {
     OAUTH_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth 인증에 실패하였습니다."),
     OAUTH_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보를 가져올 수 없습니다."),
 
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다.");
+    // global
+    BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다.")
+    ;
 
     private final HttpStatus httpStatus;
     private final String message;
