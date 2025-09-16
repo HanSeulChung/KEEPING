@@ -50,12 +50,29 @@ public enum ErrorCode {
     ADD_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 추가 요청을 찾을 수 없습니다."),
     CODE_NOT_MATCH(HttpStatus.BAD_REQUEST, "코드가 일치하지 않습니다."),
     GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 모임원을 찾을 수 없습니다."),
+
     // user 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
+
+    // 인증 관련
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
+    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
+    TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "토큰을 찾을 수 없습니다."),
+
+    // 권한 관련
+    FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+    ROLE_NOT_FOUND(HttpStatus.FORBIDDEN, "권한 정보를 찾을 수 없습니다."),
+
+    // OAuth 관련
+    OAUTH_PROVIDER_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원하지 않는 로그인 방식입니다."),
+    OAUTH_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth 인증에 실패하였습니다."),
+    OAUTH_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보를 가져올 수 없습니다."),
 
     // global
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다.")
     ;
+
     private final HttpStatus httpStatus;
     private final String message;
 }

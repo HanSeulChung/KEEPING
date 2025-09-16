@@ -83,9 +83,9 @@ public class OtpService {
 
         String text = "[keeping] 본인인증 인증번호는 " + otp + " 입니다. 정확히 입력해주세요.";
 
-        smsSender.send(dto.getPhoneNumber(), text);
+//        smsSender.send(dto.getPhoneNumber(), text);
 
-        return new OtpRequestResponse(dto.getRegSessionId());
+        return new OtpRequestResponse(dto.getRegSessionId(), otp);
     }
 
     // OTP 검증
