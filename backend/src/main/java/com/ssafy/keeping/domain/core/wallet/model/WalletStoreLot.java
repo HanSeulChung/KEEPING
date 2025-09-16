@@ -35,7 +35,7 @@ public class WalletStoreLot {
     @Column(name = "amount_remaining", nullable = false, precision = 18, scale = 2)
     private BigDecimal amountRemaining;
 
-    @Column(name = "acquierd_at", nullable = false)
+    @Column(name = "acquired_at", nullable = false)
     private LocalDateTime acquiredAt;
 
     @Column(name = "expired_at", nullable = false)
