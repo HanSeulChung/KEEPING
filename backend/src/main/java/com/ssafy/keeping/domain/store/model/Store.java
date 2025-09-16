@@ -34,9 +34,9 @@ public class Store {
     private Long storeId;
 
     // Store N : 1 Owner 연관관계
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
-    private Owner owner;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "owner_id", nullable = false)
+//    private Owner owner;
 
     @Column(nullable = false)
     private String taxId;
