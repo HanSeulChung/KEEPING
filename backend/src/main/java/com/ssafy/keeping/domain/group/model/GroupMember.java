@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.group.model;
 
+import com.ssafy.keeping.domain.core.customer.model.Customer;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,7 +34,7 @@ public class GroupMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
-    private TmpUser user;
+    private Customer user;
 
     @Column(nullable = false, name="is_leader")
     private boolean isLeader;

@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.group.service;
 
+import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.core.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
@@ -7,11 +9,9 @@ import com.ssafy.keeping.domain.group.dto.*;
 import com.ssafy.keeping.domain.group.model.Group;
 import com.ssafy.keeping.domain.group.model.GroupAddRequest;
 import com.ssafy.keeping.domain.group.model.GroupMember;
-import com.ssafy.keeping.domain.group.model.TmpUser;
 import com.ssafy.keeping.domain.group.repository.GroupAddRequestRepository;
 import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;
-import com.ssafy.keeping.domain.group.repository.TmpUserRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.validation.Valid;
@@ -30,18 +30,14 @@ public class GroupService {
     private static final int MAX_RETRY = 5;
 
     private final WalletServiceHS walletService;
-    private final TmpUserRepository userRepository;
+    private final CustomerRepository customerRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupAddRequestRepository groupAddRequestRepository;
 
     public GroupResponseDto createGroup(GroupRequestDto requestDto) {
         // TODO: 회원부분 연동되면 바꿔야하는 부분
-        TmpUser customer = validUser(requestDto.getGroupLeaderId());
-
-        if ("OWNER".equalsIgnoreCase(customer.getRole())) {
-            throw new CustomException(ErrorCode.INVALID_ROLE);
-        }
+        Customer customer = validCustomer(requestDto.getGroupLeaderId());
 
         String groupName = requestDto.getGroupName();
         String groupDescription = (requestDto.getGroupDescription() == null || requestDto.getGroupDescription().isBlank())
@@ -118,11 +114,7 @@ public class GroupService {
         if (isGroupMember)
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
 
-        TmpUser customer = validUser(customerId);
-
-        if ("OWNER".equalsIgnoreCase(customer.getRole())) {
-            throw new CustomException(ErrorCode.INVALID_ROLE);
-        }
+        Customer customer = validCustomer(customerId);
 
         boolean alreadyRequest = groupAddRequestRepository
                 .existsRequest(groupId, customerId, RequestStatus.PENDING);
@@ -168,7 +160,7 @@ public class GroupService {
                 () -> new CustomException(ErrorCode.ADD_REQUEST_NOT_FOUND)
         );
 
-        TmpUser customer = validUser(customerId);
+        Customer customer = validCustomer(customerId);
 
         boolean isGroupLeader = groupMemberRepository
                 .existsLeader(groupId, customerId);
@@ -219,11 +211,7 @@ public class GroupService {
         if (!Objects.equals(groupCode, requestDto.getInviteCode()))
             throw new CustomException(ErrorCode.CODE_NOT_MATCH);
 
-        TmpUser user = validUser(userId);
-
-        if ("OWNER".equalsIgnoreCase(user.getRole())) {
-            throw new CustomException(ErrorCode.INVALID_ROLE);
-        }
+        Customer user = validCustomer(userId);
 
         groupMemberRepository.save(
                 GroupMember.builder()
@@ -249,7 +237,7 @@ public class GroupService {
     @Transactional
     public GroupLeaderChangeResponseDto changeGroupLeader(Long groupId, Long userId, @Valid GroupLeaderChangeRequestDto requestDto) {
         validGroup(groupId);
-        validUser(userId);
+        validCustomer(userId);
 
         Long newLeaderUserId = requestDto.getNewGroupLeaderId();
         GroupMember originGroupLeader = validGroupMember(groupId, userId);
@@ -279,8 +267,8 @@ public class GroupService {
         );
     }
 
-    private TmpUser validUser(Long customerId) {
-        return userRepository.findById(customerId)
+    private Customer validCustomer(Long customerId) {
+        return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
