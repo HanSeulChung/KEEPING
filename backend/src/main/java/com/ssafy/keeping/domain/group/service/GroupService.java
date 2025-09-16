@@ -34,8 +34,7 @@ public class GroupService {
 
     public GroupResponseDto createGroup(GroupRequestDto requestDto) {
         // TODO: 회원부분 연동되면 바꿔야하는 부분
-        TmpUser customer = userRepository.findById(requestDto.getGroupLeaderId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        TmpUser customer = validUser(requestDto.getGroupLeaderId());
 
         if ("OWNER".equalsIgnoreCase(customer.getRole())) {
             throw new CustomException(ErrorCode.INVALID_ROLE);
@@ -81,8 +80,7 @@ public class GroupService {
     }
 
     public GroupResponseDto getGroup(Long groupId, Long userId) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
         boolean isGroupMember = groupMemberRepository
                                 .existsMember(groupId, userId);
@@ -97,8 +95,7 @@ public class GroupService {
     }
 
     public List<GroupMemberResponseDto> getGroupMembers(Long groupId, Long customerId) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+       validGroup(groupId);
 
         boolean isGroupMember = groupMemberRepository
                 .existsMember(groupId, customerId);
@@ -110,17 +107,14 @@ public class GroupService {
     }
 
     public void createGroupAddRequest(Long groupId, Long customerId) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
         boolean isGroupMember = groupMemberRepository
                 .existsMember(groupId, customerId);
         if (isGroupMember)
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
 
-        TmpUser customer = userRepository.findById(customerId).orElseThrow(
-                () -> new CustomException(ErrorCode.USER_NOT_FOUND)
-        );
+        TmpUser customer = validUser(customerId);
 
         if ("OWNER".equalsIgnoreCase(customer.getRole())) {
             throw new CustomException(ErrorCode.INVALID_ROLE);
@@ -149,8 +143,7 @@ public class GroupService {
     }
 
     public List<AddRequestResponseDto> getAllGroupAddRequest(Long groupId, Long customerId) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+       validGroup(groupId);
 
         boolean isGroupLeader = groupMemberRepository
                 .existsLeader(groupId, customerId);
@@ -162,8 +155,7 @@ public class GroupService {
 
     @Transactional
     public AddRequestResponseDto updateAddRequestStatus(Long groupId, Long customerId, @Valid AddRequestDecisionDto request) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
         Long groupAddRequestId = request.getGroupAddRequestId();
 
@@ -172,9 +164,7 @@ public class GroupService {
                 () -> new CustomException(ErrorCode.ADD_REQUEST_NOT_FOUND)
         );
 
-
-        TmpUser customer = userRepository.findById(groupAddRequest.getUser().getUserId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        TmpUser customer = validUser(customerId);
 
         boolean isGroupLeader = groupMemberRepository
                 .existsLeader(groupId, customerId);
@@ -206,11 +196,11 @@ public class GroupService {
     }
 
     public GroupResponseDto createGroupMember(Long groupId, Long userId, GroupEntranceRequestDto requestDto) {
-        Group group = groupRepository.findById(groupId).orElseThrow(
-                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
         boolean isGroupMember = groupMemberRepository
                 .existsMember(groupId, userId);
+
         if (isGroupMember) {
             return new GroupResponseDto(
                     group.getGroupId(), group.getGroupName(),
@@ -225,9 +215,7 @@ public class GroupService {
         if (!Objects.equals(groupCode, requestDto.getInviteCode()))
             throw new CustomException(ErrorCode.CODE_NOT_MATCH);
 
-        TmpUser user = userRepository.findById(userId).orElseThrow(
-                () -> new CustomException(ErrorCode.USER_NOT_FOUND)
-        );
+        TmpUser user = validUser(userId);
 
         if ("OWNER".equalsIgnoreCase(user.getRole())) {
             throw new CustomException(ErrorCode.INVALID_ROLE);
@@ -252,5 +240,43 @@ public class GroupService {
     public List<GroupMaskingResponseDto> getSearchGroup(String name) {
         // TODO: 고객만 모임을 검색할 수 있게 change
         return groupRepository.findGroupsByName(name);
+    }
+
+    @Transactional
+    public GroupLeaderChangeResponseDto changeGroupLeader(Long groupId, Long userId, @Valid GroupLeaderChangeRequestDto requestDto) {
+        validGroup(groupId);
+        validUser(userId);
+
+        Long newLeaderUserId = requestDto.getNewGroupLeaderId();
+        GroupMember originGroupLeader = validGroupMember(groupId, userId);
+        GroupMember newGroupLeader = validGroupMember(groupId, newLeaderUserId);
+
+        if (!originGroupLeader.isLeader())
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        if (!originGroupLeader.changeLeader(false)
+                || !newGroupLeader.changeLeader(true)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        return new GroupLeaderChangeResponseDto(
+                groupId, newGroupLeader.getGroupMemberId(), newGroupLeader.getUser().getName()
+        );
+    }
+
+    private Group validGroup(Long groupId) {
+        return groupRepository.findById(groupId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    private GroupMember validGroupMember(Long groupId, Long userId) {
+        return groupMemberRepository.findGroupMember(groupId, userId).orElseThrow(
+                () -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND)
+        );
+    }
+
+    private TmpUser validUser(Long customerId) {
+        return userRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
