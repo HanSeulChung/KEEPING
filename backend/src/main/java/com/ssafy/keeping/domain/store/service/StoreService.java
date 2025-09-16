@@ -109,10 +109,10 @@ public class StoreService {
     }
 
     /*
-    * ==================================
-    *  일반 고객 api 에서 사용할 service 로직
-    * ==================================
-    * */
+     * ==================================
+     *  일반 고객 api 에서 사용할 service 로직
+     * ==================================
+     * */
     public List<StorePublicDto> getAllStore() {
         List<StorePublicDto> allApprovedStoreDto =
                 storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
