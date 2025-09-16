@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.group.service;
 
+import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.core.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import com.ssafy.keeping.domain.group.dto.*;
 import com.ssafy.keeping.domain.group.model.Group;
@@ -27,6 +29,7 @@ import java.util.UUID;
 public class GroupService {
     private static final int MAX_RETRY = 5;
 
+    private final WalletServiceHS walletService;
     private final TmpUserRepository userRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
@@ -71,11 +74,12 @@ public class GroupService {
         );
         
         // 해당 모임의 지갑 생성 로직 추가
+        WalletResponseDto responseDto = walletService.createGroupWallet(saved);
 
         return new GroupResponseDto(
                 saved.getGroupId(), saved.getGroupName(),
                 saved.getGroupDescription(), saved.getGroupCode(),
-                saved.getGroupId() // TODO: 지갑 ID로 교체
+                responseDto.walletId().longValue() // TODO: 지갑 ID로 교체
         );
     }
 
