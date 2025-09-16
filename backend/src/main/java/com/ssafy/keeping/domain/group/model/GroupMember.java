@@ -1,8 +1,10 @@
 package com.ssafy.keeping.domain.group.model;
 
+import com.ssafy.keeping.domain.core.customer.model.Customer;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -11,6 +13,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,7 +34,7 @@ public class GroupMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
-    private TmpUser user;
+    private Customer user;
 
     @Column(nullable = false, name="is_leader")
     private boolean isLeader;
@@ -42,5 +45,12 @@ public class GroupMember {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public boolean changeLeader(boolean isLeader) {
+        if (this.isLeader == isLeader) return false;
+
+        this.isLeader = isLeader;
+        return true;
+    }
 }
 

@@ -35,14 +35,14 @@ public class WalletStoreLot {
     @Column(name = "amount_remaining", nullable = false, precision = 18, scale = 2)
     private BigDecimal amountRemaining;
 
-    @Column(name = "acquierd_at", nullable = false)
+    @Column(name = "acquired_at", nullable = false)
     private LocalDateTime acquiredAt;
 
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source_type", nullable = false)
+    @Column(name = "source_type", nullable = false, length = 20)
     private SourceType sourceType;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -75,5 +75,10 @@ public class WalletStoreLot {
     // 사용 완료 여부 확인
     public boolean isFullyUsed() {
         return this.amountRemaining.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    // 취소 처리 (소스 타입을 CANCELED로 변경)
+    public void markAsCanceled() {
+        this.sourceType = SourceType.CANCELED;
     }
 }

@@ -42,3 +42,5 @@ application.yml
 
 ### generated ###
 src/main/generated/
+
+.DS_Store

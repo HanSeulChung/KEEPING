@@ -1,14 +1,24 @@
 package com.ssafy.keeping.global.security;
 
 
+import com.ssafy.keeping.domain.auth.handler.OAuth2ProviderRouter;
+import com.ssafy.keeping.domain.auth.handler.OAuth2SuccessHandler;
+import com.ssafy.keeping.domain.auth.security.JwtAccessDeniedHandler;
+import com.ssafy.keeping.domain.auth.security.JwtAuthenticationEntryPoint;
+import com.ssafy.keeping.domain.auth.security.JwtAuthenticationFilter;
+import com.ssafy.keeping.domain.auth.security.RoleAwareAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,8 +27,38 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    public static final String[] ALLOW_URLS = {
+            "/auth/**",
+            "/otp/**",
+            "/oauth2/**",
+            "/login",
+            "/error",
+            "/actuator/health",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/favicon.ico",
+            "/.well-known/**"
+    };
+
+    public static final String[] TEMP_ALLOW_URLS = {
+            "/stores/**",
+            "/api/**",
+            "/stores/**",
+            "/groups/**"
+    };
+
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final OAuth2ProviderRouter oAuth2ProviderRouter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final StringRedisTemplate redis;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -51,6 +91,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .oauth2Login(o -> o.authorizationEndpoint(
+                        ae -> ae.authorizationRequestResolver(
+                                new RoleAwareAuthorizationRequestResolver(redis, clientRegistrationRepository,
+                                        "/oauth2/authorization")
+                        )).redirectionEndpoint(re -> re.baseUri("/auth/*/callback"))
+                        .userInfoEndpoint(ue -> ue.userService(oAuth2ProviderRouter))
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
                 // CSRF 비활성화 (JWT 사용으로 불필요)
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -62,9 +111,10 @@ public class SecurityConfig {
                 // CORS 설정 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 세션 관리 정책: STATELESS (세션 사용 안함)
+                // 세션 관리 정책 -> OAuth2 로그인 완료 후 JWT로 전환 되어 현재는 IF_REQUIRED 로 작성
+                // TODO:  OAuth2 에서 세션에 role 을 담지 않고 넘겨주는 방식으로 리팩토링 후 수정
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
 
                 .headers(headers -> headers
@@ -73,24 +123,59 @@ public class SecurityConfig {
                         .httpStrictTransportSecurity(hstsConfig -> hstsConfig.disable())  // 개발 환경에서는 비활성화
                 )
 
+                // 예외 처리
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
+                )
+
                 // URL별 접근 권한 설정
+                // TODO: 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
                         // 인증 없이 접근 가능한 URL, 우선 회원 기능을 추가하고 난 뒤 나누기
-                        .requestMatchers(
-                               "/stores/**", "/groups/**","/api/**"
-                        ).permitAll()
+                        .requestMatchers(ALLOW_URLS).permitAll()
+
+                        // 임시용
+                        .requestMatchers(TEMP_ALLOW_URLS).permitAll()
+
+                        // 가게 조회 (고객용) - 인증 불필요
+//                        .requestMatchers("GET", "/stores").permitAll()
+//                        .requestMatchers("GET", "/stores/*").permitAll()
+//                        .requestMatchers("GET", "/stores/*/menus").permitAll()
+//                        .requestMatchers("GET", "/stores/*/menus/categories").permitAll()
+
                         // 가게 주인만 접근 가능한 URL
-//                        .requestMatchers("/api/admin/**").hasRole("OWNER")
+                        .requestMatchers("/owners/**").hasRole("OWNER")
+//                        .requestMatchers("POST", "/stores").hasRole("OWNER")
+//                        .requestMatchers("PATCH", "/stores/*").hasRole("OWNER")
+//                        .requestMatchers("DELETE", "/stores/*").hasRole("OWNER")
+
+                        // 메뉴
+//                        .requestMatchers("POST", "/stores/*/menus").hasRole("OWNER")
+//                        .requestMatchers("PATCH", "/stores/*/menus/*").hasRole("OWNER")
+//                        .requestMatchers("DELETE", "/stores/*/menus").hasRole("OWNER")
+//                        .requestMatchers("DELETE", "/stores/*/menus/*").hasRole("OWNER")
+
+//                        .requestMatchers("POST", "/stores/*/menus/categories").hasRole("OWNER")
+//                        .requestMatchers("PATCH", "/stores/*/menus/categories/*").hasRole("OWNER")
+//                        .requestMatchers("DELETE", "/stores/*/menus/categories/*").hasRole("OWNER")
+
+                        // 그룹 관리
+//                        .requestMatchers("/groups/**").authenticated()
 
                         // 고객 권한만 필요한 URL
-//                        .requestMatchers("/api/user/**").hasRole("CUSTOMER")
+                        .requestMatchers("/customers/**").hasRole("CUSTOMER")
+
+                        // 결제
+//                        .requestMatchers("/charge/**", "/payments/**", "/cpqr/**").authenticated()
 
                         // 그 외 모든 요청은 인증 필요
 //                        .anyRequest().authenticated()
-                );
+                )
                 // JWT 인증 필터를 UsernamePasswordAuthenticationFilter 이전에 추가
-
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 }

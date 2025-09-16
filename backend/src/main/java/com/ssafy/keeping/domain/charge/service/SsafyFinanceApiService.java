@@ -2,8 +2,10 @@ package com.ssafy.keeping.domain.charge.service;
 
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyApiHeaderDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardPaymentRequestDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardCancelRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyAccountDepositRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardCancelResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
@@ -160,6 +162,77 @@ public class SsafyFinanceApiService {
         log.info("계좌 입금 성공 - 거래고유번호: {}, 계좌번호: {}, 금액: {}", 
                 responseDto.getRec().getTransactionUniqueNo(), accountNo, transactionBalance);
         return responseDto;
+    }
+
+    /**
+     * 카드 결제 취소 API 호출
+     */
+    public SsafyCardCancelResponseDto requestCardCancel(
+            String userKey,
+            String cardNo,
+            String cvc,
+            String transactionUniqueNo) {
+        
+        // API 헤더 생성
+        SsafyApiHeaderDto header = createCardCancelHeader(userKey);
+        
+        // 요청 DTO 생성
+        SsafyCardCancelRequestDto requestDto = SsafyCardCancelRequestDto.builder()
+                .header(header)
+                .cardNo(cardNo)
+                .cvc(cvc)
+                .transactionUniqueNo(transactionUniqueNo)
+                .build();
+        
+        // HTTP 요청 생성
+        HttpEntity<SsafyCardCancelRequestDto> requestEntity = createHttpEntity(requestDto);
+        
+        // API 호출
+        String url = baseUrl + "/ssafy/api/v1/edu/creditCard/deleteTransaction";
+        
+        ResponseEntity<SsafyCardCancelResponseDto> response;
+        try {
+            response = restTemplate.postForEntity(url, requestEntity, SsafyCardCancelResponseDto.class);
+        } catch (Exception e) {
+            log.error("카드 결제 취소 API 통신 오류", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+        }
+        
+        SsafyCardCancelResponseDto responseDto = response.getBody();
+        
+        if (responseDto == null || !responseDto.isSuccess()) {
+            String errorMessage = (responseDto != null && responseDto.getHeader() != null) 
+                    ? responseDto.getHeader().getResponseMessage() 
+                    : "응답 없음";
+            log.error("카드 결제 취소 실패 - {}", errorMessage);
+            throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
+        }
+        
+        log.info("카드 결제 취소 성공 - 거래고유번호: {}, 취소금액: {}", 
+                responseDto.getRec().getTransactionUniqueNo(), responseDto.getRec().getTransactionBalance());
+        return responseDto;
+    }
+
+    /**
+     * 카드 취소용 API 헤더 생성
+     */
+    private SsafyApiHeaderDto createCardCancelHeader(String userKey) {
+        LocalDateTime now = LocalDateTime.now();
+        String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
+        
+        return SsafyApiHeaderDto.builder()
+                .apiName("deleteTransaction")
+                .transmissionDate(transmissionDate)
+                .transmissionTime(transmissionTime)
+                .institutionCode("00100")
+                .fintechAppNo("001")
+                .apiServiceCode("deleteTransaction")
+                .institutionTransactionUniqueNo(institutionTransactionUniqueNo)
+                .apiKey(apiKey)
+                .userKey(userKey)
+                .build();
     }
 
     /**
