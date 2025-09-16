@@ -1,8 +1,5 @@
 package com.ssafy.keeping.domain.store.service;
 
-import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryEditRequestDto;
-import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryRequestDto;
-import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.menuCategory.service.MenuCategoryService;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
@@ -54,7 +51,7 @@ public class StoreService {
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())
                                 .description(requestDto.getDescription())
-                                .storeStatus(StoreStatus.APPROVED)
+                                .storeStatus(StoreStatus.ACTIVE)
                                 .imgUrl(imgUrl)
                                 .build()
                 )
@@ -73,7 +70,7 @@ public class StoreService {
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
 
-        if (!Objects.equals(store.getStoreStatus(), StoreStatus.APPROVED)) {
+        if (!Objects.equals(store.getStoreStatus(), StoreStatus.ACTIVE)) {
             throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
         }
 
@@ -115,12 +112,12 @@ public class StoreService {
      * */
     public List<StorePublicDto> getAllStore() {
         List<StorePublicDto> allApprovedStoreDto =
-                storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
+                storeRepository.findPublicAllApprovedStore(StoreStatus.ACTIVE);
         return allApprovedStoreDto;
     }
 
     public StorePublicDto getStoreByStoreId(Long storeId) {
-        return storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+        return storeRepository.findPublicById(storeId, StoreStatus.ACTIVE).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
     }
 
@@ -128,12 +125,12 @@ public class StoreService {
         String name = storeName == null ? "" : storeName.trim();
         if (name.isEmpty()) {
             // 이름이 비어있으면 전체 조회
-            return storeRepository.findPublicAllApprovedStore(StoreStatus.APPROVED);
+            return storeRepository.findPublicAllApprovedStore(StoreStatus.ACTIVE);
         }
         name = name.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
 
         List<StorePublicDto> similarityByNameStoreDto
-                = storeRepository.findPublicAllSimilarityByName(name, StoreStatus.APPROVED);
+                = storeRepository.findPublicAllSimilarityByName(name, StoreStatus.ACTIVE);
 
         return similarityByNameStoreDto;
     }

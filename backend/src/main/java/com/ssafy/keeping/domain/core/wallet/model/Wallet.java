@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.core.wallet.model;
 
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.group.model.Group;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,8 +28,9 @@ public class Wallet {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "group_id")
-    private Long groupId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private Group group;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "wallet_type", nullable = false)

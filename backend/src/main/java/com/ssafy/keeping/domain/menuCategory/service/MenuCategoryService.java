@@ -6,7 +6,6 @@ import com.ssafy.keeping.domain.menuCategory.dto.MenuCategoryResponseDto;
 import com.ssafy.keeping.domain.menuCategory.model.MenuCategory;
 import com.ssafy.keeping.domain.menuCategory.repository.MenuCategoryRepository;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
-import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.global.exception.CustomException;
@@ -108,7 +107,7 @@ public class MenuCategoryService {
     }
 
     private void validStore(Long storeId) {
-        storeRepository.findPublicById(storeId, StoreStatus.APPROVED).orElseThrow(
+        storeRepository.findPublicById(storeId, StoreStatus.ACTIVE).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // TODO: store 주인 id와 현재 접근하고 있는(principal에서의 id) 비교
