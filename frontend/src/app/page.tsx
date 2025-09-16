@@ -1,29 +1,35 @@
-import Link from "next/link"
+import Image from 'next/image'
+import Link from 'next/link'
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="font-display mb-4 text-4xl font-bold text-gray-900">
           KEEPING
         </h1>
-        <p className="text-lg text-gray-600 mb-8">
-          선결제 디지털 플랫폼
+        <p className="mb-8 text-lg text-gray-600">
+          가게에 미리 충전하고 편리하게 결제하세요. <br />
+          모임 회비도 함께 관리할 수 있습니다.
         </p>
-        
-        <div className="space-y-4">
-          <Link 
-            href="/owner/login"
-            className="block w-64 mx-auto bg-gray-800 text-white py-3 px-6 rounded-lg hover:bg-gray-900 transition-colors"
-          >
-            사장님 로그인
+
+        <div className="flex flex-row items-center justify-center space-x-4">
+          <Link href="/owner/login" className="text-white transition-colors">
+            <Image
+              src="icons/main_owner.svg"
+              alt="사장님 로그인"
+              width={180}
+              height={180}
+            />
           </Link>
-          
-          <Link 
-            href="/customer/login"
-            className="block w-64 mx-auto bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            고객 로그인
+
+          <Link href="/customer/login" className="text-white transition-colors">
+            <Image
+              src="icons/main_customer.svg"
+              alt="고객 로그인"
+              width={180}
+              height={180}
+            />
           </Link>
         </div>
       </div>
