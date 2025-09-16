@@ -25,7 +25,6 @@ interface Card {
   id: number
   name: string
   type: 'group' | 'personal'
-  // 다른 필요한 필드들...
 }
 
 export const HeaderCards = () => {
@@ -37,7 +36,7 @@ export const HeaderCards = () => {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const response = await fetch('/api/cards') // 실제 API 엔드포인트로 변경
+        const response = await fetch('/api/cards')
         const data = await response.json()
         setCards(data)
       } catch (error) {

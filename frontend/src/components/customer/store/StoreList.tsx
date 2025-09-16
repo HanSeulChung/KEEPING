@@ -330,7 +330,7 @@ const lifeStoreData: Record<string, Store[]> = {
       isLiked: false,
     },
   ],
-  용품: [
+  잡화: [
     {
       id: 119,
       name: '생활용품점',
@@ -379,7 +379,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     '펫',
     '주류',
     '클래스',
-    '용품',
+    '잡화',
   ]
 
   const categories = type === 'food' ? foodCategories : lifeCategories

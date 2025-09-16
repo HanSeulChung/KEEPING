@@ -19,7 +19,7 @@ export const LifeCategory = () => {
     { src: '/home/life/pet.svg', alt: 'pet', category: '펫' },
     { src: '/home/life/alcohol.svg', alt: 'alcohol', category: '주류' },
     { src: '/home/life/class.svg', alt: 'class', category: '클래스' },
-    { src: '/home/life/items.svg', alt: 'items', category: '용품' },
+    { src: '/home/life/items.svg', alt: 'items', category: '잡화' },
   ]
 
   const handleCategoryClick = (category: string) => {
