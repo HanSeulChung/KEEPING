@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
+import PersonalCardPaymentModal from './PersonalCardPaymentModal'
 
 export default function QRScanner() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function QRScanner() {
   const [error, setError] = useState<string | null>(null)
   const [scannedData, setScannedData] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [customerInfo, setCustomerInfo] = useState<{name: string, groupName?: string} | null>(null)
 
   // 인증 상태 확인
   useEffect(() => {
@@ -85,8 +88,11 @@ export default function QRScanner() {
 
         if (response.ok) {
           const result = await response.json()
-          alert(`QR 코드 인식 성공!\n고객: ${result.data.customerName}\n그룹: ${result.data.groupName}\n테이블: ${result.data.tableNumber}`)
-          router.push('/owner/dashboard')
+          setCustomerInfo({
+            name: result.data.customerName,
+            groupName: result.data.groupName
+          })
+          setIsPaymentModalOpen(true)
         } else {
           alert('QR 코드 인식에 실패했습니다.')
         }
@@ -158,44 +164,47 @@ export default function QRScanner() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="relative">
-        {/* 카메라 비디오 */}
-        <video
-          ref={videoRef}
-          className="w-full h-screen object-cover"
-          playsInline
-          muted
-        />
-        
-        {/* 숨겨진 캔버스 (QR 코드 분석용) */}
-        <canvas
-          ref={canvasRef}
-          className="hidden"
-        />
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-gray-50">
+      <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg mx-auto">
+        {/* 헤더 */}
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-black font-['Tenada'] text-xl sm:text-2xl lg:text-4xl font-extrabold leading-7 mb-2">
+            QR 코드 스캔
+          </h1>
+          <p className="text-gray-600 text-xs sm:text-sm lg:text-base mb-4">
+            고객의 QR 코드를 스캔하여 주문을 받아보세요
+          </p>
+        </div>
 
-        {/* 오버레이 UI */}
-        <div className="absolute inset-0 flex flex-col">
-          {/* 상단 컨트롤 */}
-          <div className="flex justify-between items-center p-4 bg-black bg-opacity-50">
-            <button
-              onClick={() => router.back()}
-              className="text-white text-lg font-bold"
-            >
-              ← 뒤로
-            </button>
-            <h1 className="text-white text-lg font-bold">QR 코드 스캔</h1>
-            <div className="w-8"></div> {/* 공간 맞추기 */}
+        {/* QR 스캔 영역 */}
+        <div className="bg-white border border-black p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="flex justify-center items-center gap-2.5 pt-[0.5625rem] pb-[0.5625rem] px-3 sm:px-4 h-[1.375rem] rounded-lg border border-black bg-white text-1 font-['nanumsquare'] text-black text-center text-[10px] sm:text-[11px] font-bold leading-5 whitespace-nowrap mx-auto mb-3 sm:mb-4">
+              QR 스캔 영역
+            </div>
           </div>
+          
+          {/* 카메라 비디오 영역 */}
+          <div className="relative w-full h-64 sm:h-80 bg-gray-100 border border-gray-300 rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+            />
+            
+            {/* 숨겨진 캔버스 (QR 코드 분석용) */}
+            <canvas
+              ref={canvasRef}
+              className="hidden"
+            />
 
-          {/* 중앙 스캔 영역 */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="relative">
-              {/* 스캔 프레임 */}
-              <div className="w-64 h-64 border-2 border-white border-dashed rounded-lg flex items-center justify-center">
+            {/* 스캔 프레임 오버레이 */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-white border-dashed rounded-lg flex items-center justify-center bg-black bg-opacity-20">
                 <div className="text-white text-center">
-                  <div className="text-sm mb-2">QR 코드를</div>
-                  <div className="text-sm">프레임 안에 맞춰주세요</div>
+                  <div className="text-xs sm:text-sm mb-2 font-['nanumsquare']">QR 코드를</div>
+                  <div className="text-xs sm:text-sm font-['nanumsquare']">프레임 안에 맞춰주세요</div>
                 </div>
               </div>
               
@@ -206,62 +215,83 @@ export default function QRScanner() {
             </div>
           </div>
 
-          {/* 하단 컨트롤 */}
-          <div className="p-6 bg-black bg-opacity-50">
-            {error && (
-              <div className="text-red-400 text-center mb-4">
+          {/* 상태 메시지 */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-xs sm:text-sm font-['nanumsquare'] text-center">
                 {error}
-              </div>
-            )}
-            
-            {scannedData && (
-              <div className="text-green-400 text-center mb-4">
+              </p>
+            </div>
+          )}
+          
+          {scannedData && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-600 text-xs sm:text-sm font-['nanumsquare'] text-center">
                 QR 코드 인식됨: {scannedData}
-              </div>
-            )}
+              </p>
+            </div>
+          )}
+        </div>
 
-            <div className="flex gap-4">
-              {!isScanning ? (
-                <button
-                  onClick={startCamera}
-                  className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700"
-                >
-                  스캔 시작
-                </button>
-              ) : (
-                <button
-                  onClick={stopCamera}
-                  className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700"
-                >
-                  스캔 중지
-                </button>
-              )}
-              
+        {/* 컨트롤 버튼들 */}
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex gap-3 sm:gap-4">
+            {!isScanning ? (
               <button
-                onClick={() => router.push('/owner/dashboard')}
-                className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-700"
+                onClick={startCamera}
+                className="flex-1 flex justify-center items-center py-2 px-3 rounded bg-blue-600 text-white text-center font-['nanumsquare'] text-xs sm:text-sm font-bold leading-6 hover:bg-blue-700 transition-colors"
               >
-                대시보드로
+                스캔 시작
               </button>
-            </div>
+            ) : (
+              <button
+                onClick={stopCamera}
+                className="flex-1 flex justify-center items-center py-2 px-3 rounded bg-red-600 text-white text-center font-['nanumsquare'] text-xs sm:text-sm font-bold leading-6 hover:bg-red-700 transition-colors"
+              >
+                스캔 중지
+              </button>
+            )}
             
-            {/* 테스트용 QR 시뮬레이션 버튼 */}
-            <div className="mt-4">
-              <button
-                onClick={() => {
-                  const mockQRData = 'customer:1:group:1:table:A-5'
-                  setScannedData(mockQRData)
-                  setIsScanning(false)
-                  handleQRResult(mockQRData)
-                }}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-green-700"
-              >
-                테스트: QR 코드 시뮬레이션
-              </button>
-            </div>
+            <button
+              onClick={() => router.push('/owner/dashboard')}
+              className="flex-1 flex justify-center items-center py-2 px-3 rounded bg-gray-600 text-white text-center font-['nanumsquare'] text-xs sm:text-sm font-bold leading-6 hover:bg-gray-700 transition-colors"
+            >
+              대시보드로
+            </button>
           </div>
+          
+          {/* 테스트용 QR 시뮬레이션 버튼 */}
+          <button
+            onClick={() => {
+              const mockQRData = 'customer:1:group:1:table:A-5'
+              setScannedData(mockQRData)
+              setIsScanning(false)
+              handleQRResult(mockQRData)
+            }}
+            className="w-full flex justify-center items-center py-2 px-3 rounded bg-green-600 text-white text-center font-['nanumsquare'] text-xs sm:text-sm font-bold leading-6 hover:bg-green-700 transition-colors"
+          >
+            테스트: QR 코드 시뮬레이션
+          </button>
+        </div>
+
+        {/* 하단 안내 */}
+        <div className="text-center mt-4 sm:mt-6">
+          <p className="text-xs sm:text-sm text-gray-500 px-4 font-['nanumsquare']">
+            QR 코드 스캔에 문제가 있으시면 고객센터로 문의해주세요
+          </p>
         </div>
       </div>
-    </div>
+
+      {/* 개인 카드 결제 모달 */}
+      <PersonalCardPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false)
+          setCustomerInfo(null)
+          setScannedData(null)
+        }}
+        customerInfo={customerInfo || undefined}
+      />
+    </main>
   )
 }

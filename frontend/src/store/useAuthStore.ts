@@ -19,7 +19,13 @@ export const useAuthStore = create<AuthState>()(
       isLoggedIn: false,
       user: null,
       login: (user) => set({ isLoggedIn: true, user }),
-      logout: () => set({ isLoggedIn: false, user: null }),
+      logout: () => {
+        // 로컬 스토리지 정리
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        set({ isLoggedIn: false, user: null })
+      },
       initializeAuth: () => {
         // 로컬 스토리지에서 토큰 확인
         const token = localStorage.getItem('accessToken')

@@ -2,20 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-interface UserRegisterFormProps {
-  onNext?: () => void
-}
+import { UserRegisterFormProps, AuthForm } from '@/types'
 
 export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   const router = useRouter()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
-  const [authForm, setAuthForm] = useState({
+  const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
-    birthDate: ''
+    phoneNumber: ''
   })
 
   const handlePassAuth = () => {
@@ -30,7 +27,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     setIsAuthCompleted(true)
   }
 
-  const handleFormChange = (field: string, value: string) => {
+  const handleFormChange = (field: keyof AuthForm, value: string) => {
     setAuthForm(prev => ({
       ...prev,
       [field]: value
@@ -86,12 +83,10 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
               <span className="text-gray-800 text-sm font-bold">×</span>
             </button>
             
-            {/* 서브타이틀 */}
             <div className="absolute left-6 top-16 text-black text-sm font-normal">
               간편 본인확인 정보 등록
             </div>
             
-            {/* 상단 구분선 */}
             <div className="absolute left-6 right-6 top-20 border-t border-gray-300"></div>
             
             {/* 본문 영역 - 인증 폼 */}
@@ -120,21 +115,21 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
                     onChange={(e) => handleFormChange('residentNumber', e.target.value)}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="생년월일 6자리 - ●●●●●●●"
-                    maxLength={14}
+                    maxLength={8}
                   />
                 </div>
                 
                 <div>
                   <div className="bg-gray-100 rounded-lg px-3 py-2 mb-2">
-                    <label className="text-sm font-medium text-gray-700">생년월일</label>
+                    <label className="text-sm font-medium text-gray-700">전화번호</label>
                   </div>
                   <input
                     type="text"
-                    value={authForm.birthDate}
-                    onChange={(e) => handleFormChange('birthDate', e.target.value)}
+                    value={authForm.phoneNumber}
+                    onChange={(e) => handleFormChange('phoneNumber', e.target.value)}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="YYYY-MM-DD ('-' 포함)"
-                    maxLength={10}
+                    placeholder="010-1234-5678"
+                    maxLength={13}
                   />
                 </div>
               </div>
@@ -167,7 +162,6 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
               KEEPING PASS
             </div>
             
-            {/* 닫기 버튼 */}
             <button
               className="absolute right-4 top-4 w-8 h-8 rounded-full border border-gray-800 flex items-center justify-center hover:bg-gray-100 transition-colors"
               onClick={() => setIsAuthModalOpen(false)}
@@ -175,15 +169,13 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
               <span className="text-gray-800 text-sm font-bold">×</span>
             </button>
             
-            {/* 서브타이틀 */}
             <div className="absolute left-6 top-16 text-black text-sm font-normal">
               간편 본인확인 정보 등록
             </div>
             
-            {/* 상단 구분선 */}
             <div className="absolute left-6 right-6 top-20 border-t border-gray-300"></div>
             
-            {/* 본문 영역 - 인증 완료 메시지 */}
+
             <div className="absolute left-6 right-6 top-24 bottom-20 bg-white flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">

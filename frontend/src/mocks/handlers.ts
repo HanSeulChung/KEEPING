@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { notificationHandlers } from './notificationHandlers'
 
 // ===== Mock 데이터 =====
 
@@ -35,7 +36,10 @@ const mockStores: any[] = [
     images: [
       'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop',
       'https://images.unsplash.com/photo-1553621042-f6e147245754?w=300&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop'
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1544025162-d76694265947?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&h=200&fit=crop'
     ],
     isLiked: false,
     likeCount: 15
@@ -53,6 +57,62 @@ const mockStores: any[] = [
     ],
     isLiked: true,
     likeCount: 23
+  },
+  {
+    id: '3',
+    name: '대구 갈비집',
+    ownerId: '2',
+    address: '대구시 중구 동성로 789',
+    phone: '053-3456-7890',
+    description: '대구의 명물 갈비를 맛볼 수 있는 전통 갈비집',
+    images: [
+      'https://images.unsplash.com/photo-1544025162-d76694265947?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=200&fit=crop'
+    ],
+    isLiked: false,
+    likeCount: 8
+  },
+  {
+    id: '4',
+    name: '제주 흑돼지',
+    ownerId: '2',
+    address: '제주시 연동 중앙로 101',
+    phone: '064-4567-8901',
+    description: '제주도 특산 흑돼지로 만드는 정통 제주 요리',
+    images: [
+      'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1551782450-17144efb9c50?w=300&h=200&fit=crop'
+    ],
+    isLiked: true,
+    likeCount: 31
+  },
+  {
+    id: '5',
+    name: '인천 짬뽕',
+    ownerId: '2',
+    address: '인천시 중구 신포로 202',
+    phone: '032-5678-9012',
+    description: '인천 차이나타운의 정통 짬뽕집',
+    images: [
+      'https://images.unsplash.com/photo-1563379091339-03246963d4d8?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1555126634-323283e090fa?w=300&h=200&fit=crop'
+    ],
+    isLiked: false,
+    likeCount: 12
+  },
+  {
+    id: '6',
+    name: '광주 비빔밥',
+    ownerId: '2',
+    address: '광주시 동구 중앙로 303',
+    phone: '062-6789-0123',
+    description: '전라도의 정통 비빔밥과 한정식을 맛볼 수 있는 곳',
+    images: [
+      'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=300&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop'
+    ],
+    isLiked: true,
+    likeCount: 19
   }
 ]
 
@@ -102,56 +162,106 @@ const mockGroupRequests: any[] = [
 const mockMenus: any[] = [
   {
     id: '1',
-    storeId: '1',
-    name: '도미정식 1人',
-    price: 39000,
-    description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥',
-    category: '식사',
-    isAvailable: true
+    name: '도미코스 A',
+    price: 25000,
+    description: '신선한 도미와 다양한 초밥으로 구성된 코스',
+    category: '도미코스',
+    image: 'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop',
+    storeId: '1'
   },
   {
     id: '2',
-    storeId: '1',
-    name: '연어정식 1人',
+    name: '도미코스 B',
     price: 35000,
-    description: '연어숙성회 + 연어머리구이 + 모듬튀김 + 연어해물라면 OR 연어덮밥',
-    category: '식사',
-    isAvailable: true
+    description: '프리미엄 도미와 특별한 초밥으로 구성된 코스',
+    category: '도미코스',
+    image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=300&h=200&fit=crop',
+    storeId: '1'
   },
   {
     id: '3',
-    storeId: '1',
-    name: '특선초밥 12貫', 
-    price: 25000,
-    description: '계절 생선으로 구성된 특선 초밥 12개',
-    category: '초밥',
-    isAvailable: true
+    name: '연어 사시미',
+    price: 18000,
+    description: '신선한 연어 사시미',
+    category: '사시미',
+    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop',
+    storeId: '1'
   },
   {
     id: '4',
-    storeId: '1',
-    name: '우니초밥 1貫',
-    price: 8000,
-    description: '프리미엄 우니(성게알) 초밥',
-    category: '초밥',
-    isAvailable: false
+    name: '도미 사시미',
+    price: 20000,
+    description: '신선한 도미 사시미',
+    category: '사시미',
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=300&h=200&fit=crop',
+    storeId: '1'
+  },
+  {
+    id: '5',
+    name: '돈코츠 라멘',
+    price: 12000,
+    description: '진한 돼지뼈 국물의 돈코츠 라멘',
+    category: '라멘',
+    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=200&fit=crop',
+    storeId: '1'
+  },
+  {
+    id: '6',
+    name: '미소 라멘',
+    price: 11000,
+    description: '일본식 미소 라멘',
+    category: '라멘',
+    image: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&h=200&fit=crop',
+    storeId: '1'
+  },
+  {
+    id: '7',
+    name: '김치',
+    price: 3000,
+    description: '집에서 담근 김치',
+    category: '사이드메뉴',
+    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=300&h=200&fit=crop',
+    storeId: '1'
+  },
+  {
+    id: '8',
+    name: '된장국',
+    price: 5000,
+    description: '구수한 된장국',
+    category: '사이드메뉴',
+    image: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&h=200&fit=crop',
+    storeId: '1'
   }
 ]
 
 // 메뉴 카테고리 Mock 데이터
 const mockCategories: any[] = [
-  { id: '1', storeId: '1', name: '식사', order: 1 },
-  { id: '2', storeId: '1', name: '초밥', order: 2 },
-  { id: '3', storeId: '1', name: '사시미', order: 3 }
+  { id: '1', name: '도미코스', order: 1, storeId: '1' },
+  { id: '2', name: '사시미', order: 2, storeId: '1' },
+  { id: '3', name: '라멘', order: 3, storeId: '1' },
+  { id: '4', name: '사이드메뉴', order: 4, storeId: '1' }
 ]
 
 // 할인/포인트 설정 Mock 데이터
 const mockDiscountPoints: any[] = [
-  { id: '1', storeId: '1', points: 50000, discount: 5 },
-  { id: '2', storeId: '1', points: 100000, discount: 10 },
-  { id: '3', storeId: '1', points: 150000, discount: 15 },
-  { id: '4', storeId: '1', points: 200000, discount: 20 },
-  { id: '5', storeId: '1', points: 250000, discount: 25 }
+  {
+    id: '1',
+    discount: 10,
+    points: 10000,
+    storeId: '1'
+  },
+  {
+    id: '2',
+    discount: 15,
+    points: 20000,
+    storeId: '1'
+  },
+  {
+    id: '3',
+    discount: 20,
+    points: 30000,
+    storeId: '1'
+  }
 ]
 
 // OTP Mock 데이터
@@ -161,6 +271,8 @@ const mockOtpData = {
 }
 
 export const handlers = [
+  // 알림 관련 핸들러들
+  ...notificationHandlers,
   // ===== 인증 관련 API =====
   
   // 로그아웃
@@ -793,20 +905,42 @@ export const handlers = [
   http.get('/api/owners/stores/:storeId/sales/calendar', ({ params, request }) => {
     const { storeId } = params
     const url = new URL(request.url)
-    const year = url.searchParams.get('year') || '2024'
-    const month = url.searchParams.get('month') || '1'
+    const year = parseInt(url.searchParams.get('year') || '2024')
+    const month = parseInt(url.searchParams.get('month') || '1')
+    
+    // 현재 날짜 기준으로 동적 데이터 생성
+    const today = new Date()
+    const currentYear = today.getFullYear()
+    const currentMonth = today.getMonth() + 1
+    const currentDay = today.getDate()
+    
+    // 해당 월의 일수 계산
+    const daysInMonth = new Date(year, month, 0).getDate()
+    
+    // 랜덤하게 매출이 있는 날짜들 생성 (월의 1/3 정도)
+    const salesDays = Math.floor(daysInMonth / 3)
+    const dailySales = []
+    
+    for (let i = 0; i < salesDays; i++) {
+      const day = Math.floor(Math.random() * daysInMonth) + 1
+      const date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+      const amount = Math.floor(Math.random() * 500000) + 50000 // 5만원 ~ 55만원
+      const customers = Math.floor(Math.random() * 8) + 1 // 1~8명
+      
+      dailySales.push({ date, amount, customers })
+    }
+    
+    // 중복 제거
+    const uniqueSales = dailySales.filter((sale, index, self) => 
+      index === self.findIndex(s => s.date === sale.date)
+    )
     
     const mockSalesData = {
       totalPrepaidAmount: 10000000,
-      monthlyPrepaidAmount: 2500000,
-      personalCustomers: 16,
-      groupCustomers: 10,
-      dailySales: [
-        { date: '2024-01-02', amount: 150000, customers: 3 },
-        { date: '2024-01-04', amount: 200000, customers: 4 },
-        { date: '2024-01-15', amount: 300000, customers: 6 },
-        { date: '2024-01-20', amount: 180000, customers: 3 }
-      ]
+      monthlyPrepaidAmount: uniqueSales.reduce((sum, sale) => sum + sale.amount, 0),
+      personalCustomers: Math.floor(Math.random() * 20) + 10, // 10~29명
+      groupCustomers: Math.floor(Math.random() * 15) + 5, // 5~19팀
+      dailySales: uniqueSales
     }
     
     return HttpResponse.json(mockSalesData)
@@ -853,6 +987,29 @@ export const handlers = [
       success: true,
       data: mockQrData
     })
+  }),
+
+  // ===== 메뉴 관리 관련 API =====
+  
+  // 메뉴 목록 조회
+  http.get('/api/stores/:storeId/menus', ({ params }) => {
+    const { storeId } = params
+    const storeMenus = mockMenus.filter(menu => menu.storeId === storeId)
+    return HttpResponse.json(storeMenus)
+  }),
+
+  // 메뉴 카테고리 목록 조회
+  http.get('/api/stores/:storeId/menus/categories', ({ params }) => {
+    const { storeId } = params
+    const storeCategories = mockCategories.filter(category => category.storeId === storeId)
+    return HttpResponse.json(storeCategories)
+  }),
+
+  // 할인/포인트 설정 조회
+  http.get('/api/stores/:storeId/discount-points', ({ params }) => {
+    const { storeId } = params
+    const storeDiscountPoints = mockDiscountPoints.filter(dp => dp.storeId === storeId)
+    return HttpResponse.json(storeDiscountPoints)
   }),
 
   // ===== 설정 관련 API =====

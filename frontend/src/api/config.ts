@@ -48,6 +48,10 @@ export const endpoints = {
     listCategory: '/stores/{storeId}/menus/categories',
     register: '/owners/stores',
     deleteStore: '/owners/stores/{storeId}',
+    ownerStores: '/owners/stores?ownerId={ownerId}',
+    ownerStoreDetail: '/owners/stores/{storeId}',
+    salesCalendar: '/owners/stores/{storeId}/sales/calendar',
+    salesStats: '/owners/stores/{storeId}/sales/stats',
   },
   menu: {
     list: '/stores/{storeId}/menus',

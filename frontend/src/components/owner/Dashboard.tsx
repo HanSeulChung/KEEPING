@@ -1,223 +1,188 @@
 'use client'
 
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
+import { endpoints } from '@/api/config'
+import StoreRegisterModal from './StoreRegisterModal'
+import StoreInfoEditModal from './StoreInfoEditModal'
 
-type Store = {
+interface Store {
   id: string
   name: string
+  ownerId: string
+  address: string
+  phone: string
+  description: string
 }
 
-interface OwnerHomeProps {
-  // 현재 선택 매장
-  currentStore?: Store
-  // 내 매장 목록
-  stores?: Store[]
-  // 읽지 않은 알림 개수
-  unreadCount?: number
-}
-
-export default function OwnerHome({
-  currentStore,
-  stores: initialStores,
-  unreadCount: initialUnreadCount,
-}: OwnerHomeProps) {
+const OwnerMainScreen = () => {
   const router = useRouter()
-  const { isLoggedIn, user } = useAuthStore()
-  const [selected, setSelected] = useState<Store | null>(null)
-  const [stores, setStores] = useState<Store[]>(initialStores || [])
-  const [unreadCount, setUnreadCount] = useState<number>(initialUnreadCount || 0)
+  const { user } = useAuthStore()
+  const [stores, setStores] = useState<Store[]>([])
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
-  // 인증 상태 확인
+  // 사장님의 가게 리스트 가져오기
   useEffect(() => {
-    if (!isLoggedIn) {
-      router.push('/owner/login')
-      return
-    }
-  }, [isLoggedIn, router])
+    const fetchStores = async () => {
+      try {
+        const ownerId = user?.id || '2'
+        const endpoint = endpoints.stores.ownerStores.replace('{ownerId}', ownerId)
+        const response = await fetch(`/api${endpoint}`)
 
-  // API 호출 함수들
-  const fetchOwnerStores = async () => {
-    try {
-      const response = await fetch('/api/owners/stores?ownerId=2')
-      if (response.ok) {
-        const data = await response.json()
-        const storeList = data.map((store: any) => ({
-          id: store.id,
-          name: store.name
-        }))
-        setStores(storeList)
-        
-        // 첫 번째 매장을 기본 선택으로 설정
-        if (storeList.length > 0 && !selected) {
-          setSelected(storeList[0])
+        if (response.ok) {
+          const storeList = await response.json()
+          setStores(storeList)
+
+          // 첫 번째 가게를 기본 선택
+          if (storeList.length > 0) {
+            setSelectedStore(storeList[0])
+          }
         }
+      } catch (error) {
+        console.error('가게 리스트 조회 실패:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('매장 목록 조회 실패:', error)
     }
-  }
 
-  const fetchUnreadNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications/unread-count?ownerId=2')
-      if (response.ok) {
-        const data = await response.json()
-        setUnreadCount(data.unreadCount)
-      }
-    } catch (error) {
-      console.error('알림 개수 조회 실패:', error)
-    }
-  }
-
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    if (!isLoggedIn) return
-    
-    const loadData = async () => {
-      await Promise.all([
-        fetchOwnerStores(),
-        fetchUnreadNotifications()
-      ])
-      setLoading(false)
-    }
-    loadData()
-  }, [isLoggedIn])
-
-  // currentStore가 있으면 그것을 선택
-  useEffect(() => {
-    if (currentStore && !selected) {
-      setSelected(currentStore)
-    }
-  }, [currentStore, selected])
-
-  // 로그인하지 않은 경우 로딩 화면 표시 (리다이렉트 중)
-  if (!isLoggedIn) {
-    return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">로그인 페이지로 이동 중...</div>
-        </div>
-      </main>
-    )
-  }
+    fetchStores()
+  }, [user])
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">로딩 중...</div>
-        </div>
-      </main>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-lg font-['nanumsquare']">로딩 중...</div>
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      {/* 상단: 매장 선택 pill + 추가 */}
-      <section className="flex items-center gap-3">
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          {stores.map(s => (
+    <div className="min-h-screen bg-white">
+
+      {/* 메인 컨텐츠 */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* 매장명 */}
+        <h1 className="text-4xl font-['Tenada'] font-extrabold text-black text-center mb-8">
+          {selectedStore?.name || '매장을 선택해주세요'}
+        </h1>
+
+        {/* 가게 선택 pills */}
+        <div className="flex justify-center items-center gap-4 mb-8 flex-wrap">
+          {stores.map((store) => (
             <button
-              key={s.id}
-              onClick={() => setSelected(s)}
-              className={[
-                'h-12 min-w-12 rounded-full border px-4 text-sm font-medium',
-                selected?.id === s.id
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50',
-              ].join(' ')}
-              aria-pressed={selected?.id === s.id}
+              key={store.id}
+              onClick={() => setSelectedStore(store)}
+              className={`w-24 h-24 rounded-full border border-black flex items-center justify-center transition-colors ${selectedStore?.id === store.id
+                  ? 'bg-black text-white'
+                  : 'bg-[#faf8f6] text-black hover:bg-gray-100'
+                }`}
             >
-              {s.name}
+              <span className="text-sm font-['Tenada'] font-extrabold text-center px-2">
+                {store.name}
+              </span>
             </button>
           ))}
 
-          {/* 매장 추가(+) */}
-          <Link
-            href="/owner/stores/new"
-            className="flex h-12 min-w-12 items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-gray-50"
-            aria-label="매장 추가"
+          {/* 가게 추가 버튼 */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-24 h-24 rounded-full border border-black bg-[#faf8f6] flex items-center justify-center hover:bg-gray-100 transition-colors"
           >
-            <span className="text-2xl leading-none">＋</span>
-          </Link>
+            <svg width={21} height={20} viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4.6647 9.99805H16.3314" stroke="black" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10.498 4.16504V15.8317" stroke="black" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
-      </section>
 
-      {/* 페이지 타이틀 */}
-      <h1 className="mt-6 text-2xl font-extrabold tracking-tight">
-        {selected?.name || '매장을 선택해주세요'}
-      </h1>
-
-      {/* 카드 그리드 */}
-      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* 매출 캘린더 */}
-        <Link
-          href="/owner/calendar"
-          className="group rounded-xl border border-gray-300 bg-white p-5 hover:shadow-sm"
-        >
-          <div className="flex items-start justify-between">
-            <h2 className="text-lg font-bold">
-              매출
-              <br />
-              캘린더 &gt;
+        {/* 카드 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          {/* 매출 캘린더 */}
+          <button
+            onClick={() => router.push('/owner/calendar')}
+            className="border border-black bg-[#faf8f6] p-6 text-left hover:bg-gray-50 transition-colors"
+          >
+            <h2 className="text-2xl font-['nanumsquare'] font-extrabold text-black mb-4">
+              매출 캘린더 &gt;
             </h2>
-          </div>
-          <div className="mt-5 space-y-1 text-sm text-gray-600">
-            <p>전체 선결제 금액</p>
-            <p>이번 달 선결제 금액</p>
-          </div>
-        </Link>
-
-        {/* 매장 관리 */}
-        <Link
-          href="/owner/manage"
-          className="group rounded-xl border border-gray-300 bg-white p-5 hover:shadow-sm"
-        >
-          <h2 className="text-lg font-bold">매장 관리</h2>
-        </Link>
-
-        {/* 설정 */}
-        <Link
-          href="/owner/settings"
-          className="group rounded-xl border border-gray-300 bg-gray-50 p-5 hover:shadow-sm"
-        >
-          <h2 className="text-lg font-bold">설정</h2>
-        </Link>
-
-        {/* QR 인식하기 */}
-        <Link
-          href="/owner/scan"
-          className="group rounded-xl border border-gray-300 bg-white p-5 hover:shadow-sm"
-        >
-          <h2 className="text-lg font-bold">QR 인식하기</h2>
-          <p className="mt-3 text-sm text-gray-600">
-            손님의 QR을 인식합니다.
-            <br />
-            (카메라로 QR 코드 스캔)
-          </p>
-        </Link>
-
-        {/* 알림 */}
-        <Link
-          href="/owner/notifications"
-          className="group rounded-xl border border-gray-300 bg-white p-5 hover:shadow-sm md:col-span-2"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">알림</h2>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border px-2">
-                {unreadCount}
-              </span>
-              <span className="text-gray-600">읽지 않은 알림</span>
+            <div className="text-sm font-['nanumsquare'] text-black">
+              <p>전체 선결제 금액</p>
+              <p>이번 달 선결제 금액</p>
             </div>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">3건</p>
-        </Link>
-      </section>
-    </main>
+          </button>
+
+          {/* QR 인식하기 */}
+          <button
+            onClick={() => router.push('/owner/scan')}
+            className="border border-black bg-white p-6 text-left hover:bg-gray-50 transition-colors"
+          >
+            <h2 className="text-2xl font-['nanumsquare'] font-extrabold text-black mb-4">
+              QR 인식하기
+            </h2>
+            <div className="text-sm font-['nanumsquare'] text-black">
+              <p>손님의 QR을 인식합니다.</p>
+            </div>
+          </button>
+
+          {/* 매장 관리 */}
+          <button
+            onClick={() => router.push('/owner/manage')}
+            className="border border-black bg-white p-6 text-left hover:bg-gray-50 transition-colors"
+          >
+            <h2 className="text-2xl font-['nanumsquare'] font-extrabold text-black">
+              매장 관리
+            </h2>
+          </button>
+
+          {/* 설정 */}
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="border border-black bg-[#faf8f6] p-6 text-left hover:bg-gray-50 transition-colors"
+          >
+            <h2 className="text-2xl font-['nanumsquare'] font-extrabold text-black">
+              설정
+            </h2>
+          </button>
+
+          {/* 알림 */}
+          <button
+            onClick={() => router.push('/owner/notification')}
+            className="border border-black bg-white p-6 md:col-span-2 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-['nanumsquare'] font-extrabold text-black">
+                알림
+              </h2>
+              <div className="flex items-center gap-2">
+                <svg width={18} height={19} viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7.55664 16.8867C7.70293 17.1401 7.91332 17.3504 8.16668 17.4967C8.42003 17.643 8.70743 17.72 8.99997 17.72C9.29252 17.72 9.57991 17.643 9.83327 17.4967C10.0866 17.3504 10.297 17.1401 10.4433 16.8867" stroke="black" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M1.71821 12.1587C1.60935 12.278 1.53751 12.4264 1.51143 12.5858C1.48534 12.7452 1.50615 12.9088 1.5713 13.0565C1.63646 13.2043 1.74316 13.33 1.87843 13.4183C2.01369 13.5065 2.1717 13.5536 2.33321 13.5537H15.6665C15.828 13.5538 15.9861 13.5069 16.1214 13.4188C16.2568 13.3307 16.3636 13.2052 16.429 13.0575C16.4943 12.9098 16.5153 12.7463 16.4894 12.5869C16.4635 12.4275 16.3919 12.279 16.2832 12.1595C15.1749 11.017 13.9999 9.80288 13.9999 6.05371C13.9999 4.72763 13.4731 3.45586 12.5354 2.51818C11.5977 1.5805 10.326 1.05371 8.99988 1.05371C7.6738 1.05371 6.40203 1.5805 5.46435 2.51818C4.52666 3.45586 3.99988 4.72763 3.99988 6.05371C3.99988 9.80288 2.82405 11.017 1.71821 12.1587Z" stroke="black" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-sm font-['nanumsquare'] text-black">
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 매장 등록 모달 */}
+      <StoreRegisterModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+
+      {/* 매장 정보 수정 모달 */}
+      <StoreInfoEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+    </div>
   )
 }
+
+export default OwnerMainScreen

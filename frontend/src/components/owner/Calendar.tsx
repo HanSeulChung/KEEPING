@@ -1,21 +1,33 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { endpoints } from '@/api/config'
 
 type Stat = { label: string; value: string }
 type Highlight =
   | { day: number; variant: 'event' } // 노랑
   | { day: number; variant: 'today' } // 파랑
 
+interface Store {
+  id: string
+  name: string
+  ownerId: string
+  address: string
+  phone: string
+  description: string
+}
+
 interface CalendarProps {
   year?: number
   month?: number
   storeId?: string
+  stores?: Store[]
+  onStoreChange?: (storeId: string) => void
   stats?: [Stat, Stat, Stat] // 선결제 금액, 개인 고객, 그룹 고객
   highlights?: Highlight[]
 }
 
-/** Monday-start calendar util */
 function buildMonthMatrix(year: number, month: number) {
   // month: 1-12
   const first = new Date(year, month - 1, 1)
@@ -38,19 +50,22 @@ function buildMonthMatrix(year: number, month: number) {
   return weeks
 }
 
-export default function Calendar({
+const OwnerSalesCalendar = ({
   year: propYear,
   month: propMonth,
   storeId = '1',
+  stores = [],
+  onStoreChange,
   stats: propStats,
   highlights: propHighlights = [],
-}: CalendarProps) {
+}: CalendarProps) => {
+  const router = useRouter()
   const [year, setYear] = useState(propYear || new Date().getFullYear())
   const [month, setMonth] = useState(propMonth || new Date().getMonth() + 1)
   const [stats, setStats] = useState<[Stat, Stat, Stat]>(propStats || [
-    { label: '선결제 금액', value: '0 원' },
-    { label: '개인 고객', value: '0명' },
-    { label: '그룹 고객', value: '0팀' }
+    { label: '선결제 금액', value: '10,000,000 원' },
+    { label: '개인 고객', value: '16명' },
+    { label: '그룹 고객', value: '10팀' }
   ])
   const [highlights, setHighlights] = useState<Highlight[]>(propHighlights)
   const [loading, setLoading] = useState(true)
@@ -58,10 +73,11 @@ export default function Calendar({
   // API 호출 함수
   const fetchSalesData = async () => {
     try {
-      const response = await fetch(`/api/owners/stores/${storeId}/sales/calendar?year=${year}&month=${month}`)
+      const endpoint = endpoints.stores.salesCalendar.replace('{storeId}', storeId)
+      const response = await fetch(`/api${endpoint}?year=${year}&month=${month}`)
       if (response.ok) {
         const data = await response.json()
-        
+
         // 통계 데이터 업데이트
         setStats([
           { label: '선결제 금액', value: `${data.totalPrepaidAmount.toLocaleString()} 원` },
@@ -105,74 +121,163 @@ export default function Calendar({
     return map
   }, [highlights])
 
+  // 월/년도 네비게이션 함수들
+  const goToPreviousMonth = () => {
+    if (month === 1) {
+      setMonth(12)
+      setYear(year - 1)
+    } else {
+      setMonth(month - 1)
+    }
+  }
+
+  const goToNextMonth = () => {
+    if (month === 12) {
+      setMonth(1)
+      setYear(year + 1)
+    } else {
+      setMonth(month + 1)
+    }
+  }
+
+  // 현재 월/년도 표시
+  const monthNames = [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월'
+  ]
+
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      <div className="min-h-screen bg-keeping-beige">
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">로딩 중...</div>
+          <div className="text-lg font-['nanumsquare']">로딩 중...</div>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-      <section className="rounded-xl border border-gray-300 bg-white">
-        <div className="grid grid-cols-3 divide-x divide-gray-200">
-          {stats.map((s, i) => (
-            <div key={i} className="p-4 text-center">
-              <div className="text-sm font-bold">{s.label}</div>
-              <div className="mt-2 text-gray-700">{s.value}</div>
-            </div>
-          ))}
+    <div className="min-h-screen bg-keeping-beige">
+
+      {/* 캘린더 제목 */}
+      <div className="w-full bg-white border border-black">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <h1 
+            onClick={() => router.push('/owner/dashboard')}
+            className="text-2xl sm:text-3xl lg:text-4xl text-black text-center font-['Tenada'] font-extrabold cursor-pointer hover:text-gray-600 transition-colors"
+          >
+            CALENDER
+          </h1>
         </div>
-      </section>
+      </div>
 
-      <h1 className="font-display mt-8 text-center text-3xl font-extrabold tracking-wide">
-        CALENDER
-      </h1>
-
-      {/* 캘린더 */}
-      <section className="mt-6 rounded-xl border border-gray-300 bg-white p-6">
-        {/* 요일 헤더 (Mon start) */}
-        <div className="grid grid-cols-7 border-b border-gray-300">
-          {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((d, index) => (
-            <div
-              key={index}
-              className="flex h-10 items-center justify-center border-l border-gray-300 text-sm font-semibold first:border-l-0"
+      {/* 월/년도 네비게이션 */}
+      <div className="w-full bg-white border-t border-b border-black">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={goToPreviousMonth}
+              className="flex items-center justify-center w-10 h-10 hover:bg-gray-100 rounded-md transition-colors"
             >
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* 주 단위 그리드 */}
-        <div className="grid grid-rows-5">
-          {weeks.map((week, wi) => (
-            <div
-              key={wi}
-              className="grid grid-cols-7 border-b border-gray-300 last:border-b-0"
+              <svg width={20} height={20} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 12L6 8L10 4" stroke="#1D1B20" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <h2 className="text-lg sm:text-xl font-['Tenada'] font-extrabold text-black">
+              {year}년 {monthNames[month - 1]}
+            </h2>
+            <button
+              onClick={goToNextMonth}
+              className="flex items-center justify-center w-10 h-10 hover:bg-gray-100 rounded-md transition-colors"
             >
-              {week.map((day, di) => {
-                const variant = day ? hlMap.get(day) : undefined
-                const base =
-                  'relative flex h-20 items-center justify-center border-l border-gray-300 first:border-l-0'
-                const color =
-                  variant === 'today'
-                    ? 'bg-blue-500 text-white'
-                    : variant === 'event'
-                      ? 'bg-yellow-300/90'
-                      : 'bg-white'
-                return (
-                  <div key={di} className={`${base} ${color}`}>
-                    {day && <span className="text-lg">{day}</span>}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+              <svg width={20} height={20} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 4L10 8L6 12" stroke="#1D1B20" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </section>
-    </main>
+      </div>
+      {/* 통계 섹션 */}
+      <div className="w-full bg-white border-2 border-black">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 border-2 border-black bg-white">
+            <div className="flex flex-col items-center justify-center p-6 border-r-0 sm:border-r-2 border-black bg-white">
+              <div className="text-base sm:text-lg font-['nanumsquare'] font-extrabold text-black text-center mb-3">
+                {stats[0].label}
+              </div>
+              <div className="text-lg sm:text-xl font-['nanumsquare'] font-bold text-black text-center">
+                {stats[0].value}
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-center p-6 border-r-0 sm:border-r-2 border-black bg-white">
+              <div className="text-base sm:text-lg font-['nanumsquare'] font-extrabold text-black text-center mb-3">
+                {stats[1].label}
+              </div>
+              <div className="text-lg sm:text-xl font-['nanumsquare'] font-bold text-black text-center">
+                {stats[1].value}
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-center p-6 bg-white">
+              <div className="text-base sm:text-lg font-['nanumsquare'] font-extrabold text-black text-center mb-3">
+                {stats[2].label}
+              </div>
+              <div className="text-lg sm:text-xl font-['nanumsquare'] font-bold text-black text-center">
+                {stats[2].value}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* 캘린더 그리드 */}
+      <div className="w-full bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-wrap justify-between items-start content-start w-full max-w-[700px] mx-auto">
+            {/* 요일 헤더 */}
+            <div className="flex flex-shrink-0 flex-wrap items-start content-start w-full h-[3.25rem] border-b border-b-[#000] bg-white">
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                <div
+                  key={index}
+                  className="flex flex-shrink-0 justify-center items-center p-2 w-[6.25rem] h-[3.25rem] border border-black bg-white text-black text-center font-['nanumsquare'] text-xl font-extrabold leading-8"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* 캘린더 날짜 */}
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex items-center w-full">
+                {week.map((day, di) => {
+                  const variant = day ? hlMap.get(day) : undefined
+                  const today = new Date()
+                  const isToday = day && 
+                    today.getFullYear() === year && 
+                    today.getMonth() + 1 === month && 
+                    today.getDate() === day
+                  
+                  const bgColor = 
+                    isToday ? 'bg-[#4c97d6]' :
+                    variant === 'event' ? 'bg-[#ffda69]' :
+                    day ? 'bg-[#faf8f6]' : 'bg-white'
+                  
+                  return (
+                    <div 
+                      key={di} 
+                      className={`flex items-start gap-2.5 p-2.5 p-2 w-[6.25rem] h-[6.25rem] border border-black ${bgColor} text-black text-center font-['nanumsquare'] text-xl font-extrabold leading-8`}
+                    >
+                      {day}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+    </div>
   )
 }
+
+export default OwnerSalesCalendar
