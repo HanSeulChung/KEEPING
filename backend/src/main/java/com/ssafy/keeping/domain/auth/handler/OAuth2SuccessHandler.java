@@ -794,10 +794,24 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     <div class="step">
                         <span class="step-number">1</span>
                         포스트맨에서 <code>POST /otp/request</code> 호출
+                       <p>{
+                                     "name": "이름",
+                                     "phoneNumber": "핸드폰번호",
+                                     "birth": "yyyy-mm-dd",
+                                     "genderDigit" : "주민번호 뒷자리 첫번째 숫자",
+                                     "regSessionId" : "regSessionId"
+                                   }
+                      </p>
                     </div>
                     <div class="step">
                         <span class="step-number">2</span>
                         받은 OTP 코드로 <code>POST /otp/verify</code> 호출
+                        <p>
+                        {
+                                  "regSessionId": "regSessionId",
+                                  "code": "/otp/request의 responsebody의 number"
+                                }
+                        </p>
                     </div>
                     <div class="step">
                         <span class="step-number">3</span>
