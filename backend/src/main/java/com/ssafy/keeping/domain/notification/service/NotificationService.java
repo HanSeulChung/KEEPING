@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -85,6 +86,9 @@ public class NotificationService {
             if (hasLostData(lastEventId)) {
                 sendLostData(lastEventId, receiverType, receiverId, emitterId, sseEmitter);
             }
+            
+            // 로그인 시 읽지 않은 알림 전송 (lastEventId 유무와 관계없이 항상 실행)
+            sendMissedNotifications(receiverType, receiverId, emitterId, sseEmitter);
             
         } catch (Exception e) {
             log.error("SSE 구독 초기화 중 오류 - EmitterID: {}", emitterId, e);
@@ -298,6 +302,74 @@ public class NotificationService {
                 .forEach(entry -> sendNotification(emitter, entry.getKey(), emitterId, entry.getValue()));
                 
         log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
+    }
+
+    /**
+     * 로그인 시 읽지 않은 알림들을 실시간으로 전송
+     * @param receiverType "customer" 또는 "owner"
+     * @param receiverId 사용자 ID
+     * @param emitterId Emitter ID
+     * @param emitter SSE Emitter
+     */
+    private void sendMissedNotifications(String receiverType, Long receiverId, String emitterId, SseEmitter emitter) {
+        try {
+            log.info("밀린 알림 전송 시작 - {}:{}", receiverType, receiverId);
+            
+            List<Notification> missedNotifications;
+            
+            // 사용자 타입에 따라 읽지 않은 알림 조회
+            if ("customer".equalsIgnoreCase(receiverType)) {
+                missedNotifications = notificationRepository.findUnreadNotificationsByCustomerId(receiverId);
+            } else if ("owner".equalsIgnoreCase(receiverType)) {
+                missedNotifications = notificationRepository.findUnreadNotificationsByOwnerId(receiverId);
+            } else {
+                log.warn("알 수 없는 사용자 타입 - receiverType: {}", receiverType);
+                return;
+            }
+            
+            if (missedNotifications.isEmpty()) {
+                log.info("밀린 알림 없음 - {}:{}", receiverType, receiverId);
+                return;
+            }
+            
+            log.info("밀린 알림 발견 - {}:{}, 개수: {}", receiverType, receiverId, missedNotifications.size());
+            
+            int successCount = 0;
+            int failCount = 0;
+            
+            // 각 알림을 순차적으로 전송 (오래된 것부터)
+            for (Notification notification : missedNotifications) {
+                try {
+                    NotificationResponseDto responseDto = NotificationResponseDto.from(notification);
+                    String eventId = makeTimeIncludeId(receiverType, receiverId);
+                    
+                    boolean success = sendNotification(emitter, eventId, emitterId, responseDto);
+                    if (success) {
+                        successCount++;
+                        log.debug("밀린 알림 전송 성공 - 알림ID: {}", notification.getNotificationId());
+                    } else {
+                        failCount++;
+                        log.warn("밀린 알림 전송 실패 - 알림ID: {}", notification.getNotificationId());
+                        // 전송 실패 시 루프 중단 (연결이 끊어진 상태)
+                        break;
+                    }
+                    
+                    // 너무 빠른 전송 방지를 위한 소량 지연 (선택사항)
+                    Thread.sleep(10);
+                    
+                } catch (Exception e) {
+                    failCount++;
+                    log.warn("밀린 알림 전송 중 오류 - 알림ID: {}, 오류: {}", 
+                            notification.getNotificationId(), e.getMessage());
+                }
+            }
+            
+            log.info("밀린 알림 전송 완료 - {}:{}, 총 개수: {}, 성공: {}, 실패: {}", 
+                    receiverType, receiverId, missedNotifications.size(), successCount, failCount);
+                    
+        } catch (Exception e) {
+            log.error("밀린 알림 전송 중 예상치 못한 오류 - {}:{}", receiverType, receiverId, e);
+        }
     }
 
 
