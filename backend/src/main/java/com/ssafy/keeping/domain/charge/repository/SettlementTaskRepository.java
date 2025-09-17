@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.charge.repository;
 
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

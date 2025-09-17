@@ -1,7 +1,6 @@
-package com.ssafy.keeping.domain.core.wallet.model;
+package com.ssafy.keeping.domain.wallet.model;
 
 import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import com.ssafy.keeping.domain.group.model.Group;
 import jakarta.persistence.*;
 import lombok.*;

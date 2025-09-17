@@ -1,7 +1,7 @@
-package com.ssafy.keeping.domain.core.wallet.model;
+package com.ssafy.keeping.domain.wallet.model;
 
 import com.ssafy.keeping.domain.store.model.Store;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,11 +29,11 @@ public class WalletStoreLot {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    @Column(name = "amount_total", nullable = false, precision = 18, scale = 2)
-    private BigDecimal amountTotal;
+    @Column(name = "amount_total", nullable = false)
+    private long amountTotal;
 
-    @Column(name = "amount_remaining", nullable = false, precision = 18, scale = 2)
-    private BigDecimal amountRemaining;
+    @Column(name = "amount_remaining", nullable = false)
+    private long amountRemaining;
 
     @Column(name = "acquired_at", nullable = false)
     private LocalDateTime acquiredAt;
@@ -53,11 +53,6 @@ public class WalletStoreLot {
     @JoinColumn(name = "origin_charge_tx_id", nullable = false)
     private Transaction originChargeTransaction;
 
-    public enum SourceType {
-        CHARGE,    // 직접 충전
-        TRANSFER_IN,     // 다른 지갑에서 공유받음
-        CANCELED   // 취소됨
-    }
 
     // 포인트 사용 메서드
     public void usePoints(BigDecimal amount) {

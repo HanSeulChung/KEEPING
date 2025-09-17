@@ -1,6 +1,6 @@
-package com.ssafy.keeping.domain.core.transaction.repository;
+package com.ssafy.keeping.domain.payment.transactions.repository;
 
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

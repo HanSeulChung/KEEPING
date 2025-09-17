@@ -7,16 +7,17 @@ import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
-import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -98,7 +99,7 @@ public class PrepaymentService {
     private PrepaymentResponseDto updateDatabaseAfterPayment(
             Wallet wallet, 
             Store store, 
-            BigDecimal paymentAmount, 
+            long paymentAmount,
             SsafyCardPaymentResponseDto apiResponse) {
 
         // 1. Transaction 생성
@@ -106,7 +107,7 @@ public class PrepaymentService {
                 .wallet(wallet)
                 .customer(wallet.getCustomer())
                 .store(store)
-                .transactionType(Transaction.TransactionType.CHARGE)
+                .transactionType(TransactionType.CHARGE)
                 .amount(paymentAmount)
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
@@ -130,9 +131,9 @@ public class PrepaymentService {
         WalletStoreBalance balance = walletStoreBalanceRepository
                 .findByWalletAndStore(wallet, store)
                 .orElseGet(() -> WalletStoreBalance.builder()
-                        .wallet(wallet)
-                        .store(store)
-                        .balance(BigDecimal.ZERO)
+                        .walletId(wallet.getWalletId())
+                        .storeId(store.getStoreId())
+                        .balance(0L)
                         .build());
 
         balance.addBalance(paymentAmount);

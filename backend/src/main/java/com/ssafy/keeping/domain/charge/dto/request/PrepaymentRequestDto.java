@@ -24,7 +24,5 @@ public class PrepaymentRequestDto {
     private String cvc;
 
     @NotNull(message = "결제 금액은 필수입니다.")
-    @DecimalMin(value = "1000", message = "최소 결제 금액은 1,000원입니다.")
-    @DecimalMax(value = "1000000", message = "최대 결제 금액은 1,000,000원입니다.")
-    private BigDecimal paymentBalance;
+    private long paymentBalance;
 }

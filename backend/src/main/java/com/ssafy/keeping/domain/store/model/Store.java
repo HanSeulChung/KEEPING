@@ -1,9 +1,8 @@
 package com.ssafy.keeping.domain.store.model;
 
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
 import jakarta.persistence.*;

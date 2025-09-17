@@ -1,15 +1,13 @@
-package com.ssafy.keeping.domain.core.wallet.service;
+package com.ssafy.keeping.domain.wallet.service;
 
-import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.domain.group.model.Group;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-
-import static com.ssafy.keeping.domain.core.wallet.model.Wallet.WalletType.GROUP;
+import static com.ssafy.keeping.domain.wallet.model.Wallet.WalletType.GROUP;
 
 @Service
 @RequiredArgsConstructor

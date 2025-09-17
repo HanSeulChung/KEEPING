@@ -1,7 +1,7 @@
-package com.ssafy.keeping.domain.core.wallet.repository;
+package com.ssafy.keeping.domain.wallet.repository;
 
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
