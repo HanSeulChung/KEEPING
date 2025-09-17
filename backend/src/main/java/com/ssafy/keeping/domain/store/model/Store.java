@@ -24,51 +24,65 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "stores", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"tax_id", "address"})
-})
+@Table(name = "stores",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"tax_id_number", "address"})
+        })
 @EntityListeners(AuditingEntityListener.class)
 public class Store {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "store_id")
     private Long storeId;
 
-    // Store N : 1 Owner 연관관계
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "owner_id", nullable = false)
-//    private Owner owner;
+    // Store N : 1 Owner 연관관계  (추후 활성화)
+    // @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    // @JoinColumn(name = "owner_id", nullable = false,
+    //     foreignKey = @ForeignKey(name = "fk_stores_owner"))
+    // private Owner owner;
+
+    @Column(name = "tax_id_number", nullable = false)
+    private String taxIdNumber;
+
+    @Column(name = "store_name", nullable = false)
+    private String storeName;
 
     @Column(nullable = false)
-    private String taxId;
-    @Column(nullable = false)
-    private String storeName;
-    @Column(nullable = false)
     private String address;
-    @Column(nullable = true)
+
+    @Column(name = "phone_number")
     private String phoneNumber;
-    @Column(nullable = false)
+
+    @Column(name = "bank_account", nullable = false)
     private String bankAccount;
-    @Column(nullable = false)
+
+    @Column(name = "merchant_id", nullable = false)
     private Long merchantId;
+
     @Column(nullable = false)
     private String category;
 
     // TODO file system은 나중에
+    @Column(name = "img_url", nullable = false)
     private String imgUrl;
 
+    @Column(length = 250)
     private String description;
 
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(updatable = false)
+    @Column(name = "stores_status", nullable = false)
     private StoreStatus storeStatus;
 
+    @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
     // 연관관계
@@ -81,27 +95,16 @@ public class Store {
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaction> transactions;
 
-
     public void patchStore(StoreEditRequestDto requestDto, String imgUrl) {
-        if (!Objects.equals(this.storeName, requestDto.getStoreName())) {
-            this.storeName = requestDto.getStoreName();
-        }
-        if (!Objects.equals(this.address, requestDto.getAddress())) {
-            this.address = requestDto.getAddress();
-        }
-        if (!Objects.equals(this.phoneNumber, requestDto.getPhoneNumber())) {
-            this.phoneNumber = requestDto.getPhoneNumber();
-        }
-        if (!Objects.equals(this.imgUrl, imgUrl)) {
-            this.imgUrl = imgUrl;
-        }
+        if (!Objects.equals(this.storeName, requestDto.getStoreName())) this.storeName = requestDto.getStoreName();
+        if (!Objects.equals(this.address,    requestDto.getAddress()))    this.address = requestDto.getAddress();
+        if (!Objects.equals(this.phoneNumber,requestDto.getPhoneNumber()))this.phoneNumber = requestDto.getPhoneNumber();
+        if (!Objects.equals(this.imgUrl,     imgUrl))                     this.imgUrl = imgUrl;
     }
 
-    // TODO: 가게 삭제 뿐만아니라, 점주 탈퇴시에도 사용하여 유령가게가 없어야하는 메서드
+    // TODO: 점주 탈퇴 시 사용하여 유령가게 방지
     public void deleteStore(StoreStatus storeStatus) {
-        if (!Objects.equals(StoreStatus.DELETED, storeStatus)) {
-            this.deletedAt = LocalDateTime.now();
-        }
+        if (!Objects.equals(StoreStatus.DELETED, storeStatus)) this.deletedAt = LocalDateTime.now();
         this.storeStatus = storeStatus;
     }
 }
