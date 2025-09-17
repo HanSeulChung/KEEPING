@@ -219,7 +219,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         return new PointShareResponseDto(
                 txOut.getTransactionId(), txIn.getTransactionId(),
                 individual.getWalletId(), group.getWalletId(), storeId, shareAmount,
-                groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false
+                groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false // 멱등성 관련해서는 추후 적용
         );
     }
 
