@@ -56,17 +56,18 @@ public enum ErrorCode {
     // user 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
 
-    // 결제 의도(Payment Intent) / 검증
+    // 결제 요청(Payment Intent) / 검증
     PAYMENT_INIT_ORDER_EMPTY(HttpStatus.BAD_REQUEST, "주문 항목이 비어 있습니다."),
     PAYMENT_INIT_STORE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "storeId는 필수입니다."),
     PAYMENT_INIT_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "수량은 1 이상이어야 합니다."),
-    PAYMENT_INTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "의도를 찾을 수 없습니다."),
+    PAYMENT_INTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 요청 찾을 수 없습니다."),
 
     // 멱등성(Idempotency)
     IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "Idempotency-Key 헤더가 필요합니다."),
     IDEMPOTENCY_BEGIN_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "멱등성 처리 시작에 실패했습니다."),
     IDEMPOTENCY_BODY_CONFLICT(HttpStatus.CONFLICT, "Idempotency-Key 충돌: 요청 내용이 처음과 다릅니다."),
     IDEMPOTENCY_REPLAY_UNAVAILABLE(HttpStatus.CONFLICT, "이미 처리된 요청이나 응답을 복원할 수 없습니다."),
+    IDEMPOTENCY_KEY_INVALID(HttpStatus.BAD_REQUEST, "Idempotency-Key 형식이 잘못되었습니다."),
 
     // QR
     QR_NOT_FOUND(HttpStatus.NOT_FOUND, "QR 토큰을 찾을 수 없거나 사용 불가 상태입니다."),
@@ -94,7 +95,22 @@ public enum ErrorCode {
     OAUTH_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보를 가져올 수 없습니다."),
 
     // global
-    BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다.");
+    BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다."),
+
+    // 결제 요청(Payment Intent) / 승인 검증 추가
+    PAYMENT_INTENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 요청 상태가 승인 가능 상태가 아닙니다."),
+    PAYMENT_INTENT_EXPIRED(HttpStatus.GONE, "결제 요청의 승인 가능 시간이 만료되었습니다."),
+    PAYMENT_INTENT_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청 소유자와 승인 주체가 일치하지 않습니다."),
+
+    // PIN 인증 관련
+    PIN_REQUIRED(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)는 필수입니다."),
+    PIN_INVALID(HttpStatus.UNAUTHORIZED, "결제 비밀번호(PIN)가 올바르지 않습니다."),
+    PIN_NOT_SET(HttpStatus.BAD_REQUEST, "설정된 결제 비밀번호(PIN)가 없습니다."),
+    PIN_LOCKED(HttpStatus.LOCKED, "PIN 입력이 일정 시간 잠겨 있습니다. 잠시 후 다시 시도하세요."), // 423 Locked
+    PIN_LENGTH_INVALID(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)의 길이는 6자리 이여야 합니다."),
+    // 자금/한도 관련
+    FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
+    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
