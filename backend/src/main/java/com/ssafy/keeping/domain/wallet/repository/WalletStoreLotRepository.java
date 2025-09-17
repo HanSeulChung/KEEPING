@@ -1,7 +1,8 @@
-package com.ssafy.keeping.domain.core.wallet.repository;
+package com.ssafy.keeping.domain.wallet.repository;
 
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -41,5 +42,5 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
             @Param("walletId") Long walletId,
             @Param("storeId") Long storeId,
             @Param("originTxId") Long originTxId,
-            @Param("sourceType") WalletStoreLot.SourceType type);
+            @Param("sourceType") LotSourceType type);
 }

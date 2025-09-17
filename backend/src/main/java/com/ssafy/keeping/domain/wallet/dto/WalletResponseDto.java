@@ -1,6 +1,6 @@
-package com.ssafy.keeping.domain.core.wallet.dto;
+package com.ssafy.keeping.domain.wallet.dto;
 
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
 
 import java.time.LocalDateTime;
 import java.util.List;

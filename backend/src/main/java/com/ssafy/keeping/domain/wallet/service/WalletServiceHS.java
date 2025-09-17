@@ -1,19 +1,11 @@
-package com.ssafy.keeping.domain.core.wallet.service;
+package com.ssafy.keeping.domain.wallet.service;
 
+import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
-import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
-import com.ssafy.keeping.domain.core.wallet.dto.PointShareRequestDto;
-import com.ssafy.keeping.domain.core.wallet.dto.PointShareResponseDto;
-import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
-import com.ssafy.keeping.domain.core.wallet.dto.WalletStoreBalanceResponseDto;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.domain.group.model.Group;
 import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;
@@ -21,21 +13,27 @@ import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
+import static com.ssafy.keeping.domain.wallet.model.Wallet.WalletType.GROUP;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
-import static com.ssafy.keeping.domain.core.wallet.model.Wallet.WalletType.GROUP;
-import static com.ssafy.keeping.domain.core.wallet.model.Wallet.WalletType.INDIVIDUAL;
 
 @Service
 @RequiredArgsConstructor
@@ -127,8 +125,8 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     @Transactional
     public PointShareResponseDto sharePoints(Long groupId, Long userId, Long storeId, @Valid PointShareRequestDto req) {
         // 1) 입력·기본 엔티티 조회
-        final BigDecimal shareAmount = req.getShareAmount().setScale(2, RoundingMode.DOWN);
-        if (shareAmount.signum() <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
+        final long shareAmount = req.getShareAmount();
+        if (shareAmount <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
 
         Customer actor = customerRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -149,21 +147,21 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
         WalletStoreBalance groupBal = balanceRepository.lockByWalletIdAndStoreId(group.getWalletId(), storeId)
                 .orElseGet(() -> balanceRepository.save(
-                        WalletStoreBalance.builder().wallet(group).store(store).balance(BigDecimal.ZERO.setScale(2)).build()
+                        WalletStoreBalance.builder().wallet(group).store(store).balance(0L).build()
                 ));
 
         // 3) LOT 차감 및 수신 LOT 적립(FIFO)
-        BigDecimal shareLeft = shareAmount;
+        Long shareLeft = shareAmount;
         List<WalletStoreLot> lots = lotRepository.lockAllByWalletIdAndStoreIdOrderByAcquiredAt(individual.getWalletId(), storeId);
         for (WalletStoreLot src : lots) {
-            if (shareLeft.signum() == 0) break;
+            if (shareLeft == 0) break;
             if (src.isExpired() || src.isFullyUsed()) continue;
 
-            BigDecimal movable = src.getAmountRemaining().min(shareLeft).setScale(2, RoundingMode.DOWN);
-            if (movable.signum() == 0) continue;
+            Long movable = Math.min(src.getAmountRemaining(), shareLeft); // 기존 코드 -> src.getAmountRemaining().min(shareLeft).setScale(2, RoundingMode.DOWN);
+            if (movable == 0) continue;
 
             src.usePoints(movable);                            // 개인 LOT 차감
-            shareLeft = shareLeft.subtract(movable);
+            shareLeft -= movable;
 
             // 수신 LOT: 동일 origin_charge_tx 기준으로 1개에 누적
             WalletStoreLot dst = lotRepository
@@ -171,24 +169,24 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                             group.getWalletId(),
                             storeId,
                             src.getOriginChargeTransaction().getTransactionId(),
-                            WalletStoreLot.SourceType.TRANSFER_IN
+                            LotSourceType.TRANSFER_IN
                     )
                     .orElseGet(() -> lotRepository.save(
                             WalletStoreLot.builder()
                                     .wallet(group)
                                     .store(store)
-                                    .amountTotal(BigDecimal.ZERO.setScale(2))
-                                    .amountRemaining(BigDecimal.ZERO.setScale(2))
+                                    .amountTotal(0L)
+                                    .amountRemaining(0L)
                                     .acquiredAt(src.getAcquiredAt())
                                     .expiredAt(src.getExpiredAt())
-                                    .sourceType(WalletStoreLot.SourceType.TRANSFER_IN)
+                                    .sourceType(LotSourceType.TRANSFER_IN)
                                     .contributorWallet(individual)
                                     .originChargeTransaction(src.getOriginChargeTransaction())
                                     .build()
                     ));
             dst.sharePoints(movable); // 총액·잔량 가산
         }
-        if (shareLeft.signum() != 0) throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+        if (shareLeft != 0) throw new CustomException(ErrorCode.INCONSISTENT_STATE);
 
         // 4) 잔액 이동
         indivBal.subtractBalance(shareAmount);
@@ -201,7 +199,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(group)
                         .customer(actor)
                         .store(store)
-                        .transactionType(Transaction.TransactionType.USE)
+                        .transactionType(TransactionType.USE)
                         .amount(shareAmount)
                         .build()
         );
@@ -211,7 +209,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(individual)
                         .customer(actor)
                         .store(store)
-                        .transactionType(Transaction.TransactionType.SHARE)
+                        .transactionType(TransactionType.TRANSFER_IN)
                         .amount(shareAmount)
                         .build()
         );

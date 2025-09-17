@@ -1,8 +1,8 @@
-package com.ssafy.keeping.domain.core.wallet.repository;
+package com.ssafy.keeping.domain.wallet.repository;
 
 import com.ssafy.keeping.domain.store.model.Store;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;

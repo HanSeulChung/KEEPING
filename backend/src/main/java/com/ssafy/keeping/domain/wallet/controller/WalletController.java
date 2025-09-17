@@ -1,9 +1,9 @@
-package com.ssafy.keeping.domain.core.wallet.controller;
+package com.ssafy.keeping.domain.wallet.controller;
 
-import com.ssafy.keeping.domain.core.wallet.dto.PointShareRequestDto;
-import com.ssafy.keeping.domain.core.wallet.dto.PointShareResponseDto;
-import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
-import com.ssafy.keeping.domain.core.wallet.service.WalletServiceHS;
+import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
+import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

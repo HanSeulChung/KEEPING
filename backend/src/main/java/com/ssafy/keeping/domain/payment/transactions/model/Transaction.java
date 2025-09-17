@@ -1,8 +1,9 @@
-package com.ssafy.keeping.domain.core.transaction.model;
+package com.ssafy.keeping.domain.payment.transactions.model;
 
 import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.store.model.Store;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -43,8 +44,8 @@ public class Transaction {
     @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;
 
-    @Column(name = "amount", nullable = false, precision = 18, scale = 2)
-    private BigDecimal amount;
+    @Column(name = "amount", nullable = false)
+    private Long amount;
 
     @Column(name = "transaction_unique_no", length = 50)
     private String transactionUniqueNo;
@@ -53,11 +54,4 @@ public class Transaction {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public enum TransactionType {
-        CHARGE,    // 포인트 충전
-        USE,       // 포인트 사용
-        CANCEL,    // 결제 취소
-        SHARE,     // 포인트 공유
-        RECEIVE    // 포인트 받기
-    }
 }

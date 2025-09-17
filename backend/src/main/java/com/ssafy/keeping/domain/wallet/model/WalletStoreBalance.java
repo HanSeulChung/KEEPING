@@ -1,24 +1,23 @@
-package com.ssafy.keeping.domain.core.wallet.model;
+package com.ssafy.keeping.domain.wallet.model;
 
 import com.ssafy.keeping.domain.store.model.Store;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 @Entity
 @Table(
-        name = "wallet_store_balance",
+        name = "wallet_store_balances",
         uniqueConstraints = @UniqueConstraint(name = "uk_wallet_store", columnNames = {"wallet_id","store_id"}),
         indexes = {@Index(name="idx_wsb_wallet", columnList="wallet_id"),
                 @Index(name="idx_wsb_store",  columnList="store_id")}
 )
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
 public class WalletStoreBalance {
 
     @Id
@@ -34,19 +33,21 @@ public class WalletStoreBalance {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    @Column(name = "balance", nullable = false, precision = 18, scale = 2)
-    private BigDecimal balance;
+    @Column(name = "balance", nullable = false)
+    private Long balance;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
-    // 잔액 업데이트 메서드
-    public void addBalance(BigDecimal amount) {
-        this.balance = this.balance.add(amount);
+    public void addBalance(Long amount) {
+        this.balance = this.balance + amount;
     }
 
-    public void subtractBalance(BigDecimal amount) {
-        this.balance = this.balance.subtract(amount);
+    public void subtractBalance(Long amount) {
+        if (this.balance < amount) {
+            // TODO: 커스텀익셉션 으로 변경하기
+            throw new IllegalArgumentException("잔액 부족: " + this.balance + " < " + amount);
+        }
+        this.balance = this.balance - amount;
     }
 }
