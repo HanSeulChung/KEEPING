@@ -9,14 +9,9 @@ import com.ssafy.keeping.domain.notification.entity.Notification;
 import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.domain.notification.repository.EmitterRepository;
 import com.ssafy.keeping.domain.notification.repository.NotificationRepository;
-import com.ssafy.keeping.global.exception.CustomException;
-import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -85,11 +80,16 @@ public class NotificationService {
             // 없을 때는 사용자가 처음 로그인해서 맺는 최초의 연결임
             if (hasLostData(lastEventId)) {
                 sendLostData(lastEventId, receiverType, receiverId, emitterId, sseEmitter);
+            } else {
+                sendMissedNotifications(receiverType, receiverId, emitterId, sseEmitter);
+                // 로그인 시 읽지 않은 알림 전송 (lastEventId 유무와 관계없이 항상 실행) - 최초 로그인
             }
-            
-            // 로그인 시 읽지 않은 알림 전송 (lastEventId 유무와 관계없이 항상 실행)
-            sendMissedNotifications(receiverType, receiverId, emitterId, sseEmitter);
-            
+            //   작동 방식:
+            //  1. 최초 연결: lastEventId가 없음 → 밀린 알림만 전송
+            //  2. 재연결: lastEventId가 있음 → 유실된 이벤트 + 밀린 알림 모두 전송
+            // 프론트가
+
+
         } catch (Exception e) {
             log.error("SSE 구독 초기화 중 오류 - EmitterID: {}", emitterId, e);
             cleanupEmitter(emitterId);
