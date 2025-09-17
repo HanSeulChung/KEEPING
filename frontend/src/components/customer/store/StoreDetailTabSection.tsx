@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { PaymentModal } from '../../ui/PaymentModal'
 
 // 타입 정의
 interface ChargeOptionData {
@@ -46,13 +47,13 @@ const ChargeOption = ({
 }: ChargeOptionProps) => {
   return (
     <div
-      className={`flex h-14 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors ${
+      className={`flex h-16 md:h-14 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
       onClick={onClick}
     >
-      <span className="text-sm font-bold text-red-500">{discount}</span>
-      <span className="text-sm font-bold text-black">{points}</span>
+      <span className="text-base md:text-sm font-bold text-red-500">{discount}</span>
+      <span className="text-base md:text-sm font-bold text-black">{points}</span>
     </div>
   )
 }
@@ -130,6 +131,7 @@ const ChargeSection = ({
   chargeOptions: ChargeOptionData[]
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
 
   // 선택된 옵션의 결제 금액 계산
   const calculatePaymentAmount = () => {
@@ -183,6 +185,11 @@ const ChargeSection = ({
             : 'cursor-not-allowed bg-gray-300'
         }`}
         disabled={selectedIndex === null}
+        onClick={() => {
+          if (selectedIndex !== null) {
+            setIsPaymentModalOpen(true)
+          }
+        }}
       >
         <span
           className={`text-sm font-bold ${
@@ -192,6 +199,17 @@ const ChargeSection = ({
           충전하기
         </span>
       </button>
+
+      {/* 결제 모달 */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        amount={paymentAmount}
+        onPayment={() => {
+          console.log('결제 완료:', paymentAmount)
+          // 결제 완료 후 로직
+        }}
+      />
     </div>
   )
 }
