@@ -50,7 +50,8 @@ public class SecurityConfig {
             "/api/**",
             "/stores/**",
             "/groups/**",
-            "/api/v1/stores/**"
+            "/api/v1/stores/**",
+            "/wallets/**"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
