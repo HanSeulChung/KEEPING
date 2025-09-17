@@ -53,6 +53,11 @@ public enum ErrorCode {
     CODE_NOT_MATCH(HttpStatus.BAD_REQUEST, "코드가 일치하지 않습니다."),
     GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 모임원을 찾을 수 없습니다."),
 
+    // wallet - group 관련
+    BEFORE_INDIVIDUAL_CHARGE(HttpStatus.BAD_REQUEST, "개인 지갑에 충전이 먼저 되어야합니다."),
+    OVER_INDIVIDUAL_POINT(HttpStatus.BAD_REQUEST, "개인 지갑 포인트 이하로 공유 가능합니다."),
+    INCONSISTENT_STATE(HttpStatus.CONFLICT, "처리 중 상태가 일치하지 않습니다."),
+
     // user 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
 
@@ -93,6 +98,11 @@ public enum ErrorCode {
     OAUTH_PROVIDER_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원하지 않는 로그인 방식입니다."),
     OAUTH_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth 인증에 실패하였습니다."),
     OAUTH_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보를 가져올 수 없습니다."),
+
+    // 알림 관련
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 알림을 찾을 수 없습니다."),
+    NOTIFICATION_UNAUTHORIZED_ACCESS(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
+    NOTIFICATION_ALREADY_READ(HttpStatus.BAD_REQUEST, "이미 읽은 알림입니다."),
 
     // global
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다."),

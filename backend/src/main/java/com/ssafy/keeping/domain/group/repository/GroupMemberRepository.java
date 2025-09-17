@@ -26,13 +26,13 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     from GroupMember gm
     where gm.group.groupId = :groupId
       and gm.user.customerId  = :userId
-      and gm.isLeader = true
+      and gm.leader = true
     """)
     boolean existsLeader(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Query("""
     select new com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto(
-        :groupId, u.customerId, u.name, gm.isLeader, gm.groupMemberId
+        :groupId, u.customerId, u.name, gm.leader, gm.groupMemberId
     )
     from GroupMember gm
     join gm.user u

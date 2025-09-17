@@ -19,6 +19,8 @@ import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,7 @@ public class PrepaymentService {
     private final WalletStoreLotRepository walletStoreLotRepository;
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
+    private final NotificationService notificationService;
 
     /**
      * 선결제 처리
@@ -132,8 +135,8 @@ public class PrepaymentService {
         WalletStoreBalance balance = walletStoreBalanceRepository
                 .findByWalletAndStore(wallet, store)
                 .orElseGet(() -> WalletStoreBalance.builder()
-                        .walletId(wallet.getWalletId())
-                        .storeId(store.getStoreId())
+                        .wallet(wallet)
+                        .store(store)
                         .balance(0L)
                         .build());
 
@@ -147,7 +150,27 @@ public class PrepaymentService {
                 .build();
         settlementTaskRepository.save(settlementTask);
 
-        // 5. 응답 생성
+        // 5. 점주에게 알림 전송
+        try {
+            Long ownerId = store.getOwner().getOwnerId();
+            String customerName = wallet.getCustomer().getName();
+            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다", 
+                    customerName, paymentAmount);
+            
+            notificationService.sendToOwner(
+                    ownerId,
+                    NotificationType.POINT_CHARGE,
+                    notificationContent,
+                    "/" // 점주가 매출 확인할 수 있는 페이지 (아직 관련 페이지, 로직 없음)
+            );
+            
+            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}", ownerId, paymentAmount);
+        } catch (Exception e) {
+            log.warn("점주 알림 전송 실패 - 점주ID: {}, 오류: {}", store.getOwner().getOwnerId(), e.getMessage());
+            // 알림 실패는 비즈니스 로직에 영향을 주지 않음
+        }
+
+        // 6. 응답 생성
         long updatedBalance = balance.getBalance();
         
         return PrepaymentResponseDto.builder()
