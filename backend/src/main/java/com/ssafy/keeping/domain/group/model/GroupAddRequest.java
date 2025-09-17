@@ -3,10 +3,7 @@ package com.ssafy.keeping.domain.group.model;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -19,15 +16,18 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "group_add_requests",
+@Table(
+        name = "group_add_requests",
         indexes = {
-                @Index(name="idx_user_group_status_created_at", columnList="customer_id, group_id, status, created_at"),
-                @Index(name="idx_group_status_created_at", columnList="group_id, status, created_at")
-        })
+                @Index(name = "idx_user_group_status_created_at", columnList = "customer_id, group_id, status, created_at"),
+                @Index(name = "idx_group_status_created_at",      columnList = "group_id, status, created_at")
+        }
+)
 @EntityListeners(AuditingEntityListener.class)
 public class GroupAddRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "group_add_requests_id")
     private Long groupAddRequestId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -38,21 +38,20 @@ public class GroupAddRequest {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer user;
 
-    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private RequestStatus requestStatus = RequestStatus.PENDING;
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-
     public void changeStatus(RequestStatus status) {
-        if (!Objects.equals(this.requestStatus, status))
-            this.requestStatus = status;
+        if (!Objects.equals(this.requestStatus, status)) this.requestStatus = status;
     }
 }
