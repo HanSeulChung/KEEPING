@@ -39,6 +39,4 @@ public class FinOpenApiClient {
         return post(FinOpenApiPaths.MEMBER_SEARCH, requestDto, SearchUserKeyResponseDto.class);
     }
 
-    // userkey 생성
-    public
 }
