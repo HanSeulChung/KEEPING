@@ -43,4 +43,6 @@ export interface AuthForm {
   name: string
   residentNumber: string
   phoneNumber: string
+  birthDate: string
+  genderCode: string
 }

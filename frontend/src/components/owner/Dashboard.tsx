@@ -192,5 +192,3 @@ export default function OwnerHome({
     </div>
   )
 }
-
-export default OwnerMainScreen

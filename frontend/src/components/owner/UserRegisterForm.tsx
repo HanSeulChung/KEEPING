@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { AuthForm } from '@/types'
 
 interface UserRegisterFormProps {
   onNext?: () => void
@@ -33,7 +34,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   }
 
   const handleFormChange = (field: keyof AuthForm, value: string) => {
-    setAuthForm(prev => ({
+    setAuthForm((prev: AuthForm) => ({
       ...prev,
       [field]: value,
     }))
@@ -55,7 +56,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       const newBirthDate = input.slice(0, 6)
       const newGenderCode = input.slice(6, 7)
 
-      setAuthForm(prev => ({
+      setAuthForm((prev: AuthForm) => ({
         ...prev,
         birthDate: newBirthDate,
         genderCode: newGenderCode,
@@ -68,7 +69,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         displayValue = `${newBirthDate}-${newGenderCode}${'●'.repeat(6)}`
       }
 
-      setAuthForm(prev => ({
+      setAuthForm((prev: AuthForm) => ({
         ...prev,
         residentNumber: displayValue,
       }))
