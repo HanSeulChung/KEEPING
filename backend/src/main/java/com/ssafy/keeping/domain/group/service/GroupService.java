@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.group.service;
 
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.core.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;

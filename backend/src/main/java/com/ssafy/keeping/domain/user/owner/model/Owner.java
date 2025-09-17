@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.owner.model;
+package com.ssafy.keeping.domain.user.owner.model;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;

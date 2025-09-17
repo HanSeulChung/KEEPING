@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.core.wallet.service;
 
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletStoreBalanceResponseDto;
 import com.ssafy.keeping.domain.core.wallet.model.Wallet;

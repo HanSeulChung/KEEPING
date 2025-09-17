@@ -1,7 +1,7 @@
-package com.ssafy.keeping.domain.customer.repository;
+package com.ssafy.keeping.domain.user.customer.repository;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
-import com.ssafy.keeping.domain.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

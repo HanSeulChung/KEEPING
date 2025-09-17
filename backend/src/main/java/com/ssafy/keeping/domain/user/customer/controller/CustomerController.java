@@ -1,6 +1,6 @@
-package com.ssafy.keeping.domain.customer.controller;
+package com.ssafy.keeping.domain.user.customer.controller;
 
-import com.ssafy.keeping.domain.customer.service.CustomerService;
+import com.ssafy.keeping.domain.user.customer.service.CustomerService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

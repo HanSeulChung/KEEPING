@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.owner.dto;
+package com.ssafy.keeping.domain.user.owner.dto;
 
 import com.ssafy.keeping.domain.auth.enums.Gender;
 import jakarta.validation.constraints.NotBlank;

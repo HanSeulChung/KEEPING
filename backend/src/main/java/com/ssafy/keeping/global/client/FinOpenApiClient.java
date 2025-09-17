@@ -1,7 +1,7 @@
 package com.ssafy.keeping.global.client;
 
-import com.ssafy.keeping.domain.customer.dto.finopenapi.SearchUserKeyRequestDto;
-import com.ssafy.keeping.domain.customer.dto.finopenapi.SearchUserKeyResponseDto;
+import com.ssafy.keeping.domain.user.finopenapi.SearchUserKeyRequestDto;
+import com.ssafy.keeping.domain.user.finopenapi.SearchUserKeyResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -38,4 +38,7 @@ public class FinOpenApiClient {
         SearchUserKeyRequestDto requestDto = SearchUserKeyRequestDto.builder().userId(email).apiKey(apiProps.getApiKey()).build();
         return post(FinOpenApiPaths.MEMBER_SEARCH, requestDto, SearchUserKeyResponseDto.class);
     }
+
+    // userkey 생성
+    public
 }

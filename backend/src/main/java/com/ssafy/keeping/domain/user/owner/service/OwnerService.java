@@ -1,12 +1,12 @@
-package com.ssafy.keeping.domain.owner.service;
+package com.ssafy.keeping.domain.user.owner.service;
 
-import com.ssafy.keeping.domain.owner.model.Owner;
-import com.ssafy.keeping.domain.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterRequest;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterRequest;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

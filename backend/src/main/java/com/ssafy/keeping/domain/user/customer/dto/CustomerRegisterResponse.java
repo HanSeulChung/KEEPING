@@ -1,8 +1,8 @@
-package com.ssafy.keeping.domain.customer.dto;
+package com.ssafy.keeping.domain.user.customer.dto;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
 import lombok.Builder;
 import lombok.Getter;
 

@@ -1,8 +1,8 @@
-package com.ssafy.keeping.domain.owner.dto;
+package com.ssafy.keeping.domain.user.owner.dto;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
 import lombok.Builder;
 import lombok.Getter;
 

@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.customer.dto.finopenapi;
+package com.ssafy.keeping.domain.user.finopenapi;
 
 import lombok.Builder;
 import lombok.Data;

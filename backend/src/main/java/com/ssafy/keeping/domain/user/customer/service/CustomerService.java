@@ -1,9 +1,9 @@
-package com.ssafy.keeping.domain.customer.service;
+package com.ssafy.keeping.domain.user.customer.service;
 
-import com.ssafy.keeping.domain.customer.model.Customer;
-import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
