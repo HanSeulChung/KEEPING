@@ -9,7 +9,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "wallet_store_balance")
+@Table(
+        name = "wallet_store_balance",
+        uniqueConstraints = @UniqueConstraint(name = "uk_wallet_store", columnNames = {"wallet_id","store_id"}),
+        indexes = {@Index(name="idx_wsb_wallet", columnList="wallet_id"),
+                @Index(name="idx_wsb_store",  columnList="store_id")}
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
