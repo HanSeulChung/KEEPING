@@ -9,7 +9,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "wallet_store_lot")
+@Table(
+        name="wallet_store_lot",
+        indexes = {
+                @Index(name="idx_lot_wallet_store", columnList="wallet_id,store_id"),
+                @Index(name="idx_lot_origin_tx", columnList="origin_charge_tx_id")
+        }
+)
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -65,6 +72,11 @@ public class WalletStoreLot {
             throw new IllegalArgumentException("사용하려는 금액이 잔액보다 큽니다.");
         }
         this.amountRemaining = this.amountRemaining.subtract(amount);
+    }
+
+    public void sharePoints(BigDecimal amount) {
+        this.amountRemaining = this.amountRemaining.add(amount);
+        this.amountTotal = this.amountTotal.add(amount);
     }
 
     // 만료 여부 확인
