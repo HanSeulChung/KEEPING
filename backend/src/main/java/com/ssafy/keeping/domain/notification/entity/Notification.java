@@ -49,7 +49,7 @@ public class Notification {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    // 읽음 처리 (아직 구현 안함)
+    // 읽음 처리
     public void markAsRead() {
         this.isRead = true;
     }
