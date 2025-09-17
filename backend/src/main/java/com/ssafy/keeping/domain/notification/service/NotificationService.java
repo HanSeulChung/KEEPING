@@ -26,6 +26,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final CustomerRepository customerRepository;
     private final OwnerRepository ownerRepository;
+    private final FcmService fcmService;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60; // 60분
 
@@ -135,8 +136,8 @@ public class NotificationService {
             log.info("고객 알림 DB 저장 완료 - 고객ID: {}, 알림ID: {}, 타입: {}", 
                     customerId, notification.getNotificationId(), notificationType);
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(NotificationResponseDto.from(notification));
+            // 포그라운드/백그라운드 분기하여 알림 전송
+            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("고객 알림 전송 중 예상치 못한 오류 - 고객ID: {}, 타입: {}", customerId, notificationType, e);
@@ -177,11 +178,73 @@ public class NotificationService {
             log.info("점주 알림 DB 저장 완료 - 점주ID: {}, 알림ID: {}, 타입: {}", 
                     ownerId, notification.getNotificationId(), notificationType);
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(NotificationResponseDto.from(notification));
+            // 포그라운드/백그라운드 분기하여 알림 전송
+            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("점주 알림 전송 중 예상치 못한 오류 - 점주ID: {}, 타입: {}", ownerId, notificationType, e);
+        }
+    }
+
+    /**
+     * 포그라운드/백그라운드 분기하여 알림 전송
+     */
+    private void sendNotificationWithStrategy(NotificationResponseDto data) {
+        String receiverType = data.getReceiverType().toLowerCase();
+        Long receiverId = data.getReceiverId();
+        
+        try {
+            // 활성 SSE 연결이 있는지 확인
+            boolean hasActiveConnection = emitterRepository.hasActiveConnection(receiverType, receiverId);
+            
+            if (hasActiveConnection) {
+                // 포그라운드: SSE로 실시간 전송
+                log.info("포그라운드 상태 감지 - SSE로 알림 전송: {}:{}", receiverType, receiverId);
+                sendRealTimeNotification(data);
+            } else {
+                // 백그라운드: FCM으로 푸시 알림 전송
+                log.info("백그라운드 상태 감지 - FCM으로 푸시 알림 전송: {}:{}", receiverType, receiverId);
+                sendFcmNotification(data);
+            }
+            
+        } catch (Exception e) {
+            log.error("알림 전송 전략 선택 중 오류 - {}:{}", receiverType, receiverId, e);
+        }
+    }
+    
+    /**
+     * FCM 푸시 알림 전송
+     */
+    private void sendFcmNotification(NotificationResponseDto data) {
+        String receiverType = data.getReceiverType().toLowerCase();
+        Long receiverId = data.getReceiverId();
+        String title = "새 알림";
+        String body = data.getContent();
+        
+        try {
+            // 알림 타입별 제목 설정
+            if (data.getNotificationType() != null) {
+                title = data.getNotificationType().getDisplayName();
+            }
+            
+            // 추가 데이터 설정
+            Map<String, String> fcmData = Map.of(
+                "notificationId", data.getNotificationId().toString(),
+                "type", data.getNotificationType() != null ? data.getNotificationType().toString() : "UNKNOWN",
+                "url", data.getUrl() != null ? data.getUrl() : "",
+                "createdAt", data.getCreatedAt().toString()
+            );
+            
+            if ("customer".equals(receiverType)) {
+                fcmService.sendToCustomer(receiverId, data.getNotificationType(), title, body, fcmData);
+            } else if ("owner".equals(receiverType)) {
+                fcmService.sendToOwner(receiverId, data.getNotificationType(), title, body, fcmData);
+            }
+            
+            log.info("FCM 푸시 알림 전송 완료 - {}:{}, 제목: {}", receiverType, receiverId, title);
+            
+        } catch (Exception e) {
+            log.error("FCM 푸시 알림 전송 실패 - {}:{}", receiverType, receiverId, e);
         }
     }
 

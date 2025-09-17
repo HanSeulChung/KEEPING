@@ -81,5 +81,16 @@ public class EmitterRepository {
         log.info("Emitter 제거 완료 - ID: {}, 남은 연결 수: {}", id, emitters.size());
     }
 
-    
+    /**
+     * 특정 사용자의 활성 SSE 연결이 있는지 확인
+     * @param receiverType "customer" 또는 "owner"
+     * @param receiverId 사용자 ID
+     * @return 활성 연결 여부
+     */
+    public boolean hasActiveConnection(String receiverType, Long receiverId) {
+
+        String prefix = receiverType + "-" + receiverId;
+        return emitters.entrySet().stream()
+                .anyMatch(entry -> entry.getKey().startsWith(prefix));
+    }
 }

@@ -20,7 +20,7 @@ public enum NotificationType {
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),
     SYSTEM_MAINTENANCE("시스템 점검");
-    
+
     private final String displayName;
 
     NotificationType(String displayName) {
