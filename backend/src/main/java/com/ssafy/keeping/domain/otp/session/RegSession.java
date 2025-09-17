@@ -2,7 +2,6 @@ package com.ssafy.keeping.domain.otp.session;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

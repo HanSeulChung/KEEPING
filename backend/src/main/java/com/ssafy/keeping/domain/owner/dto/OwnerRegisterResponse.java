@@ -2,13 +2,11 @@ package com.ssafy.keeping.domain.owner.dto;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.owner.model.Owner;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Getter
 @Builder

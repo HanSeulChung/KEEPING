@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.customer.service;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.customer.model.Customer;
+import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
@@ -13,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 
 @Service

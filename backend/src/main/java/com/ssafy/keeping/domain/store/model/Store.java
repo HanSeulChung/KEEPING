@@ -1,6 +1,5 @@
 package com.ssafy.keeping.domain.store.model;
 
-import com.ssafy.keeping.domain.core.owner.model.Owner;
 import com.ssafy.keeping.domain.core.transaction.model.Transaction;
 import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;

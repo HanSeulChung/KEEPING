@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.core.wallet.repository;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.customer.model.Customer;
 import com.ssafy.keeping.domain.core.wallet.model.Wallet;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

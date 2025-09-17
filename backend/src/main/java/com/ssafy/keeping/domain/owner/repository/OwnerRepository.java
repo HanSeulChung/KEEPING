@@ -1,8 +1,7 @@
-package com.ssafy.keeping.domain.core.owner.repository;
+package com.ssafy.keeping.domain.owner.repository;
 
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.owner.model.Owner;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,14 +1,12 @@
 package com.ssafy.keeping.domain.core.wallet.service;
 
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.core.wallet.dto.WalletStoreBalanceResponseDto;
 import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
 import com.ssafy.keeping.domain.group.model.Group;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;
-import com.ssafy.keeping.domain.group.service.GroupService;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
