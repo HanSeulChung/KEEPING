@@ -424,81 +424,166 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   return (
     <div className="w-full">
       {/* 제목 */}
-      <div className="mb-6 text-center">
+      <div className="mb-2 text-center">
         <h1 className="font-display text-2xl font-bold">
           {type === 'food' ? 'Food' : 'Life'}
         </h1>
+        {/* 검/흰 번갈아가는 줄 */}
+        <div className="mt-1 flex justify-center">
+          <div className="w-[932px] h-[20px] md:w-[90vw] md:max-w-[932px] relative overflow-hidden">
+            <div className="w-[37px] h-1 absolute left-2.5 top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[47px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[84px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[121px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[158px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[195px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[232px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[269px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[306px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[343px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[380px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[417px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[454px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[491px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[528px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[565px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[602px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[639px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[676px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[713px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[750px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[787px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[824px] top-[10px] bg-black" />
+            <div className="w-[37px] h-1 absolute left-[861px] top-[10px] bg-white border border-black" />
+            <div className="w-[37px] h-1 absolute left-[898px] top-[10px] bg-black" />
+          </div>
+        </div>
       </div>
 
       {/* 카테고리 탭들 */}
-      <div className="mb-6">
+      <div className="mb-6 mt-1">
         <div className="relative">
-          <div className="scrollbar-hide flex gap-1 overflow-x-auto px-4">
+          <div className="scrollbar-hide flex gap-2 overflow-x-auto justify-center">
             {categories.map(category => (
-              <button
+              <div
                 key={category}
+                className="w-[93px] h-[46px] relative overflow-hidden flex-shrink-0 cursor-pointer flex items-center justify-center"
                 onClick={() => handleCategoryChange(category)}
-                className={`flex-shrink-0 cursor-pointer border-b-2 px-4 py-2 text-sm whitespace-nowrap transition-colors ${
-                  activeCategory === category
-                    ? 'border-black font-medium text-black'
-                    : 'border-transparent text-gray-600 hover:text-gray-800'
-                }`}
               >
-                {category}
-              </button>
+                <div className="flex items-center gap-2">
+                  <svg
+                    width={17}
+                    height={17}
+                    viewBox="0 0 17 17"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-[16.7px] h-[16.51px] flex-shrink-0"
+                    preserveAspectRatio="none"
+                  >
+                    <circle 
+                      cx="8.69727" 
+                      cy="8.51172" 
+                      r="7.5" 
+                      fill={activeCategory === category ? "black" : "white"} 
+                      stroke="black" 
+                    />
+                    {activeCategory === category && (
+                      <path
+                        d="M5.5 8.5L7.5 10.5L12 6"
+                        stroke="white"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                    {activeCategory !== category && (
+                      <path
+                        d="M11.6973 1.51172C11.6973 1.51172 7.52196 2.41697 5.37247 4.09306C3.12803 5.84319 1.20994 9.90158 1.20994 9.90158"
+                        stroke="black"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                  </svg>
+                  <p className="text-[13.6px] font-bold text-black whitespace-nowrap">
+                    {category}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
       {/* 가게 목록 */}
-      <div className="space-y-3">
-        {stores.map(store => (
-          <div
-            key={store.id}
-            className="flex items-center gap-4 border border-gray-300 bg-white p-4 transition-colors hover:bg-gray-50"
-          >
-            {/* 가게 이미지 (플레이스홀더) */}
-            <div
-              className="h-16 w-16 flex-shrink-0 cursor-pointer bg-gray-200"
-              onClick={() => handleStoreClick(store.id)}
-            ></div>
+      <div className="space-y-0">
+        {stores.map((store, index) => (
+          <div key={store.id}>
+            <div className="flex items-center gap-4 bg-white p-4 transition-colors hover:bg-gray-50">
+              {/* 가게 이미지 (플레이스홀더) */}
+              <div
+                className="h-16 w-16 flex-shrink-0 cursor-pointer bg-gray-200"
+                onClick={() => handleStoreClick(store.id)}
+              ></div>
 
-            {/* 가게 정보 */}
-            <div
-              className="flex-1 cursor-pointer"
-              onClick={() => handleStoreClick(store.id)}
-            >
-              <h3 className="mb-1 font-medium text-black">{store.name}</h3>
-              <p className="mb-2 text-sm text-gray-600">{store.location}</p>
-              <div className="flex items-center gap-1">
-                <Heart
-                  size={16}
-                  fill={store.isLiked ? 'currentColor' : 'none'}
-                  className={`${store.isLiked ? 'fill-gray-400 text-gray-400' : 'text-gray-400'}`}
-                />
-                <span className="text-sm text-gray-600">{store.likes}</span>
+              {/* 가게 정보 */}
+              <div
+                className="flex-1 cursor-pointer"
+                onClick={() => handleStoreClick(store.id)}
+              >
+                <h3 className="mb-1 font-medium text-black">{store.name}</h3>
+                <p className="mb-2 text-sm text-gray-600">{store.location}</p>
+                <div className="flex items-center gap-1">
+                  <Heart
+                    size={16}
+                    fill={store.isLiked ? 'currentColor' : 'none'}
+                    className={`${store.isLiked ? 'fill-gray-400 text-gray-400' : 'text-gray-400'}`}
+                  />
+                  <span className="text-sm text-gray-600">{store.likes}</span>
+                </div>
               </div>
-            </div>
 
-            {/* 좋아요 버튼 */}
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                toggleLike(store.id)
-              }}
-              className="p-2"
-            >
-              <Heart
-                size={20}
-                fill={store.isLiked ? 'currentColor' : 'none'}
-                className={`transition-colors ${
-                  store.isLiked
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400 hover:text-red-500'
-                }`}
-              />
-            </button>
+              {/* 좋아요 버튼 */}
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  toggleLike(store.id)
+                }}
+                className="p-2"
+              >
+                <Heart
+                  size={20}
+                  fill={store.isLiked ? 'currentColor' : 'none'}
+                  className={`transition-colors ${
+                    store.isLiked
+                      ? 'fill-red-500 text-red-500'
+                      : 'text-gray-400 hover:text-red-500'
+                  }`}
+                />
+              </button>
+            </div>
+            {/* 가게 간 구분선 */}
+            {index < stores.length - 1 && (
+              <div className="flex justify-center py-2">
+                <div className="w-[932px] md:w-[90vw] md:max-w-[932px] flex justify-center">
+                  <svg
+                    width="932"
+                    height="2"
+                    viewBox="0 0 932 2"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-full h-0.5"
+                  >
+                    <path
+                      d="M0 1H932"
+                      stroke="black"
+                      strokeWidth="1"
+                      strokeDasharray="10 10"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
