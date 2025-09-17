@@ -63,4 +63,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      */
     @Query("SELECT n FROM Notification n WHERE n.owner.ownerId = :ownerId AND n.isRead = false ORDER BY n.createdAt ASC")
     List<Notification> findUnreadNotificationsByOwnerId(@Param("ownerId") Long ownerId);
+
+    /**
+     * 특정 고객의 읽지 않은 알림 목록 조회 (페이징, 최신순)
+     */
+    @Query("SELECT n FROM Notification n WHERE n.customer.customerId = :customerId AND n.isRead = false ORDER BY n.createdAt DESC")
+    Page<Notification> findUnreadNotificationsByCustomerIdOrderByCreatedAtDesc(@Param("customerId") Long customerId, Pageable pageable);
+
+    /**
+     * 특정 점주의 읽지 않은 알림 목록 조회 (페이징, 최신순)
+     */
+    @Query("SELECT n FROM Notification n WHERE n.owner.ownerId = :ownerId AND n.isRead = false ORDER BY n.createdAt DESC")
+    Page<Notification> findUnreadNotificationsByOwnerIdOrderByCreatedAtDesc(@Param("ownerId") Long ownerId, Pageable pageable);
 }

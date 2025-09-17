@@ -218,4 +218,66 @@ public class NotificationController {
             )
         );
     }
+
+    /**
+     * 고객 읽지 않은 알림 목록 조회
+     * 
+     * @param customerId 고객 ID
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 고객 읽지 않은 알림 목록 (페이징)
+     */
+    @GetMapping("/customer/{customerId}/unread")
+    public ResponseEntity<ApiResponse<Page<NotificationResponseDto>>> getUnreadNotificationListForCustomer(
+            @PathVariable @Positive(message = "고객 ID는 양수여야 합니다.") Long customerId,
+            @RequestParam(defaultValue = "0") @PositiveOrZero(message = "페이지 번호는 0 이상이어야 합니다.") int page,
+            @RequestParam(defaultValue = "20") @Positive(message = "페이지 크기는 양수여야 합니다.") int size) {
+        
+        log.info("고객 읽지 않은 알림 목록 조회 요청 - 고객ID: {}, 페이지: {}, 크기: {}", customerId, page, size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<NotificationResponseDto> notifications = notificationQueryService.getUnreadNotificationListForCustomer(customerId, pageable);
+        
+        log.info("고객 읽지 않은 알림 목록 조회 성공 - 고객ID: {}, 총 개수: {}, 현재 페이지 개수: {}", 
+                customerId, notifications.getTotalElements(), notifications.getNumberOfElements());
+        
+        return ResponseEntity.ok(
+            ApiResponse.success(
+                "고객 읽지 않은 알림 목록 조회 완료", 
+                HttpStatus.OK.value(), 
+                notifications
+            )
+        );
+    }
+
+    /**
+     * 점주 읽지 않은 알림 목록 조회
+     * 
+     * @param ownerId 점주 ID
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 점주 읽지 않은 알림 목록 (페이징)
+     */
+    @GetMapping("/owner/{ownerId}/unread")
+    public ResponseEntity<ApiResponse<Page<NotificationResponseDto>>> getUnreadNotificationListForOwner(
+            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @RequestParam(defaultValue = "0") @PositiveOrZero(message = "페이지 번호는 0 이상이어야 합니다.") int page,
+            @RequestParam(defaultValue = "20") @Positive(message = "페이지 크기는 양수여야 합니다.") int size) {
+        
+        log.info("점주 읽지 않은 알림 목록 조회 요청 - 점주ID: {}, 페이지: {}, 크기: {}", ownerId, page, size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<NotificationResponseDto> notifications = notificationQueryService.getUnreadNotificationListForOwner(ownerId, pageable);
+        
+        log.info("점주 읽지 않은 알림 목록 조회 성공 - 점주ID: {}, 총 개수: {}, 현재 페이지 개수: {}", 
+                ownerId, notifications.getTotalElements(), notifications.getNumberOfElements());
+        
+        return ResponseEntity.ok(
+            ApiResponse.success(
+                "점주 읽지 않은 알림 목록 조회 완료", 
+                HttpStatus.OK.value(), 
+                notifications
+            )
+        );
+    }
 }
