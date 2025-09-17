@@ -1,7 +1,10 @@
 package com.ssafy.keeping.domain.customer.controller;
 
 import com.ssafy.keeping.domain.customer.service.CustomerService;
+import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -10,6 +13,12 @@ import org.springframework.web.bind.annotation.*;
 public class CustomerController {
 
     private final CustomerService customerService;
+
+    // test
+    @GetMapping
+    public ResponseEntity<ApiResponse<String>> testCumstomers() {
+        return ResponseEntity.ok().body(ApiResponse.success("Spring Security 정상 작동", HttpStatus.OK.value(), "good"));
+    }
 
     // 회원가입
 //    @PostMapping("/")

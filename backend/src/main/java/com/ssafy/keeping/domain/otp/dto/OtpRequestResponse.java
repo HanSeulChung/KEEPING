@@ -10,4 +10,6 @@ public class OtpRequestResponse {
 
     @NotBlank
     private String regSessionId;
+
+    private String otpNumber;
 }
