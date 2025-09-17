@@ -1,13 +1,14 @@
 package com.ssafy.keeping.domain.user.customer.dto;
 
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
-@Getter
+@Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class SignupCustomerResponse {
-    private final CustomerRegisterResponse user;
-    private final TokenResponse token;
+    private CustomerRegisterResponse user;
+    private TokenResponse token;
 }
 

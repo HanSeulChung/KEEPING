@@ -110,7 +110,23 @@ public enum ErrorCode {
     PIN_LENGTH_INVALID(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)의 길이는 6자리 이여야 합니다."),
     // 자금/한도 관련
     FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
-    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다.");
+    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다."),
+
+    // 외부 API 관련 에러
+    INVALID_HEADER(HttpStatus.BAD_REQUEST, "요청 헤더가 유효하지 않습니다"),
+    INVALID_API_ITEM(HttpStatus.BAD_REQUEST, "API 항목이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_DATE(HttpStatus.BAD_REQUEST, "전송일자 형식이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_TIME(HttpStatus.BAD_REQUEST, "전송시각 형식이 유효하지 않습니다"),
+    INVALID_INSTITUTION_CODE(HttpStatus.BAD_REQUEST, "기관코드가 유효하지 않습니다"),
+    INVALID_FINTECHAPP_NUMBER(HttpStatus.BAD_REQUEST, "핀테크 앱 일련번호가 유효하지 않습니다"),
+    INVALID_SERVICE_CODE(HttpStatus.BAD_REQUEST, "API 서비스코드가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER(HttpStatus.BAD_REQUEST, "기관거래고유번호가 중복됩니다"),
+    INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "API KEY가 유효하지 않습니다"),
+    INVALID_USER_KEY(HttpStatus.UNAUTHORIZED, "USER KEY가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "기관거래고유번호가 유효하지 않습니다"),
+    INVALID_ACCOUNT_NUMBER(HttpStatus.BAD_REQUEST, "계좌번호가 유효하지 않습니다");
+
+
 
     private final HttpStatus httpStatus;
     private final String message;

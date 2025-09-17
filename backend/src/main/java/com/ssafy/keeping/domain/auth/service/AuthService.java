@@ -151,7 +151,7 @@ public class AuthService {
         map.put("birth", regSession.getBirth());
         map.put("phoneNumber", regSession.getPhoneNumber());
         map.put("regStep", RegStep.PHONE_VERIFIED);
-        map.put("phoneVerfiedAt", regSession.getPhoneVerifiedAt());
+        map.put("phoneVerifiedAt", regSession.getPhoneVerifiedAt());
         map.put("gender", regSession.getGender().name());
 
 

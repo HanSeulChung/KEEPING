@@ -3,13 +3,17 @@ package com.ssafy.keeping.domain.user.customer.dto;
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CustomerRegisterResponse {
     private Long customerId;
     private String providerId;

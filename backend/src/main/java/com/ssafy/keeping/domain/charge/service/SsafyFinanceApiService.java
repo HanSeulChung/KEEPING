@@ -238,7 +238,7 @@ public class SsafyFinanceApiService {
     /**
      * 계좌 입금용 API 헤더 생성
      */
-    private SsafyApiHeaderDto createAccountDepositHeader(String userKey) {
+    public SsafyApiHeaderDto createAccountDepositHeader(String userKey) {
         LocalDateTime now = LocalDateTime.now();
         String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
@@ -262,5 +262,23 @@ public class SsafyFinanceApiService {
         return new HttpEntity<>(requestDto, headers);
         // 여기서의 headers는 진짜 header이고,
         // requestDto에 들어있는 header는 단지 이름이 header임
+    }
+
+    // 공통 헤더 생성
+    public SsafyApiHeaderDto createCommonHeader(String userKey, String apiName) {
+        LocalDateTime now = LocalDateTime.now();
+        String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
+
+        return SsafyApiHeaderDto.createCommonHeaderDto(
+                transmissionDate,
+                transmissionTime,
+                institutionTransactionUniqueNo,
+                apiKey,
+                userKey,
+                apiName
+
+        );
     }
 }
