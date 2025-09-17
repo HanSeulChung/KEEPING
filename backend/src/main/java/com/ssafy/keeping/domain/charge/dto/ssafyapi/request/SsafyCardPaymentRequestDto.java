@@ -24,14 +24,14 @@ public class SsafyCardPaymentRequestDto {
             String cardNo,
             String cvc,
             String merchantId,
-            BigDecimal paymentBalance) {
+            long paymentBalance) {
         
         return SsafyCardPaymentRequestDto.builder()
                 .header(header)
                 .cardNo(cardNo)
                 .cvc(cvc)
                 .merchantId(merchantId)
-                .paymentBalance(paymentBalance.toString())
+                .paymentBalance(paymentBalance + "")
                 .build();
     }
 }

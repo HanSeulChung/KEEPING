@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.wallet.model;
 
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -43,7 +44,7 @@ public class WalletStoreLot {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false, length = 20)
-    private SourceType sourceType;
+    private LotSourceType sourceType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "contributor_wallet_id")

@@ -12,6 +12,7 @@ import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
@@ -122,7 +123,7 @@ public class PrepaymentService {
                 .amountRemaining(paymentAmount)
                 .acquiredAt(LocalDateTime.now())
                 .expiredAt(expiredAt)
-                .sourceType(WalletStoreLot.SourceType.CHARGE)
+                .sourceType(LotSourceType.CHARGE)
                 .originChargeTransaction(transaction)
                 .build();
         walletStoreLotRepository.save(lot);
@@ -147,7 +148,7 @@ public class PrepaymentService {
         settlementTaskRepository.save(settlementTask);
 
         // 5. 응답 생성
-        BigDecimal updatedBalance = balance.getBalance();
+        long updatedBalance = balance.getBalance();
         
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
