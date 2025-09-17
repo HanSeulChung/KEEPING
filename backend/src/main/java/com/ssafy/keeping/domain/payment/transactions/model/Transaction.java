@@ -45,7 +45,7 @@ public class Transaction {
     private TransactionType transactionType;
 
     @Column(name = "amount", nullable = false)
-    private long amount;
+    private Long amount;
 
     @Column(name = "transaction_unique_no", length = 50)
     private String transactionUniqueNo;

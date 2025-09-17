@@ -13,7 +13,7 @@ public class CancelListResponseDto {
     
     private String transactionUniqueNo;
     private String storeName;
-    private BigDecimal paymentAmount;
+    private Long paymentAmount;
     private LocalDateTime transactionTime;
-    private BigDecimal remainingBalance;
+    private Long remainingBalance;
 }

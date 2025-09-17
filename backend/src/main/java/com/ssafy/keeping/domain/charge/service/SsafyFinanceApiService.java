@@ -124,7 +124,7 @@ public class SsafyFinanceApiService {
     public SsafyAccountDepositResponseDto requestAccountDeposit(
             String userKey,
             String accountNo,
-            BigDecimal transactionBalance,
+            Long transactionBalance,
             String transactionSummary) {
         
         // API 헤더 생성

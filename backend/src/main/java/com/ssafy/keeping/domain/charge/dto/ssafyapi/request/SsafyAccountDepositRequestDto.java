@@ -21,7 +21,7 @@ public class SsafyAccountDepositRequestDto {
     public static SsafyAccountDepositRequestDto create(
             SsafyApiHeaderDto header,
             String accountNo,
-            BigDecimal transactionBalance,
+            Long transactionBalance,
             String transactionSummary) {
         
         return SsafyAccountDepositRequestDto.builder()

@@ -3,10 +3,10 @@ package com.ssafy.keeping.domain.wallet.model;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -61,6 +61,16 @@ public class WalletStoreLot {
     @JoinColumn(name = "origin_charge_tx_id", nullable = false)
     private Transaction originChargeTransaction;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lot_status", nullable = false, length = 20)
+    private LotStatus lotStatus;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancel_tx_id")
+    private Transaction cancelTransaction;
 
     // 포인트 사용 메서드
     public void usePoints(Long amount) {
@@ -87,7 +97,7 @@ public class WalletStoreLot {
 
     // 취소 처리 (소스 타입을 CANCELED로 변경)
     // 이 부분은 lot_status 필드가 새로 추가되었습니다. 그래서 나중에 확인하고 변경하겠습니다.
-//    public void markAsCanceled() {
-//        this.sourceType = SourceType.CANCELED;
-//    }
+    public void markAsCanceled() {
+        this.lotStatus = LotStatus.CANCELED;
+    }
 }

@@ -24,5 +24,5 @@ public class PrepaymentRequestDto {
     private String cvc;
 
     @NotNull(message = "결제 금액은 필수입니다.")
-    private long paymentBalance;
+    private Long paymentBalance;
 }

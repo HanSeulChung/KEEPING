@@ -3,9 +3,7 @@ package com.ssafy.keeping.domain.wallet.model;
 import com.ssafy.keeping.domain.store.model.Store;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
