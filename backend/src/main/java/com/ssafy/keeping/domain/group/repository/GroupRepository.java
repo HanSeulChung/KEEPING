@@ -37,7 +37,7 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     join Customer c
     on gm.user.customerId=c.customerId
     where g.groupName=:name
-    and gm.isLeader=true
+    and gm.leader=true
     """
     )
     List<GroupMaskingResponseDto> findGroupsByName(String name);

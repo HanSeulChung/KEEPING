@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.payment.intent.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.keeping.domain.auth.pin.service.PinAuthService;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
 import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
 import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
@@ -14,10 +15,7 @@ import com.ssafy.keeping.domain.menu.repository.MenuRepository;
 import com.ssafy.keeping.domain.payment.common.IdUtil;
 import com.ssafy.keeping.domain.payment.intent.canonical.CanonicalInitiate;
 import com.ssafy.keeping.domain.payment.intent.constant.PaymentStatus;
-import com.ssafy.keeping.domain.payment.intent.dto.PaymentInitiateItemDto;
-import com.ssafy.keeping.domain.payment.intent.dto.PaymentInitiateRequest;
-import com.ssafy.keeping.domain.payment.intent.dto.PaymentIntentDetailResponse;
-import com.ssafy.keeping.domain.payment.intent.dto.PaymentIntentItemView;
+import com.ssafy.keeping.domain.payment.intent.dto.*;
 import com.ssafy.keeping.domain.payment.intent.model.PaymentIntent;
 import com.ssafy.keeping.domain.payment.intent.model.PaymentIntentItem;
 import com.ssafy.keeping.domain.payment.intent.repository.PaymentIntentItemRepository;
@@ -48,6 +46,7 @@ public class PaymentIntentService {
     private final PaymentIntentItemRepository itemRepository;
     private final QrTokenRepository qrTokenRepository;
     private final MenuRepository menuRepository;
+    private final PinAuthService pinAuthService;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
@@ -88,9 +87,6 @@ public class PaymentIntentService {
         UUID keyUuid = UUID.fromString(idempotencyKeyHeader);
         String path = "/cpqr/" + qrTokenId + "/initiate"; // 스코프 정규화
         IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.MERCHANT, ownerId, "POST", path, keyUuid, bodyHash);
-
-        // slotOpt이 비어있는지 확인
-//        IdempotencyKey slot = slotOpt.orElseThrow(() -> new RuntimeException("Idempotency begin failed"));
 
         IdempotencyKey slot = begin.getRow();
 
@@ -225,6 +221,136 @@ public class PaymentIntentService {
         }
         return PaymentIntentDetailResponse.from(intent, itemViews);
     }
+
+//    @Transactional
+//    public IdempotentResult<PaymentIntentDetailResponse> approve(UUID intentPublicId,
+//                                                                 String idempotencyKeyHeader,
+//                                                                 Long customerId,ApproveRequest req) {
+//        // 입력 검증 (헤더/바디)
+//        if (idempotencyKeyHeader == null || idempotencyKeyHeader.isBlank()) {
+//            throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
+//        }
+//        if (req == null || req.getPin() == null || req.getPin().isBlank()) {
+//            throw new CustomException(ErrorCode.PIN_REQUIRED); // 400/422 매핑
+//        }
+//
+//        // 멱등 바디 정규화 → SHA-256
+//        String canonicalBody = canonicalizeApproveBody(req); // 키 정렬/NULL 제거
+//        byte[] bodyHash = IdempotencyService.sha256(canonicalBody); // SHA-256
+//
+//        // 멱등 선점 또는 로드
+//        UUID keyUuid;
+//        try {
+//            keyUuid = UUID.fromString(idempotencyKeyHeader);
+//        } catch (IllegalArgumentException ex) {
+//            throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_INVALID);
+//        }
+//        String path = "/payments/" + intentPublicId + "/approve"; // 스코프 정규화
+//        IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.CUSTOMER, customerId, "POST", path, keyUuid, bodyHash);
+//
+//        IdempotencyKey slot = begin.getRow();
+//
+//        // 본문 충돌 확인
+//        if (idempotencyService.isBodyConflict(slot, bodyHash)) {
+//            throw new CustomException(ErrorCode.IDEMPOTENCY_BODY_CONFLICT);
+//        }
+//
+//        // DONE 재생
+//        if (slot.getStatus() == IdemStatus.DONE) {
+//            PaymentIntentDetailResponse replay;
+//            if (slot.getResponseJson() != null) {
+//                replay = parseSnapshot(slot.getResponseJson());
+//            } else if (slot.getIntentPublicId() != null) {
+//                replay = rebuildFromResource(slot.getIntentPublicId());
+//            } else {
+//                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+//            }
+//            return IdempotentResult.okReplay(replay); // 200 OK + replay
+//        }
+//
+//        // 타 프로세스가 IN_PROGRESS 선점 중이면 202
+//        if (!begin.isCreated() && slot.getStatus() == IdemStatus.IN_PROGRESS) {
+//            return IdempotentResult.acceptedWithRetryAfterSeconds(2); // 202
+//        }
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//        // 비즈니스 검증/처리 시작
+//        PaymentIntent intent = intentRepository.findByPublicId(intentPublicId)
+//                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_INTENT_NOT_FOUND));
+//
+//        LocalDateTime now = LocalDateTime.now(clock);
+//
+//        if (intent.getStatus() != PaymentStatus.PENDING) {
+//            throw new CustomException(ErrorCode.PAYMENT_INTENT_STATUS_CONFLICT); // 결제 요청 상태가 승인 가능 상태가 아닙니다.
+//        }
+//        if (intent.getExpiresAt() != null && now.isAfter(intent.getExpiresAt())) {
+//            throw new CustomException(ErrorCode.PAYMENT_INTENT_EXPIRED); // 결제 요청의 승인 가능 시간이 만료되었습니다.
+//        }
+//        if (!Objects.equals(intent.getCustomerId(), customerId)) {
+//            throw new CustomException(ErrorCode.PAYMENT_INTENT_OWNER_MISMATCH); // 결제 요청 소유자와 승인 주체가 일치하지 않습니다.
+//        }
+//
+//        // PIN 검증
+//        boolean pinOk = pinAuthService.verify(customerId, req.getPin());
+//        if (!pinOk) {
+//            throw new CustomException(ErrorCode.PIN_INVALID); // 결제 비밀번호(PIN)가 올바르지 않습니다.
+//        }
+//
+//
+//        // -----------------------------------여기서부터 해야함.... --------------------
+//        // --- 잔액/한도 검증 및 차감(원자 UPDATE 또는 내부 비관락; Intent는 낙관락 유지) ---
+//        FundsResult funds = fundsService.capture(intent);
+//        if (!funds.isSufficient()) {
+//            throw new CustomException(ErrorCode.FUNDS_INSUFFICIENT); // 402
+//        }
+//        if (!funds.isPolicyOk()) {
+//            throw new CustomException(ErrorCode.PAYMENT_POLICY_VIOLATION); // 422
+//        }
+//
+//        // --- 상태 전이 (낙관적 락: 커밋 시점에 version 비교) ---
+//        intent.markSucceeded(now); // status=SUCCEEDED, succeededAt=now
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//        PaymentIntentDetailResponse res = PaymentIntentDetailResponse.from(intent);
+//
+//        // --- 멱등 완료 기록(DONE + 응답 스냅샷) (initi​ate와 동일) ---
+//        try {
+//            idempotencyService.complete(slot, HttpStatus.OK.value(), res, intent.getPublicId());
+//        } catch (JsonProcessingException e) {
+//            // 스냅샷 직렬화 실패 시 폴백 (리소스 키만 기록)
+//            idempotencyService.completeWithoutSnapshot(slot, HttpStatus.OK.value(), res, intent.getPublicId());
+//        }
+//
+//        return IdempotentResult.ok(res); // 200 OK
+//
+//    }
+
+
+
+
+
 
     /* ---------- 내부 유틸 ---------- */
 

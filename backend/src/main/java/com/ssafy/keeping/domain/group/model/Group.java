@@ -1,10 +1,7 @@
 package com.ssafy.keeping.domain.group.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -16,29 +13,31 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "`groups`",
-    uniqueConstraints = {
-            @UniqueConstraint(columnNames = "group_code")
-    }
+@Table(
+        name = "`groups`",
+        uniqueConstraints = @UniqueConstraint(name = "uq_groups_code", columnNames = "group_code")
 )
 @EntityListeners(AuditingEntityListener.class)
 public class Group {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "group_id")
     private Long groupId;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "group_name", nullable = false, length = 100)
     private String groupName;
-    @Column(nullable = false, length = 150)
-    private String groupDescription;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "group_code", nullable = false, length = 100)
     private String groupCode;
 
+    @Column(name = "group_description", nullable = false, length = 150)
+    private String groupDescription;
+
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

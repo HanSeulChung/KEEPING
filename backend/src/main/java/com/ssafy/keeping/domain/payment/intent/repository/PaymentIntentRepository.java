@@ -23,6 +23,10 @@ public interface PaymentIntentRepository extends JpaRepository<PaymentIntent, Lo
     // QrToken으로 조회 (상태 조건까지 포함)
     Optional<PaymentIntent> findByQrTokenAndStatus(QrToken qrToken, PaymentStatus status);
 
+    Optional<PaymentIntent> findByPublicIdAndCustomerId(UUID publicId, Long customerId);
+
+    boolean existsByPublicId(UUID publicId);
+
     // 특정 QrToken에 대해 PaymentIntent가 존재하는지 여부만 체크
     boolean existsByQrToken(QrToken qrToken);
 
