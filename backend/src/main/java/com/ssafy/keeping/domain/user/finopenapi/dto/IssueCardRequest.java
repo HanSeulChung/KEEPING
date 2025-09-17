@@ -15,6 +15,6 @@ public class IssueCardRequest {
     @JsonProperty("Header")
     private SsafyApiHeaderDto header;
     private String cardUniqueNo;
-    private String withdrawlAccountNo;
-    private String withdrawlDate = "1";
+    private String withdrawalAccountNo;
+    private String withdrawalDate;
 }

@@ -4,6 +4,7 @@ import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyApiHeaderDto;
 import com.ssafy.keeping.domain.charge.service.SsafyFinanceApiService;
 import com.ssafy.keeping.domain.user.finopenapi.dto.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FinOpenApiClient {
 
     private final WebClient finOpenApiWebClient;
@@ -21,28 +23,38 @@ public class FinOpenApiClient {
 
     private final Long TRANSACTION_BALANCE = 100000000L;
 
-    @Value("${ssafy.finance.value.account-type-unique-no}")
-    private String accountTypeUniqueNo;
+    @Value("${ssafy.finance.value.customer-account-type-unique-no}")
+    private String customerAccountTypeUniqueNo;
 
-    @Value("${ssafy.finance.value.card-unique-no")
+    @Value("${ssafy.finance.value.owner-account-type-unique-no}")
+    private String ownerAccountTypeUniqueNo;
+
+    @Value("${ssafy.finance.value.card-unique-no}")
     private String cardUniqueNo;
 
     public <TReq, TRes> TRes post(String path, TReq body, Class<TRes> resType) {
-        return Mono.fromCallable(() -> {
+        log.debug("FinOpenAPI 요청 - Path: {}, Body: {}", path, body);
 
-            return finOpenApiWebClient.post()
-                    .uri(path)
-                    .bodyValue(body)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, r -> r.bodyToMono(String.class)
-                            .map(msg -> new IllegalArgumentException("finopenapi 4xx: " + msg)))
-                    .onStatus(HttpStatusCode::is5xxServerError, r -> r.bodyToMono(String.class)
-                            .map(msg -> new IllegalStateException("finopenapi 5xx: " + msg)))
-                    .bodyToMono(resType)
-                    .block();
-        })    .subscribeOn(Schedulers.boundedElastic()) // 별도 스레드에서 실행
+        return Mono.fromCallable(() -> {
+                    return finOpenApiWebClient.post()
+                            .uri(path)
+                            .header("Content-Type", "application/json")
+                            .bodyValue(body)
+                            .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, r -> r.bodyToMono(String.class)
+                                    .map(msg -> new IllegalArgumentException("finopenapi 4xx: " + msg)))
+                            .onStatus(HttpStatusCode::is5xxServerError, r -> {
+                                log.error("FinOpenAPI 500 에러 - Status: {}", r.statusCode());
+                                return r.bodyToMono(String.class)
+                                        .doOnNext(errorBody -> log.error("에러 응답: {}", errorBody))
+                                        .map(msg -> new IllegalStateException("finopenapi 5xx: " + msg));
+                            })
+                            .bodyToMono(resType)
+                            .block();
+                }).subscribeOn(Schedulers.boundedElastic())
                 .block();
     }
+
 
     // email 로 userKey 찾기
     public SearchUserKeyResponseDto searchUserKey(String email) {
@@ -57,27 +69,32 @@ public class FinOpenApiClient {
     }
 
     // 계좌 생성
-    public CreateAccountResponse createAccount(String userKey) {
+    public CreateAccountResponse createAccount(String userKey, String role) {
+        log.debug("API 요청 데이터: userKey={}", userKey);
+
         // TODO: 환경변수
         String apiName = "createDemandDepositAccount";
 
         SsafyApiHeaderDto header = ssafyFinanceApiService.createCommonHeader(userKey, apiName);
 
         CreateAccountRequest request = CreateAccountRequest.builder()
-                .header(header).accountTypeUniqueNo(accountTypeUniqueNo).build();
-
+                .header(header)
+                .accountTypeUniqueNo(role.equals("CUSTOMER") ? customerAccountTypeUniqueNo : ownerAccountTypeUniqueNo)
+                .build();
         return post(FinOpenApiPaths.CREATE_ACCOUNT, request, CreateAccountResponse.class);
     }
 
     // card 생성
-    public IssueCardResponse issueCard(String userKey, String withdrawlAccountNo) {
+    public IssueCardResponse issueCard(String userKey, String withdrawalAccountNo) {
         String apiName = "createCreditCard";
+        log.debug("카드 생성 계좌 번호 : {}", withdrawalAccountNo);
 
         SsafyApiHeaderDto header = ssafyFinanceApiService.createCommonHeader(userKey, apiName);
 
         // 출금일은 1일로 고정
         IssueCardRequest request = IssueCardRequest.builder()
-                .cardUniqueNo(cardUniqueNo).withdrawlAccountNo(withdrawlAccountNo).build();
+                .header(header).cardUniqueNo(cardUniqueNo).withdrawalAccountNo(withdrawalAccountNo)
+                .withdrawalDate("1").build();
 
         return post(FinOpenApiPaths.ISSUE_CARD, request, IssueCardResponse.class);
     }
@@ -89,7 +106,7 @@ public class FinOpenApiClient {
         SsafyApiHeaderDto header = ssafyFinanceApiService.createCommonHeader(userKey, apiName);
 
         AccountDepositRequest request = AccountDepositRequest.builder()
-                .accountNo(accountNo).transactionBalance(TRANSACTION_BALANCE).build();
+                .header(header).accountNo(accountNo).transactionBalance(TRANSACTION_BALANCE).build();
 
         return post(FinOpenApiPaths.ACCOUNT_DEPOSIT, request, AccountDepositResponse.class);
     }

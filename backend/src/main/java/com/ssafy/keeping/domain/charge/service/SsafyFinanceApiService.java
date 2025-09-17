@@ -269,6 +269,8 @@ public class SsafyFinanceApiService {
         LocalDateTime now = LocalDateTime.now();
         String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        log.debug("현재 시각 : {}", transmissionTime);
+
         String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
 
         return SsafyApiHeaderDto.createCommonHeaderDto(

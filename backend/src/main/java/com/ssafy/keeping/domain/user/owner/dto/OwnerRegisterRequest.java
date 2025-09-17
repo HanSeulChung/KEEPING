@@ -14,6 +14,4 @@ public class OwnerRegisterRequest {
 
     @NotBlank
     private String regSessionId;
-
-    private String userKey;
 }

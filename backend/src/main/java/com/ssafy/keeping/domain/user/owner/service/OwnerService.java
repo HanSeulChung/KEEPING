@@ -1,5 +1,8 @@
 package com.ssafy.keeping.domain.user.owner.service;
 
+import com.ssafy.keeping.domain.user.finopenapi.dto.CreateAccountResponse;
+import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMemberResponseDto;
+import com.ssafy.keeping.domain.user.finopenapi.dto.SearchUserKeyResponseDto;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.otp.session.RegSession;
@@ -8,6 +11,8 @@ import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterRequest;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,17 +39,48 @@ public class OwnerService {
             throw new IllegalStateException("휴대폰 인증이 필요합니다.");
         }
 
-        // userKey
-        String userKey = null;
+        // userKey 생성
+        String userKey;
+
         try {
-            userKey = apiClient.searchUserKey(session.getEmail()).getUserKey();
-        } catch (Exception e) {
-            // 사용자를 찾을 수 없는 경우 null로 설정하고 계속 진행
-            log.info("FinOpenAPI에서 사용자를 찾을 수 없음: {}", session.getEmail());
-            userKey = null;
+            SearchUserKeyResponseDto searchUserKeyResponse = apiClient.searchUserKey(session.getEmail());
+
+            // userKey 있으면
+            if(searchUserKeyResponse != null
+                    && searchUserKeyResponse.getUserKey() != null
+                    && !searchUserKeyResponse.getUserKey().isEmpty()) {
+
+                userKey = searchUserKeyResponse.getUserKey();
+                log.debug("기존 userKey 사용 : {}", userKey);
+
+            } else {
+                // userKey 생성 (catch 문으로 이동)
+                log.debug("새로운 userKey 생성");
+                throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
+            }
+
+        } catch (CustomException e) {
+            // userKey 생성
+            try {
+                log.debug("FinOpenApi userkey 생성 : {}", session.getEmail());
+                InsertMemberResponseDto member = apiClient.insertMember(session.getEmail());
+                userKey = member.getUserKey();
+                log.debug("userKey 생성 : {}", userKey);
+
+            } catch (CustomException ex) {
+                // 생성 실패
+                log.warn("FinOpenApi Member 생성 실패 : {}", session.getEmail());
+                throw new CustomException(ErrorCode.BAD_REQUEST);
+            }
         }
 
-        // 고객 생성
+        // userKey 가 null 이거나 empty
+        if(userKey == null || userKey.isEmpty()) {
+            log.error("userKey 얻을 수 없음 : {}", session.getEmail());
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        // 점주 생성
         Owner owner = Owner.builder()
                 .providerType(session.getProvider())
                 .providerId(session.getProviderId())
@@ -61,6 +97,22 @@ public class OwnerService {
             owner = ownerRepository.save(owner);
         } catch (DataIntegrityViolationException e){
             // TODO: 예외처리
+            throw e;
+        }
+
+        // 정산용 계좌 생성
+        String accountNo = null;
+
+        try{
+            log.debug("계좌 생성 시도");
+            String role = "OWNER";
+            CreateAccountResponse accountResponse = apiClient.createAccount(userKey, role);
+            accountNo = accountResponse.getRecResponse().getAccountNo();
+            log.debug("계좌 생성 성공 : {}", accountNo);
+
+        } catch (CustomException e) {
+            log.debug("해당 계좌 생성 실패 : {}", accountNo);
+
             throw e;
         }
 

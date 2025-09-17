@@ -25,6 +25,7 @@ public class ExternalApiErrorMapper {
         map.put("H1009", ErrorCode.INVALID_USER_KEY);
         map.put("H1010", ErrorCode.INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE);
         map.put("A1003", ErrorCode.INVALID_ACCOUNT_NUMBER);
+        map.put("E4002", ErrorCode.USER_KEY_ALREADY_EXISTS);
 
         ERROR_CODE_MAP = Collections.unmodifiableMap(map);
     }
