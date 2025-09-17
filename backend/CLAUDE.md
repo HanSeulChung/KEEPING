@@ -58,12 +58,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Package Structure
 ```
 com.ssafy.keeping/
-├── domain/charge/          # Payment domain (DDD approach)
-│   ├── controller/         # REST endpoints
-│   ├── dto/               # Request/Response DTOs + SSAFY API DTOs
-│   ├── entity/            # JPA entities  
-│   ├── repository/        # Data access
-│   └── service/           # Business logic
+├── domain/                # Domain-driven design structure
+│   ├── charge/            # Payment & settlement domain
+│   ├── core/              # Core entities (Customer, Owner, etc.)
+│   ├── customer/          # Customer management
+│   ├── group/             # Group sharing functionality
+│   ├── menu/              # Menu management
+│   ├── menuCategory/      # Menu categorization
+│   ├── notification/      # Real-time SSE notification system
+│   └── store/             # Store management
 ├── global/                # Cross-cutting concerns
 │   ├── exception/         # Centralized error handling
 │   ├── response/          # Standard API response wrapper
@@ -112,6 +115,15 @@ com.ssafy.keeping/
   - Card payment integration with SSAFY Finance API
   - Wallet and point balance management
   - Settlement task creation
+- **Payment Cancellation API**: `GET/POST /api/v1/cancel/**`
+  - Cancel within 3-day window and unused points condition
+  - SSAFY card payment cancellation integration
+  - Settlement task state management (CANCELED)
+- **Real-time Notification System**: `POST /api/notifications/**`
+  - SSE-based live notifications for Customer/Owner
+  - Memory-based EmitterRepository with event caching
+  - Automatic reconnection with Last-Event-ID mechanism
+  - Evolution path: Memory → Redis → Kafka (documented)
 - **Settlement Scheduler**: Automated weekly processing (Monday 07:30 Asia/Seoul)
   - PENDING → LOCKED → COMPLETED state transitions  
   - Store owner fund transfers via account deposit API

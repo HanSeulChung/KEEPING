@@ -120,11 +120,11 @@ public class SettlementScheduler {
             log.info("가게 정산 처리 시작 - 가게: {}, 작업 수: {}", store.getStoreName(), tasks.size());
             
             // 1. 정산 금액 계산
-            BigDecimal totalAmount = tasks.stream()
-                    .map(task -> task.getTransaction().getAmount())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            Long totalAmount = tasks.stream()
+                    .map(task -> task.getTransaction().getAmount()) // 반환 타입이 Long이라고 가정
+                    .reduce(0L, Long::sum);
             
-            if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (totalAmount <= 0) {
                 log.warn("정산 금액이 0 이하입니다. 가게: {}, 금액: {}", store.getStoreName(), totalAmount);
                 return;
             }
