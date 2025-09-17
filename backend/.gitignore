@@ -51,3 +51,6 @@ src/main/generated/
 /src/docs/notification_kafka.md
 /src/docs/notification_nothing.md
 /src/docs/notification_redis.md
+/src/CLAUD.md
+/src/data_erd.md
+/src/main/resources/firebase/keeping-6130e-firebase-adminsdk-fbsvc-96f9066c42.json
