@@ -8,7 +8,6 @@ export default function StoreRegisterForm({ onBack }: { onBack: () => void }) {
     category,
     address,
     description,
-    accountNumber,
     storeImgUrl,
     setRegister,
     resetRegister,
@@ -22,9 +21,6 @@ export default function StoreRegisterForm({ onBack }: { onBack: () => void }) {
     if (!category) newErrors.category = '업종은 필수입니다.'
     if (!address) newErrors.address = '주소는 필수입니다.'
     if (!description) newErrors.description = '매장 소개는 필수입니다.'
-    if (!accountNumber) newErrors.accountNumber = '정산 계좌는 필수입니다.'
-    setErrors(newErrors)
-
     if (Object.keys(newErrors).length > 0) return
 
     const body = useOwnerRegisterStore.getState()
@@ -80,17 +76,6 @@ export default function StoreRegisterForm({ onBack }: { onBack: () => void }) {
       />
       {errors.description && (
         <p className="text-sm text-red-500">{errors.description}</p>
-      )}
-
-      <input
-        type="text"
-        placeholder="정산 계좌번호"
-        value={accountNumber}
-        onChange={e => setRegister({ accountNumber: e.target.value })}
-        className={`rounded border p-2 ${errors.accountNumber ? 'border-red-500' : ''}`}
-      />
-      {errors.accountNumber && (
-        <p className="text-sm text-red-500">{errors.accountNumber}</p>
       )}
 
       <div className="mt-4 flex justify-between">
