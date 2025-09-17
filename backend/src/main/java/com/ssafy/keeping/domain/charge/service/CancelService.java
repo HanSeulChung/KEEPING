@@ -8,12 +8,13 @@ import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
-import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -144,8 +145,8 @@ public class CancelService {
                 .wallet(originalTransaction.getWallet())
                 .customer(originalTransaction.getCustomer())
                 .store(originalTransaction.getStore())
-                .transactionType(Transaction.TransactionType.CANCEL)
-                .amount(originalTransaction.getAmount().negate()) // 음수로 저장
+                .transactionType(TransactionType.CANCEL_CHARGE)
+                .amount(-originalTransaction.getAmount()) // 음수로 저장
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo()) // 동일한 거래번호
                 .build();
 

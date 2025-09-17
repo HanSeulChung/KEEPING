@@ -52,7 +52,7 @@ public class SsafyFinanceApiService {
             String cardNo,
             String cvc,
             String merchantId,
-            BigDecimal paymentBalance) {
+            long paymentBalance) {
         
         // API 헤더 생성
         SsafyApiHeaderDto header = createCardPaymentHeader(userKey);
@@ -124,7 +124,7 @@ public class SsafyFinanceApiService {
     public SsafyAccountDepositResponseDto requestAccountDeposit(
             String userKey,
             String accountNo,
-            BigDecimal transactionBalance,
+            Long transactionBalance,
             String transactionSummary) {
         
         // API 헤더 생성

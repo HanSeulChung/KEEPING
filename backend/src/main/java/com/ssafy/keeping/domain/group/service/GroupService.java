@@ -2,8 +2,8 @@ package com.ssafy.keeping.domain.group.service;
 
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.wallet.dto.WalletResponseDto;
-import com.ssafy.keeping.domain.core.wallet.service.WalletServiceHS;
+import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import com.ssafy.keeping.domain.group.dto.*;
 import com.ssafy.keeping.domain.group.model.Group;
@@ -65,10 +65,10 @@ public class GroupService {
                 GroupMember.builder()
                         .group(saved)
                         .user(customer)
-                        .isLeader(true)
+                        .leader(true)
                         .build()
         );
-        
+
         // 해당 모임의 지갑 생성 로직 추가
         WalletResponseDto responseDto = walletService.createGroupWallet(saved);
 
@@ -87,10 +87,12 @@ public class GroupService {
         if (!isGroupMember)
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
+        WalletResponseDto groupWallet = walletService.getGroupWallet(group);
+
         return new GroupResponseDto(
                 group.getGroupId(), group.getGroupName(),
                 group.getGroupDescription(), group.getGroupCode(),
-                group.getGroupId() // TODO: 지갑 ID로 교체
+                groupWallet.walletId()
         );
     }
 
@@ -179,7 +181,7 @@ public class GroupService {
             groupMemberRepository.save(
                     GroupMember.builder()
                             .group(group)
-                            .isLeader(false)
+                            .leader(false)
                             .user(customer)
                             .build()
             );
@@ -197,11 +199,13 @@ public class GroupService {
         boolean isGroupMember = groupMemberRepository
                 .existsMember(groupId, userId);
 
+        WalletResponseDto groupWallet = walletService.getGroupWallet(group);
+
         if (isGroupMember) {
             return new GroupResponseDto(
                     group.getGroupId(), group.getGroupName(),
                     group.getGroupDescription(), group.getGroupCode(),
-                    group.getGroupId());// TODO: 지갑 ID로 교체
+                    groupWallet.walletId());
         }
 
         /* TODO: 복사해서 줄때 복사 날짜 시간을 접미사로 얹어서 주면,
@@ -216,7 +220,7 @@ public class GroupService {
         groupMemberRepository.save(
                 GroupMember.builder()
                         .group(group)
-                        .isLeader(false)
+                        .leader(false)
                         .user(user)
                         .build()
         );

@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentIntentController {
 
-    private final PaymentIntentService service;
+    private final PaymentIntentService paymentIntentService;
 
     /**
      * 점원/점주가 손님 QR을 스캔하고 결제 의도를 생성
@@ -34,7 +34,7 @@ public class PaymentIntentController {
             @AuthenticationPrincipal(expression = "id") Long ownerId,
             @Valid @RequestBody PaymentInitiateRequest body
     ) {
-        IdempotentResult<PaymentIntentDetailResponse> res = service.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);
+        IdempotentResult<PaymentIntentDetailResponse> res = paymentIntentService.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);
         return ResponseEntity
                 .status(res.getHttpStatus())
                 .body(ApiResponse.success(
@@ -51,7 +51,7 @@ public class PaymentIntentController {
     public ResponseEntity<ApiResponse<PaymentIntentDetailResponse>> getDetail(
             @PathVariable UUID intentPublicId
     ) {
-        PaymentIntentDetailResponse res = service.getDetail(intentPublicId);
+        PaymentIntentDetailResponse res = paymentIntentService.getDetail(intentPublicId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("OK", HttpStatus.OK.value(), res));

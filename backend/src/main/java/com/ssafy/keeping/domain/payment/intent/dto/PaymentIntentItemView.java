@@ -18,12 +18,12 @@ public class PaymentIntentItemView {
     private String name;
 
     @Schema(description = "스냅샷 단가(원)", example = "6000")
-    private long unitPrice;
+    private Long unitPrice;
 
     @Schema(description = "수량", example = "2")
     private int quantity;
 
     @Schema(description = "합계(원)", example = "12000")
-    private long lineTotal;
+    private Long lineTotal;
 
 }

@@ -28,7 +28,7 @@ public class PaymentIntentDetailResponse {
     private Long customerId;
 
     @Schema(description = "총 결제 요청 금액(원)", example = "12000")
-    private long amount;
+    private Long amount;
 
     @Schema(description = "상태", example = "PENDING")
     private PaymentStatus status;

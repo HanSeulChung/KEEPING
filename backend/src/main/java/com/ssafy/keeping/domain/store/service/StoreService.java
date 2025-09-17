@@ -33,7 +33,7 @@ public class StoreService {
         String taxId = requestDto.getTaxId();
         String address = requestDto.getAddress();
 
-        boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
+        boolean exists = storeRepository.existsByTaxIdNumberAndAddress(taxId, address);
         if (exists) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
@@ -43,7 +43,7 @@ public class StoreService {
         return StoreResponseDto.fromEntity(
                 storeRepository.save(
                         Store.builder()
-                                .taxId(requestDto.getTaxId())
+                                .taxIdNumber(requestDto.getTaxId())
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
@@ -74,10 +74,10 @@ public class StoreService {
             throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
         }
 
-        String taxId = store.getTaxId();
+        String taxId = store.getTaxIdNumber();
         String address = requestDto.getAddress();
 
-        boolean exists = storeRepository.existsByTaxIdAndAddress(taxId, address);
+        boolean exists = storeRepository.existsByTaxIdNumberAndAddress(taxId, address);
         if (exists) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
