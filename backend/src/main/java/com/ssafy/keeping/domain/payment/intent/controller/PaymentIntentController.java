@@ -31,7 +31,7 @@ public class PaymentIntentController {
             @PathVariable UUID qrTokenId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKeyHeader,
             // @AuthenticationPrincipal Owner owner,
-            @AuthenticationPrincipal(expression = "id") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @Valid @RequestBody PaymentInitiateRequest body
     ) {
         IdempotentResult<PaymentIntentDetailResponse> res = paymentIntentService.initiate(qrTokenId, idempotencyKeyHeader, ownerId, body);

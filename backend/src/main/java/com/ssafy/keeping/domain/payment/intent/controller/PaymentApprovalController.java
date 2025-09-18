@@ -28,7 +28,7 @@ public class PaymentApprovalController {
     public ResponseEntity<ApiResponse<PaymentIntentDetailResponse>> approve(
             @PathVariable("intentId")UUID intentId,
             @RequestHeader("Idempotency-Key") String idemKey,
-            @AuthenticationPrincipal(expression = "id") Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @Valid @RequestBody ApproveRequest body
     ) {
 
