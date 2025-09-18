@@ -37,18 +37,4 @@ public class NotificationResponseDto {
                 .createdAt(notification.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                 .build();
     }
-
-    // SSE 이벤트용 간단한 생성자
-    public static NotificationResponseDto forSSE(String content, String url, NotificationType type, 
-                                                String receiverType, Long receiverId) {
-        return NotificationResponseDto.builder()
-                .content(content)
-                .url(url)
-                .isRead(false)
-                .notificationType(type)
-                .receiverType(receiverType)
-                .receiverId(receiverId)
-                .createdAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                .build();
-    }
 }

@@ -1,8 +1,9 @@
 package com.ssafy.keeping.domain.otp.session;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.Gender;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.otp.dto.OtpRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,9 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RegSession {
+    private UserRole userRole;
     private String regSessionId;
     private String providerId;
     private AuthProvider provider;

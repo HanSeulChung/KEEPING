@@ -6,14 +6,14 @@ import com.ssafy.keeping.domain.auth.security.JwtProvider;
 import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterRequest;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
-import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
-import com.ssafy.keeping.domain.customer.service.CustomerService;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterRequest;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
-import com.ssafy.keeping.domain.owner.dto.SignupOwnerResponse;
-import com.ssafy.keeping.domain.owner.service.OwnerService;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.user.customer.dto.SignupCustomerResponse;
+import com.ssafy.keeping.domain.user.customer.service.CustomerService;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterRequest;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
+import com.ssafy.keeping.domain.user.owner.service.OwnerService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")

@@ -1,12 +1,12 @@
 package com.ssafy.keeping.domain.wallet.service;
 
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
 import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.group.model.Group;
 import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;

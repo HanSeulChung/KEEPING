@@ -126,10 +126,26 @@ public enum ErrorCode {
     // 자금/한도 관련
     FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
     PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다."),
+
     FUNDS_INVARIANT_VIOLATION(HttpStatus.INTERNAL_SERVER_ERROR, "자금 불변식 위반: 잔액표와 로트 합계가 일치하지 않습니다."),
 
     // lot 관련
-    WALLET_LOT_MOVE_DELTA_ZERO(HttpStatus.BAD_REQUEST, "로트 증감 delta는 0일 수 없습니다.");
+    WALLET_LOT_MOVE_DELTA_ZERO(HttpStatus.BAD_REQUEST, "로트 증감 delta는 0일 수 없습니다."),
+
+    // 외부 API 관련 에러
+    INVALID_HEADER(HttpStatus.BAD_REQUEST, "요청 헤더가 유효하지 않습니다"),
+    INVALID_API_ITEM(HttpStatus.BAD_REQUEST, "API 항목이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_DATE(HttpStatus.BAD_REQUEST, "전송일자 형식이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_TIME(HttpStatus.BAD_REQUEST, "전송시각 형식이 유효하지 않습니다"),
+    INVALID_INSTITUTION_CODE(HttpStatus.BAD_REQUEST, "기관코드가 유효하지 않습니다"),
+    INVALID_FINTECHAPP_NUMBER(HttpStatus.BAD_REQUEST, "핀테크 앱 일련번호가 유효하지 않습니다"),
+    INVALID_SERVICE_CODE(HttpStatus.BAD_REQUEST, "API 서비스코드가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER(HttpStatus.BAD_REQUEST, "기관거래고유번호가 중복됩니다"),
+    INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "API KEY가 유효하지 않습니다"),
+    INVALID_USER_KEY(HttpStatus.UNAUTHORIZED, "USER KEY가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "기관거래고유번호가 유효하지 않습니다"),
+    INVALID_ACCOUNT_NUMBER(HttpStatus.BAD_REQUEST, "계좌번호가 유효하지 않습니다"),
+    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
