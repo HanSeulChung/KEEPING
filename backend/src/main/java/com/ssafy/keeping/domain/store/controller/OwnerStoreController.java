@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.store.controller;
 
 import com.ssafy.keeping.domain.store.dto.StoreEditRequestDto;
+import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.service.StoreService;
@@ -54,5 +55,13 @@ public class OwnerStoreController {
     ) {
         return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(),
                 storeService.deleteStore(storeId, ownerId)));
+    }
+
+    // TODO: 가게 주인 자신이 볼 수 있는 전체 정보(민감정보 마스킹 or 마스킹 X)
+    @GetMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StorePublicDto>> getStore(
+            @PathVariable Long storeId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("해당 store id로 매장이 조회되었습니다.", HttpStatus.OK.value(), storeService.getStoreByStoreId(storeId)));
     }
 }
