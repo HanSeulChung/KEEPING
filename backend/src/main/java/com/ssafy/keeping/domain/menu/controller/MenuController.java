@@ -20,47 +20,11 @@ import java.util.List;
 public class MenuController {
     private final MenuService menuService;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<MenuResponseDto>> createMenus(
-            @PathVariable Long storeId,
-            @Valid @ModelAttribute MenuRequestDto requestDto
-    ) {
-        MenuResponseDto dto = menuService.createMenu(storeId, requestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴가 등록되었습니다", HttpStatus.CREATED.value(), dto));
-    }
-
-    @PatchMapping(value="/{menusId}" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<MenuResponseDto>> editMenus(
-            @PathVariable Long menusId,
-            @PathVariable Long storeId,
-            @Valid @ModelAttribute MenuEditRequestDto requestDto
-    ) {
-        MenuResponseDto dto = menuService.editMenu(storeId, menusId, requestDto);
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 수정되었습니다", HttpStatus.OK.value(), dto));
-    }
-
     @GetMapping()
     public ResponseEntity<ApiResponse<List<MenuResponseDto>>> getAllMenus(
             @PathVariable Long storeId
     ) {
         List<MenuResponseDto> dtos = menuService.getAllMenus(storeId);
         return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 조회되었습니다", HttpStatus.OK.value(), dtos));
-    }
-
-    @DeleteMapping("/{menusId}")
-    public ResponseEntity<ApiResponse<Void>> deleteMenu(
-            @PathVariable Long storeId,
-            @PathVariable Long menusId
-    ) {
-        menuService.deleteMenu(storeId, menusId);
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 삭제 되었습니다", HttpStatus.OK.value(), null));
-    }
-
-    @DeleteMapping()
-    public ResponseEntity<ApiResponse<Void>> deleteMenu(
-            @PathVariable Long storeId
-    ) {
-        menuService.deleteAllMenu(storeId);
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 삭제 되었습니다", HttpStatus.OK.value(), null));
     }
 }
