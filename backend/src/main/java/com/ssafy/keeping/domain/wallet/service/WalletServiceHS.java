@@ -20,6 +20,9 @@ import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
+import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
@@ -28,6 +31,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -233,5 +238,49 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
             throw new CustomException(ErrorCode.BAD_REQUEST);
         if (!groupMemberRepository.existsMember(groupId, userId))
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+    }
+
+    @Transactional(readOnly = true)
+    public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        Page<WalletStoreBalanceDetailDto> storeBalances =
+                balanceRepository.findPersonalWalletBalancesByCustomerId(customerId, pageable);
+
+        return new PersonalWalletBalanceResponseDto(
+                customerId,
+                personalWallet.getWalletId(),
+                storeBalances
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+
+        Wallet groupWallet = walletRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        Page<WalletStoreBalanceDetailDto> storeBalances =
+                balanceRepository.findGroupWalletBalancesByGroupId(groupId, pageable);
+
+        return new GroupWalletBalanceResponseDto(
+                groupId,
+                groupWallet.getWalletId(),
+                group.getGroupName(),
+                storeBalances
+        );
     }
 }

@@ -3,6 +3,8 @@ package com.ssafy.keeping.domain.wallet.controller;
 import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
 import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -10,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/wallets")
@@ -38,6 +42,29 @@ public class WalletController {
     ){
         PointShareResponseDto dto = walletService.sharePoints(groupId, userId, storeId, req);
         return ResponseEntity.ok(ApiResponse.success("모임 지갑에 포인트 공유에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    @GetMapping("/individual/{customerId}/balance")
+    public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        PersonalWalletBalanceResponseDto dto = walletService.getPersonalWalletBalance(customerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("개인 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    @GetMapping("/groups/{groupId}/{customerId}/balance")
+    public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
+            @PathVariable Long groupId,
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        GroupWalletBalanceResponseDto dto = walletService.getGroupWalletBalance(groupId, customerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("모임 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
 }

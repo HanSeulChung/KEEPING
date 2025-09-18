@@ -12,6 +12,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreBalance, Long> {
@@ -60,4 +62,48 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
                AND balance >= :amount
             """, nativeQuery = true)
     int decrementIfEnough(@Param("walletId") Long walletId, @Param("storeId") Long storeId, @Param("amount") Long amount);
+
+    @Query("""
+        select new com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto(
+            s.storeId,
+            s.storeName,
+            coalesce(sum(case when t.transactionType = 'CHARGE' then t.amount else 0 end), 0),
+            wsb.balance,
+            wsb.updatedAt
+        )
+        from WalletStoreBalance wsb
+        join fetch wsb.store s
+        join fetch wsb.wallet w
+        left join Transaction t on t.wallet = w and t.store = s
+        where w.customer.customerId = :customerId
+        and w.walletType = 'INDIVIDUAL'
+        and wsb.balance >= 0
+        group by s.storeId, s.storeName, wsb.balance, wsb.updatedAt
+        order by wsb.updatedAt desc
+        """)
+    Page<com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto> findPersonalWalletBalancesByCustomerId(
+            @Param("customerId") Long customerId,
+            Pageable pageable);
+
+    @Query("""
+        select new com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto(
+            s.storeId,
+            s.storeName,
+            coalesce(sum(case when t.transactionType = 'TRANSFER_IN' then t.amount else 0 end), 0),
+            wsb.balance,
+            wsb.updatedAt
+        )
+        from WalletStoreBalance wsb
+        join fetch wsb.store s
+        join fetch wsb.wallet w
+        left join Transaction t on t.wallet = w and t.store = s
+        where w.group.groupId = :groupId
+        and w.walletType = 'GROUP'
+        and wsb.balance >= 0
+        group by s.storeId, s.storeName, wsb.balance, wsb.updatedAt
+        order by wsb.updatedAt desc
+        """)
+    Page<com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto> findGroupWalletBalancesByGroupId(
+            @Param("groupId") Long groupId,
+            Pageable pageable);
 }
