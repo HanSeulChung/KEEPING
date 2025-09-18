@@ -213,7 +213,6 @@ public class NotificationService {
             Map<String, String> fcmData = Map.of(
                 "notificationId", data.getNotificationId().toString(),
                 "type", data.getNotificationType() != null ? data.getNotificationType().toString() : "UNKNOWN",
-                "url", data.getUrl() != null ? data.getUrl() : "",
                 "createdAt", data.getCreatedAt().toString()
             );
             
