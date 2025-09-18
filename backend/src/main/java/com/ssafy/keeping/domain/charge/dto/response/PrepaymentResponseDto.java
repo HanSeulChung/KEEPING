@@ -16,6 +16,9 @@ public class PrepaymentResponseDto {
     private Long storeId;
     private String storeName;
     private Long paymentAmount;
+    private Integer bonusPercentage;
+    private Long bonusAmount;
+    private Long totalPoints;
     private LocalDateTime transactionTime;
     private Long remainingBalance;
 }

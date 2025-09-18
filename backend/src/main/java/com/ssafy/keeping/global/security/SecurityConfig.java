@@ -44,13 +44,17 @@ public class SecurityConfig {
             "/favicon.ico",
             "/.well-known/**",
             "/s3/**"
+            "/owners/stores/**",
+            "/api/v1/stores/**"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
             "/stores/**",
             "/api/**",
             "/api/v1/stores/**",
-            "/wallets/**"
+            "/wallets/**",
+            "/owners/*/stores/*/charge-bonus",
+            "/owners/*/stores/*/charge-bonus/*"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
