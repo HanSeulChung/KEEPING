@@ -3,6 +3,9 @@ package com.ssafy.keeping.domain.user.customer.repository;
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -29,4 +32,11 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByPhoneNumberAndDeletedAtIsNull(String phoneNumber);
 
     Optional<Customer> findByPhoneNumberAndDeletedAtIsNotNullOrderByDeletedAtDesc(String phoneNumber);
+
+    @Modifying
+    @Query("UPDATE Customer c SET c.imgUrl = :imgUrl WHERE c.customerId = :customerId")
+    int updateImageUrl(@Param("customerId") Long customerId, @Param("imgUrl") String imgUrl);
+
+    @Query("SELECT c.imgUrl FROM Customer c WHERE c.customerId = :customerId")
+    Optional<String> findImageUrlByCustomerId(@Param("customerId") Long customerId);
 }

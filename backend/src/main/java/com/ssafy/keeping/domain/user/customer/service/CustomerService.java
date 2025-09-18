@@ -9,6 +9,7 @@ import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.user.finopenapi.dto.*;
+import com.ssafy.keeping.domain.user.service.ImageService;
 import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
@@ -21,6 +22,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 @Service
@@ -33,6 +37,7 @@ public class CustomerService {
     private final FinOpenApiClient apiClient;
     private final PinAuthService pinAuthService;
     private final WalletRepository walletRepository;
+    private final ImageService imageService;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -159,6 +164,29 @@ public class CustomerService {
         return CustomerRegisterResponse.register(customer);
     }
 
+    public Customer validCustomer(Long customerId) {
+        return customerRepository.findByCustomerIdAndDeletedAtIsNull(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 
+    // 프로필 이미지 변경
+    public void uploadProfileImage(Long customerId, MultipartFile newImage) {
+        String oldImgUrl = customerRepository.findImageUrlByCustomerId(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
+
+        // 이미지 삭제
+        imageService.deleteFileFromS3(oldImgUrl);
+
+        // 변경
+        try {
+            String newImgUrl = imageService.updateProfileImage(newImage);
+            customerRepository.updateImageUrl(customerId, newImgUrl);
+
+            log.info("사용자 {} 프로필 이미지 업데이트: {}", customerId, newImgUrl);
+
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+    }
 
 }
