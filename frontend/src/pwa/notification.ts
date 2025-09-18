@@ -9,46 +9,48 @@ export interface NotificationData {
   data?: any
 }
 
-export const requestPushSubscription = async (): Promise<PushSubscription | null> => {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return null
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.ready
-    
-    if (!('PushManager' in window)) {
-      console.log('Push messaging is not supported')
+export const requestPushSubscription =
+  async (): Promise<PushSubscription | null> => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       return null
     }
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    })
+    try {
+      const registration = await navigator.serviceWorker.ready
 
-    console.log('Push subscription created:', subscription)
-    return subscription
-  } catch (error) {
-    console.error('Push subscription failed:', error)
-    return null
-  }
-}
+      if (!('PushManager' in window)) {
+        console.log('Push messaging is not supported')
+        return null
+      }
 
-export const getPushSubscription = async (): Promise<PushSubscription | null> => {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return null
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      })
+
+      console.log('Push subscription created:', subscription)
+      return subscription
+    } catch (error) {
+      console.error('Push subscription failed:', error)
+      return null
+    }
   }
 
-  try {
-    const registration = await navigator.serviceWorker.ready
-    const subscription = await registration.pushManager.getSubscription()
-    return subscription
-  } catch (error) {
-    console.error('Failed to get push subscription:', error)
-    return null
+export const getPushSubscription =
+  async (): Promise<PushSubscription | null> => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return null
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+      return subscription
+    } catch (error) {
+      console.error('Failed to get push subscription:', error)
+      return null
+    }
   }
-}
 
 export const unsubscribePush = async (): Promise<boolean> => {
   try {
@@ -65,7 +67,9 @@ export const unsubscribePush = async (): Promise<boolean> => {
   }
 }
 
-export const sendPushNotification = async (data: NotificationData): Promise<void> => {
+export const sendPushNotification = async (
+  data: NotificationData
+): Promise<void> => {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return
   }
@@ -81,7 +85,6 @@ export const sendPushNotification = async (data: NotificationData): Promise<void
     badge: data.badge || '/icons/qr.png',
     tag: data.tag,
     data: data.data,
-    vibrate: [100, 50, 100],
     requireInteraction: false,
     silent: false,
   }
