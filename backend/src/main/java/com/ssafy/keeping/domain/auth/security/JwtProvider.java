@@ -22,7 +22,8 @@ public class JwtProvider {
 
     private Key key;
 
-    private final long ACCESS_TOKEN_EXP = 1000L * 60 * 15;       // 15분
+//    private final long ACCESS_TOKEN_EXP = 1000L * 60 * 15;       // 15분
+    private final long ACCESS_TOKEN_EXP =1000L * 60 * 60 * 24 * 7;;
     private final long REFRESH_TOKEN_EXP = 1000L * 60 * 60 * 24 * 7; // 7일
 
     @PostConstruct

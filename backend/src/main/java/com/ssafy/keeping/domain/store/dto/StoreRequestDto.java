@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class StoreRequestDto {
     @NotBlank
     @Pattern(regexp = "^[0-9]{3}-[0-9]{2}-[0-9]{5}$", message = "사업자 등록번호 형식은 XXX-XX-XXXXX 여야 합니다.")
-    private String taxId;
+    private String taxIdNumber;
     @NotBlank
     private String storeName;
     @NotBlank

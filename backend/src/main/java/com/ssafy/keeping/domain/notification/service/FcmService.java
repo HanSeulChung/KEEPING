@@ -1,7 +1,6 @@
 package com.ssafy.keeping.domain.notification.service;
 
 import com.google.firebase.messaging.*;
-
 import com.ssafy.keeping.domain.notification.entity.FcmToken;
 import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.domain.notification.repository.FcmTokenRepository;

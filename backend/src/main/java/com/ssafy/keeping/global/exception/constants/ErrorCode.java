@@ -15,6 +15,7 @@ public enum ErrorCode {
     STORE_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록한 주소의 가게입니다. 다시 확인해주세요."),
     STORE_INVALID(HttpStatus.BAD_REQUEST, "해당 매장의 운영상태를 확인해주세요."),
     STORE_NOT_MATCH(HttpStatus.BAD_REQUEST, "두 가게가 맞지 않습니다."),
+    OWNER_NOT_MATCH(HttpStatus.BAD_REQUEST, "가게 주인과 가게가 맞지 않습니다."),
 
     // MenuCategory 관련
     MENU_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
