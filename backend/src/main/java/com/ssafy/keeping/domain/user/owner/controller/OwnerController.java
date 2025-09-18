@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.user.owner.controller;
 
 import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
+import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMerchantResponse;
 import com.ssafy.keeping.domain.user.owner.service.OwnerService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,13 @@ public class OwnerController {
 
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("성공적 변경", HttpStatus.OK.value(),response));
 
+    }
+
+    // test
+    @PostMapping("/test")
+    public ResponseEntity<ApiResponse<InsertMerchantResponse>> test(@RequestParam("merchantName") String merchantName) {
+        InsertMerchantResponse response = ownerService.insertMerchant(merchantName);
+
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("성공", HttpStatus.OK.value(), response));
     }
 }
