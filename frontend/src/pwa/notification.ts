@@ -1,4 +1,5 @@
 // 푸시 알림 관련 함수들
+const isProd = process.env.NODE_ENV === 'production'
 
 export interface NotificationData {
   title: string
@@ -11,6 +12,7 @@ export interface NotificationData {
 
 export const requestPushSubscription =
   async (): Promise<PushSubscription | null> => {
+    if (!isProd) return null
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       return null
     }
@@ -38,6 +40,7 @@ export const requestPushSubscription =
 
 export const getPushSubscription =
   async (): Promise<PushSubscription | null> => {
+    if (!isProd) return null
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       return null
     }
@@ -53,6 +56,7 @@ export const getPushSubscription =
   }
 
 export const unsubscribePush = async (): Promise<boolean> => {
+  if (!isProd) return true
   try {
     const subscription = await getPushSubscription()
     if (subscription) {
@@ -70,6 +74,7 @@ export const unsubscribePush = async (): Promise<boolean> => {
 export const sendPushNotification = async (
   data: NotificationData
 ): Promise<void> => {
+  if (!isProd) return
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return
   }
@@ -96,6 +101,7 @@ export const sendPushToServer = async (
   subscription: PushSubscription,
   data: NotificationData
 ): Promise<Response | null> => {
+  if (!isProd) return null
   try {
     const response = await fetch('/api/push/send', {
       method: 'POST',
@@ -123,6 +129,7 @@ export const registerPushSubscription = async (
   subscription: PushSubscription,
   userId?: string
 ): Promise<Response | null> => {
+  if (!isProd) return null
   try {
     const response = await fetch('/api/push/register', {
       method: 'POST',
