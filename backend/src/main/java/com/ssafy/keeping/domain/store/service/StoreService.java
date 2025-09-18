@@ -10,10 +10,13 @@ import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.Objects;
 public class StoreService {
     private final StoreRepository storeRepository;
     private final OwnerRepository ownerRepository;
+    private final WalletStoreBalanceRepository balanceRepository;
 
     /*
      * ==================================
@@ -69,18 +73,19 @@ public class StoreService {
         return "random_img_url";
     }
 
-    public StoreResponseDto editStore(Long storeId, StoreEditRequestDto requestDto) {
+    @Transactional
+    public StoreResponseDto editStore(Long storeId, Long ownerId, StoreEditRequestDto requestDto) {
         // TODO: 이미지 파일은 추후, principal 체크 추후
-        String editImgUrl = makeImgUrl(requestDto.getImgFile());
-
-        Store store = storeRepository.findById(storeId).orElseThrow(
-                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
-        );
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
 
         if (!Objects.equals(store.getStoreStatus(), StoreStatus.ACTIVE)) {
             throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
         }
 
+        String editImgUrl = makeImgUrl(requestDto.getImgFile());
         String taxId = store.getTaxIdNumber();
         String address = requestDto.getAddress();
 
@@ -96,16 +101,19 @@ public class StoreService {
         );
     }
 
-    public StoreResponseDto deleteStore(Long storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(
-                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
-        );
+    @Transactional
+    public StoreResponseDto deleteStore(Long storeId, Long ownerId) {
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
 
-        StoreStatus storeStatus = StoreStatus.DELETED;
-        // TODO: wallet_store_balance 에서 남아있는게 없어야 완전히 DELETE STATUS가 됨.
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
 
+        boolean hasPositive = balanceRepository
+                .existsPositiveBalanceForStoreWithLock(storeId); // 아래 쿼리 참조
 
-        store.deleteStore(storeStatus);
+        StoreStatus status = hasPositive ? StoreStatus.SUSPENDED : StoreStatus.DELETED;
+        store.deleteStore(status);
 
         return StoreResponseDto.fromEntity(
                 storeRepository.save(store)
@@ -134,11 +142,22 @@ public class StoreService {
             // 이름이 비어있으면 전체 조회
             return storeRepository.findPublicAllApprovedStore(StoreStatus.ACTIVE);
         }
-        name = name.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+        name = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
 
         List<StorePublicDto> similarityByNameStoreDto
                 = storeRepository.findPublicAllSimilarityByName(name, StoreStatus.ACTIVE);
 
         return similarityByNameStoreDto;
+    }
+
+    private Owner validOwner(Long ownerId) {
+        return ownerRepository.findById(ownerId).orElseThrow(
+                () -> new CustomException(ErrorCode.OWNER_NOT_FOUND)
+        );
+    }
+    private Store validStore(Long storeId) {
+        return storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
     }
 }

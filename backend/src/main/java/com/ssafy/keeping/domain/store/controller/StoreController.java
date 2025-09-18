@@ -41,23 +41,26 @@ public class StoreController {
     /*
      * 가게 주인이 사용하는 api - 가게 수정 patch
      * */
-    @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(value="/{storeId}/{ownerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> editStore(
+            @PathVariable Long ownerId,
             @PathVariable Long storeId,
             @Valid @ModelAttribute StoreEditRequestDto requestDto
     ) {
-        StoreResponseDto dto = storeService.editStore(storeId, requestDto);
+        StoreResponseDto dto = storeService.editStore(storeId, ownerId, requestDto);
         return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK.value(), dto));
     }
 
     /*
      * 가게 주인이 사용하는 api - 가게 삭제 delete
      * */
-    @DeleteMapping("/{storeId}")
+    @DeleteMapping("/{storeId}/{ownerId}")
     public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
+            @PathVariable Long ownerId,
             @PathVariable Long storeId
     ) {
-        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(), storeService.deleteStore(storeId)));
+        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(),
+                storeService.deleteStore(storeId, ownerId)));
     }
     /* =================================
      * 일반 고객이 가게 조회하는 api
