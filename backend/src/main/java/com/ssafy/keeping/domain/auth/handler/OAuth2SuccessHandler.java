@@ -6,13 +6,11 @@ import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
-import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -47,8 +45,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         // role 복원
         UserRole role = authService.extractRoleFromState(request);
         System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
-        
-        // role이 null인 경우 처리
+
         // role이 null인 경우 처리
         if (role == null) {
             System.out.println("[OAUTH] Role is null - redirecting to role selection");
