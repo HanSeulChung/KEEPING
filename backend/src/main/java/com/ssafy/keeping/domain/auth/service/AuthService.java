@@ -120,10 +120,7 @@ public class AuthService {
         if(otpValue != null) {
             try {
                 regSession = om.readValue(otpValue, RegSession.class);
-                System.out.println("[ATTACH OTP] regSession name: " + regSession.getName());
-                System.out.println("[ATTACH OTP] regSession birth: " + regSession.getBirth());
-                System.out.println("[ATTACH OTP] regSession phone: " + regSession.getPhoneNumber());
-                System.out.println("[ATTACH OTP] regSession regStep: " + regSession.getRegStep());
+
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -134,8 +131,6 @@ public class AuthService {
         String signUpKey = SIGN_UP_INFO_KEY + regSessionId;
         String signUpValue = redis.opsForValue().get(signUpKey);
 
-        System.out.println("[ATTACH OTP] signUpKey: " + signUpKey);
-        System.out.println("[ATTACH OTP] signUpValue before: " + signUpValue);
 
         Map<String, Object> map = new HashMap<>();
 
