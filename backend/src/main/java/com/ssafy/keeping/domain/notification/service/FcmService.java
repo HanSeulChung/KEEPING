@@ -1,13 +1,13 @@
 package com.ssafy.keeping.domain.notification.service;
 
 import com.google.firebase.messaging.*;
+import com.ssafy.keeping.domain.notification.entity.FcmToken;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.repository.FcmTokenRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
-import com.ssafy.keeping.domain.notification.entity.FcmToken;
-import com.ssafy.keeping.domain.notification.entity.NotificationType;
-import com.ssafy.keeping.domain.notification.repository.FcmTokenRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ public class FcmService {
     public void registerCustomerToken(Long customerId, String token) {
         log.info("고객 FCM 토큰 등록 요청 - 고객ID: {}, 토큰: {}", customerId, token.substring(0, 20));
 
-        Customer customer = customerRepository.findById(customerId)
+        Customer customer = customerRepository.findByCustomerIdAndDeletedAtIsNull(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
 
         // 기존 토큰이 있으면 업데이트, 없으면 새로 생성
@@ -61,7 +61,7 @@ public class FcmService {
     public void registerOwnerToken(Long ownerId, String token) {
         log.info("점주 FCM 토큰 등록 요청 - 점주ID: {}, 토큰: {}", ownerId, token.substring(0, 20));
 
-        Owner owner = ownerRepository.findById(ownerId)
+        Owner owner = ownerRepository.findByOwnerIdAndDeletedAtIsNull(ownerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.OWNER_NOT_FOUND));
 
         // 기존 토큰이 있으면 업데이트, 없으면 새로 생성
