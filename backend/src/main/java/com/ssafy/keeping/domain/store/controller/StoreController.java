@@ -32,7 +32,7 @@ public class StoreController {
      * 일반 고객이 가게 조회하는 api
      * ==================================
      * */
-    @GetMapping(params = "!name")
+    @GetMapping(params = {"!name", "!category"})
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
         return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK.value(), storeService.getAllStore()));
     }
