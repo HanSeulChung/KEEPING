@@ -117,8 +117,20 @@ public class CancelService {
             throw new CustomException(ErrorCode.CANCEL_NOT_AVAILABLE);
         }
 
-        log.info("취소 가능 검증 완료 - 거래ID: {}, 금액: {}", 
-                originalTransaction.getTransactionId(), originalTransaction.getAmount());
+        // 3. wallet_store_lot에서 잔여 포인트 확인 (충전된 전체 포인트가 남아있는지)
+        WalletStoreLot lot = walletStoreLotRepository
+                .findByOriginChargeTransaction(originalTransaction)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 충전된 전체 금액(totalPoints)과 현재 잔여 포인트 비교
+        if (!lot.getAmountRemaining().equals(originalTransaction.getAmount())) {
+            log.warn("취소 불가 - 포인트가 이미 사용됨. 총 포인트: {}, 잔여 포인트: {}",
+                    originalTransaction.getAmount(), lot.getAmountRemaining());
+            throw new CustomException(ErrorCode.CANCEL_NOT_AVAILABLE);
+        }
+
+        log.info("취소 가능 검증 완료 - 거래ID: {}, 실제결제금액: {}, 총포인트: {}",
+                originalTransaction.getTransactionId(), settlementTask.getActualPaymentAmount(), originalTransaction.getAmount());
 
         return originalTransaction;
     }
@@ -170,11 +182,11 @@ public class CancelService {
         log.info("WalletStoreBalance 차감 완료 - 차감 금액: {}, 잔여 잔액: {}", 
                 originalTransaction.getAmount(), balance.getBalance());
 
-        // 5. 응답 생성
+        // 5. 응답 생성 (실제 결제금액과 포인트 구분)
         return CancelResponseDto.builder()
                 .cancelTransactionId(cancelTransaction.getTransactionId())
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo())
-                .cancelAmount(originalTransaction.getAmount())
+                .cancelAmount(settlementTask.getActualPaymentAmount()) // 이미 위에서 조회한 settlementTask 사용
                 .cancelTime(LocalDateTime.now())
                 .remainingBalance(balance.getBalance())
                 .build();
@@ -184,12 +196,17 @@ public class CancelService {
      * SettlementTask를 CancelListResponseDto로 변환
      */
     private CancelListResponseDto convertToDto(SettlementTask settlementTask) {
+        // WalletStoreLot에서 잔여 포인트 조회
+        WalletStoreLot lot = walletStoreLotRepository
+                .findByOriginChargeTransaction(settlementTask.getTransaction())
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
         return CancelListResponseDto.builder()
                 .transactionUniqueNo(settlementTask.getTransaction().getTransactionUniqueNo())
                 .storeName(settlementTask.getTransaction().getStore().getStoreName())
-                .paymentAmount(settlementTask.getTransaction().getAmount())
+                .paymentAmount(settlementTask.getActualPaymentAmount()) // 실제 결제금액 사용
                 .transactionTime(settlementTask.getTransaction().getCreatedAt())
-                .remainingBalance(settlementTask.getTransaction().getAmount()) // 미사용이므로 전액
+                .remainingBalance(lot.getAmountRemaining()) // 실제 잔여 포인트 사용
                 .build();
     }
 }
