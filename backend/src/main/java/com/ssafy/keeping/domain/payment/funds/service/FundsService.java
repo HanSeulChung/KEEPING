@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.payment.funds.service;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.menu.model.Menu;
 import com.ssafy.keeping.domain.menu.repository.MenuRepository;
 import com.ssafy.keeping.domain.payment.funds.dto.FundsResult;
