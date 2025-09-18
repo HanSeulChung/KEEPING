@@ -48,7 +48,7 @@ public class StoreService {
                 () -> new CustomException(ErrorCode.OWNER_NOT_FOUND)
         );
 
-        // TODO: 이미지 파일은 추후, principal 체크 추후
+        // TODO: 이미지 파일은 추후
         String imgUrl = makeImgUrl(requestDto.getImgFile());
         return StoreResponseDto.fromEntity(
                 storeRepository.save(
@@ -75,7 +75,6 @@ public class StoreService {
 
     @Transactional
     public StoreResponseDto editStore(Long storeId, Long ownerId, StoreEditRequestDto requestDto) {
-        // TODO: 이미지 파일은 추후, principal 체크 추후
         Owner owner = validOwner(ownerId);
         Store store = validStore(storeId);
         if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))

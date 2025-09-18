@@ -15,8 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -28,10 +31,9 @@ public class StoreController {
     /*
     * 가게 주인이 사용하는 api - 가게 등록 post
     * */
-    // TODO: owner principal로 대체
-    @PostMapping(value="/{ownerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> createStore(
-            @PathVariable Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @Valid @ModelAttribute StoreRequestDto requestDto
     ) {
         StoreResponseDto dto = storeService.createStore(ownerId, requestDto);
@@ -41,9 +43,9 @@ public class StoreController {
     /*
      * 가게 주인이 사용하는 api - 가게 수정 patch
      * */
-    @PatchMapping(value="/{storeId}/{ownerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> editStore(
-            @PathVariable Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable Long storeId,
             @Valid @ModelAttribute StoreEditRequestDto requestDto
     ) {
@@ -54,9 +56,9 @@ public class StoreController {
     /*
      * 가게 주인이 사용하는 api - 가게 삭제 delete
      * */
-    @DeleteMapping("/{storeId}/{ownerId}")
+    @DeleteMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
-            @PathVariable Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable Long storeId
     ) {
         return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(),
