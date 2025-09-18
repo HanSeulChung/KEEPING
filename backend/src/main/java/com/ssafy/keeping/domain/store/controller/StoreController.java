@@ -28,11 +28,13 @@ public class StoreController {
     /*
     * 가게 주인이 사용하는 api - 가게 등록 post
     * */
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // TODO: owner principal로 대체
+    @PostMapping(value="/{ownerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StoreResponseDto>> createStore(
+            @PathVariable Long ownerId,
             @Valid @ModelAttribute StoreRequestDto requestDto
     ) {
-        StoreResponseDto dto = storeService.createStore(requestDto);
+        StoreResponseDto dto = storeService.createStore(ownerId, requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED.value(), dto));
     }
 

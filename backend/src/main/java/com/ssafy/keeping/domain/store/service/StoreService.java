@@ -8,6 +8,8 @@ import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,29 +23,34 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class StoreService {
     private final StoreRepository storeRepository;
-    private final MenuCategoryService menuCategoryService;
+    private final OwnerRepository ownerRepository;
 
     /*
      * ==================================
      * 가게 주인(owner) role api 에서 사용할 service 로직
      * ==================================
      * */
-    public StoreResponseDto createStore(StoreRequestDto requestDto) {
+    public StoreResponseDto createStore(Long ownerId, StoreRequestDto requestDto) {
 
-        String taxId = requestDto.getTaxId();
+        String taxIdNumber = requestDto.getTaxIdNumber();
         String address = requestDto.getAddress();
 
-        boolean exists = storeRepository.existsByTaxIdNumberAndAddress(taxId, address);
+        boolean exists = storeRepository.existsByTaxIdNumberAndAddress(taxIdNumber, address);
         if (exists) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
+
+        Owner owner = ownerRepository.findById(ownerId).orElseThrow(
+                () -> new CustomException(ErrorCode.OWNER_NOT_FOUND)
+        );
 
         // TODO: 이미지 파일은 추후, principal 체크 추후
         String imgUrl = makeImgUrl(requestDto.getImgFile());
         return StoreResponseDto.fromEntity(
                 storeRepository.save(
                         Store.builder()
-                                .taxIdNumber(requestDto.getTaxId())
+                                .owner(owner)
+                                .taxIdNumber(requestDto.getTaxIdNumber())
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
