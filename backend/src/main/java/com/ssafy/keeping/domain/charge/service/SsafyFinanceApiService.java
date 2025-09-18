@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -71,6 +72,17 @@ public class SsafyFinanceApiService {
 
         try {
             response = restTemplate.postForEntity(url, requestEntity, SsafyCardPaymentResponseDto.class);
+        } catch (HttpClientErrorException e) {
+            // 400 에러 - 에러 응답 본문에서 코드 확인
+            String responseBody = e.getResponseBodyAsString();
+
+            if (responseBody.contains("A1054")) {
+                throw new CustomException(ErrorCode.INVALID_CARD_NUMBER);
+            } else if (responseBody.contains("A1055")) {
+                throw new CustomException(ErrorCode.INVALID_CVC);
+            } else {
+                throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
+            }
         } catch (Exception e) {
             log.error("카드 결제 API 통신 오류", e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
