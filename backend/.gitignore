@@ -51,3 +51,6 @@ src/main/generated/
 /src/docs/notification_kafka.md
 /src/docs/notification_nothing.md
 /src/docs/notification_redis.md
+
+### firebase
+/resource/firebase/keeping-firebase-adminsdk.json

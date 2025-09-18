@@ -103,9 +103,8 @@ public class NotificationService {
      * @param customerId 고객 ID
      * @param notificationType 알림 타입
      * @param content 알림 내용
-     * @param url 클릭 시 이동할 URL
      */
-    public void sendToCustomer(Long customerId, NotificationType notificationType, String content, String url) {
+    public void sendToCustomer(Long customerId, NotificationType notificationType, String content) {
         try {
             // 입력 값 검증
             if (customerId == null || notificationType == null || content == null || content.trim().isEmpty()) {
@@ -125,7 +124,6 @@ public class NotificationService {
             Notification notification = Notification.builder()
                     .customer(customer)
                     .content(content)
-                    .url(url != null ? url : "")
                     .notificationType(notificationType)
                     .build();
             
@@ -146,9 +144,8 @@ public class NotificationService {
      * @param ownerId 점주 ID
      * @param notificationType 알림 타입
      * @param content 알림 내용
-     * @param url 클릭 시 이동할 URL
      */
-    public void sendToOwner(Long ownerId, NotificationType notificationType, String content, String url) {
+    public void sendToOwner(Long ownerId, NotificationType notificationType, String content) {
         try {
             // 입력 값 검증
             if (ownerId == null || notificationType == null || content == null || content.trim().isEmpty()) {
@@ -167,7 +164,6 @@ public class NotificationService {
             Notification notification = Notification.builder()
                     .owner(owner)
                     .content(content)
-                    .url(url != null ? url : "")
                     .notificationType(notificationType)
                     .build();
             

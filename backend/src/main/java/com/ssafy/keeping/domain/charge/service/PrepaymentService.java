@@ -236,8 +236,7 @@ public class PrepaymentService {
             notificationService.sendToOwner(
                     ownerId,
                     NotificationType.POINT_CHARGE,
-                    notificationContent,
-                    "/" // 점주가 매출 확인할 수 있는 페이지 (아직 관련 페이지, 로직 없음)
+                    notificationContent
             );
             
             log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}", ownerId, paymentAmount);
