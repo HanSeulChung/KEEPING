@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.idempotency.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
@@ -10,6 +11,7 @@ import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -26,7 +28,9 @@ public class IdempotencyService {
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final Clock clock;
-    private final ObjectMapper om; // response_json 직렬화용
+
+    @Qualifier("canonicalObjectMapper")
+    private final ObjectMapper canonicalObjectMapper;
 
     /**
      * 멱등키 '선점 또는 로드'
@@ -76,12 +80,28 @@ public class IdempotencyService {
         row.setHttpStatus(httpStatus);
         row.setIntentPublicId(resourcePublicId);
         try {
-            String json = om.writeValueAsString(responseBody); // JSON 직렬화
+            String json = canonicalObjectMapper.writeValueAsString(responseBody); // JSON 직렬화
             row.setResponseJson(json);
         } catch (Exception e) {
-            // TODO: 최초 응답이 기록되지 않은 경우... 어떻게 다시 응답을 줄지??
             log.warn("Response 직렬화 실패", e);
         }
+
+        idempotencyKeyRepository.save(row);
+    }
+
+    @Transactional
+    public void completeStrict(IdempotencyKey row,
+                               int httpStatus,
+                               Object responseBody,
+                               UUID resourcePublicId) throws JsonProcessingException {
+        row.setStatus(IdemStatus.DONE);
+        row.setHttpStatus(httpStatus);
+        row.setIntentPublicId(resourcePublicId);
+
+        String json = canonicalObjectMapper.writeValueAsString(responseBody); // throws 가능
+        row.setResponseJson(json);
+
+        idempotencyKeyRepository.save(row);
     }
 
     /**
@@ -96,6 +116,19 @@ public class IdempotencyService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** 폴백 경로: DONE만 기록(스냅샷 없이) → 재시도 시 리소스 재조회로 재생 */
+    @Transactional
+    public void completeWithoutSnapshot(IdempotencyKey row,
+                                        int httpStatus,
+                                        UUID intentPublicId) {
+        row.setStatus(IdemStatus.DONE);
+        row.setHttpStatus(httpStatus);
+        row.setResponseJson(null); // 스냅샷 없음 (직렬화 실패)
+        row.setIntentPublicId(intentPublicId);
+
+        idempotencyKeyRepository.save(row);
     }
 
 }

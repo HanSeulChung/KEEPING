@@ -6,5 +6,4 @@ public enum PaymentStatus {
     DECLINED,     // 손님 거절
     CANCELED,     // 점주/시스템 취소
     EXPIRED,      // 유효시간 만료(연결된 QR 만료/Intent 자체 만료)
-    COMPLETED     // 최종 정산 완료(후속 결제 확정까지 포함 시)
 }

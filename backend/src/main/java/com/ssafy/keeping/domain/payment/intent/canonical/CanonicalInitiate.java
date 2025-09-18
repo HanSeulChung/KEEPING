@@ -5,7 +5,11 @@ import lombok.*;
 
 import java.util.List;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @JsonPropertyOrder({ "storeId", "items" }) // 필드 출력 순서 고정
 public class CanonicalInitiate {
 
