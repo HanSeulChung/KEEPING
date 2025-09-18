@@ -31,6 +31,24 @@ public class MenuService {
     private final OwnerRepository ownerRepository;
     private final MenuCategoryRepository menuCategoryRepository;
 
+    /*
+    * 권한 필요 없는 메서드
+    * */
+    public List<MenuResponseDto> getAllMenus(Long storeId) {
+        storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+
+        return menuRepository.findAllMenusByStoreId(storeId);
+    }
+
+    public List<MenuResponseDto> getAllMenusByCategory(Long categoryId) {
+        return menuRepository.findAllMenusByCategoryId(categoryId);
+    }
+
+    /*
+    * 가게 주인이 조작하는 service (권한 필요)
+    * */
     public MenuResponseDto createMenu(Long ownerId, Long storeId, MenuRequestDto requestDto) {
         Owner owner = validOwner(ownerId);
         Store store = validStore(storeId);
@@ -45,9 +63,12 @@ public class MenuService {
             throw new CustomException(ErrorCode.STORE_NOT_MATCH);
         }
 
+        if (menuRepository.existsDuplicationName(storeId,  requestDto.getMenuName()))
+            throw new CustomException(ErrorCode.DUPLICATE_RESOURCE);
+
         // TODO: 이미지 서버 구축 후 같이 수정
         String imgUrl = StoreService.makeImgUrl(requestDto.getImgFile());
-        int order = menuRepository.nextOrder(storeId, categoryId);
+        int order = menuRepository.nextOrderIncludingDeleted(storeId, categoryId);
         Menu saved = menuRepository.save(
                     Menu.builder()
                             .menuName(requestDto.getMenuName())
@@ -81,7 +102,7 @@ public class MenuService {
             throw new CustomException(ErrorCode.STORE_NOT_MATCH);
 
         boolean changed = !menu.getCategory().getCategoryId().equals(requestDto.getCategoryId());
-        int order = changed ? menuRepository.nextOrder(storeId, requestDto.getCategoryId())
+        int order = changed ? menuRepository.nextOrderIncludingDeleted(storeId, requestDto.getCategoryId())
                 : menu.getDisplayOrder();
         if (changed) menu.changeCategory(category);
 
@@ -101,14 +122,6 @@ public class MenuService {
                 menu.getMenuId(), storeId, menu.getMenuName(),
                 menu.getCategory().getCategoryId(), menu.getCategory().getCategoryName(),
                 menu.getDisplayOrder(), menu.isSoldOut());
-    }
-
-    public List<MenuResponseDto> getAllMenus(Long storeId) {
-        storeRepository.findById(storeId).orElseThrow(
-                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
-        );
-
-        return menuRepository.findAllMenusByStoreId(storeId);
     }
 
     public void deleteMenu(Long ownerId, Long storeId, Long menusId) {
