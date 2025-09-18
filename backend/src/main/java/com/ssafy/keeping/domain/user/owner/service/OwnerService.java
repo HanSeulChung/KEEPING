@@ -59,7 +59,7 @@ public class OwnerService {
                 throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
             }
 
-        } catch (CustomException e) {
+        } catch (Exception e) {
             // userKey 생성
             try {
                 log.debug("FinOpenApi userkey 생성 : {}", session.getEmail());
