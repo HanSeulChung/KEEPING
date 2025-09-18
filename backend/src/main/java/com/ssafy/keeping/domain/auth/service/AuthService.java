@@ -5,17 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.Util.CookieUtil;
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
-import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.user.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
-import com.ssafy.keeping.domain.owner.dto.SignupOwnerResponse;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -151,7 +151,7 @@ public class AuthService {
         map.put("birth", regSession.getBirth());
         map.put("phoneNumber", regSession.getPhoneNumber());
         map.put("regStep", RegStep.PHONE_VERIFIED);
-        map.put("phoneVerfiedAt", regSession.getPhoneVerifiedAt());
+        map.put("phoneVerifiedAt", regSession.getPhoneVerifiedAt());
         map.put("gender", regSession.getGender().name());
 
 

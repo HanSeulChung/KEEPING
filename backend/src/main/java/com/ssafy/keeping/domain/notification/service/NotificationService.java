@@ -1,14 +1,14 @@
 package com.ssafy.keeping.domain.notification.service;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.notification.dto.NotificationResponseDto;
 import com.ssafy.keeping.domain.notification.entity.Notification;
 import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.domain.notification.repository.EmitterRepository;
 import com.ssafy.keeping.domain.notification.repository.NotificationRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

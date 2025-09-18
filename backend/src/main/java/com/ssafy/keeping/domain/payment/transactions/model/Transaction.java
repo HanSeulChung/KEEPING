@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.payment.transactions.model;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
