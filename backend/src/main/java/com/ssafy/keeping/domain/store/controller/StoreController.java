@@ -15,8 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -25,43 +28,11 @@ import java.util.List;
 public class StoreController {
     private final StoreService storeService;
 
-    /*
-    * 가게 주인이 사용하는 api - 가게 등록 post
-    * */
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<StoreResponseDto>> createStore(
-            @Valid @ModelAttribute StoreRequestDto requestDto
-    ) {
-        StoreResponseDto dto = storeService.createStore(requestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("매장이 등록되었습니다", HttpStatus.CREATED.value(), dto));
-    }
-
-    /*
-     * 가게 주인이 사용하는 api - 가게 수정 patch
-     * */
-    @PatchMapping(value="/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<StoreResponseDto>> editStore(
-            @PathVariable Long storeId,
-            @Valid @ModelAttribute StoreEditRequestDto requestDto
-    ) {
-        StoreResponseDto dto = storeService.editStore(storeId, requestDto);
-        return ResponseEntity.ok(ApiResponse.success("매장이 수정되었습니다", HttpStatus.OK.value(), dto));
-    }
-
-    /*
-     * 가게 주인이 사용하는 api - 가게 삭제 delete
-     * */
-    @DeleteMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<StoreResponseDto>> deleteStore(
-            @PathVariable Long storeId
-    ) {
-        return ResponseEntity.ok(ApiResponse.success("매장이 삭제되었습니다", HttpStatus.OK.value(), storeService.deleteStore(storeId)));
-    }
     /* =================================
      * 일반 고객이 가게 조회하는 api
      * ==================================
      * */
-    @GetMapping(params = "!name")
+    @GetMapping(params = {"!name", "!category"})
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStore() {
         return ResponseEntity.ok(ApiResponse.success("전체 매장이 조회되었습니다", HttpStatus.OK.value(), storeService.getAllStore()));
     }
@@ -73,10 +44,19 @@ public class StoreController {
         return ResponseEntity.ok(ApiResponse.success("해당 store id로 매장이 조회되었습니다.", HttpStatus.OK.value(), storeService.getStoreByStoreId(storeId)));
     }
 
+    @GetMapping(params = "category")
+    public ResponseEntity<ApiResponse<List<StorePublicDto>>> getAllStoreByCategory(
+            @RequestParam String category
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("해당 category로 매장이 조회되었습니다.", HttpStatus.OK.value(),
+                storeService.getAllStoreByCategory(category)));
+    }
+
     @GetMapping(params = "name")
     public ResponseEntity<ApiResponse<List<StorePublicDto>>> getStore(
             @RequestParam String name
     ) {
-        return ResponseEntity.ok(ApiResponse.success("store name으로 매장이 조회되었습니다.", HttpStatus.OK.value(), storeService.getStoreByStoreName(name)));
+        return ResponseEntity.ok(ApiResponse.success("store name으로 매장이 조회되었습니다.", HttpStatus.OK.value(),
+                storeService.getStoreByStoreName(name)));
     }
 }
