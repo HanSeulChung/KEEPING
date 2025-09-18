@@ -52,7 +52,7 @@ public class CustomerService {
                     && !searchUserKeyResponse.getUserKey().isEmpty()) {
 
                 userKey = searchUserKeyResponse.getUserKey();
-                log.debug("기존 userKey 사용 : {}", userKey);
+                log.debug("기존 userKey 사용");
 
             } else {
                 // userKey 생성 (catch 문으로 이동)
@@ -60,13 +60,13 @@ public class CustomerService {
                 throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
             }
 
-        } catch (CustomException e) {
+        } catch (Exception e) {
             // userKey 생성
             try {
                 log.debug("FinOpenApi userkey 생성 : {}", session.getEmail());
                 InsertMemberResponseDto member = apiClient.insertMember(session.getEmail());
                 userKey = member.getUserKey();
-                log.debug("userKey 생성 : {}", userKey);
+                log.debug("userKey 생성 완료");
 
             } catch (CustomException ex) {
                 // 생성 실패
@@ -108,7 +108,7 @@ public class CustomerService {
         String accountNo = null;
 
         try{
-            log.debug("계좌 생성 : {}", userKey);
+            log.debug("계좌 생성 시도");
             String role = "CUSTOMER";
             CreateAccountResponse accountResponse = apiClient.createAccount(userKey, role);
             accountNo = accountResponse.getRecResponse().getAccountNo();

@@ -30,6 +30,7 @@ public class QrTokenService {
         QrToken entity = QrToken.builder()
                 .qrTokenId(id)
                 .customerId(customerId)
+                .walletId(req.getWalletId())
                 .mode(req.getMode())
                 .bindStoreId(req.getBindStoreId())
                 .expiresAt(expires)

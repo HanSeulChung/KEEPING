@@ -33,7 +33,7 @@ public class FinOpenApiClient {
     private String cardUniqueNo;
 
     public <TReq, TRes> TRes post(String path, TReq body, Class<TRes> resType) {
-        log.debug("FinOpenAPI 요청 - Path: {}, Body: {}", path, body);
+        log.debug("FinOpenAPI 요청 - Path: {}", path);
 
         return Mono.fromCallable(() -> {
                     return finOpenApiWebClient.post()
@@ -70,7 +70,7 @@ public class FinOpenApiClient {
 
     // 계좌 생성
     public CreateAccountResponse createAccount(String userKey, String role) {
-        log.debug("API 요청 데이터: userKey={}", userKey);
+        log.debug("계좌 생성 시작");
 
         // TODO: 환경변수
         String apiName = "createDemandDepositAccount";
