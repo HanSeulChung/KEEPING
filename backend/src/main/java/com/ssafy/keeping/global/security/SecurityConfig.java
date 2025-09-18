@@ -48,7 +48,6 @@ public class SecurityConfig {
     public static final String[] TEMP_ALLOW_URLS = {
             "/stores/**",
             "/api/**",
-            "/groups/**",
             "/api/v1/stores/**",
             "/wallets/**"
     };
@@ -166,6 +165,7 @@ public class SecurityConfig {
 
                         // 고객 권한만 필요한 URL
                         .requestMatchers("/customers/**").hasRole("CUSTOMER")
+                        .requestMatchers("/groups/**").hasRole("CUSTOMER")
 
                         // 결제
 //                        .requestMatchers("/charge/**", "/payments/**", "/cpqr/**").authenticated()
