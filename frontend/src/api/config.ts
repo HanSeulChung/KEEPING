@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
@@ -7,6 +6,12 @@ export const apiConfig = {
   headers: {
     'Content-Type': 'application/json',
   },
+}
+
+// 중앙 URL 빌더 (index.ts 제거 후 대체)
+export const buildURL = (path: string): string => {
+  const base = apiConfig.baseURL.replace(/\/$/, '')
+  return `${base}${path}`
 }
 
 export const endpoints = {
@@ -19,13 +24,11 @@ export const endpoints = {
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',
     // 소셜 로그인 (구글) - 향후 구현
-    googleOwner: '/auth/google/owner', 
+    googleOwner: '/auth/google/owner',
     googleCustomer: '/auth/google/customer',
     // 회원가입 완료
     signupCustomer: '/auth/signup/customer',
     signupOwner: '/auth/signup/owner',
-    // 역할 선택 페이지 (디버깅용)
-    selectRole: '/auth/select-role',
     // OTP 인증
     otpRequest: '/otp/request',
     otpVerify: '/otp/verify',
@@ -91,12 +94,14 @@ export const endpoints = {
     ownerList: '/notifications/owner/{ownerId}',
     ownerUnreadCount: '/notifications/owner/{ownerId}/unread-count',
     ownerUnreadList: '/notifications/owner/{ownerId}/unread',
-    ownerMarkAsRead: '/notifications/owner/{ownerId}/mark-read/{notificationId}',
+    ownerMarkAsRead:
+      '/notifications/owner/{ownerId}/mark-read/{notificationId}',
     ownerMarkAllAsRead: '/notifications/owner/{ownerId}/mark-all-read',
-    // 고객 알림  
+    // 고객 알림
     customerList: '/notifications/customer/{customerId}',
     customerUnreadCount: '/notifications/customer/{customerId}/unread-count',
-    customerMarkAsRead: '/notifications/customer/{customerId}/mark-read/{notificationId}',
+    customerMarkAsRead:
+      '/notifications/customer/{customerId}/mark-read/{notificationId}',
     // 알림 설정
     updateSettings: '/notifications/settings',
     // FCM 토큰 등록
@@ -115,13 +120,13 @@ export const endpoints = {
     // 그룹 결제
     groupPay: '/payments/group',
   },
-  // QR 코드 관련 API  
+  // QR 코드 관련 API
   qr: {
     generate: '/qr/generate',
     scan: '/qr/scan',
     validate: '/qr/validate',
   },
-  // SSE (Server-Sent Events) 
+  // SSE (Server-Sent Events)
   sse: {
     connect: '/sse/connect',
     ownerNotifications: '/sse/owner/{ownerId}/notifications',

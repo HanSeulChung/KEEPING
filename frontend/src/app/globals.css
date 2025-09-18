@@ -60,7 +60,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-nanum-square-neo, Arial, Helvetica, sans-serif);
   --font-display: var(--font-tenada, Arial, Helvetica, sans-serif);
-  
+
   /* Keeping 색상 토큰 */
   --color-black: #000000;
   --color-white: #ffffff;
@@ -68,16 +68,16 @@
   --color-keeping-blue: #4c97d6;
   --color-keeping-yellow: #ffda69;
   --color-keeping-charcoal: #333333;
-  
+
   /* 의미 토큰: 용도 기반 이름 */
-  --color-primary: var(--color-black);       
-  --color-primary-fg: #ffffff;                
+  --color-primary: var(--color-black);
+  --color-primary-fg: #ffffff;
   --color-accent: var(--color-keeping-yellow);
-  --color-bg: var(--color-white);            
-  --color-surface: #ffffff;                   
-  --color-border: var(--color-black);         
-  --color-text: var(--color-black);           
-  --color-text-muted: #cccccc;                
+  --color-bg: var(--color-white);
+  --color-surface: #ffffff;
+  --color-border: var(--color-black);
+  --color-text: var(--color-black);
+  --color-text-muted: #cccccc;
 
   /* 상태색(알림/에러 등) */
   --color-success: #22c55e;
@@ -93,4 +93,14 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/* 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
