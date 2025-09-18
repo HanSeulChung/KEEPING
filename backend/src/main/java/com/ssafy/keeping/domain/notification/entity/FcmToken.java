@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.notification.entity;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
