@@ -35,7 +35,7 @@ const QRModal = ({
     const generateQRCode = async () => {
       try {
         const qrString =
-          'payapp://q?v=1&t=1f0944fd-2dcd-6a9b-9378-af2d22653626&m=CPQR'
+          'http://payapp.kr/q?v=1&t=1f0944fd-2dcd-6a9b-9378-af2d22653626&m=CPQR'
         const dataUrl = await QRCode.toDataURL(qrString, {
           width: 160,
           margin: 2,
