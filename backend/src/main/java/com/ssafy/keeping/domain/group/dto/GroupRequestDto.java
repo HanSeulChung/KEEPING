@@ -10,10 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GroupRequestDto {
-    // 임시 회원 역할
-    @NotNull
-    private Long groupLeaderId;
-
     @NotBlank
     private String groupName;
     private String groupDescription;

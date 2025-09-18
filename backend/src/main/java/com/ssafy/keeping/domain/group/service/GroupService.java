@@ -35,9 +35,8 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final GroupAddRequestRepository groupAddRequestRepository;
 
-    public GroupResponseDto createGroup(GroupRequestDto requestDto) {
-        // TODO: 회원부분 연동되면 바꿔야하는 부분
-        Customer customer = validCustomer(requestDto.getGroupLeaderId());
+    public GroupResponseDto createGroup(Long groupLeaderId, GroupRequestDto requestDto) {
+        Customer customer = validCustomer(groupLeaderId);
 
         String groupName = requestDto.getGroupName();
         String groupDescription = (requestDto.getGroupDescription() == null || requestDto.getGroupDescription().isBlank())
@@ -75,7 +74,7 @@ public class GroupService {
         return new GroupResponseDto(
                 saved.getGroupId(), saved.getGroupName(),
                 saved.getGroupDescription(), saved.getGroupCode(),
-                responseDto.walletId().longValue() // TODO: 지갑 ID로 교체
+                responseDto.walletId().longValue()
         );
     }
 
@@ -228,13 +227,15 @@ public class GroupService {
         return new GroupResponseDto(
                 group.getGroupId(), group.getGroupName(),
                 group.getGroupDescription(), group.getGroupCode(),
-                group.getGroupId() // TODO: 지갑 ID로 교체
+                groupWallet.walletId()
         );
 
     }
 
-    public List<GroupMaskingResponseDto> getSearchGroup(String name) {
-        // TODO: 고객만 모임을 검색할 수 있게 change
+    public List<GroupMaskingResponseDto> getSearchGroup(Long customerId, String name) {
+        // 고객만 모임을 검색할 수 있게 change => 경로로 막음 + valid 체크
+        validCustomer(customerId);
+
         return groupRepository.findGroupsByName(name);
     }
 
