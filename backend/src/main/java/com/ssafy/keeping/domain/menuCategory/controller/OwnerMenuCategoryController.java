@@ -8,12 +8,13 @@ import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("owners/stores/{storeId}/menus/categories")
+@RequestMapping("/owners/stores/{storeId}/menus/categories")
 @RequiredArgsConstructor
 public class OwnerMenuCategoryController {
     private final MenuCategoryService menuCategoryService;
@@ -23,10 +24,11 @@ public class OwnerMenuCategoryController {
      * */
     @PostMapping()
     public ResponseEntity<ApiResponse<MenuCategoryResponseDto>> createMenuCategory(
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable Long storeId,
             @RequestBody MenuCategoryRequestDto requestDto
     ) {
-        MenuCategoryResponseDto dto = menuCategoryService.createMenuCategory(storeId, requestDto);
+        MenuCategoryResponseDto dto = menuCategoryService.createMenuCategory(ownerId, storeId, requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("메뉴 카테고리가 등록되었습니다", HttpStatus.CREATED.value(), dto));
     }
 
@@ -48,11 +50,12 @@ public class OwnerMenuCategoryController {
      * */
     @PatchMapping("/{categoryId}")
     public ResponseEntity<ApiResponse<MenuCategoryResponseDto>> editMenuCategory(
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable Long storeId,
             @PathVariable Long categoryId,
             @RequestBody MenuCategoryEditRequestDto requestDto
     ) {
-        MenuCategoryResponseDto dto = menuCategoryService.editMenuCategory(storeId, categoryId, requestDto);
+        MenuCategoryResponseDto dto = menuCategoryService.editMenuCategory(ownerId, storeId, categoryId, requestDto);
         return ResponseEntity.ok(ApiResponse.success("메뉴 카테고리가 수정되었습니다", HttpStatus.OK.value(), dto));
     }
 
@@ -61,10 +64,11 @@ public class OwnerMenuCategoryController {
      * */
     @DeleteMapping("{categoryId}")
     public ResponseEntity<ApiResponse<Void>> deleteMenuCategory(
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable Long storeId,
             @PathVariable Long categoryId
     ) {
-        menuCategoryService.deleteMenuCategory(storeId, categoryId);
+        menuCategoryService.deleteMenuCategory(ownerId, storeId, categoryId);
         return ResponseEntity.ok(ApiResponse.success("메뉴 카테고리가 삭제되었습니다", HttpStatus.OK.value(), null));
     }
 }
