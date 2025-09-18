@@ -57,4 +57,25 @@ public class SsafyApiHeaderDto {
                 .userKey(userKey)
                 .build();
     }
+
+    public static SsafyApiHeaderDto createCommonHeaderDto(
+            String transmissionDate,
+            String transmissionTime,
+            String institutionTransactionUniqueNo,
+            String apiKey,
+            String userKey,
+            String apiName) {
+
+        return SsafyApiHeaderDto.builder()
+                .apiName(apiName)
+                .transmissionDate(transmissionDate)
+                .transmissionTime(transmissionTime)
+                .institutionCode("00100")
+                .fintechAppNo("001")
+                .apiServiceCode(apiName)
+                .institutionTransactionUniqueNo(institutionTransactionUniqueNo)
+                .apiKey(apiKey)
+                .userKey(userKey)
+                .build();
+    }
 }

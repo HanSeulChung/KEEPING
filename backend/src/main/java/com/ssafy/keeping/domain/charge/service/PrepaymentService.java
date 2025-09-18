@@ -5,18 +5,23 @@ import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
-import com.ssafy.keeping.domain.core.transaction.repository.TransactionRepository;
-import com.ssafy.keeping.domain.core.wallet.model.Wallet;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreBalance;
-import com.ssafy.keeping.domain.core.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.domain.core.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
+import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +46,7 @@ public class PrepaymentService {
     private final WalletStoreLotRepository walletStoreLotRepository;
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
+    private final NotificationService notificationService;
 
     /**
      * 선결제 처리
@@ -82,11 +88,11 @@ public class PrepaymentService {
      * 개인 지갑 조회 또는 생성
      */
     private Wallet findOrCreateIndividualWallet(Customer customer) {
-        return walletRepository.findByCustomerAndWalletType(customer, Wallet.WalletType.INDIVIDUAL)
+        return walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseGet(() -> {
                     Wallet newWallet = Wallet.builder()
                             .customer(customer)
-                            .walletType(Wallet.WalletType.INDIVIDUAL)
+                            .walletType(WalletType.INDIVIDUAL)
                             .build();
                     return walletRepository.save(newWallet);
                 });
@@ -98,7 +104,7 @@ public class PrepaymentService {
     private PrepaymentResponseDto updateDatabaseAfterPayment(
             Wallet wallet, 
             Store store, 
-            BigDecimal paymentAmount, 
+            long paymentAmount,
             SsafyCardPaymentResponseDto apiResponse) {
 
         // 1. Transaction 생성
@@ -106,8 +112,9 @@ public class PrepaymentService {
                 .wallet(wallet)
                 .customer(wallet.getCustomer())
                 .store(store)
-                .transactionType(Transaction.TransactionType.CHARGE)
+                .transactionType(TransactionType.CHARGE)
                 .amount(paymentAmount)
+                .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
         transaction = transactionRepository.save(transaction);
 
@@ -120,7 +127,7 @@ public class PrepaymentService {
                 .amountRemaining(paymentAmount)
                 .acquiredAt(LocalDateTime.now())
                 .expiredAt(expiredAt)
-                .sourceType(WalletStoreLot.SourceType.CHARGE)
+                .sourceType(LotSourceType.CHARGE)
                 .originChargeTransaction(transaction)
                 .build();
         walletStoreLotRepository.save(lot);
@@ -131,7 +138,7 @@ public class PrepaymentService {
                 .orElseGet(() -> WalletStoreBalance.builder()
                         .wallet(wallet)
                         .store(store)
-                        .balance(BigDecimal.ZERO)
+                        .balance(0L)
                         .build());
 
         balance.addBalance(paymentAmount);
@@ -144,8 +151,28 @@ public class PrepaymentService {
                 .build();
         settlementTaskRepository.save(settlementTask);
 
-        // 5. 응답 생성
-        BigDecimal updatedBalance = balance.getBalance();
+        // 5. 점주에게 알림 전송
+        try {
+            Long ownerId = store.getOwner().getOwnerId();
+            String customerName = wallet.getCustomer().getName();
+            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다", 
+                    customerName, paymentAmount);
+            
+            notificationService.sendToOwner(
+                    ownerId,
+                    NotificationType.POINT_CHARGE,
+                    notificationContent,
+                    "/" // 점주가 매출 확인할 수 있는 페이지 (아직 관련 페이지, 로직 없음)
+            );
+            
+            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}", ownerId, paymentAmount);
+        } catch (Exception e) {
+            log.warn("점주 알림 전송 실패 - 점주ID: {}, 오류: {}", store.getOwner().getOwnerId(), e.getMessage());
+            // 알림 실패는 비즈니스 로직에 영향을 주지 않음
+        }
+
+        // 6. 응답 생성
+        long updatedBalance = balance.getBalance();
         
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())

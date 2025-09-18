@@ -15,7 +15,7 @@ public class PrepaymentResponseDto {
     private String transactionUniqueNo;
     private Long storeId;
     private String storeName;
-    private BigDecimal paymentAmount;
+    private Long paymentAmount;
     private LocalDateTime transactionTime;
-    private BigDecimal remainingBalance;
+    private Long remainingBalance;
 }

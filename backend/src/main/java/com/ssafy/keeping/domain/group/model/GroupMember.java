@@ -1,9 +1,8 @@
 package com.ssafy.keeping.domain.group.model;
 
+import com.ssafy.keeping.domain.user.customer.model.Customer;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -11,18 +10,23 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "group_members",
+@Table(
+        name = "group_members",
+        uniqueConstraints = @UniqueConstraint(name = "uq_group_member", columnNames = {"group_id","customer_id"}),
         indexes = {
-                @Index(name="idx_customer_group", columnList="customer_id, group_id"),
-                @Index(name="idx_group_leader", columnList="group_id, is_leader")
-        })
+                @Index(name = "idx_customer_group", columnList = "customer_id, group_id"),
+                @Index(name = "idx_group_leader",  columnList = "group_id, leader")
+        }
+)
 @EntityListeners(AuditingEntityListener.class)
 public class GroupMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "group_member_id")
     private Long groupMemberId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -31,16 +35,22 @@ public class GroupMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
-    private TmpUser user;
+    private Customer user;
 
-    @Column(nullable = false, name="is_leader")
-    private boolean isLeader;
+    @Column(name = "leader", nullable = false)
+    private boolean leader;
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
 
+    public boolean changeLeader(boolean leader) {
+        if (this.leader == leader) return false;
+        this.leader = leader;
+        return true;
+    }
+}
