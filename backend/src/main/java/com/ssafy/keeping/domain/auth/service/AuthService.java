@@ -41,14 +41,13 @@ public class AuthService {
     private final String SIGN_UP_INFO_KEY = "signup:info:";
     private final String OTP_KEY_PREFIX = "otp:info:";
 
-    public UserRole extractRoleFromState(HttpServletRequest request) {
+    public UserRole extractRoleFromState(String state) {
         // 세션에서 role 가져오기
-        String role = (String) request.getSession().getAttribute("oauth_role");
-        System.out.println("[AUTH SERVICE] Session ID: " + request.getSession().getId());
-        System.out.println("[AUTH SERVICE] Found role in session: " + role);
+        String role = redis.opsForValue().get("oauth:state:" + state);
+        System.out.println("[AUTH SERVICE] Found role in redis: " + role);
 
         if (role != null) {
-            request.getSession().removeAttribute("oauth_role"); // 한 번 사용 후 삭제
+            redis.delete("oauth:state" + state); // 한 번 사용 후 삭제
             return toUserRole(role);
         }
 
@@ -113,9 +112,6 @@ public class AuthService {
         String otpKey = OTP_KEY_PREFIX + regSessionId;
         String otpValue = redis.opsForValue().get(otpKey);
 
-        System.out.println("[ATTACH OTP] otpKey: " + otpKey);
-        System.out.println("[ATTACH OTP] otpValue: " + otpValue);
-
         RegSession regSession = new RegSession();
         if(otpValue != null) {
             try {
@@ -152,7 +148,6 @@ public class AuthService {
 
         try {
             String finalValue = om.writeValueAsString(map);
-            System.out.println("[ATTACH OTP] signUpValue after: " + finalValue);
             redis.opsForValue().set(signUpKey, finalValue, Duration.ofMinutes(15));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

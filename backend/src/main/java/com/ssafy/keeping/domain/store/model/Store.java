@@ -36,7 +36,7 @@ public class Store {
     @Column(name = "store_id")
     private Long storeId;
 
-    // Store N : 1 Owner 연관관계  (추후 활성화)
+    // Store N : 1 Owner 연관관계
      @ManyToOne(fetch = FetchType.LAZY, optional = false)
      @JoinColumn(name = "owner_id", nullable = false,
          foreignKey = @ForeignKey(name = "fk_stores_owner"))

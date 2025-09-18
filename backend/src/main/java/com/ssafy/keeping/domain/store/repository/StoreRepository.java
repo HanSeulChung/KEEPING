@@ -26,6 +26,7 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     Optional<StorePublicDto> findPublicById(@Param("id") Long id,
                                             @Param("status") StoreStatus status);
     boolean existsByTaxIdNumberAndAddress(String taxIdNumber, String address);
+
     @Query("""
     select new com.ssafy.keeping.domain.store.dto.StorePublicDto(
       s.storeId, s.storeName, s.address, s.phoneNumber,
@@ -36,6 +37,19 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     order by s.storeId desc
     """)
     List<StorePublicDto> findPublicAllApprovedStore(@Param("status") StoreStatus status);
+
+    @Query("""
+    select new com.ssafy.keeping.domain.store.dto.StorePublicDto(
+      s.storeId, s.storeName, s.address, s.phoneNumber,
+      s.category, s.storeStatus, s.description, s.createdAt, s.imgUrl
+    )
+    from Store s
+    where s.storeStatus = :status and s.deletedAt is null
+      and s.category= :category
+    order by s.storeName asc
+    """)
+    List<StorePublicDto> findPublicAllByCategory(@Param("category") String category,
+                                                       @Param("status") StoreStatus status);
 
     @Query("""
     select new com.ssafy.keeping.domain.store.dto.StorePublicDto(

@@ -53,4 +53,6 @@ src/main/generated/
 /src/docs/notification_redis.md
 /src/CLAUD.md
 /src/data_erd.md
-/src/main/resources/firebase
+/src/main/resources/firebase/**.json
+/src/main/resources/**.json
+

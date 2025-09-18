@@ -1,0 +1,118 @@
+services:
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    container_name: keeping-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - certs:/etc/letsencrypt:ro
+      - certbot_challenges:/var/www/certbot:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - appnet
+    environment:
+      - TZ=Asia/Seoul
+
+  backend:
+    image: keeping/myapp-backend:${BACKEND_TAG}
+    container_name: keeping-backend
+    restart: always
+    env_file:
+      - ./env/backend.prod.env
+      - ./env/redis.prod.env
+    expose:
+      - "8080"
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - appnet
+    environment:
+      - TZ=Asia/Seoul
+
+  frontend:
+    image: keeping/myapp-frontend:${FRONTEND_TAG}
+    container_name: keeping-frontend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Asia/Seoul
+    depends_on:
+      - backend
+    expose:
+      - "3000"
+    networks:
+      - appnet
+
+  mysql:
+    image: mysql:8.0
+    container_name: keeping-mysql
+    restart: always
+    env_file:
+      - ./env/mysql.prod.env
+    environment:
+      - TZ=Asia/Seoul
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+    expose:
+      - "3306"
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: keeping-redis
+    restart: always
+    env_file:
+      - ./env/redis.prod.env
+    command: >
+      sh -c 'exec redis-server /usr/local/etc/redis/redis.conf
+             --requirepass "$REDIS_PASSWORD"'
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - redis_data:/data
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    expose:
+      - "6379"
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      
+  certbot:
+    image: certbot/certbot
+    container_name: keeping-certbot
+    restart: unless-stopped
+    volumes:
+      - certs:/etc/letsencrypt
+      - certbot_challenges:/var/www/certbot
+
+volumes:
+  db_data: {}
+  redis_data: {}
+  certs: {}
+  certbot_challenges: {}
+
+networks:
+  appnet:
+    driver: bridge
