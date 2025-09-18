@@ -23,6 +23,7 @@ import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
@@ -154,7 +155,7 @@ public class PrepaymentService {
         PrepaymentResponseDto response = updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
         
         // 멱등 완료 기록(DONE + 응답 스냅샷)
-        idempotencyService.complete(slot, HttpStatus.CREATED.value(), response, UUID.fromString(response.getTransactionUniqueNo()));
+        idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), response);
         
         return IdempotentResult.created(response);
     }
@@ -203,6 +204,7 @@ public class PrepaymentService {
                 .acquiredAt(LocalDateTime.now())
                 .expiredAt(expiredAt)
                 .sourceType(LotSourceType.CHARGE)
+                .lotStatus(LotStatus.ACTIVE)
                 .originChargeTransaction(transaction)
                 .build();
         walletStoreLotRepository.save(lot);
