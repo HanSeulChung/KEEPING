@@ -48,7 +48,7 @@ public class SecurityConfig {
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
-            "/stores/**",
+            "/stores/**", // 통계 API (/stores/{storeId}/statistics/**) 포함
             "/api/**",
             "/api/v1/stores/**",
             "/wallets/**",
