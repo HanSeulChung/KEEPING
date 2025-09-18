@@ -37,7 +37,6 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
          where b.wallet.walletId = :walletId
            and b.store.storeId   = :storeId
     """)
-
     Optional<WalletStoreBalance> lockByWalletIdAndStoreId(@Param("walletId") Long walletId,
                                                           @Param("storeId") Long storeId);
     @Query("""
@@ -47,8 +46,6 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
     """)
     @Lock(LockModeType.PESSIMISTIC_READ)
     boolean existsPositiveBalanceForStoreWithLock(@Param("storeId") Long storeId);
-
-    Optional<WalletStoreBalance> lockByWalletIdAndStoreId(@Param("walletId") Long walletId, @Param("storeId") Long storeId);
 
     /**
      * 잔액이 충분할 때만 balance를 amount만큼 차감
