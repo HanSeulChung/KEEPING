@@ -41,14 +41,13 @@ public class AuthService {
     private final String SIGN_UP_INFO_KEY = "signup:info:";
     private final String OTP_KEY_PREFIX = "otp:info:";
 
-    public UserRole extractRoleFromState(HttpServletRequest request) {
+    public UserRole extractRoleFromState(String state) {
         // 세션에서 role 가져오기
-        String role = (String) request.getSession().getAttribute("oauth_role");
-        System.out.println("[AUTH SERVICE] Session ID: " + request.getSession().getId());
-        System.out.println("[AUTH SERVICE] Found role in session: " + role);
+        String role = redis.opsForValue().get("oauth:state:" + state);
+        System.out.println("[AUTH SERVICE] Found role in redis: " + role);
 
         if (role != null) {
-            request.getSession().removeAttribute("oauth_role"); // 한 번 사용 후 삭제
+            redis.delete("oauth:state" + state); // 한 번 사용 후 삭제
             return toUserRole(role);
         }
 
