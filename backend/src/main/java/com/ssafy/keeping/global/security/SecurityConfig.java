@@ -43,6 +43,7 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "/favicon.ico",
             "/.well-known/**",
+            "/s3/**"
             "/owners/stores/**",
             "/api/v1/stores/**"
     };
