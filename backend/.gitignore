@@ -32,6 +32,7 @@ out/
 /dist/
 /nbdist/
 /.nb-gradle/
+**/backend/src/docs/
 
 ### VS Code ###
 .vscode/
@@ -39,3 +40,17 @@ out/
 
 ### yml ###
 application.yml
+
+### generated ###
+src/main/generated/
+
+.DS_Store
+/src/docs/card_payment.md
+/src/docs/card_canceled.md
+/src/docs/notification.md
+/src/docs/notification_kafka.md
+/src/docs/notification_nothing.md
+/src/docs/notification_redis.md
+/src/CLAUD.md
+/src/data_erd.md
+/src/main/resources/firebase
