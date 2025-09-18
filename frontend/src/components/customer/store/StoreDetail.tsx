@@ -216,24 +216,18 @@ export const StoreDetailPage = () => {
 
         const data = await response.json()
         console.log('가게 상세 응답 데이터:', data) // 디버깅용
-        console.log('응답 데이터 키들:', Object.keys(data)) // 디버깅용
 
         // 백엔드 응답 데이터를 StoreData 타입에 맞게 변환
-        // 실제 가게 데이터는 data.data에 중첩되어 있음
-        const storeInfo = data.data || data
-
         const transformedStoreData: StoreData = {
-          storeId: storeInfo.storeId,
-          storeName: storeInfo.storeName,
-          description: storeInfo.description || '',
-          address: storeInfo.address || '',
-          category: storeInfo.category || '',
-          storeStatus: storeInfo.storeStatus || '',
-          imageUrl: storeInfo.imgUrl || storeInfo.imageUrl || storeInfo.image,
-          phoneNumber: storeInfo.phoneNumber || '',
+          storeId: data.storeId,
+          storeName: data.storeName,
+          description: data.description,
+          address: data.address,
+          category: data.category,
+          storeStatus: data.storeStatus,
+          imageUrl: data.imageUrl || data.image,
+          phoneNumber: data.phoneNumber,
         }
-
-        console.log('변환된 storeData:', transformedStoreData) // 디버깅용
 
         setStoreData(transformedStoreData)
       } catch (error) {
