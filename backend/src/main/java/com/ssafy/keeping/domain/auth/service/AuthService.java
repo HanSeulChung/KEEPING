@@ -5,17 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.Util.CookieUtil;
 import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
-import com.ssafy.keeping.domain.customer.dto.CustomerRegisterResponse;
-import com.ssafy.keeping.domain.customer.dto.SignupCustomerResponse;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.user.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
-import com.ssafy.keeping.domain.owner.dto.OwnerRegisterResponse;
-import com.ssafy.keeping.domain.owner.dto.SignupOwnerResponse;
+import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -41,14 +41,13 @@ public class AuthService {
     private final String SIGN_UP_INFO_KEY = "signup:info:";
     private final String OTP_KEY_PREFIX = "otp:info:";
 
-    public UserRole extractRoleFromState(HttpServletRequest request) {
+    public UserRole extractRoleFromState(String state) {
         // 세션에서 role 가져오기
-        String role = (String) request.getSession().getAttribute("oauth_role");
-        System.out.println("[AUTH SERVICE] Session ID: " + request.getSession().getId());
-        System.out.println("[AUTH SERVICE] Found role in session: " + role);
+        String role = redis.opsForValue().get("oauth:state:" + state);
+        System.out.println("[AUTH SERVICE] Found role in redis: " + role);
 
         if (role != null) {
-            request.getSession().removeAttribute("oauth_role"); // 한 번 사용 후 삭제
+            redis.delete("oauth:state" + state); // 한 번 사용 후 삭제
             return toUserRole(role);
         }
 
@@ -113,17 +112,11 @@ public class AuthService {
         String otpKey = OTP_KEY_PREFIX + regSessionId;
         String otpValue = redis.opsForValue().get(otpKey);
 
-        System.out.println("[ATTACH OTP] otpKey: " + otpKey);
-        System.out.println("[ATTACH OTP] otpValue: " + otpValue);
-
         RegSession regSession = new RegSession();
         if(otpValue != null) {
             try {
                 regSession = om.readValue(otpValue, RegSession.class);
-                System.out.println("[ATTACH OTP] regSession name: " + regSession.getName());
-                System.out.println("[ATTACH OTP] regSession birth: " + regSession.getBirth());
-                System.out.println("[ATTACH OTP] regSession phone: " + regSession.getPhoneNumber());
-                System.out.println("[ATTACH OTP] regSession regStep: " + regSession.getRegStep());
+
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -134,8 +127,6 @@ public class AuthService {
         String signUpKey = SIGN_UP_INFO_KEY + regSessionId;
         String signUpValue = redis.opsForValue().get(signUpKey);
 
-        System.out.println("[ATTACH OTP] signUpKey: " + signUpKey);
-        System.out.println("[ATTACH OTP] signUpValue before: " + signUpValue);
 
         Map<String, Object> map = new HashMap<>();
 
@@ -151,13 +142,12 @@ public class AuthService {
         map.put("birth", regSession.getBirth());
         map.put("phoneNumber", regSession.getPhoneNumber());
         map.put("regStep", RegStep.PHONE_VERIFIED);
-        map.put("phoneVerfiedAt", regSession.getPhoneVerifiedAt());
+        map.put("phoneVerifiedAt", regSession.getPhoneVerifiedAt());
         map.put("gender", regSession.getGender().name());
 
 
         try {
             String finalValue = om.writeValueAsString(map);
-            System.out.println("[ATTACH OTP] signUpValue after: " + finalValue);
             redis.opsForValue().set(signUpKey, finalValue, Duration.ofMinutes(15));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

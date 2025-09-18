@@ -13,14 +13,17 @@ public enum NotificationType {
     SETTLEMENT_COMPLETED("정산 완료"),
     
     // 그룹 관련
-    GROUP_INVITE("그룹 초대"),
-    GROUP_JOIN_REQUEST("가입 요청"),
-    GROUP_MEMBER_JOINED("멤버 가입"),
+    GROUP_INVITE("모임 초대"),
+    GROUP_JOIN_REQUEST("모임 가입 요청"),
+    GROUP_JOIN_ACCEPTED("모임 가입 승인"),
+    GROUP_JOIN_REJECTED("모임 가입 거절"),
+    GROUP_JOINED("모임 참여 완료"),
+    GROUP_LEADER_CHANGED("모임 리더 변경"),
     
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),
     SYSTEM_MAINTENANCE("시스템 점검");
-    
+
     private final String displayName;
 
     NotificationType(String displayName) {

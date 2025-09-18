@@ -6,6 +6,7 @@ import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -38,4 +39,25 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
     """)
     Optional<WalletStoreBalance> lockByWalletIdAndStoreId(@Param("walletId") Long walletId,
                                                           @Param("storeId") Long storeId);
+    @Query("""
+        select case when count(wb)>0 then true else false end
+        from WalletStoreBalance wb
+        where wb.store.storeId = :storeId and wb.balance > 0
+    """)
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    boolean existsPositiveBalanceForStoreWithLock(@Param("storeId") Long storeId);
+
+    /**
+     * 잔액이 충분할 때만 balance를 amount만큼 차감
+     * - 반환값: 1 = 차감 성공, 0 = 실패(잔액 부족 또는 경합)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE wallet_store_balances
+               SET balance = balance - :amount
+             WHERE wallet_id = :walletId
+               AND store_id = :storeId
+               AND balance >= :amount
+            """, nativeQuery = true)
+    int decrementIfEnough(@Param("walletId") Long walletId, @Param("storeId") Long storeId, @Param("amount") Long amount);
 }

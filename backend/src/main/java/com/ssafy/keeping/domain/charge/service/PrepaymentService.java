@@ -15,14 +15,15 @@ import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
@@ -63,7 +64,7 @@ public class PrepaymentService {
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
     private final NotificationService notificationService;
-    
+
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
     @Qualifier("canonicalObjectMapper")
@@ -88,12 +89,12 @@ public class PrepaymentService {
         if (idempotencyKeyHeader == null || idempotencyKeyHeader.isBlank()) {
             throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
         }
-        
+
         // 멱등 바디 정규화 → SHA-256
         String canonicalBody = canonicalizeRequestBody(requestDto);
         byte[] bodyHash = IdempotencyService.sha256(canonicalBody); // 암호화
         // sha256 : 해시 암호화의 알고리즘
-        
+
         // 멱등 선점 또는 로드
         UUID keyUuid = UUID.fromString(idempotencyKeyHeader);
         // 클라이언트가 보내준 텍스트(String) 형식의 키를, 서버가 사용하기 좋은 객체(UUID) 형식으로 변환
@@ -101,12 +102,12 @@ public class PrepaymentService {
         IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.CUSTOMER, requestDto.getUserId(), "POST", path, keyUuid, bodyHash);
         // 이미 키가 있으면 기존 상태를 로드하고, 없으면 새로 생성해서 IN_PROGRESS로 설정
         IdempotencyKey slot = begin.getRow();
-        
+
         // 본문 충돌 확인
         if (idempotencyService.isBodyConflict(slot, bodyHash)) { // 기존 키가 있는데 본문이 다르면 true -> 충돌남, 새로 만든 키거나 본문이 같으면 충돌 안남
             throw new CustomException(ErrorCode.IDEMPOTENCY_BODY_CONFLICT);
         }
-        
+
         if (slot.getStatus() == IdemStatus.DONE) {
             // 스냅샷이 있으면 그대로, 없으면 리소스 재조회해서 응답 구성
             PrepaymentResponseDto replay;
@@ -117,12 +118,12 @@ public class PrepaymentService {
             }
             return IdempotentResult.okReplay(replay);
         }
-        
+
         // 다른 처리에서 IN_PROGRESS로 선점
         if (!begin.isCreated() && slot.getStatus() == IdemStatus.IN_PROGRESS) { // IN_PROGRESS인데, 만들어지지 않았다면 (DONE 상태가 아니라면)
             return IdempotentResult.acceptedWithRetryAfterSeconds(2); // 2초뒤에 응답을 만들어줘
         }
-        
+
         // 1. 사용자 정보 조회 및 검증
         Customer customer = customerRepository.findById(requestDto.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
@@ -153,10 +154,10 @@ public class PrepaymentService {
 
         // 5. DB 업데이트 (트랜잭션 처리)
         PrepaymentResponseDto response = updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
-        
+
         // 멱등 완료 기록(DONE + 응답 스냅샷)
         idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), response);
-        
+
         return IdempotentResult.created(response);
     }
 
@@ -164,11 +165,11 @@ public class PrepaymentService {
      * 개인 지갑 조회 또는 생성
      */
     private Wallet findOrCreateIndividualWallet(Customer customer) {
-        return walletRepository.findByCustomerAndWalletType(customer, Wallet.WalletType.INDIVIDUAL)
+        return walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseGet(() -> {
                     Wallet newWallet = Wallet.builder()
                             .customer(customer)
-                            .walletType(Wallet.WalletType.INDIVIDUAL)
+                            .walletType(WalletType.INDIVIDUAL)
                             .build();
                     return walletRepository.save(newWallet);
                 });
@@ -260,7 +261,7 @@ public class PrepaymentService {
                 .remainingBalance(updatedBalance)
                 .build();
     }
-    
+
     /**
      * 요청 바디 정규화 (키 정렬 + 공백 제거 등: ObjectMapper 설정에 따름)
      */
@@ -271,7 +272,7 @@ public class PrepaymentService {
                 .cvc(requestDto.getCvc())
                 .paymentBalance(requestDto.getPaymentBalance())
                 .build();
-                
+
         try {
             return canonicalObjectMapper.writeValueAsString(canonical);
             // JSON 문자열로 변환
@@ -279,7 +280,7 @@ public class PrepaymentService {
             throw new CustomException(ErrorCode.REQUEST_CANONICALIZE_FAILED);
         }
     }
-    
+
     /**
      * 스냅샷 JSON → DTO
      */
@@ -291,18 +292,18 @@ public class PrepaymentService {
             throw new CustomException(ErrorCode.RESPONSE_SNAPSHOT_PARSE_FAILED);
         }
     }
-    
+
     /**
      * transactionUniqueNo로 리소스를 재조회하여 응답 재구성 (스냅샷 없을 때 폴백)
      */
     private PrepaymentResponseDto rebuildFromResource(UUID transactionUniqueNo) {
         Transaction transaction = transactionRepository.findByTransactionUniqueNo(transactionUniqueNo.toString())
                 .orElseThrow(() -> new CustomException(ErrorCode.TRANSACTION_NOT_FOUND));
-                
+
         WalletStoreBalance balance = walletStoreBalanceRepository
                 .findByWalletAndStore(transaction.getWallet(), transaction.getStore())
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_BALANCE_NOT_FOUND));
-                
+
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(transaction.getTransactionUniqueNo())

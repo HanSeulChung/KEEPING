@@ -1,7 +1,9 @@
 package com.ssafy.keeping.domain.group.service;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,10 +38,11 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupAddRequestRepository groupAddRequestRepository;
+    private final NotificationService notificationService;
 
-    public GroupResponseDto createGroup(GroupRequestDto requestDto) {
-        // TODO: 회원부분 연동되면 바꿔야하는 부분
-        Customer customer = validCustomer(requestDto.getGroupLeaderId());
+    @Transactional
+    public GroupResponseDto createGroup(Long groupLeaderId, GroupRequestDto requestDto) {
+        Customer customer = validCustomer(groupLeaderId);
 
         String groupName = requestDto.getGroupName();
         String groupDescription = (requestDto.getGroupDescription() == null || requestDto.getGroupDescription().isBlank())
@@ -75,7 +80,7 @@ public class GroupService {
         return new GroupResponseDto(
                 saved.getGroupId(), saved.getGroupName(),
                 saved.getGroupDescription(), saved.getGroupCode(),
-                responseDto.walletId().longValue() // TODO: 지갑 ID로 교체
+                responseDto.walletId().longValue()
         );
     }
 
@@ -108,6 +113,7 @@ public class GroupService {
         return groupMemberRepository.findAllGroupMembers(groupId);
     }
 
+    @Transactional
     public void createGroupAddRequest(Long groupId, Long customerId) {
         Group group = validGroup(groupId);
 
@@ -129,6 +135,14 @@ public class GroupService {
                         .group(group)
                         .build()
         );
+
+        Long leaderId = groupMemberRepository.findLeaderId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_LEADER_NOT_FOUND));
+
+        final String url = "/groups/" + groupId + "/requests";
+        afterCommit(() -> notificationService.sendToCustomer(
+                leaderId, NotificationType.GROUP_JOIN_REQUEST,
+                "새 가입 요청이 도착했습니다.", url));
 
     }
 
@@ -162,7 +176,7 @@ public class GroupService {
                 () -> new CustomException(ErrorCode.ADD_REQUEST_NOT_FOUND)
         );
 
-        Customer customer = validCustomer(customerId);
+        validCustomer(customerId);
 
         boolean isGroupLeader = groupMemberRepository
                 .existsLeader(groupId, customerId);
@@ -173,19 +187,39 @@ public class GroupService {
         if (groupAddRequest.getRequestStatus() != RequestStatus.PENDING)
             throw new CustomException(ErrorCode.ALREADY_PROCESS_REQUEST);
 
+        if (!groupAddRequest.getGroup().getGroupId().equals(groupId)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
         RequestStatus changeStatus = request.getIsAccept() == Boolean.TRUE
                 ? RequestStatus.ACCEPT : RequestStatus.REJECT;
         groupAddRequest.changeStatus(changeStatus);
 
-        if (groupAddRequest.getRequestStatus() == RequestStatus.ACCEPT) {
-            groupMemberRepository.save(
-                    GroupMember.builder()
-                            .group(group)
-                            .leader(false)
-                            .user(customer)
-                            .build()
-            );
+
+
+        Customer requester = groupAddRequest.getUser();
+
+        if (changeStatus == RequestStatus.ACCEPT) {
+            Long requesterId = groupAddRequest.getUser().getCustomerId();
+            if (!groupMemberRepository.existsMember(groupId, requesterId)) {
+                groupMemberRepository.save(GroupMember.builder()
+                        .group(group)
+                        .leader(false)
+                        .user(requester)
+                        .build());
+            }
         }
+
+        boolean accepted = (changeStatus == RequestStatus.ACCEPT);
+        final Long requesterId = groupAddRequest.getUser().getCustomerId();
+        final String url = "/groups/" + groupId;
+
+        afterCommit(() -> notificationService.sendToCustomer(
+                requesterId,
+                accepted ? NotificationType.GROUP_JOIN_ACCEPTED : NotificationType.GROUP_JOIN_REJECTED,
+                accepted ? "가입이 승인되었습니다." : "가입이 거절되었습니다.",
+                url
+        ));
 
         return new AddRequestResponseDto(
             groupAddRequest.getGroupAddRequestId(), groupAddRequest.getUser().getName(),
@@ -193,6 +227,7 @@ public class GroupService {
         );
     }
 
+    @Transactional
     public GroupResponseDto createGroupMember(Long groupId, Long userId, GroupEntranceRequestDto requestDto) {
         Group group = validGroup(groupId);
 
@@ -217,6 +252,8 @@ public class GroupService {
 
         Customer user = validCustomer(userId);
 
+        List<Long> memberIdsToNotify = groupMemberRepository.findMemberIdsByGroupId(groupId);
+
         groupMemberRepository.save(
                 GroupMember.builder()
                         .group(group)
@@ -225,16 +262,35 @@ public class GroupService {
                         .build()
         );
 
+        final String url = "/groups/" + groupId;
+
+        // 커밋 후 알림
+        afterCommit(() -> {
+            // 본인: 참여 완료
+            notificationService.sendToCustomer(
+                    userId, NotificationType.GROUP_JOINED, "모임 참여가 완료되었습니다.", url);
+
+            // 기존 멤버 전원: 새 멤버 참여 알림 (본인 제외, 스냅샷 기반)
+            memberIdsToNotify.stream()
+                    .filter(id -> !id.equals(userId))
+                    .distinct()
+                    .forEach(id -> notificationService.sendToCustomer(
+                            id, NotificationType.GROUP_JOINED, "새 멤버가 참여했습니다.", url));
+        });
+
+
         return new GroupResponseDto(
                 group.getGroupId(), group.getGroupName(),
                 group.getGroupDescription(), group.getGroupCode(),
-                group.getGroupId() // TODO: 지갑 ID로 교체
+                groupWallet.walletId()
         );
 
     }
 
-    public List<GroupMaskingResponseDto> getSearchGroup(String name) {
-        // TODO: 고객만 모임을 검색할 수 있게 change
+    public List<GroupMaskingResponseDto> getSearchGroup(Long customerId, String name) {
+        // 고객만 모임을 검색할 수 있게 change => 경로로 막음 + valid 체크
+        validCustomer(customerId);
+
         return groupRepository.findGroupsByName(name);
     }
 
@@ -255,6 +311,17 @@ public class GroupService {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
+        final String url = "/groups/" + groupId;
+        final Long oldLeaderId = originGroupLeader.getUser().getCustomerId();
+        final Long newLeaderId = newGroupLeader.getUser().getCustomerId();
+
+        afterCommit(() -> {
+            notificationService.sendToCustomer(
+                    oldLeaderId, NotificationType.GROUP_LEADER_CHANGED, "리더 권한이 해제되었습니다.", url);
+            notificationService.sendToCustomer(
+                    newLeaderId, NotificationType.GROUP_LEADER_CHANGED, "새 리더로 지정되었습니다.", url);
+        });
+
         return new GroupLeaderChangeResponseDto(
                 groupId, newGroupLeader.getGroupMemberId(), newGroupLeader.getUser().getName()
         );
@@ -274,5 +341,14 @@ public class GroupService {
     private Customer validCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    // 유틸: 트랜잭션 커밋 후 실행
+    private void afterCommit(Runnable r) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCommit() { r.run(); }
+            });
+        } else { r.run(); }
     }
 }

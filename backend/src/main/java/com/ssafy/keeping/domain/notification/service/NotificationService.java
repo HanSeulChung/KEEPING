@@ -1,14 +1,14 @@
 package com.ssafy.keeping.domain.notification.service;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
-import com.ssafy.keeping.domain.core.customer.repository.CustomerRepository;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.notification.dto.NotificationResponseDto;
 import com.ssafy.keeping.domain.notification.entity.Notification;
 import com.ssafy.keeping.domain.notification.entity.NotificationType;
 import com.ssafy.keeping.domain.notification.repository.EmitterRepository;
 import com.ssafy.keeping.domain.notification.repository.NotificationRepository;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +27,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final CustomerRepository customerRepository;
     private final OwnerRepository ownerRepository;
+    private final FcmService fcmService;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60; // 60분
 
@@ -73,22 +74,10 @@ public class NotificationService {
             if (!connectionSuccess) {
                 log.warn("초기 연결 이벤트 전송 실패 - EmitterID: {}", emitterId);
             }
-            
-            // 클라이언트가 재연결한 경우, 유실된 이벤트 전송
-            // lastEventId는 서버가 만드는 것이 아니라, 클라이언트(브라우저)가 보내주는 값
-            // lastEventId는 있을 수도, 없을 수도 있음. 만약 있을 경우 서버 연결이 실패한 것
-            // 없을 때는 사용자가 처음 로그인해서 맺는 최초의 연결임
+
             if (hasLostData(lastEventId)) {
                 sendLostData(lastEventId, receiverType, receiverId, emitterId, sseEmitter);
-            } else {
-                sendMissedNotifications(receiverType, receiverId, emitterId, sseEmitter);
-                // 로그인 시 읽지 않은 알림 전송 (lastEventId 유무와 관계없이 항상 실행) - 최초 로그인
             }
-            //   작동 방식:
-            //  1. 최초 연결: lastEventId가 없음 → 밀린 알림만 전송
-            //  2. 재연결: lastEventId가 있음 → 유실된 이벤트 + 밀린 알림 모두 전송
-            // 프론트가
-
 
         } catch (Exception e) {
             log.error("SSE 구독 초기화 중 오류 - EmitterID: {}", emitterId, e);
@@ -131,8 +120,8 @@ public class NotificationService {
             log.info("고객 알림 DB 저장 완료 - 고객ID: {}, 알림ID: {}, 타입: {}", 
                     customerId, notification.getNotificationId(), notificationType);
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(NotificationResponseDto.from(notification));
+            // 포그라운드/백그라운드 분기하여 알림 전송
+            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("고객 알림 전송 중 예상치 못한 오류 - 고객ID: {}, 타입: {}", customerId, notificationType, e);
@@ -171,11 +160,73 @@ public class NotificationService {
             log.info("점주 알림 DB 저장 완료 - 점주ID: {}, 알림ID: {}, 타입: {}", 
                     ownerId, notification.getNotificationId(), notificationType);
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(NotificationResponseDto.from(notification));
+            // 포그라운드/백그라운드 분기하여 알림 전송
+            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
             
         } catch (Exception e) {
             log.error("점주 알림 전송 중 예상치 못한 오류 - 점주ID: {}, 타입: {}", ownerId, notificationType, e);
+        }
+    }
+
+    /**
+     * 포그라운드/백그라운드 분기하여 알림 전송
+     */
+    private void sendNotificationWithStrategy(NotificationResponseDto data) {
+        String receiverType = data.getReceiverType().toLowerCase();
+        Long receiverId = data.getReceiverId();
+        
+        try {
+            // 활성 SSE 연결이 있는지 확인
+            boolean hasActiveConnection = emitterRepository.hasActiveConnection(receiverType, receiverId);
+            
+            if (hasActiveConnection) {
+                // 포그라운드: SSE로 실시간 전송
+                log.info("포그라운드 상태 감지 - SSE로 알림 전송: {}:{}", receiverType, receiverId);
+                sendRealTimeNotification(data);
+            } else {
+                // 백그라운드: FCM으로 푸시 알림 전송
+                log.info("백그라운드 상태 감지 - FCM으로 푸시 알림 전송: {}:{}", receiverType, receiverId);
+                sendFcmNotification(data);
+            }
+            
+        } catch (Exception e) {
+            log.error("알림 전송 전략 선택 중 오류 - {}:{}", receiverType, receiverId, e);
+        }
+    }
+    
+    /**
+     * FCM 푸시 알림 전송
+     */
+    private void sendFcmNotification(NotificationResponseDto data) {
+        String receiverType = data.getReceiverType().toLowerCase();
+        Long receiverId = data.getReceiverId();
+        String title = "새 알림";
+        String body = data.getContent();
+        
+        try {
+            // 알림 타입별 제목 설정
+            if (data.getNotificationType() != null) {
+                title = data.getNotificationType().getDisplayName();
+            }
+            
+            // 추가 데이터 설정
+            Map<String, String> fcmData = Map.of(
+                "notificationId", data.getNotificationId().toString(),
+                "type", data.getNotificationType() != null ? data.getNotificationType().toString() : "UNKNOWN",
+                "url", data.getUrl() != null ? data.getUrl() : "",
+                "createdAt", data.getCreatedAt().toString()
+            );
+            
+            if ("customer".equals(receiverType)) {
+                fcmService.sendToCustomer(receiverId, data.getNotificationType(), title, body, fcmData);
+            } else if ("owner".equals(receiverType)) {
+                fcmService.sendToOwner(receiverId, data.getNotificationType(), title, body, fcmData);
+            }
+            
+            log.info("FCM 푸시 알림 전송 완료 - {}:{}, 제목: {}", receiverType, receiverId, title);
+            
+        } catch (Exception e) {
+            log.error("FCM 푸시 알림 전송 실패 - {}:{}", receiverType, receiverId, e);
         }
     }
 
@@ -299,78 +350,4 @@ public class NotificationService {
                 
         log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
     }
-
-    /**
-     * 로그인 시 읽지 않은 알림들을 실시간으로 전송
-     * @param receiverType "customer" 또는 "owner"
-     * @param receiverId 사용자 ID
-     * @param emitterId Emitter ID
-     * @param emitter SSE Emitter
-     */
-    private void sendMissedNotifications(String receiverType, Long receiverId, String emitterId, SseEmitter emitter) {
-        try {
-            log.info("밀린 알림 전송 시작 - {}:{}", receiverType, receiverId);
-            
-            List<Notification> missedNotifications;
-            
-            // 사용자 타입에 따라 읽지 않은 알림 조회
-            if ("customer".equalsIgnoreCase(receiverType)) {
-                missedNotifications = notificationRepository.findUnreadNotificationsByCustomerId(receiverId);
-            } else if ("owner".equalsIgnoreCase(receiverType)) {
-                missedNotifications = notificationRepository.findUnreadNotificationsByOwnerId(receiverId);
-            } else {
-                log.warn("알 수 없는 사용자 타입 - receiverType: {}", receiverType);
-                return;
-            }
-            
-            if (missedNotifications.isEmpty()) {
-                log.info("밀린 알림 없음 - {}:{}", receiverType, receiverId);
-                return;
-            }
-            
-            log.info("밀린 알림 발견 - {}:{}, 개수: {}", receiverType, receiverId, missedNotifications.size());
-            
-            int successCount = 0;
-            int failCount = 0;
-            
-            // 각 알림을 순차적으로 전송 (오래된 것부터)
-            for (Notification notification : missedNotifications) {
-                try {
-                    NotificationResponseDto responseDto = NotificationResponseDto.from(notification);
-                    String eventId = makeTimeIncludeId(receiverType, receiverId);
-                    
-                    boolean success = sendNotification(emitter, eventId, emitterId, responseDto);
-                    if (success) {
-                        successCount++;
-                        log.debug("밀린 알림 전송 성공 - 알림ID: {}", notification.getNotificationId());
-                    } else {
-                        failCount++;
-                        log.warn("밀린 알림 전송 실패 - 알림ID: {}", notification.getNotificationId());
-                        // 전송 실패 시 루프 중단 (연결이 끊어진 상태)
-                        break;
-                    }
-                    
-                    // 너무 빠른 전송 방지를 위한 소량 지연 (선택사항)
-                    Thread.sleep(10);
-                    
-                } catch (Exception e) {
-                    failCount++;
-                    log.warn("밀린 알림 전송 중 오류 - 알림ID: {}, 오류: {}", 
-                            notification.getNotificationId(), e.getMessage());
-                }
-            }
-            
-            log.info("밀린 알림 전송 완료 - {}:{}, 총 개수: {}, 성공: {}, 실패: {}", 
-                    receiverType, receiverId, missedNotifications.size(), successCount, failCount);
-                    
-        } catch (Exception e) {
-            log.error("밀린 알림 전송 중 예상치 못한 오류 - {}:{}", receiverType, receiverId, e);
-        }
-    }
-
-
-
-
-
-
 }

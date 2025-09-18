@@ -10,6 +10,8 @@ import com.ssafy.keeping.domain.menuCategory.repository.MenuCategoryRepository;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.store.service.StoreService;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,25 +28,47 @@ import java.util.Optional;
 public class MenuService {
     private final MenuRepository menuRepository;
     private final StoreRepository storeRepository;
+    private final OwnerRepository ownerRepository;
     private final MenuCategoryRepository menuCategoryRepository;
 
-    public MenuResponseDto createMenu(Long storeId, MenuRequestDto requestDto) {
-        Store store = storeRepository.findById(storeId).orElseThrow(
+    /*
+    * 권한 필요 없는 메서드
+    * */
+    public List<MenuResponseDto> getAllMenus(Long storeId) {
+        storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
 
+        return menuRepository.findAllMenusByStoreId(storeId);
+    }
+
+    public List<MenuResponseDto> getAllMenusByCategory(Long categoryId) {
+        return menuRepository.findAllMenusByCategoryId(categoryId);
+    }
+
+    /*
+    * 가게 주인이 조작하는 service (권한 필요)
+    * */
+    public MenuResponseDto createMenu(Long ownerId, Long storeId, MenuRequestDto requestDto) {
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
+
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
+
         Long categoryId = requestDto.getCategoryId();
-        MenuCategory category = menuCategoryRepository.findById(categoryId).orElseThrow(
-                () -> new CustomException(ErrorCode.MENU_CATEGORY_NOT_FOUND)
-        );
+        MenuCategory category = validMenuCategory(categoryId);
 
         if(!Objects.equals(storeId, category.getStore().getStoreId())){
             throw new CustomException(ErrorCode.STORE_NOT_MATCH);
         }
 
+        if (menuRepository.existsDuplicationName(storeId,  requestDto.getMenuName()))
+            throw new CustomException(ErrorCode.DUPLICATE_RESOURCE);
+
         // TODO: 이미지 서버 구축 후 같이 수정
         String imgUrl = StoreService.makeImgUrl(requestDto.getImgFile());
-        int order = menuRepository.nextOrder(storeId, categoryId);
+        int order = menuRepository.nextOrderIncludingDeleted(storeId, categoryId);
         Menu saved = menuRepository.save(
                     Menu.builder()
                             .menuName(requestDto.getMenuName())
@@ -64,17 +88,21 @@ public class MenuService {
         );
     }
 
-    public MenuResponseDto editMenu(Long storeId, Long menuId, MenuEditRequestDto requestDto) {
-        Menu menu = menuRepository.findByMenuIdAndStore_StoreId(menuId, storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
+    public MenuResponseDto editMenu(Long ownerId, Long storeId, Long menuId, MenuEditRequestDto requestDto) {
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
 
-        MenuCategory category = menuCategoryRepository.findById(requestDto.getCategoryId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MENU_CATEGORY_NOT_FOUND));
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
+
+        Menu menu = validMenu(menuId, storeId);
+
+        MenuCategory category = validMenuCategory(requestDto.getCategoryId());
         if (!category.getStore().getStoreId().equals(storeId))
             throw new CustomException(ErrorCode.STORE_NOT_MATCH);
 
         boolean changed = !menu.getCategory().getCategoryId().equals(requestDto.getCategoryId());
-        int order = changed ? menuRepository.nextOrder(storeId, requestDto.getCategoryId())
+        int order = changed ? menuRepository.nextOrderIncludingDeleted(storeId, requestDto.getCategoryId())
                 : menu.getDisplayOrder();
         if (changed) menu.changeCategory(category);
 
@@ -96,26 +124,48 @@ public class MenuService {
                 menu.getDisplayOrder(), menu.isSoldOut());
     }
 
-    public List<MenuResponseDto> getAllMenus(Long storeId) {
-        storeRepository.findById(storeId).orElseThrow(
-                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
-        );
+    public void deleteMenu(Long ownerId, Long storeId, Long menusId) {
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
 
-        return menuRepository.findAllMenusByStoreId(storeId);
-    }
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
 
-    public void deleteMenu(Long storeId, Long menusId) {
-        Menu menu = menuRepository.findByMenuIdAndStore_StoreId(menusId, storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
+        Menu menu = validMenu(menusId, storeId);
 
         menuRepository.deleteById(menusId);
     }
 
-    public void deleteAllMenu(Long storeId) {
-        storeRepository.findById(storeId).orElseThrow(
-                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
-        );
+    public void deleteAllMenu(Long ownerId, Long storeId) {
+        Owner owner = validOwner(ownerId);
+        Store store = validStore(storeId);
+
+        if (!store.getOwner().getOwnerId().equals(owner.getOwnerId()))
+            throw new CustomException(ErrorCode.OWNER_NOT_MATCH);
 
         menuRepository.deleteAllByStore_StoreId(storeId);
+    }
+
+    private Owner validOwner(Long ownerId) {
+        return ownerRepository.findById(ownerId).orElseThrow(
+                () -> new CustomException(ErrorCode.OWNER_NOT_FOUND)
+        );
+    }
+
+    private Store validStore(Long storeId) {
+        return storeRepository.findById(storeId).orElseThrow(
+                () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
+        );
+    }
+
+    private MenuCategory validMenuCategory(Long categoryId) {
+        return  menuCategoryRepository.findById(categoryId).orElseThrow(
+                () -> new CustomException(ErrorCode.MENU_CATEGORY_NOT_FOUND)
+        );
+    }
+
+    private Menu validMenu(Long menuId, Long storeId) {
+        return menuRepository.findByMenuIdAndStore_StoreId(menuId, storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
     }
 }

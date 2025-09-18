@@ -15,6 +15,7 @@ public enum ErrorCode {
     STORE_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록한 주소의 가게입니다. 다시 확인해주세요."),
     STORE_INVALID(HttpStatus.BAD_REQUEST, "해당 매장의 운영상태를 확인해주세요."),
     STORE_NOT_MATCH(HttpStatus.BAD_REQUEST, "두 가게가 맞지 않습니다."),
+    OWNER_NOT_MATCH(HttpStatus.BAD_REQUEST, "가게 주인과 가게가 맞지 않습니다."),
 
     // MenuCategory 관련
     MENU_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
@@ -31,7 +32,7 @@ public enum ErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API 통신 중 오류가 발생했습니다."),
     INVALID_CARD_NUMBER(HttpStatus.BAD_REQUEST, "입력하신 카드번호가 올바르지 않습니다."),
     INVALID_CVC(HttpStatus.BAD_REQUEST, "CVC 번호가 올바르지 않습니다."),
-    
+
     // 취소 관련
     TRANSACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 거래를 찾을 수 없습니다."),
     SETTLEMENT_TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 정산 작업을 찾을 수 없습니다."),
@@ -54,6 +55,7 @@ public enum ErrorCode {
     ADD_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 추가 요청을 찾을 수 없습니다."),
     CODE_NOT_MATCH(HttpStatus.BAD_REQUEST, "코드가 일치하지 않습니다."),
     GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 모임원을 찾을 수 없습니다."),
+    GROUP_LEADER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 모임장을 찾을 수 없습니다."),
 
     // wallet - group 관련
     BEFORE_INDIVIDUAL_CHARGE(HttpStatus.BAD_REQUEST, "개인 지갑에 충전이 먼저 되어야합니다."),
@@ -113,6 +115,10 @@ public enum ErrorCode {
     PAYMENT_INTENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 요청 상태가 승인 가능 상태가 아닙니다."),
     PAYMENT_INTENT_EXPIRED(HttpStatus.GONE, "결제 요청의 승인 가능 시간이 만료되었습니다."),
     PAYMENT_INTENT_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청 소유자와 승인 주체가 일치하지 않습니다."),
+    PAYMENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 상태 전이가 유효하지 않습니다."),
+
+    // transaction 관련
+    TX_ITEM_STORE_MISMATCH(HttpStatus.BAD_REQUEST, "트랜잭션과 품목의 가게가 일치하지 않습니다."),
 
     // PIN 인증 관련
     PIN_REQUIRED(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)는 필수입니다."),
@@ -120,10 +126,34 @@ public enum ErrorCode {
     PIN_NOT_SET(HttpStatus.BAD_REQUEST, "설정된 결제 비밀번호(PIN)가 없습니다."),
     PIN_LOCKED(HttpStatus.LOCKED, "PIN 입력이 일정 시간 잠겨 있습니다. 잠시 후 다시 시도하세요."), // 423 Locked
     PIN_LENGTH_INVALID(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)의 길이는 6자리 이여야 합니다."),
+
     // 자금/한도 관련
     FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
     PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다."),
-    
+
+    FUNDS_INVARIANT_VIOLATION(HttpStatus.INTERNAL_SERVER_ERROR, "자금 불변식 위반: 잔액표와 로트 합계가 일치하지 않습니다."),
+
+    // lot 관련
+    WALLET_LOT_MOVE_DELTA_ZERO(HttpStatus.BAD_REQUEST, "로트 증감 delta는 0일 수 없습니다."),
+
+    // 외부 API 관련 에러
+    INVALID_HEADER(HttpStatus.BAD_REQUEST, "요청 헤더가 유효하지 않습니다"),
+    INVALID_API_ITEM(HttpStatus.BAD_REQUEST, "API 항목이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_DATE(HttpStatus.BAD_REQUEST, "전송일자 형식이 유효하지 않습니다"),
+    INVALID_TRANSMISSION_TIME(HttpStatus.BAD_REQUEST, "전송시각 형식이 유효하지 않습니다"),
+    INVALID_INSTITUTION_CODE(HttpStatus.BAD_REQUEST, "기관코드가 유효하지 않습니다"),
+    INVALID_FINTECHAPP_NUMBER(HttpStatus.BAD_REQUEST, "핀테크 앱 일련번호가 유효하지 않습니다"),
+    INVALID_SERVICE_CODE(HttpStatus.BAD_REQUEST, "API 서비스코드가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER(HttpStatus.BAD_REQUEST, "기관거래고유번호가 중복됩니다"),
+    INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "API KEY가 유효하지 않습니다"),
+    INVALID_USER_KEY(HttpStatus.UNAUTHORIZED, "USER KEY가 유효하지 않습니다"),
+    INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "기관거래고유번호가 유효하지 않습니다"),
+    INVALID_ACCOUNT_NUMBER(HttpStatus.BAD_REQUEST, "계좌번호가 유효하지 않습니다"),
+    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다."),
+
+    // 직렬화
+    JSON_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON 파싱/역직렬화에 실패했습니다."),
+
     // 추가된 에러 코드들
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
     WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다.");

@@ -48,8 +48,6 @@ public class SecurityConfig {
     public static final String[] TEMP_ALLOW_URLS = {
             "/stores/**",
             "/api/**",
-            "/stores/**",
-            "/groups/**",
             "/api/v1/stores/**",
             "/wallets/**"
     };
@@ -116,7 +114,7 @@ public class SecurityConfig {
                 // 세션 관리 정책 -> OAuth2 로그인 완료 후 JWT로 전환 되어 현재는 IF_REQUIRED 로 작성
                 // TODO:  OAuth2 에서 세션에 role 을 담지 않고 넘겨주는 방식으로 리팩토링 후 수정
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
                 .headers(headers -> headers
@@ -162,17 +160,22 @@ public class SecurityConfig {
 //                        .requestMatchers("PATCH", "/stores/*/menus/categories/*").hasRole("OWNER")
 //                        .requestMatchers("DELETE", "/stores/*/menus/categories/*").hasRole("OWNER")
 
-                        // 그룹 관리
+                        .requestMatchers("/cpqr/new").hasRole("CUSTOMER")
+                        .requestMatchers("/cpqr/*/initiate").hasRole("OWNER")
+                        .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
+
+                                // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()
 
                         // 고객 권한만 필요한 URL
                         .requestMatchers("/customers/**").hasRole("CUSTOMER")
+                        .requestMatchers("/groups/**").hasRole("CUSTOMER")
 
                         // 결제
 //                        .requestMatchers("/charge/**", "/payments/**", "/cpqr/**").authenticated()
 
                         // 그 외 모든 요청은 인증 필요
-//                        .anyRequest().authenticated()
+                        .anyRequest().authenticated()
                 )
                 // JWT 인증 필터를 UsernamePasswordAuthenticationFilter 이전에 추가
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

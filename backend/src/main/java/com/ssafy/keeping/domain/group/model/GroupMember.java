@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.group.model;
 
-import com.ssafy.keeping.domain.core.customer.model.Customer;
+import com.ssafy.keeping.domain.user.customer.model.Customer;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
