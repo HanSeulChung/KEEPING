@@ -113,9 +113,6 @@ public class AuthService {
         String otpKey = OTP_KEY_PREFIX + regSessionId;
         String otpValue = redis.opsForValue().get(otpKey);
 
-        System.out.println("[ATTACH OTP] otpKey: " + otpKey);
-        System.out.println("[ATTACH OTP] otpValue: " + otpValue);
-
         RegSession regSession = new RegSession();
         if(otpValue != null) {
             try {
@@ -152,7 +149,6 @@ public class AuthService {
 
         try {
             String finalValue = om.writeValueAsString(map);
-            System.out.println("[ATTACH OTP] signUpValue after: " + finalValue);
             redis.opsForValue().set(signUpKey, finalValue, Duration.ofMinutes(15));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
