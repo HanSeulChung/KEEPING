@@ -104,6 +104,19 @@ public class IdempotencyService {
         idempotencyKeyRepository.save(row);
     }
 
+    @Transactional
+    public void completeCharge(IdempotencyKey row, int httpStatus, Object responseBody) {
+        row.setStatus(IdemStatus.DONE);
+        row.setHttpStatus(httpStatus);
+        try {
+            row.setResponseJson(canonicalObjectMapper.valueToTree(responseBody));
+        } catch (Exception e) {
+            log.warn("Response 직렬화 실패", e);
+        }
+
+        idempotencyKeyRepository.save(row);
+    }
+
     /**
      * SHA-256 유틸 (정규화된 요청 바디 문자열 → 32바이트 해시)
      * - 반드시 먼저 원문 정규화가 필요!!
