@@ -4,12 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getFcmToken, requestNotificationPermission, setupForegroundMessageListener } from '@/lib/firebase'
 import { registerFCMToken, unregisterFCMToken } from '@/api/fcmApi'
-import { 
-  getNotificationListForOwner, 
-  getUnreadCountForOwner, 
-  markAsReadForOwner,
-  NotificationResponseDto 
-} from '@/api/notificationApi'
+import { notificationApi } from '@/api/notificationApi'
+import { NotificationAPI } from '@/types/api'
 
 interface NotificationData {
   id: number
@@ -49,7 +45,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const maxReconnectAttempts = 5
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
-  const convertNotificationData = (backendData: NotificationResponseDto): NotificationData => {
+  const convertNotificationData = (backendData: NotificationAPI.NotificationResponseDto): NotificationData => {
     return {
       id: backendData.id,
       type: backendData.type,
@@ -363,7 +359,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     try {
       // 서버에 읽음 상태 전송
-      await markAsReadForOwner(user.id, id)
+      await notificationApi.markAsRead(user.id, id)
       
       // 로컬 상태 업데이트
       setNotifications(prev => 
@@ -457,13 +453,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
 
     try {
-      const response = await getNotificationListForOwner(parseInt(user.id), 0, 50) // 최근 50개 알림
-      if (response.success) {
-        const convertedNotifications = response.data.content.map(convertNotificationData)
-        setNotifications(convertedNotifications)
-      } else {
-        console.error('알림 로드 실패:', response.message)
-      }
+      const list = await notificationApi.getNotificationList(parseInt(user.id), 0, 50)
+      const convertedNotifications = list.map(convertNotificationData)
+      setNotifications(convertedNotifications)
     } catch (error) {
       console.error('알림 로드 오류:', error)
     }
