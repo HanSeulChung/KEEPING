@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.notification.entity;
 
+
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import jakarta.persistence.*;
