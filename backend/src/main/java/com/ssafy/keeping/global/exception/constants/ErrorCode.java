@@ -147,7 +147,10 @@ public enum ErrorCode {
     INVALID_USER_KEY(HttpStatus.UNAUTHORIZED, "USER KEY가 유효하지 않습니다"),
     INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "기관거래고유번호가 유효하지 않습니다"),
     INVALID_ACCOUNT_NUMBER(HttpStatus.BAD_REQUEST, "계좌번호가 유효하지 않습니다"),
-    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다.");
+    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다."),
+
+    // 직렬화
+    JSON_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON 파싱/역직렬화에 실패했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
