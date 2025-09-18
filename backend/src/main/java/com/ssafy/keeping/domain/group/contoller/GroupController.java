@@ -33,7 +33,7 @@ public class GroupController {
             @AuthenticationPrincipal Long customerId,
             @RequestParam String name
     ) {
-        List<GroupMaskingResponseDto> dtos = groupService.getSearchGroup(name);
+        List<GroupMaskingResponseDto> dtos = groupService.getSearchGroup(customerId, name);
         String message = dtos.size() == 0 ?
                 "해당 이름으로 조회되는 모임이 존재하지 않습니다." : "해당 모임이 조회되었습니다.";
         return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dtos));
