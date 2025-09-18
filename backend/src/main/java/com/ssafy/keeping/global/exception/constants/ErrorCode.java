@@ -111,6 +111,10 @@ public enum ErrorCode {
     PAYMENT_INTENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 요청 상태가 승인 가능 상태가 아닙니다."),
     PAYMENT_INTENT_EXPIRED(HttpStatus.GONE, "결제 요청의 승인 가능 시간이 만료되었습니다."),
     PAYMENT_INTENT_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청 소유자와 승인 주체가 일치하지 않습니다."),
+    PAYMENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 상태 전이가 유효하지 않습니다."),
+
+    // transaction 관련
+    TX_ITEM_STORE_MISMATCH(HttpStatus.BAD_REQUEST, "트랜잭션과 품목의 가게가 일치하지 않습니다."),
 
     // PIN 인증 관련
     PIN_REQUIRED(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)는 필수입니다."),
@@ -118,9 +122,14 @@ public enum ErrorCode {
     PIN_NOT_SET(HttpStatus.BAD_REQUEST, "설정된 결제 비밀번호(PIN)가 없습니다."),
     PIN_LOCKED(HttpStatus.LOCKED, "PIN 입력이 일정 시간 잠겨 있습니다. 잠시 후 다시 시도하세요."), // 423 Locked
     PIN_LENGTH_INVALID(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)의 길이는 6자리 이여야 합니다."),
+
     // 자금/한도 관련
     FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
-    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다.");
+    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다."),
+    FUNDS_INVARIANT_VIOLATION(HttpStatus.INTERNAL_SERVER_ERROR, "자금 불변식 위반: 잔액표와 로트 합계가 일치하지 않습니다."),
+
+    // lot 관련
+    WALLET_LOT_MOVE_DELTA_ZERO(HttpStatus.BAD_REQUEST, "로트 증감 delta는 0일 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

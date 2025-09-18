@@ -13,6 +13,7 @@ import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
@@ -87,11 +88,11 @@ public class PrepaymentService {
      * 개인 지갑 조회 또는 생성
      */
     private Wallet findOrCreateIndividualWallet(Customer customer) {
-        return walletRepository.findByCustomerAndWalletType(customer, Wallet.WalletType.INDIVIDUAL)
+        return walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseGet(() -> {
                     Wallet newWallet = Wallet.builder()
                             .customer(customer)
-                            .walletType(Wallet.WalletType.INDIVIDUAL)
+                            .walletType(WalletType.INDIVIDUAL)
                             .build();
                     return walletRepository.save(newWallet);
                 });

@@ -2,6 +2,7 @@ package com.ssafy.keeping.domain.wallet.model;
 
 import com.ssafy.keeping.domain.core.customer.model.Customer;
 import com.ssafy.keeping.domain.group.model.Group;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -47,7 +48,4 @@ public class Wallet {
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<WalletStoreBalance> walletStoreBalances;
 
-    public enum WalletType {
-        INDIVIDUAL, GROUP
-    }
 }

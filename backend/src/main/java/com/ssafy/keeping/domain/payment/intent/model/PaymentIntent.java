@@ -2,6 +2,8 @@ package com.ssafy.keeping.domain.payment.intent.model;
 
 import com.ssafy.keeping.domain.payment.intent.constant.PaymentStatus;
 import com.ssafy.keeping.domain.payment.qr.model.QrToken;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,15 +17,17 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(
-    name = "payment_intent",
-    uniqueConstraints = {
-            @UniqueConstraint(name = "uk_intent_qr_token", columnNames = {"qr_token_id"}),
-            @UniqueConstraint(name = "uk_intent_public_id", columnNames = {"public_id"})
-    },
-    indexes = {
-            @Index(name = "idx_status_expires", columnList = "status,expires_at"),
-            @Index(name = "idx_store_status", columnList = "store_id,status")
-    }
+        name = "payment_intent",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_intent_qr_token",  columnNames = {"qr_token_id"}),
+                @UniqueConstraint(name = "uk_intent_public_id", columnNames = {"public_id"}),
+                @UniqueConstraint(name = "uk_intent_idem",      columnNames = {"idempotency_key"})
+        },
+        indexes = {
+                @Index(name = "idx_status_expires", columnList = "status,expires_at"),
+                @Index(name = "idx_store_status",   columnList = "store_id,status"),
+                @Index(name = "idx_wallet_status",  columnList = "wallet_id,status")
+        }
 )
 public class PaymentIntent {
     // 낙관적 락 : 동시성 안전성(concurrency control)
@@ -51,11 +55,14 @@ public class PaymentIntent {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
+    @Column(name = "wallet_id", nullable = false)
+    private Long walletId;
+
     @Column(name = "store_id", nullable = false)
     private Long storeId;
 
     @Column(nullable = false)
-    private long amount;
+    private Long amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -97,4 +104,41 @@ public class PaymentIntent {
     public void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    public void markApproved(LocalDateTime now) {
+        // 만료 검사
+        if (now.isAfter(this.expiresAt)) {
+            throw new CustomException(ErrorCode.PAYMENT_INTENT_EXPIRED);
+        }
+        // 전이 가능 상태만 허용
+        if (this.status != PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_STATUS_CONFLICT);
+        }
+        this.status = PaymentStatus.APPROVED;
+        this.approvedAt = now;
+    }
+
+    public void markDeclined(LocalDateTime now) {
+        if (this.status != PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_STATUS_CONFLICT);
+        }
+        this.status = PaymentStatus.DECLINED;
+        this.declinedAt = now;
+    }
+
+    public void markCanceled(LocalDateTime now) {
+        if (this.status != PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_STATUS_CONFLICT);
+        }
+        this.status = PaymentStatus.CANCELED;
+        this.canceledAt = now;
+    }
+
+    public void markExpired(LocalDateTime now) {
+        if (this.status != PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_STATUS_CONFLICT);
+        }
+        this.status = PaymentStatus.EXPIRED;
+    }
+
 }

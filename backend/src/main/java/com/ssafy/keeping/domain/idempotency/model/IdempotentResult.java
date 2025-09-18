@@ -23,6 +23,9 @@ public class IdempotentResult<T> {
     public static <T> IdempotentResult<T> created(T body) {
         return new IdempotentResult<>(HttpStatus.CREATED, body, false, null); // 최초 처리됨(201)
     }
+    public static <T> IdempotentResult<T> ok(T body) {
+        return new IdempotentResult<>(HttpStatus.OK, body, false, null);
+    }
     public static <T> IdempotentResult<T> okReplay(T body) {
         return new IdempotentResult<>(HttpStatus.OK, body, true, null); // 과거 응답 재생(200)
     }

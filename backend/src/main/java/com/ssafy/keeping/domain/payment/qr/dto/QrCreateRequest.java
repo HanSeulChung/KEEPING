@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 public class QrCreateRequest {
 
     @NotNull
+    private Long walletId;
+
+    @NotNull
     private QrMode mode;
 
     @NotNull
