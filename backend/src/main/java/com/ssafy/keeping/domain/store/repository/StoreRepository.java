@@ -63,4 +63,7 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     """)
     List<StorePublicDto> findPublicAllSimilarityByName(@Param("name") String name,
                                                        @Param("status") StoreStatus status);
+
+    /** 점주가 해당 가게의 소유자인지 빠르게 존재 체크 */
+    boolean existsByStoreIdAndOwner_OwnerId(Long storeId, Long ownerId);
 }
