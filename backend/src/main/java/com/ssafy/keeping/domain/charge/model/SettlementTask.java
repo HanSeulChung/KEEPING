@@ -40,6 +40,9 @@ public class SettlementTask {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "actual_payment_amount", nullable = false)
+    private Long actualPaymentAmount;
+
     public enum Status {
         PENDING,    // 대기 중 (3일 후 처리 예정)
         COMPLETED,  // 정산 완료

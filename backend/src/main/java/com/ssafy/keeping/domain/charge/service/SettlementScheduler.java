@@ -119,9 +119,9 @@ public class SettlementScheduler {
         try {
             log.info("가게 정산 처리 시작 - 가게: {}, 작업 수: {}", store.getStoreName(), tasks.size());
             
-            // 1. 정산 금액 계산
+            // 1. 정산 금액 계산 (실제 결제금액 사용)
             Long totalAmount = tasks.stream()
-                    .map(task -> task.getTransaction().getAmount()) // 반환 타입이 Long이라고 가정
+                    .map(SettlementTask::getActualPaymentAmount) // 실제 결제금액 합산
                     .reduce(0L, Long::sum);
             
             if (totalAmount <= 0) {
@@ -156,7 +156,7 @@ public class SettlementScheduler {
             
             // 4. 정산 완료 처리
             markTasksAsCompleted(tasks);
-            log.info("가게 정산 완료 - 가게: {}, 금액: {}, 거래번호: {}", 
+            log.info("가게 정산 완료 - 가게: {}, 실제결제금액: {}, 거래번호: {}",
                     store.getStoreName(), totalAmount, response.getRec().getTransactionUniqueNo());
             
         } catch (CustomException e) {
