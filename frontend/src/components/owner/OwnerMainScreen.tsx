@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/useAuthStore'
+import Header from '@/components/common/Header'
+import { notificationApi } from '@/api/notificationApi'
+import { storeApi } from '@/api/storeApi'
 
 type Store = {
   id: string
@@ -10,7 +13,7 @@ type Store = {
 }
 
 const OwnerMainScreen = () => {
-  const { isLoggedIn } = useAuthStore()
+  const { isLoggedIn, user } = useAuthStore()
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [stores, setStores] = useState<Store[]>([])
   const [unreadCount, setUnreadCount] = useState<number>(0)
@@ -18,20 +21,24 @@ const OwnerMainScreen = () => {
 
   // API 호출 함수들
   const fetchOwnerStores = async () => {
+    if (!user?.id) {
+      console.log('사용자 정보가 없습니다.')
+      return
+    }
+
     try {
-      const response = await fetch('/api/owners/stores?ownerId=2')
-      if (response.ok) {
-        const data = await response.json()
-        const storeList = data.map((store: any) => ({
-          id: store.id,
-          name: store.name
-        }))
-        setStores(storeList)
-        
-        // 첫 번째 매장을 기본 선택으로 설정
-        if (storeList.length > 0 && !selectedStore) {
-          setSelectedStore(storeList[0])
-        }
+      const storeList = await storeApi.getOwnerStores(parseInt(user.id))
+      
+      const formattedStores = storeList.map(store => ({
+        id: store.id.toString(),
+        name: store.name
+      }))
+      
+      setStores(formattedStores)
+      
+      // 첫 번째 매장을 기본 선택으로 설정
+      if (formattedStores.length > 0 && !selectedStore) {
+        setSelectedStore(formattedStores[0])
       }
     } catch (error) {
       console.error('매장 목록 조회 실패:', error)
@@ -39,12 +46,15 @@ const OwnerMainScreen = () => {
   }
 
   const fetchUnreadNotifications = async () => {
+    if (!user?.id) {
+      console.log('사용자 정보가 없습니다.')
+      return
+    }
+    
     try {
-      const response = await fetch('/api/notifications/unread-count?ownerId=2')
-      if (response.ok) {
-        const data = await response.json()
-        setUnreadCount(data.unreadCount)
-      }
+      // API 함수 사용
+      const count = await notificationApi.getUnreadCount(parseInt(user.id))
+      setUnreadCount(count)
     } catch (error) {
       console.error('알림 개수 조회 실패:', error)
     }
@@ -94,7 +104,7 @@ const OwnerMainScreen = () => {
                 onClick={() => setSelectedStore(store)}
                 className={`px-4 py-2 rounded-full border text-sm font-['Tenada'] font-extrabold transition-colors ${
                   selectedStore?.id === store.id
-                    ? 'border-black bg-[#faf8f6] text-black'
+                    ? 'border-black bg-keeping-beige text-black'
                     : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -120,7 +130,7 @@ const OwnerMainScreen = () => {
           {/* 매출 캘린더 */}
           <Link
             href="/owner/calendar"
-            className="group p-6 border border-black bg-[#faf8f6] hover:bg-gray-50 transition-colors"
+            className="group p-6 border border-black bg-keeping-beige hover:bg-gray-50 transition-colors"
           >
             <h2 className="text-xl sm:text-2xl font-['nanumsquare'] font-extrabold text-black mb-4">
               매출 캘린더 &gt;
@@ -158,7 +168,7 @@ const OwnerMainScreen = () => {
           {/* 설정 */}
           <Link
             href="/owner/settings"
-            className="group p-6 border border-black bg-[#faf8f6] hover:bg-gray-50 transition-colors"
+            className="group p-6 border border-black bg-keeping-beige hover:bg-gray-50 transition-colors"
           >
             <h2 className="text-xl sm:text-2xl font-['nanumsquare'] font-extrabold text-black">
               설정

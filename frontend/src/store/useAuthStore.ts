@@ -27,25 +27,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoggedIn: false, user: null })
       },
       initializeAuth: () => {
-        // 로컬 스토리지에서 토큰 확인
-        const token = localStorage.getItem('accessToken')
-        const userData = localStorage.getItem('user')
-        
-        if (token && userData) {
-          try {
-            const user = JSON.parse(userData)
-            set({ isLoggedIn: true, user })
-          } catch (error) {
-            console.error('사용자 데이터 파싱 오류:', error)
-            // 잘못된 데이터가 있으면 정리
-            localStorage.removeItem('accessToken')
-            localStorage.removeItem('refreshToken')
-            localStorage.removeItem('user')
-            set({ isLoggedIn: false, user: null })
-          }
-        } else {
-          set({ isLoggedIn: false, user: null })
-        }
+        // 자동 로그인 비활성화 - 항상 소셜 로그인을 통해서만 로그인
+        // 기존 토큰이 있어도 자동 로그인하지 않고 초기화
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        set({ isLoggedIn: false, user: null })
       },
     }),
     {

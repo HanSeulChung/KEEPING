@@ -63,10 +63,10 @@ export default function QRScanner() {
     const hasQRPattern = detectQRPattern(imageData)
 
     if (hasQRPattern) {
-      const mockQRData = 'customer:1:group:1:table:A-5'
-      setScannedData(mockQRData)
+      // 실제 QR 코드 데이터를 스캔해야 함
+      // 현재는 패턴만 감지하고 실제 데이터는 없음
+      console.log('QR 패턴 감지됨 - 실제 구현 필요')
       setIsScanning(false)
-      handleQRResult(mockQRData)
     }
   }
 
@@ -329,10 +329,9 @@ export default function QRScanner() {
               <div className="mt-4">
                 <button
                   onClick={() => {
-                    const mockQRData = 'customer:1:group:1:table:A-5'
-                    setScannedData(mockQRData)
+                    // 실제 QR 코드 스캔 기능 구현 필요
+                    console.log('수동 QR 스캔 버튼 클릭 - 실제 구현 필요')
                     setIsScanning(false)
-                    handleQRResult(mockQRData)
                   }}
                   className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
                 >

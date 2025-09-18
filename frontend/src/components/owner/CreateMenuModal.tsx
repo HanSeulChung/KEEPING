@@ -5,7 +5,7 @@ import Calendar from './Calendar'
 
 export default function CreateMenuModal() {
   return (
-    <div className="flex w-[1440px] flex-col items-center gap-11 bg-[#faf8f6] px-0 pt-2 pb-9">
+    <div className="flex w-[1440px] flex-col items-center gap-11 bg-keeping-beige px-0 pt-2 pb-9">
       {/* Top bar */}
       <div className="flex h-[3.0625rem] w-[1440px] items-start justify-between border-t border-b border-[#000]">
         <div className="flex items-center justify-center gap-2.5 self-stretch border-t border-r border-b border-[#000] p-2.5">

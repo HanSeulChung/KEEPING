@@ -6,7 +6,7 @@ export default function CalendarLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#faf8f6]">
+    <div className="min-h-screen bg-keeping-beige">
       {children}
     </div>
   );

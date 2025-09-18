@@ -1,14 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
-
-type MenuItem = {
-  id: string
-  name: string
-  description: string
-  price: number
-  category: string
-}
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useMenuManagement } from '@/hooks/useMenuManagement'
+import { MenuResponseDto } from '@/api/menuApi'
 
 type DiscountTier = {
   id: string
@@ -18,31 +13,26 @@ type DiscountTier = {
 }
 
 const StoreManage = () => {
-  const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
+  const searchParams = useSearchParams()
+  const storeId = searchParams.get('storeId')
+  const accountName = searchParams.get('accountName')
   
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([
-    {
-      id: '1',
-      name: '도미정식 1人',
-      description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥',
-      price: 39000,
-      category: '도미코스'
-    },
-    {
-      id: '2',
-      name: '도미정식 1人',
-      description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥',
-      price: 39000,
-      category: '도미코스'
-    },
-    {
-      id: '3',
-      name: '도미정식 1人',
-      description: '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥',
-      price: 39000,
-      category: '도미코스'
+  const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
+  const { 
+    menus, 
+    loading, 
+    error, 
+    fetchMenus, 
+    removeMenu, 
+    clearError 
+  } = useMenuManagement()
+  
+  // 컴포넌트 마운트 시 메뉴 목록 조회
+  useEffect(() => {
+    if (storeId) {
+      fetchMenus(parseInt(storeId))
     }
-  ])
+  }, [storeId, fetchMenus])
 
   const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([
     { id: '1', discount: '5% 할인', points: '50,000 포인트', isActive: true },
@@ -52,12 +42,25 @@ const StoreManage = () => {
     { id: '5', discount: '5% 할인', points: '250,000 포인트', isActive: false }
   ])
 
-  const handleEditMenu = (id: string) => {
+  const handleEditMenu = (id: number) => {
     console.log('메뉴 수정:', id)
+    // TODO: 메뉴 수정 모달 구현
   }
 
-  const handleDeleteMenu = (id: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== id))
+  const handleDeleteMenu = async (id: number) => {
+    if (!storeId) {
+      alert('매장 정보가 없습니다.')
+      return
+    }
+    
+    if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
+      const success = await removeMenu(parseInt(storeId), id)
+      if (success) {
+        alert('메뉴가 삭제되었습니다.')
+      } else {
+        alert('메뉴 삭제에 실패했습니다.')
+      }
+    }
   }
 
   const handleChangeDiscount = (id: string) => {
@@ -71,7 +74,7 @@ const StoreManage = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-center gap-4 mb-8">
           <h1 className="text-3xl sm:text-4xl font-['Tenada'] font-extrabold text-black">
-            서울 초밥 매장 관리
+            {accountName || '매장'} 관리
           </h1>
           <div className="w-8 h-8">
             <svg width={31} height={31} viewBox="0 0 31 31" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,37 +145,63 @@ const StoreManage = () => {
         {/* 메뉴 탭 내용 */}
         {activeTab === 'menu' && (
           <div className="space-y-4 mb-6">
-            {menuItems.map((item) => (
-              <div key={item.id} className="border border-black p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-['nanumsquare'] text-black mb-2">
-                      {item.name}
-                    </h3>
-                    <p className="text-gray-600 font-['nanumsquare'] text-sm mb-4">
-                      {item.description}
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <span className="text-lg font-['nanumsquare'] font-bold text-black">
-                        {item.price.toLocaleString()}원
-                      </span>
-                      <button
-                        onClick={() => handleEditMenu(item.id)}
-                        className="px-3 py-1 text-xs font-['Inter'] bg-gray-100 text-black rounded hover:bg-gray-200 transition-colors"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMenu(item.id)}
-                        className="px-3 py-1 text-xs font-['Inter'] bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors"
-                      >
-                        삭제
-                      </button>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="text-lg font-['nanumsquare']">메뉴를 불러오는 중...</div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-500 font-['nanumsquare'] mb-4">{error}</div>
+                <button
+                  onClick={() => {
+                    clearError()
+                    if (storeId) fetchMenus(parseInt(storeId))
+                  }}
+                  className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition-colors"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : menus.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-gray-500 font-['nanumsquare']">등록된 메뉴가 없습니다</div>
+              </div>
+            ) : (
+              menus.map((item) => (
+                <div key={item.id} className="border border-black p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-['nanumsquare'] text-black mb-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-gray-600 font-['nanumsquare'] text-sm mb-4">
+                        {item.description}
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <span className="text-lg font-['nanumsquare'] font-bold text-black">
+                          {item.price.toLocaleString()}원
+                        </span>
+                        <span className="text-sm font-['nanumsquare'] text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {item.category}
+                        </span>
+                        <button
+                          onClick={() => handleEditMenu(item.id)}
+                          className="px-3 py-1 text-xs font-['Inter'] bg-gray-100 text-black rounded hover:bg-gray-200 transition-colors"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMenu(item.id)}
+                          className="px-3 py-1 text-xs font-['Inter'] bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors"
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 

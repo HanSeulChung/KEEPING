@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import StoreRegisterModal from './StoreRegisterModal'
 
 interface Store {
   id: string
@@ -18,6 +21,7 @@ export default function OwnerHome({
   stores: initialStores,
   unreadCount: initialUnreadCount,
 }: OwnerHomeProps) {
+  const router = useRouter()
   const [selected, setSelected] = useState<Store | null>(null)
   const [stores, setStores] = useState<Store[]>(
     initialStores || [
@@ -29,6 +33,7 @@ export default function OwnerHome({
     initialUnreadCount || 3
   )
   const [loading, setLoading] = useState(false)
+  const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] = useState(false)
 
   // currentStore가 있으면 그것을 선택, 없으면 첫 번째 매장 선택
   useEffect(() => {
@@ -38,6 +43,15 @@ export default function OwnerHome({
       setSelected(stores[0])
     }
   }, [currentStore, stores, selected])
+
+  // 가게 선택 시 해당 가게의 대시보드로 이동
+  const handleStoreSelect = (store: Store) => {
+    setSelected(store)
+    // URL에 가게 정보를 포함하여 각 페이지로 이동할 수 있도록 설정
+    // accountName을 사용하여 URL 구성
+    const accountName = store.name.replace(/\s+/g, '').toLowerCase()
+    router.push(`/owner/dashboard?storeId=${store.id}&accountName=${accountName}`)
+  }
 
   if (loading) {
     return (
@@ -57,12 +71,12 @@ export default function OwnerHome({
             {stores.map((s, index) => (
               <button
                 key={s.id}
-                onClick={() => setSelected(s)}
+                onClick={() => handleStoreSelect(s)}
                 className={[
-                  'flex h-24 w-24 flex-shrink-0 flex-col items-center justify-center rounded-full border border-black text-center',
+                  'flex h-24 w-24 flex-shrink-0 flex-col items-center justify-center rounded-full border border-black text-center cursor-pointer transition-colors',
                   selected?.id === s.id
                     ? 'bg-black text-white'
-                    : 'bg-[#faf8f6] text-black',
+                    : 'bg-keeping-beige text-black hover:bg-gray-100',
                 ].join(' ')}
               >
                 <div className="px-2 text-[17px] leading-6 font-extrabold whitespace-pre-line">
@@ -72,7 +86,10 @@ export default function OwnerHome({
             ))}
 
             {/* 매장 추가 버튼 */}
-            <button className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border border-black bg-[#faf8f6]">
+            <button 
+              onClick={() => setIsStoreRegisterModalOpen(true)}
+              className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border border-black bg-keeping-beige hover:bg-gray-100 transition-colors cursor-pointer"
+            >
               <svg
                 width={21}
                 height={20}
@@ -112,7 +129,10 @@ export default function OwnerHome({
               {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
               <div className="flex h-full flex-col gap-6">
                 {/* 매출 캘린더 */}
-                <div className="bg-keeping-beige flex flex-1 flex-col items-start border border-black p-4">
+                <Link 
+                  href={`/owner/calendar?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="bg-keeping-beige flex flex-1 flex-col items-start border border-black p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     매출
                     <br />
@@ -123,24 +143,30 @@ export default function OwnerHome({
                     <br />
                     이번 달 선결제 금액
                   </div>
-                </div>
+                </Link>
 
                 {/* QR 인식하기 */}
-                <div className="flex flex-1 flex-col items-start border border-black bg-white p-4">
+                <Link 
+                  href={`/owner/scan?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     QR 인식하기
                   </div>
-                </div>
+                </Link>
               </div>
 
               {/* 2열: 나머지 3개 (세로 스택) */}
               <div className="flex h-full flex-col gap-6">
                 {/* 매장 관리 */}
-                <div className="relative flex flex-1 flex-col items-start border border-black bg-white p-4">
+                <Link 
+                  href={`/owner/manage?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     매장 관리
                   </div>
-                </div>
+                </Link>
 
                 {/* 설정 */}
                 <div className="bg-keeping-beige relative flex flex-1 flex-col items-start border border-black p-4">
@@ -150,7 +176,10 @@ export default function OwnerHome({
                 </div>
 
                 {/* 알림 */}
-                <div className="relative flex flex-1 flex-col items-start border border-black bg-white p-4">
+                <Link 
+                  href={`/owner/notification?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <div className="flex w-full items-start justify-between">
                     <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                       알림
@@ -181,14 +210,20 @@ export default function OwnerHome({
                   <div className="mt-2 flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
                     읽지 않은 알림
                     <br />
-                    3건
+                    {unreadCount}건
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </main>
+      
+      {/* 매장 등록 모달 */}
+      <StoreRegisterModal 
+        isOpen={isStoreRegisterModalOpen}
+        onClose={() => setIsStoreRegisterModalOpen(false)}
+      />
     </div>
   )
 }

@@ -1,12 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useStoreManagement } from '@/hooks/useStoreManagement';
+import { StoreRequestDto } from '@/api/storeApi';
 
 interface StoreRegisterModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
-const StoreRegisterModal = ({ isOpen, onClose }: StoreRegisterModalProps) => {
+const StoreRegisterModal = ({ isOpen, onClose, onSuccess }: StoreRegisterModalProps) => {
+  const { loading, error, createNewStore, clearError } = useStoreManagement()
+  const [formData, setFormData] = useState<StoreRequestDto>({
+    name: '',
+    description: '',
+    address: '',
+    phone: '',
+    category: '',
+    images: []
+  })
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+
   if (!isOpen) return null
+
+  const handleInputChange = (field: keyof StoreRequestDto, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      const fileArray = Array.from(files)
+      setSelectedImages(fileArray)
+      setFormData(prev => ({
+        ...prev,
+        images: fileArray
+      }))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.description || !formData.address || !formData.phone || !formData.category) {
+      alert('모든 필수 항목을 입력해주세요.')
+      return
+    }
+
+    const result = await createNewStore(formData)
+    if (result) {
+      alert('가게가 성공적으로 등록되었습니다!')
+      onClose()
+      onSuccess?.()
+      // 폼 초기화
+      setFormData({
+        name: '',
+        description: '',
+        address: '',
+        phone: '',
+        category: '',
+        images: []
+      })
+      setSelectedImages([])
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -27,10 +86,22 @@ const StoreRegisterModal = ({ isOpen, onClose }: StoreRegisterModalProps) => {
         {/* 이미지 업로드 */}
         <div className="mb-6">
           <div className="w-full h-48 border border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center">
-            <button className="px-4 py-2 border border-black bg-white text-black text-xs font-['nanumsquare'] font-bold rounded-lg">
+            <label className="px-4 py-2 border border-black bg-white text-black text-xs font-['nanumsquare'] font-bold rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
               이미지 업로드
-            </button>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </label>
           </div>
+          {selectedImages.length > 0 && (
+            <div className="mt-2 text-sm text-gray-600">
+              선택된 이미지: {selectedImages.length}개
+            </div>
+          )}
         </div>
 
         {/* 가게 소개 */}
@@ -41,8 +112,10 @@ const StoreRegisterModal = ({ isOpen, onClose }: StoreRegisterModalProps) => {
             </span>
           </div>
           <textarea 
-            className="w-full h-20 p-2 border border-gray-300 rounded-md text-gray-400 font-['Inter']"
+            className="w-full h-20 p-2 border border-gray-300 rounded-md text-black font-['Inter']"
             placeholder="가게 소개 입력"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
           />
         </div>
 
@@ -51,12 +124,20 @@ const StoreRegisterModal = ({ isOpen, onClose }: StoreRegisterModalProps) => {
           <div className="flex items-center mb-2">
             <span className="text-gray-500 font-['Inter'] text-xs">업종</span>
           </div>
-          <div className="flex justify-between items-center p-2 h-10 rounded-md border border-gray-300">
-            <span className="text-black font-['Inter']">업종 선택</span>
-            <svg width={16} height={17} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M11.0201 6.84664C11.2154 7.0419 11.2154 7.35849 11.0201 7.55373L8.35345 10.2204C8.15818 10.4157 7.84165 10.4157 7.64638 10.2204L4.9797 7.55373C4.78444 7.35849 4.78444 7.0419 4.9797 6.84664C5.17496 6.65138 5.49154 6.65138 5.6868 6.84664L7.99992 9.15973L10.3131 6.84664C10.5083 6.65138 10.8249 6.65138 11.0201 6.84664Z" fill="black" />
-            </svg>
-          </div>
+          <select 
+            className="w-full p-2 h-10 rounded-md border border-gray-300 text-black font-['Inter']"
+            value={formData.category}
+            onChange={(e) => handleInputChange('category', e.target.value)}
+          >
+            <option value="">업종 선택</option>
+            <option value="한식">한식</option>
+            <option value="중식">중식</option>
+            <option value="일식">일식</option>
+            <option value="양식">양식</option>
+            <option value="카페">카페</option>
+            <option value="디저트">디저트</option>
+            <option value="기타">기타</option>
+          </select>
         </div>
 
         {/* 주소 */}

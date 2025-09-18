@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
+import { getFcmToken, requestNotificationPermission, setupForegroundMessageListener } from '@/lib/firebase'
+import { registerFCMToken, unregisterFCMToken } from '@/api/fcmApi'
+import { 
+  getNotificationListForOwner, 
+  getUnreadCountForOwner, 
+  markAsReadForOwner,
+  NotificationResponseDto 
+} from '@/api/notificationApi'
 
 interface NotificationData {
-  id: string
+  id: number
   type: 'payment' | 'order' | 'review' | 'system'
   title: string
   message: string
@@ -18,10 +26,13 @@ interface UseNotificationSystemReturn {
   unreadCount: number
   isConnected: boolean
   isPermissionGranted: boolean
+  fcmToken: string | null
   requestPermission: () => Promise<boolean>
-  markAsRead: (id: string) => void
+  markAsRead: (id: number) => void
   markAllAsRead: () => void
   addNotification: (notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>) => void
+  registerFCM: () => Promise<boolean>
+  unregisterFCM: () => Promise<void>
 }
 
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
@@ -30,14 +41,30 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const [isConnected, setIsConnected] = useState(false)
   const [isPermissionGranted, setIsPermissionGranted] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
+  const [fcmToken, setFcmToken] = useState<string | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const isVisibleRef = useRef(true)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
 
+  // 백엔드 응답을 프론트엔드 형식으로 변환
+  const convertNotificationData = (backendData: NotificationResponseDto): NotificationData => {
+    return {
+      id: backendData.id,
+      type: backendData.type,
+      title: backendData.title,
+      message: backendData.message,
+      timestamp: backendData.createdAt,
+      isRead: backendData.isRead,
+      data: backendData.data
+    }
+  }
+
   // 네트워크 상태 감지
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleOnline = () => {
       console.log('네트워크 연결됨')
       setIsOnline(true)
@@ -75,6 +102,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // 앱 가시성 상태 감지
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleVisibilityChange = () => {
       isVisibleRef.current = !document.hidden
       
@@ -230,31 +259,64 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // Web Push 권한 요청
   const requestPermission = async (): Promise<boolean> => {
-    if (!('Notification' in window)) {
-      console.log('이 브라우저는 알림을 지원하지 않습니다.')
-      return false
-    }
-
-    if (Notification.permission === 'granted') {
-      setIsPermissionGranted(true)
-      return true
-    }
-
-    if (Notification.permission === 'denied') {
-      console.log('알림 권한이 거부되었습니다.')
-      return false
-    }
-
-    const permission = await Notification.requestPermission()
-    const granted = permission === 'granted'
+    const granted = await requestNotificationPermission()
     setIsPermissionGranted(granted)
-
-    if (granted) {
-      // 서비스 워커 등록 및 구독
-      await registerServiceWorker()
-    }
-
     return granted
+  }
+
+  // FCM 토큰 등록
+  const registerFCM = async (): Promise<boolean> => {
+    try {
+      if (!user?.id) {
+        console.log('사용자 정보가 없습니다.')
+        return false
+      }
+
+      // 알림 권한 확인
+      const hasPermission = await requestPermission()
+      if (!hasPermission) {
+        console.log('알림 권한이 필요합니다.')
+        return false
+      }
+
+      // FCM 토큰 발급
+      const token = await getFcmToken()
+      if (!token) {
+        console.log('FCM 토큰을 가져올 수 없습니다.')
+        return false
+      }
+
+      setFcmToken(token)
+
+      // 서버에 토큰 등록
+      await registerFCMToken({
+        userId: user.id,
+        token: token,
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform
+        }
+      })
+
+      console.log('FCM 토큰 등록 완료')
+      return true
+    } catch (error) {
+      console.error('FCM 등록 실패:', error)
+      return false
+    }
+  }
+
+  // FCM 토큰 해제
+  const unregisterFCM = async (): Promise<void> => {
+    try {
+      if (user?.id && fcmToken) {
+        await unregisterFCMToken(user.id, fcmToken)
+        setFcmToken(null)
+        console.log('FCM 토큰 해제 완료')
+      }
+    } catch (error) {
+      console.error('FCM 해제 실패:', error)
+    }
   }
 
   // 서비스 워커 등록 및 Web Push 구독
@@ -293,25 +355,27 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }
 
   // 알림 읽음 처리
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    )
+  const markAsRead = useCallback(async (id: number) => {
+    if (!user?.id) {
+      console.error('사용자 정보가 없습니다.')
+      return
+    }
 
-    // 서버에 읽음 상태 전송
-    fetch(`/api/notifications/${id}/read`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId: user?.id })
-    }).catch(error => {
+    try {
+      // 서버에 읽음 상태 전송
+      await markAsReadForOwner(user.id, id)
+      
+      // 로컬 상태 업데이트
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      )
+    } catch (error) {
       console.error('읽음 상태 업데이트 오류:', error)
-    })
+    }
   }, [user?.id])
 
   // 모든 알림 읽음 처리
@@ -356,31 +420,49 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // 초기화
   useEffect(() => {
-    if (user?.id && isOnline) {
-      // 권한 상태 확인
-      if ('Notification' in window) {
-        setIsPermissionGranted(Notification.permission === 'granted')
-      }
+    const initializeNotificationSystem = async () => {
+      if (typeof window !== 'undefined' && user?.id && isOnline) {
+        // 권한 상태 확인
+        if ('Notification' in window) {
+          setIsPermissionGranted(Notification.permission === 'granted')
+        }
 
-      // 기존 알림 로드
-      fetchNotifications()
-      
-      // SSE 연결
-      connectSSE()
+        // 기존 알림 로드
+        fetchNotifications()
+        
+        // SSE 연결 (포그라운드용)
+        connectSSE()
+        
+        // FCM 설정 (백그라운드용)
+        registerFCM()
+        
+        // 포그라운드 메시지 리스너 설정
+        await setupForegroundMessageListener()
+      }
     }
+
+    initializeNotificationSystem()
 
     return () => {
       disconnectSSE()
+      unregisterFCM()
     }
   }, [user?.id, isOnline, connectSSE, disconnectSSE])
 
   // 기존 알림 로드
   const fetchNotifications = async () => {
+    if (!user?.id) {
+      console.log('사용자 정보가 없습니다.')
+      return
+    }
+
     try {
-      const response = await fetch(`/api/notifications?userId=${user?.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data.notifications || [])
+      const response = await getNotificationListForOwner(parseInt(user.id), 0, 50) // 최근 50개 알림
+      if (response.success) {
+        const convertedNotifications = response.data.content.map(convertNotificationData)
+        setNotifications(convertedNotifications)
+      } else {
+        console.error('알림 로드 실패:', response.message)
       }
     } catch (error) {
       console.error('알림 로드 오류:', error)
@@ -394,9 +476,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     unreadCount,
     isConnected: isConnected && isOnline,
     isPermissionGranted,
+    fcmToken,
     requestPermission,
     markAsRead,
     markAllAsRead,
-    addNotification
+    addNotification,
+    registerFCM,
+    unregisterFCM
   }
 }

@@ -258,7 +258,7 @@ const OwnerSalesCalendar = ({
                   const bgColor = 
                     isToday ? 'bg-[#4c97d6]' :
                     variant === 'event' ? 'bg-[#ffda69]' :
-                    day ? 'bg-[#faf8f6]' : 'bg-white'
+                    day ? 'bg-keeping-beige' : 'bg-white'
                   
                   return (
                     <div 

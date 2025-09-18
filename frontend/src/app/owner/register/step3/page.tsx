@@ -61,7 +61,9 @@ const StoreRegistration = () => {
       // FormData 생성
       const formData = new FormData()
       formData.append('image', file)
-      formData.append('storeId', 'temp-store-id') // 임시 스토어 ID
+      // 실제 스토어 ID를 사용해야 함 - 스토어 등록 후 받은 ID 사용
+      const storeId = localStorage.getItem('currentStoreId') || 'pending-store-registration'
+      formData.append('storeId', storeId)
       formData.append('imageIndex', '0')
 
       // 이미지 업로드 API 호출

@@ -5,62 +5,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { authApi } from "@/api/authApi";
 
 export default function OwnerLogin() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+  const handleSocialLogin = (provider: 'google' | 'kakao') => {
     setLoading(provider);
     
-    try {
-      console.log(`로그인 시도: ${provider}`);
-      
-      const response = await fetch(`/api/auth/${provider}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // 실제 구현에서는 소셜 로그인 토큰이나 코드를 전달
-          token: `${provider}-mock-token-${Date.now()}`
-        }),
-      });
-
-      console.log('응답 상태:', response.status);
-      console.log('응답 OK:', response.ok);
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('로그인 성공 데이터:', data);
-        
-        // 토큰 저장 (실제로는 secure storage 사용)
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Auth store 업데이트
-        login({
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email
-        });
-        
-        console.log('대시보드로 리다이렉트');
-        // 대시보드로 리다이렉트
-        router.push('/owner/dashboard');
-      } else {
-        const errorData = await response.text();
-        console.error('로그인 실패 응답:', errorData);
-        alert(`로그인에 실패했습니다. (상태: ${response.status})`);
-      }
-    } catch (error) {
-      console.error('로그인 오류:', error);
-      alert(`로그인 중 오류가 발생했습니다: ${error}`);
-    } finally {
+    // 백엔드 점주용 소셜 로그인 URL로 직접 리다이렉트
+    const backendUrl = 'http://localhost:8080';
+    let redirectUrl: string;
+    
+    if (provider === 'kakao') {
+      redirectUrl = `${backendUrl}/auth/kakao/owner`;
+    } else if (provider === 'google') {
+      redirectUrl = `${backendUrl}/auth/google/owner`; // 추후 백엔드에서 구현
+    } else {
+      console.error('지원하지 않는 소셜 로그인 프로바이더:', provider);
       setLoading(null);
+      return;
     }
+    
+    console.log(`${provider} 점주 소셜 로그인으로 리다이렉트:`, redirectUrl);
+    
+    // 백엔드 OAuth 엔드포인트로 직접 리다이렉트
+    window.location.href = redirectUrl;
   };
 
   return (

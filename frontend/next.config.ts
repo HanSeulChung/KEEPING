@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     optimizeCss: true,
   },
   
+  
   // 이미지 최적화
   images: {
     formats: ['image/webp', 'image/avif'],

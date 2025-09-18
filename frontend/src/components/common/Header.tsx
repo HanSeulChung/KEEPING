@@ -1,5 +1,6 @@
 'use client'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -8,6 +9,7 @@ export default function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const { isLoggedIn, user, logout } = useAuthStore()
+  const { unreadCount } = useNotificationSystem()
 
   // 홈페이지인지 확인
   const isHomePage = pathname === '/'
@@ -19,6 +21,18 @@ export default function Header() {
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
     router.push('/')
+  }
+
+  const handleNotificationClick = () => {
+    router.push('/owner/notification')
+  }
+
+  const handleLogoClick = () => {
+    if (isLoggedIn) {
+      router.push('/owner/dashboard')
+    } else {
+      router.push('/')
+    }
   }
   return (
     <div className="w-full bg-white pt-1 sm:pt-2 md:pt-3">
@@ -46,9 +60,12 @@ export default function Header() {
 
         {/* Center: Logo */}
         <div className="flex items-center">
-          <span className="text-text font-display text-base font-extrabold sm:text-lg md:text-xl">
+          <button 
+            onClick={handleLogoClick}
+            className="text-text font-display text-base font-extrabold sm:text-lg md:text-xl hover:text-gray-600 transition-colors cursor-pointer"
+          >
             KEEPING
-          </span>
+          </button>
         </div>
 
         {/* Right: 구분선 + 알림 버튼 + 로그인/로그아웃 */}
@@ -60,7 +77,11 @@ export default function Header() {
             <>
               {/* 로그인 상태일 때만 알림 버튼 표시 */}
               {isLoggedIn && (
-                <button className="hover:bg-gray-100 sm:p-2" aria-label="알림">
+                <button 
+                  onClick={handleNotificationClick}
+                  className="relative hover:bg-gray-100 sm:p-2 rounded-md transition-colors" 
+                  aria-label="알림"
+                >
                   <div className="relative h-4 w-4 sm:h-5 sm:w-5 md:h-7 md:w-7">
                     <Image
                       src="/icons/bell.svg"
@@ -68,6 +89,12 @@ export default function Header() {
                       fill
                       className="object-contain opacity-60"
                     />
+                    {/* 읽지 않은 알림 개수 배지 */}
+                    {unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </div>
+                    )}
                   </div>
                 </button>
               )}
