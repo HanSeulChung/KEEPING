@@ -1,4 +1,4 @@
-package com.ssafy.keeping.global.s3.config;
+package com.ssafy.keeping.global.config;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;

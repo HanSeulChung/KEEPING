@@ -1305,7 +1305,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private boolean devFallback() {
-        return feBaseUrl == null || feBaseUrl.isBlank();
+//        return feBaseUrl == null || feBaseUrl.isBlank();
+        return true;
     }
 
 }

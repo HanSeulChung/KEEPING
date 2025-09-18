@@ -1,11 +1,8 @@
 package com.ssafy.keeping.domain.user.customer.controller;
 
-import com.google.protobuf.Api;
-import com.ssafy.keeping.domain.user.customer.model.Customer;
-import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.customer.service.CustomerService;
-import com.ssafy.keeping.domain.user.service.ImageService;
-import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
+import com.ssafy.keeping.global.s3.service.ImageService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,13 +21,14 @@ public class CustomerController {
 
     // 프로필 이미지 수정
     @PostMapping("/{customerId}/profile-image/upload")
-    public ResponseEntity<ApiResponse<String>> uploadProfileImage(@PathVariable Long customerId,
-                                                                  @RequestParam("file") MultipartFile file) {
-        customerService.uploadProfileImage(customerId, file);
+    public ResponseEntity<ApiResponse<ProfileUploadResponse>> uploadProfileImage(@PathVariable Long customerId,
+                                                                                 @RequestParam("file") MultipartFile file) {
+        ProfileUploadResponse response = customerService.uploadProfileImage(customerId, file);
 
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("성공적 변경", HttpStatus.OK.value(), "Ok"));
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("성공적 변경", HttpStatus.OK.value(), response));
 
     }
+
     // 회원가입
 //    @PostMapping("/")
 //    public ResponseEntity<CustomerRegisterResponseDto> register(@RequestBody CustomerRegisterRequestDto dto) {

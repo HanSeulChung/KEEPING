@@ -1,4 +1,4 @@
-package com.ssafy.keeping.domain.user.service;
+package com.ssafy.keeping.global.s3.service;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -40,7 +40,9 @@ public class ImageService {
     private String bucketName;
 
     // 이미지 저장/업데이트
-    public String updateProfileImage(MultipartFile newImage) throws IOException {
+    public String updateProfileImage(String oldImgUrl, MultipartFile newImage) throws IOException {
+
+        deleteFileFromS3(oldImgUrl);
 
         String fileName = UUID.randomUUID() + "_" + newImage.getOriginalFilename();
 
