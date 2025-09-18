@@ -120,7 +120,11 @@ public enum ErrorCode {
     PIN_LENGTH_INVALID(HttpStatus.BAD_REQUEST, "결제 비밀번호(PIN)의 길이는 6자리 이여야 합니다."),
     // 자금/한도 관련
     FUNDS_INSUFFICIENT(HttpStatus.PAYMENT_REQUIRED, "잔액이 부족합니다."),
-    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다.");
+    PAYMENT_POLICY_VIOLATION(HttpStatus.UNPROCESSABLE_ENTITY, "결제 정책에 따라 승인할 수 없습니다."),
+    
+    // 추가된 에러 코드들
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
+    WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
