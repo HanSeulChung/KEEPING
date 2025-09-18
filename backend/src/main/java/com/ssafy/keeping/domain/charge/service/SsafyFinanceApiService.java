@@ -63,7 +63,7 @@ public class SsafyFinanceApiService {
         
         // HTTP 요청 생성
         HttpEntity<SsafyCardPaymentRequestDto> requestEntity = createHttpEntity(requestDto);
-        
+
         // API 호출
         String url = baseUrl + "/ssafy/api/v1/edu/creditCard/createCreditCardTransaction";
         
@@ -72,19 +72,33 @@ public class SsafyFinanceApiService {
         try {
             response = restTemplate.postForEntity(url, requestEntity, SsafyCardPaymentResponseDto.class);
         } catch (Exception e) {
-            // 여기서 연결 처리를 해주는게 맞다 생각해서 try-catch로 잡았음
             log.error("카드 결제 API 통신 오류", e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
-        
+
         SsafyCardPaymentResponseDto responseDto = response.getBody();
-        
-        if (responseDto == null || !responseDto.isSuccess()) {
-            String errorMessage = (responseDto != null && responseDto.getHeader() != null) 
-                    ? responseDto.getHeader().getResponseMessage() 
-                    : "응답 없음";
-            log.error("카드 결제 실패 - {}", errorMessage);
-            throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
+
+        if (responseDto == null) {
+            log.error("카드 결제 API 응답이 없습니다.");
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+        }
+
+        // 응답 코드 기반 에러 처리
+        String responseCode = responseDto.getHeader().getResponseCode();
+
+        switch (responseCode) {
+            case "H0000":
+                break;
+            case "A1054":
+                log.warn("카드 번호 오류 - 카드번호: {}", cardNo);
+                throw new CustomException(ErrorCode.INVALID_CARD_NUMBER);
+            case "A1055":
+                log.warn("CVC 번호 오류 - 카드번호: {}", cardNo);
+                throw new CustomException(ErrorCode.INVALID_CVC);
+            default:
+                String errorMessage = responseDto.getHeader().getResponseMessage();
+                log.error("카드 결제 실패 - 응답코드: {}, 메시지: {}", responseCode, errorMessage);
+                throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
         }
         
         log.info("카드 결제 성공 - 거래고유번호: {}", responseDto.getRec().getTransactionUniqueNo());
