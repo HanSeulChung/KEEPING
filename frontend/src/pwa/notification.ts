@@ -7,7 +7,6 @@ export interface NotificationData {
   badge?: string
   tag?: string
   data?: any
-  actions?: NotificationAction[]
 }
 
 export const requestPushSubscription = async (): Promise<PushSubscription | null> => {
@@ -82,7 +81,6 @@ export const sendPushNotification = async (data: NotificationData): Promise<void
     badge: data.badge || '/icons/qr.png',
     tag: data.tag,
     data: data.data,
-    actions: data.actions,
     vibrate: [100, 50, 100],
     requireInteraction: false,
     silent: false,
