@@ -8,7 +8,7 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-export default function Inputfield({
+export function Input({
   label,
   placeholder,
   type = 'text',
@@ -28,3 +28,4 @@ export default function Inputfield({
     </div>
   )
 }
+export default Input
