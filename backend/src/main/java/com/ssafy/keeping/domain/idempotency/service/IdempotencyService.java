@@ -109,12 +109,12 @@ public class IdempotencyService {
         row.setStatus(IdemStatus.DONE);
         row.setHttpStatus(httpStatus);
         try {
-            String json = om.writeValueAsString(responseBody); // JSON 직렬화
-            row.setResponseJson(json);
+            row.setResponseJson(canonicalObjectMapper.valueToTree(responseBody));
         } catch (Exception e) {
-            // TODO: 최초 응답이 기록되지 않은 경우... 어떻게 다시 응답을 줄지??
             log.warn("Response 직렬화 실패", e);
         }
+
+        idempotencyKeyRepository.save(row);
     }
 
     /**

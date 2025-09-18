@@ -112,7 +112,7 @@ public class PrepaymentService {
             // 스냅샷이 있으면 그대로, 없으면 리소스 재조회해서 응답 구성
             PrepaymentResponseDto replay;
             if (slot.getResponseJson() != null) { // DONE 인데, 응답 결과가 있다면 반환
-                replay = parseSnapshot(slot.getResponseJson());
+                replay = parseSnapshot(slot.getResponseJson().toString());
             } else {
                 throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
             }
