@@ -27,4 +27,13 @@ public class MenuController {
         List<MenuResponseDto> dtos = menuService.getAllMenus(storeId);
         return ResponseEntity.ok(ApiResponse.success("메뉴가 전체 조회되었습니다", HttpStatus.OK.value(), dtos));
     }
+
+    @GetMapping("/categories/{categoryId}")
+    public ResponseEntity<ApiResponse<List<MenuResponseDto>>> getAllMenusByCategories(
+            @PathVariable Long storeId,
+            @PathVariable Long categoryId
+    ) {
+        List<MenuResponseDto> dtos = menuService.getAllMenusByCategory(categoryId);
+        return ResponseEntity.ok(ApiResponse.success("카테고리 별로 메뉴가 전체 조회되었습니다", HttpStatus.OK.value(), dtos));
+    }
 }
