@@ -9,6 +9,9 @@ import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.user.finopenapi.dto.*;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
@@ -29,6 +32,7 @@ public class CustomerService {
     private final RegSessionStore sessionStore;
     private final FinOpenApiClient apiClient;
     private final PinAuthService pinAuthService;
+    private final WalletRepository walletRepository;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -139,6 +143,15 @@ public class CustomerService {
         } catch (CustomException e) {
             log.debug("해당 계좌로 입금 실패 : {}", accountNo);
             throw e;
+        }
+
+        // 지갑 생성
+        Wallet wallet = Wallet.builder().customer(customer).walletType(WalletType.INDIVIDUAL).build();
+
+        try {
+            walletRepository.save(wallet);
+        } catch (CustomException e) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         // 세션 만료
