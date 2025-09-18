@@ -35,7 +35,7 @@ public class StoreService {
      * ==================================
      * */
     public StoreResponseDto createStore(Long ownerId, StoreRequestDto requestDto) {
-
+        Owner owner = validOwner(ownerId);
         String taxIdNumber = requestDto.getTaxIdNumber();
         String address = requestDto.getAddress();
 
@@ -43,10 +43,6 @@ public class StoreService {
         if (exists) {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
-
-        Owner owner = ownerRepository.findById(ownerId).orElseThrow(
-                () -> new CustomException(ErrorCode.OWNER_NOT_FOUND)
-        );
 
         // TODO: 이미지 파일은 추후
         String imgUrl = makeImgUrl(requestDto.getImgFile());
@@ -133,6 +129,19 @@ public class StoreService {
     public StorePublicDto getStoreByStoreId(Long storeId) {
         return storeRepository.findPublicById(storeId, StoreStatus.ACTIVE).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+    }
+
+    public List<StorePublicDto> getAllStoreByCategory(String categoryName) {
+        String category = categoryName == null ? "" : categoryName.trim();
+        if (category.isEmpty()) {
+            // 카테고리가 비어있으면 전체 조회
+            return storeRepository.findPublicAllApprovedStore(StoreStatus.ACTIVE);
+        }
+
+        List<StorePublicDto> storesByCategory
+                = storeRepository.findPublicAllByCategory(category, StoreStatus.ACTIVE);
+
+        return storesByCategory;
     }
 
     public List<StorePublicDto> getStoreByStoreName(String storeName) {
