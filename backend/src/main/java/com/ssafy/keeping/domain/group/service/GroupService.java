@@ -35,9 +35,8 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final GroupAddRequestRepository groupAddRequestRepository;
 
-    public GroupResponseDto createGroup(GroupRequestDto requestDto) {
-        // TODO: 회원부분 연동되면 바꿔야하는 부분
-        Customer customer = validCustomer(requestDto.getGroupLeaderId());
+    public GroupResponseDto createGroup(Long groupLeaderId, GroupRequestDto requestDto) {
+        Customer customer = validCustomer(groupLeaderId);
 
         String groupName = requestDto.getGroupName();
         String groupDescription = (requestDto.getGroupDescription() == null || requestDto.getGroupDescription().isBlank())
