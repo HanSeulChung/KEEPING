@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-keeping-beige: #faf8f6;
+  --color-keeping-blue: #4c97d6;
+  --color-keeping-yellow: #ffda69;
+  --color-keeping-charcoal: #333333;
+
+  /* 의미 토큰: 용도 기반 이름 */
+  --color-primary: var(--color-black); /* 주버튼, 강조 */
+  --color-primary-fg: #ffffff; /* 주버튼 글자색 */
+  --color-accent: var(--color-keeping-yellow); /* 포인트 */
+  --color-bg: --color-white; /* 페이지 배경 */
+  --color-surface: #ffffff; /* 카드/패널 */
+  --color-border: --color-black;
+  --color-text: var(--color-black) --color-text-muted: #cccccc;
+
+  /* 상태색(알림/에러 등) */
+  --color-success: #22c55e;
+  --color-warning: var(--color-keeping-yellow);
+  --color-danger: #ef4444;
+}

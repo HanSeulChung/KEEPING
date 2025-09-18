@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.payment.intent.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.pin.service.PinAuthService;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
@@ -102,14 +103,20 @@ public class PaymentIntentService {
         if (slot.getStatus() == IdemStatus.DONE) {
             // 스냅샷이 있으면 그대로, 없으면 리소스 재조회해서 응답 구성
             PaymentIntentDetailResponse replay;
-            if (slot.getResponseJson() != null) {
-                replay = parseSnapshot(slot.getResponseJson());
-            } else if (slot.getIntentPublicId() != null) {
-                replay = rebuildFromResource(slot.getIntentPublicId());
-            } else {
-                // 최소한의 폴백 (실무에선 거의 안탐)
-                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+
+            try {
+                var node = slot.getResponseJson(); // JsonNode
+                if (node != null && !node.isNull()) {
+                    replay = canonicalObjectMapper.treeToValue(node, PaymentIntentDetailResponse.class);
+                } else if (slot.getIntentPublicId() != null) {
+                    replay = rebuildFromResource(slot.getIntentPublicId());
+                } else {
+                    throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new CustomException(ErrorCode.JSON_PARSE_ERROR);
             }
+
             return IdempotentResult.okReplay(replay);
         }
 
@@ -272,14 +279,16 @@ public class PaymentIntentService {
         // DONE 재생
         if (slot.getStatus() == IdemStatus.DONE) {
             PaymentIntentDetailResponse replay;
-            if (slot.getResponseJson() != null) {
-                replay = parseSnapshot(slot.getResponseJson());
+            var node = slot.getResponseJson();
+
+            if (node != null && !node.isNull()) {
+                replay = parseSnapshot(node); // ← JsonNode 버전 사용
             } else if (slot.getIntentPublicId() != null) {
                 replay = rebuildFromResource(slot.getIntentPublicId());
             } else {
-                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE); // 이미 처리된 요청이나 응답을 복원할 수 없습니다.
+                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
             }
-            return IdempotentResult.okReplay(replay); // 200 OK + replay
+            return IdempotentResult.okReplay(replay);
         }
 
         // 타 프로세스가 IN_PROGRESS 선점 중이면 202
@@ -414,10 +423,9 @@ public class PaymentIntentService {
     }
 
     /** 스냅샷 JSON → DTO */
-    private PaymentIntentDetailResponse parseSnapshot(String json) {
+    private PaymentIntentDetailResponse parseSnapshot(JsonNode node) {
         try {
-            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-            return objectMapper.readValue(bytes, PaymentIntentDetailResponse.class);
+            return canonicalObjectMapper.treeToValue(node, PaymentIntentDetailResponse.class);
         } catch (Exception e) {
             // 스냅샷 파싱이 불가능하면 리소스 재조회를 시도하도록 위에서 폴백 처리
             throw new CustomException(ErrorCode.RESPONSE_SNAPSHOT_PARSE_FAILED);
