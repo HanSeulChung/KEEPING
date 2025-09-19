@@ -42,14 +42,19 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-resources/**",
             "/favicon.ico",
-            "/.well-known/**"
+            "/.well-known/**",
+            "/s3/**",
+            "/owners/stores/**",
+            "/api/v1/stores/**"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
-            "/stores/**",
+            "/stores/**", // 통계 API (/stores/{storeId}/statistics/**) 포함
             "/api/**",
             "/api/v1/stores/**",
-            "/wallets/**"
+            "/wallets/**",
+            "/owners/*/stores/*/charge-bonus",
+            "/owners/*/stores/*/charge-bonus/*"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
@@ -163,6 +168,8 @@ public class SecurityConfig {
                         .requestMatchers("/cpqr/new").hasRole("CUSTOMER")
                         .requestMatchers("/cpqr/*/initiate").hasRole("OWNER")
                         .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
+                        .requestMatchers("/stores/*/transactions/*/refund").hasRole("OWNER")
+
 
                                 // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()

@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.store.repository;
 import com.ssafy.keeping.domain.store.constant.StoreStatus;
 import com.ssafy.keeping.domain.store.dto.StorePublicDto;
 import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.user.owner.model.Owner;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -63,4 +64,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     """)
     List<StorePublicDto> findPublicAllSimilarityByName(@Param("name") String name,
                                                        @Param("status") StoreStatus status);
+
+    Optional<Store> findByStoreIdAndOwner(Long storeId, Owner owner);
+    /** 점주가 해당 가게의 소유자인지 빠르게 존재 체크 */
+    boolean existsByStoreIdAndOwner_OwnerId(Long storeId, Long ownerId);
 }

@@ -8,10 +8,13 @@ import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.user.finopenapi.dto.DetailDto;
+import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMerchantResponse;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,7 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final OwnerRepository ownerRepository;
     private final WalletStoreBalanceRepository balanceRepository;
+    private final FinOpenApiClient apiClient;
 
     /*
      * ==================================
@@ -44,6 +48,18 @@ public class StoreService {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
+        // merchantId 생성
+        InsertMerchantResponse response = apiClient.insertMerchant(requestDto.getStoreName());
+        if(response == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        String merchantId = getMerchantId(response, requestDto.getStoreName());
+        if(merchantId == null || merchantId.isEmpty()) {
+            throw new CustomException(ErrorCode.MERCHANTID_NOT_FOUND);
+        }
+
+
         // TODO: 이미지 파일은 추후
         String imgUrl = makeImgUrl(requestDto.getImgFile());
         return StoreResponseDto.fromEntity(
@@ -54,7 +70,7 @@ public class StoreService {
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
-                                .merchantId(requestDto.getMerchantId())
+                                .merchantId(Long.valueOf(merchantId))
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())
                                 .description(requestDto.getDescription())
@@ -167,5 +183,16 @@ public class StoreService {
         return storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
+    }
+    private String getMerchantId(InsertMerchantResponse response, String requestedMerchantName) {
+        if (response == null || response.getREC() == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        return response.getREC().stream()
+                .filter(detail -> requestedMerchantName.equals(detail.getMerchantName()))
+                .map(DetailDto::getMerchantId)
+                .findFirst()
+                .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
     }
 }

@@ -63,6 +63,18 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
             """, nativeQuery = true)
     int decrementIfEnough(@Param("walletId") Long walletId, @Param("storeId") Long storeId, @Param("amount") Long amount);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+      select b
+      from WalletStoreBalance b
+      where b.wallet = :wallet and b.store = :store
+    """)
+    Optional<WalletStoreBalance> findByWalletAndStoreForUpdate(
+            @Param("wallet") Wallet wallet,
+            @Param("store") Store store
+    );
+
+
 
 
     /**

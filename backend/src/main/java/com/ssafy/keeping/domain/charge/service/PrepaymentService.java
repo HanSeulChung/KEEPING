@@ -6,6 +6,8 @@ import com.ssafy.keeping.domain.charge.canonical.CanonicalPrepayment;
 import com.ssafy.keeping.domain.charge.dto.request.PrepaymentRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
+import com.ssafy.keeping.domain.charge.model.ChargeBonus;
+import com.ssafy.keeping.domain.charge.service.ChargeBonusService;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
 import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
 import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
@@ -64,6 +66,7 @@ public class PrepaymentService {
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
     private final NotificationService notificationService;
+    private final ChargeBonusService chargeBonusService;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
@@ -152,8 +155,24 @@ public class PrepaymentService {
                 requestDto.getPaymentBalance()
         );
 
-        // 5. DB 업데이트 (트랜잭션 처리)
-        PrepaymentResponseDto response = updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
+        // 5. 보너스 포인트 계산
+        long actualPaymentAmount = requestDto.getPaymentBalance();
+        ChargeBonus chargeBonus = chargeBonusService.findChargeBonusByAmount(storeId, actualPaymentAmount).orElse(null);
+
+        long totalPoints = actualPaymentAmount;
+        int bonusPercentage = 0;
+        long bonusAmount = 0;
+
+        if (chargeBonus != null) {
+            bonusPercentage = chargeBonus.getBonusPercentage();
+            bonusAmount = actualPaymentAmount * bonusPercentage / 100;
+            totalPoints = actualPaymentAmount + bonusAmount;
+            log.info("보너스 적용 - 실제결제: {}원, 보너스: {}% ({}원), 총지급: {}포인트",
+                    actualPaymentAmount, bonusPercentage, bonusAmount, totalPoints);
+        }
+
+        // 6. DB 업데이트 (트랜잭션 처리)
+        PrepaymentResponseDto response = updateDatabaseAfterPayment(wallet, store, actualPaymentAmount, totalPoints, bonusPercentage, bonusAmount, apiResponse);
 
         // 멱등 완료 기록(DONE + 응답 스냅샷)
         idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), response);
@@ -179,29 +198,32 @@ public class PrepaymentService {
      * 결제 성공 후 DB 업데이트
      */
     private PrepaymentResponseDto updateDatabaseAfterPayment(
-            Wallet wallet, 
-            Store store, 
-            long paymentAmount,
+            Wallet wallet,
+            Store store,
+            long actualPaymentAmount,
+            long totalPoints,
+            int bonusPercentage,
+            long bonusAmount,
             SsafyCardPaymentResponseDto apiResponse) {
 
-        // 1. Transaction 생성
+        // 1. Transaction 생성 (총 지급 포인트로 기록)
         Transaction transaction = Transaction.builder()
                 .wallet(wallet)
                 .customer(wallet.getCustomer())
                 .store(store)
                 .transactionType(TransactionType.CHARGE)
-                .amount(paymentAmount)
+                .amount(totalPoints)
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
         transaction = transactionRepository.save(transaction);
 
-        // 2. WalletStoreLot 생성 (만료일: 1년 후)
+        // 2. WalletStoreLot 생성 (총 지급 포인트로 생성, 만료일: 1년 후)
         LocalDateTime expiredAt = LocalDateTime.now().plusYears(1);
         WalletStoreLot lot = WalletStoreLot.builder()
                 .wallet(wallet)
                 .store(store)
-                .amountTotal(paymentAmount)
-                .amountRemaining(paymentAmount)
+                .amountTotal(totalPoints)
+                .amountRemaining(totalPoints)
                 .acquiredAt(LocalDateTime.now())
                 .expiredAt(expiredAt)
                 .sourceType(LotSourceType.CHARGE)
@@ -219,12 +241,13 @@ public class PrepaymentService {
                         .balance(0L)
                         .build());
 
-        balance.addBalance(paymentAmount);
+        balance.addBalance(totalPoints);
         walletStoreBalanceRepository.save(balance);
 
-        // 4. SettlementTask 생성 (후에 정산 예정)
+        // 4. SettlementTask 생성 (실제 결제 금액으로 정산 예정)
         SettlementTask settlementTask = SettlementTask.builder()
                 .transaction(transaction)
+                .actualPaymentAmount(actualPaymentAmount)
                 .status(SettlementTask.Status.PENDING)
                 .build();
         settlementTaskRepository.save(settlementTask);
@@ -233,8 +256,8 @@ public class PrepaymentService {
         try {
             Long ownerId = store.getOwner().getOwnerId();
             String customerName = wallet.getCustomer().getName();
-            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다", 
-                    customerName, paymentAmount);
+            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다 (포인트: %,d)",
+                    customerName, actualPaymentAmount, totalPoints);
             
             notificationService.sendToOwner(
                     ownerId,
@@ -242,7 +265,7 @@ public class PrepaymentService {
                     notificationContent
             );
             
-            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}", ownerId, paymentAmount);
+            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}, 총포인트: {}", ownerId, actualPaymentAmount, totalPoints);
         } catch (Exception e) {
             log.warn("점주 알림 전송 실패 - 점주ID: {}, 오류: {}", store.getOwner().getOwnerId(), e.getMessage());
             // 알림 실패는 비즈니스 로직에 영향을 주지 않음
@@ -250,13 +273,16 @@ public class PrepaymentService {
 
         // 6. 응답 생성
         long updatedBalance = balance.getBalance();
-        
+
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .storeId(store.getStoreId())
                 .storeName(store.getStoreName())
-                .paymentAmount(paymentAmount)
+                .paymentAmount(actualPaymentAmount)
+                .bonusPercentage(bonusPercentage)
+                .bonusAmount(bonusAmount)
+                .totalPoints(totalPoints)
                 .transactionTime(transaction.getCreatedAt())
                 .remainingBalance(updatedBalance)
                 .build();
@@ -304,12 +330,23 @@ public class PrepaymentService {
                 .findByWalletAndStore(transaction.getWallet(), transaction.getStore())
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_BALANCE_NOT_FOUND));
 
+        SettlementTask settlementTask = settlementTaskRepository.findByTransaction(transaction)
+                .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_TASK_NOT_FOUND));
+
+        long actualPaymentAmount = settlementTask.getActualPaymentAmount();
+        long totalPoints = transaction.getAmount();
+        long bonusAmount = totalPoints - actualPaymentAmount;
+        int bonusPercentage = actualPaymentAmount > 0 ? (int) (bonusAmount * 100 / actualPaymentAmount) : 0;
+
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(transaction.getTransactionUniqueNo())
                 .storeId(transaction.getStore().getStoreId())
                 .storeName(transaction.getStore().getStoreName())
-                .paymentAmount(transaction.getAmount())
+                .paymentAmount(actualPaymentAmount)
+                .bonusPercentage(bonusPercentage)
+                .bonusAmount(bonusAmount)
+                .totalPoints(totalPoints)
                 .transactionTime(transaction.getCreatedAt())
                 .remainingBalance(balance.getBalance())
                 .build();

@@ -13,6 +13,8 @@ import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
 import com.ssafy.keeping.domain.menu.model.Menu;
 import com.ssafy.keeping.domain.menu.repository.MenuRepository;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
 import com.ssafy.keeping.domain.payment.common.IdUtil;
 import com.ssafy.keeping.domain.payment.funds.dto.FundsResult;
 import com.ssafy.keeping.domain.payment.funds.service.FundsService;
@@ -28,8 +30,12 @@ import com.ssafy.keeping.domain.payment.qr.constant.QrMode;
 import com.ssafy.keeping.domain.payment.qr.constant.QrState;
 import com.ssafy.keeping.domain.payment.qr.model.QrToken;
 import com.ssafy.keeping.domain.payment.qr.repository.QrTokenRepository;
+import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.store.service.StoreService;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +48,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentIntentService {
@@ -52,6 +59,8 @@ public class PaymentIntentService {
     private final MenuRepository menuRepository;
     private final PinAuthService pinAuthService;
     private final FundsService fundsService;
+    private final NotificationService notificationService;
+    private final StoreRepository storeRepository;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
@@ -215,6 +224,25 @@ public class PaymentIntentService {
             itemViews.add(toItemView(it));
         }
         PaymentIntentDetailResponse res = PaymentIntentDetailResponse.from(intent, itemViews);
+
+        try {
+            Long customerId = qr.getCustomerId();
+            Store store = storeRepository.findById(intent.getStoreId()).orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+            String storeName = store.getStoreName();
+
+            String notificationContent = String.format("%s에서 결제 요청이 도착하였습니다.", storeName);
+
+            notificationService.sendToCustomer(
+                    customerId,
+                    NotificationType.PAYMENT_REQUEST,
+                    notificationContent
+            );
+
+            log.info("결제 요청 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+        } catch (Exception e) {
+            log.info("결제 요청 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", qr.getCustomerId(), intent.getAmount(), intent.getStoreId());
+            // 알림 실패는 비즈니스 로직에 영향을 주지 않음
+        }
 
         // 멱등 완료 기록(DONE + 응답 스냅샷)
         idempotencyService.complete(slot, HttpStatus.CREATED.value(), res, intent.getPublicId());
