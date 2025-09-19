@@ -99,7 +99,7 @@ public class SecurityConfig {
                 .oauth2Login(o -> o.authorizationEndpoint(
                         ae -> ae.authorizationRequestResolver(
                                 new RoleAwareAuthorizationRequestResolver(redis, clientRegistrationRepository,
-                                        "/api/oauth2/authorization")
+                                        "/oauth2/authorization")
                         )).redirectionEndpoint(re -> re.baseUri("/auth/*/callback"))
                         .userInfoEndpoint(ue -> ue.userService(oAuth2ProviderRouter))
                         .successHandler(oAuth2SuccessHandler)
