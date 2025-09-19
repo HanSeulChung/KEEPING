@@ -3,6 +3,44 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { GroupCreateModal } from '../ui/GroupCreateModal'
 import { PaymentModal } from '../ui/PaymentModal'
+import FindGroup from './findGroup'
+
+import { apiConfig, endpoints } from '@/api/config'
+
+const createGroup = async (groupData: {
+  groupLeaderId: number
+  groupName: string
+  groupDescription: string
+}) => {
+  try {
+    const url = `${apiConfig.baseURL}${endpoints.group.create}`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...apiConfig.headers,
+        // 필요한 경우 Authorization 헤더 추가
+        // 'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        groupLeaderId: groupData.groupLeaderId,
+        groupName: groupData.groupName,
+        groupDescription: groupData.groupDescription,
+        // 백엔드에서 요구하는 다른 필드들 추가
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('그룹 생성 실패:', error)
+    throw error
+  }
+}
 
 // 타입 정의
 interface WalletCard {
@@ -206,87 +244,6 @@ const ChargeOption = ({
   )
 }
 
-// 충전 섹션 컴포넌트 (MyWallet에서 가져옴)
-const ChargeSection = () => {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-
-  const chargeOptions = [
-    {
-      discount: '5% 할인',
-      points: '50,000 포인트',
-      originalPrice: 50000,
-      discountRate: 0.05,
-    },
-    {
-      discount: '5% 할인',
-      points: '100,000 포인트',
-      originalPrice: 100000,
-      discountRate: 0.05,
-    },
-    {
-      discount: '5% 할인',
-      points: '150,000 포인트',
-      originalPrice: 150000,
-      discountRate: 0.05,
-    },
-    {
-      discount: '5% 할인',
-      points: '200,000 포인트',
-      originalPrice: 200000,
-      discountRate: 0.05,
-    },
-    {
-      discount: '5% 할인',
-      points: '250,000 포인트',
-      originalPrice: 250000,
-      discountRate: 0.05,
-    },
-  ]
-
-  // 선택된 옵션의 결제 금액 계산
-  const calculatePaymentAmount = () => {
-    if (selectedIndex === null) return 0
-    const selectedOption = chargeOptions[selectedIndex]
-    return Math.round(
-      selectedOption.originalPrice * (1 - selectedOption.discountRate)
-    )
-  }
-
-  const paymentAmount = calculatePaymentAmount()
-
-  return (
-    <div className="w-full">
-      {/* 충전 옵션들 */}
-      <div className="mb-6 space-y-2">
-        {chargeOptions.map((option, index) => (
-          <ChargeOption
-            key={index}
-            discount={option.discount}
-            points={option.points}
-            isSelected={selectedIndex === index}
-            onClick={() => setSelectedIndex(index)}
-          />
-        ))}
-      </div>
-
-      {/* 결제 금액 */}
-      <div className="mb-6">
-        <span className="text-sm font-bold text-black">
-          결제 금액:{' '}
-          {paymentAmount > 0
-            ? `${paymentAmount.toLocaleString()}원`
-            : '옵션을 선택해주세요'}
-        </span>
-      </div>
-
-      {/* 충전하기 버튼 */}
-      <button className="flex h-12 w-full items-center justify-center border border-black bg-black">
-        <span className="text-sm font-bold text-white">충전하기</span>
-      </button>
-    </div>
-  )
-}
-
 // 공유 섹션 컴포넌트
 const ShareSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
   const [shareAmount, setShareAmount] = useState<string>('')
@@ -479,6 +436,7 @@ export const GroupWallet = () => {
   const [selectedGroup, setSelectedGroup] = useState<number>(0)
   const [hoveredMember, setHoveredMember] = useState<number | null>(null)
   const [isGroupCreateModalOpen, setIsGroupCreateModalOpen] = useState(false)
+  const [isFindGroupOpen, setIsFindGroupOpen] = useState(false)
 
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
@@ -488,9 +446,33 @@ export const GroupWallet = () => {
     setSelectedGroup(groupId)
   }
 
-  const handleCreateGroup = (groupName: string, groupDescription: string) => {
-    console.log('새 그룹 생성:', { groupName, groupDescription })
-    // 실제 그룹 생성 로직 구현
+  const handleCreateGroup = async (
+    groupName: string,
+    groupDescription: string
+  ) => {
+    try {
+      const result = await createGroup({
+        groupLeaderId: 1,
+        groupName: groupName,
+        groupDescription: groupDescription,
+      })
+
+      console.log('그룹 생성 성공:', result)
+
+      // 성공 시 그룹 목록 업데이트 또는 페이지 새로고침
+      // 실제로는 상태를 업데이트하거나 다시 fetch해야 함
+
+      // 모달 닫기
+      setIsGroupCreateModalOpen(false)
+
+      // 성공 알림 (선택사항)
+      alert('그룹이 성공적으로 생성되었습니다!')
+    } catch (error) {
+      console.error('그룹 생성 에러:', error)
+
+      // 에러 처리
+      alert('그룹 생성에 실패했습니다. 다시 시도해주세요.')
+    }
   }
 
   const cardsWithSelection = WALLET_CARDS.map(card => ({
@@ -520,35 +502,32 @@ export const GroupWallet = () => {
     <div className="min-h-screen bg-white p-4">
       <div className="mx-auto max-w-md">
         {/* 헤더 */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1
             className="text-2xl font-bold text-black md:text-xl"
             style={{ fontFamily: 'Tenada' }}
           >
             모임 지갑
           </h1>
-        </div>
 
-        {/* 검색바 */}
-        <div className="mb-6 w-full">
-          <div className="flex h-[48px] border border-solid border-black bg-white md:h-[41px]">
-            <div className="flex flex-1 items-center px-4 md:px-3">
-              <input
-                type="text"
-                placeholder="모임 검색"
-                className="w-full border-none text-base outline-none md:text-sm"
-              />
-            </div>
-            <button className="flex h-[48px] w-12 items-center justify-center bg-[#1f2937] transition-colors hover:bg-[#374151] md:h-[41px] md:w-9">
-              <Image
-                src="/home/searchbar/search.svg"
-                alt="Search icon"
-                width={18}
-                height={18}
-                className="md:h-[15px] md:w-[15px]"
-              />
-            </button>
-          </div>
+          {/* 검색 버튼 */}
+          <button
+            onClick={() => setIsFindGroupOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
+          >
+            <svg
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-gray-600"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
         </div>
 
         {/* 그룹 선택 원형 버튼들 */}
@@ -794,6 +773,12 @@ export const GroupWallet = () => {
           isOpen={isGroupCreateModalOpen}
           onClose={() => setIsGroupCreateModalOpen(false)}
           onCreateGroup={handleCreateGroup}
+        />
+
+        {/* 그룹 검색 모달 */}
+        <FindGroup
+          isOpen={isFindGroupOpen}
+          onClose={() => setIsFindGroupOpen(false)}
         />
       </div>
     </div>

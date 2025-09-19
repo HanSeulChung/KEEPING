@@ -1,7 +1,6 @@
 'use client'
 
 import { authApi } from '@/api/authApi'
-import { endpoints as API_ENDPOINTS, buildURL } from '@/api/config'
 import { useAuthStore } from '@/store/useAuthStore'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -25,50 +24,6 @@ export default function OwnerLogin() {
       if (provider === 'google') {
         authApi.googleOwnerLogin()
         return
-      }
-
-      // (fallback - 현재 사용되지 않음)
-      const path = API_ENDPOINTS.auth.googleOwner
-      const url = buildURL(path)
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          token: `${provider}-mock-token-${Date.now()}`,
-        }),
-      })
-
-      console.log('응답 상태:', response.status)
-      console.log('응답 OK:', response.ok)
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('로그인 성공 데이터:', data)
-
-        if (data.accessToken)
-          localStorage.setItem('accessToken', data.accessToken)
-        if (data.refreshToken)
-          localStorage.setItem('refreshToken', data.refreshToken)
-        if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
-
-        if (data.user) {
-          login({
-            id: data.user.id,
-            name: data.user.name,
-            email: data.user.email,
-          })
-        }
-
-        console.log('대시보드로 리다이렉트')
-        router.push('/owner/dashboard')
-      } else {
-        const errorData = await response.text()
-        console.error('로그인 실패 응답:', errorData)
-        alert(`로그인에 실패했습니다. (상태: ${response.status})`)
       }
     } catch (error) {
       console.error('로그인 오류:', error)

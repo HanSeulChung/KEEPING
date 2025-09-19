@@ -5,11 +5,11 @@ import { AuthForm } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-interface UserRegisterFormProps {
+interface CustomerAuthFormProps {
   onNext?: () => void
 }
 
-export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
+export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
   const router = useRouter()
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
@@ -34,10 +34,6 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
 
   const handleOtpSuccess = (token?: string) => {
     console.log('OTP 인증 성공 콜백 호출됨')
-    console.log('받은 token 값:', token)
-    console.log('token 타입:', typeof token)
-    console.log('token 존재 여부:', !!token)
-
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
 
@@ -46,12 +42,6 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     if (token) {
       localStorage.setItem('regSessionId', token)
       console.log('regSessionId 저장됨:', token)
-      console.log(
-        'localStorage에서 확인:',
-        localStorage.getItem('regSessionId')
-      )
-    } else {
-      console.error('token이 없어서 regSessionId를 저장할 수 없습니다!')
     }
     console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')
   }
@@ -189,7 +179,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         name={authForm.name}
         birth={authForm.birthDate}
         genderDigit={authForm.genderCode}
-        userRole="OWNER"
+        userRole="CUSTOMER"
         purpose="REGISTER"
         onSuccess={handleOtpSuccess}
       />

@@ -1,12 +1,20 @@
 'use client'
+import { apiConfig, endpoints } from '@/api/config'
 import Image from 'next/image'
+import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { StoreDetailTabSection } from './StoreDetailTabSection'
 
 // 타입 정의
 interface StoreData {
-  name: string
+  storeId: number
+  storeName: string
   description: string
-  galleryImages: string[]
+  address: string
+  phoneNumber: string
+  category: string
+  storeStatus: string
+  imageUrl?: string
 }
 
 interface ChargeOptionData {
@@ -26,18 +34,6 @@ interface MenuData {
   meal: MenuItemData[]
   course: MenuItemData[]
   alacarte: MenuItemData[]
-}
-
-// 더미 데이터
-const STORE_DATA: StoreData = {
-  name: '코미도리',
-  description:
-    '"역삼 직장인들의 추천 맛집, 코미도리"\n숙성된 도미로 만드는 다양한 요리로 점심은 물론 저녁 술자리까지\n가능합니다 :)',
-  galleryImages: [
-    '/store/gallery1.jpg',
-    '/store/gallery2.jpg',
-    '/store/gallery3.jpg',
-  ],
 }
 
 const CHARGE_OPTIONS: ChargeOptionData[] = [
@@ -162,7 +158,9 @@ const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
     <div className="mx-auto w-full max-w-4xl">
       {/* 가게 이름 */}
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-extrabold text-black">{storeData.name}</h1>
+        <h1 className="text-2xl font-extrabold text-black">
+          {storeData.storeName}
+        </h1>
       </div>
 
       {/* 가게 소개 섹션 */}
@@ -180,34 +178,109 @@ const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
           </p>
         </div>
       </div>
-
-      {/* 가게 이미지 갤러리 */}
-      <div className="mb-8 grid grid-cols-3 gap-4 px-4">
-        {storeData.galleryImages.map((image, index) => (
-          <div
-            key={index}
-            className="aspect-[4/3] overflow-hidden rounded bg-gray-300"
-          >
-            <Image
-              src={image}
-              alt={`가게 이미지 ${index + 1}`}
-              width={200}
-              height={150}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
 
 // 메인 컴포넌트
 export const StoreDetailPage = () => {
+  const params = useParams()
+  const storeId = params.id as string
+
+  const [storeData, setStoreData] = useState<StoreData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 가게 상세 정보 조회
+  useEffect(() => {
+    const fetchStoreDetail = async () => {
+      if (!storeId) return
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const url = `${apiConfig.baseURL}${endpoints.stores.searchById.replace('{storeId}', storeId)}`
+        console.log('가게 상세 조회 URL:', url) // 디버깅용
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            ...apiConfig.headers,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log('가게 상세 응답 데이터:', data) // 디버깅용
+
+        // 백엔드 응답 데이터를 StoreData 타입에 맞게 변환
+        const transformedStoreData: StoreData = {
+          storeId: data.storeId,
+          storeName: data.storeName,
+          description: data.description,
+          address: data.address,
+          category: data.category,
+          storeStatus: data.storeStatus,
+          imageUrl: data.imageUrl || data.image,
+          phoneNumber: data.phoneNumber,
+        }
+
+        setStoreData(transformedStoreData)
+      } catch (error) {
+        console.error('가게 상세 조회 실패:', error)
+        setError('가게 정보를 불러오는데 실패했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStoreDetail()
+  }, [storeId])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-gray-500">가게 정보를 불러오는 중...</div>
+          </div>
+      </div>
+    </div>
+  )
+}
+
+  if (error) {
+  return (
+      <div className="min-h-screen bg-white py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-red-500">{error}</div>
+          </div>
+        </div>
+    </div>
+  )
+}
+
+  if (!storeData) {
+  return (
+      <div className="min-h-screen bg-white py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-gray-500">가게 정보를 찾을 수 없습니다.</div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
   return (
     <div className="min-h-screen bg-white py-8">
       <div className="container mx-auto px-4">
-        <StoreInfo storeData={STORE_DATA} />
+        <StoreInfo storeData={storeData} />
         <StoreDetailTabSection
           chargeOptions={CHARGE_OPTIONS}
           menuData={MENU_DATA}
