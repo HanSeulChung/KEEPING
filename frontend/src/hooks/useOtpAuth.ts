@@ -14,6 +14,7 @@ interface UseOtpAuthReturn {
   error: string | null
   requestId: string | null
   expiresAt: string | null
+
   requestOtpCode: (
     name: string,
     phoneNumber: string,

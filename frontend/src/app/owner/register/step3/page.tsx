@@ -1,5 +1,4 @@
 'use client'
-
 import { buildURL, endpoints } from '@/api/config'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
@@ -158,10 +157,10 @@ const StoreRegistration = () => {
     <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
       <div className="mx-auto w-full max-w-md">
         <div className="mb-8 flex flex-col items-center justify-center">
-          <h1 className="mb-2 text-center font-['Tenada'] text-2xl leading-7 font-extrabold text-black sm:text-4xl">
+          <h1 className="mb-2 text-center font-['Tenada'] text-2xl font-extrabold leading-7 text-black sm:text-4xl">
             매장 등록
           </h1>
-          <div className="text-center font-['Tenada'] text-xl leading-7 font-extrabold text-black sm:text-4xl">
+          <div className="text-center font-['Tenada'] text-xl font-extrabold leading-7 text-black sm:text-4xl">
             2/2
           </div>
         </div>
@@ -185,8 +184,8 @@ const StoreRegistration = () => {
                 </div>
               )}
 
-              <div className="absolute right-4 bottom-4">
-                <label className="text-1 flex h-[1.375rem] cursor-pointer flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pt-[0.5625rem] pb-[0.5625rem] text-center font-['nanumsquare'] text-[11px] leading-5 font-bold text-black transition-colors hover:bg-gray-50">
+              <div className="absolute bottom-4 right-4">
+                <label className="text-1 flex h-[1.375rem] cursor-pointer flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black transition-colors hover:bg-gray-50">
                   {isUploading ? '업로드 중...' : '이미지 업로드'}
                   <input
                     type="file"
@@ -203,7 +202,7 @@ const StoreRegistration = () => {
           {/* 가게 소개 */}
           <div className="w-full">
             <div className="flex flex-col items-start gap-2">
-              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pt-[0.5625rem] pb-[0.5625rem] text-center font-['nanumsquare'] text-[11px] leading-5 font-bold text-black">
+              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
                 가게 소개
               </div>
               <textarea
@@ -228,7 +227,7 @@ const StoreRegistration = () => {
           {/* 업종 선택 */}
           <div className="w-full">
             <div className="flex flex-col items-start gap-2">
-              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pt-[0.5625rem] pb-[0.5625rem] text-center font-['nanumsquare'] text-[11px] leading-5 font-bold text-black">
+              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
                 업종
               </div>
               <select
@@ -260,7 +259,7 @@ const StoreRegistration = () => {
           {/* 주소 */}
           <div className="w-full">
             <div className="flex flex-col items-start gap-2">
-              <div className="text-6 flex h-[1.375rem] items-center justify-center gap-2.5 rounded-lg border border-black bg-white px-4 pt-[0.5625rem] pb-[0.5625rem] text-center font-['nanumsquare'] text-[11px] leading-5 font-bold text-black">
+              <div className="text-6 flex h-[1.375rem] items-center justify-center gap-2.5 rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
                 주 소
               </div>
               <div className="flex h-[2.5625rem] w-full">
@@ -275,7 +274,7 @@ const StoreRegistration = () => {
                   }
                   placeholder="우편번호"
                   maxLength={5}
-                  className={`h-[2.5625rem] flex-1 rounded-tl-md rounded-bl-md border bg-white p-2 font-['Inter'] leading-6 ${
+                  className={`h-[2.5625rem] flex-1 rounded-bl-md rounded-tl-md border bg-white p-2 font-['Inter'] leading-6 ${
                     errors.postalCode
                       ? 'border-red-500 focus:border-red-500'
                       : 'border-gray-300 focus:border-gray-500'
@@ -283,7 +282,7 @@ const StoreRegistration = () => {
                 />
                 <button
                   type="button"
-                  className="flex h-[2.5625rem] w-16 items-center justify-center rounded-tr-md rounded-br-md bg-gray-800 px-3 text-center font-['Inter'] text-[.8125rem] leading-6 text-white transition-colors hover:bg-gray-900"
+                  className="flex h-[2.5625rem] w-16 items-center justify-center rounded-br-md rounded-tr-md bg-gray-800 px-3 text-center font-['Inter'] text-[.8125rem] leading-6 text-white transition-colors hover:bg-gray-900"
                 >
                   검색
                 </button>
@@ -312,7 +311,7 @@ const StoreRegistration = () => {
           <div className="flex w-full items-center justify-center">
             <button
               onClick={handleSubmit}
-              className="flex items-center justify-center rounded bg-gray-800 px-3 py-2 text-center font-['nanumsquare'] text-[.8125rem] leading-6 font-bold text-white transition-colors hover:bg-gray-900"
+              className="flex items-center justify-center rounded bg-gray-800 px-3 py-2 text-center font-['nanumsquare'] text-[.8125rem] font-bold leading-6 text-white transition-colors hover:bg-gray-900"
             >
               등록하기
             </button>

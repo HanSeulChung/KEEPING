@@ -1,4 +1,4 @@
-# ---- �all ---
+# ---- �all ---
 node_modules/
 dist/
 build/
@@ -16,3 +16,7 @@ out/
 # ---- OS ----
 .DS_Store      # macOS
 Thumbs.db      # Windows
+
+# env 실파일은 절대 커밋 금지
+env/*.env
+.env

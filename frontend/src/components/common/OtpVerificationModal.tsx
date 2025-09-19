@@ -86,6 +86,7 @@ const OtpVerificationModal = ({
       purpose
     )
     console.log('OTP 요청 결과:', success)
+
     if (success) {
       setIsOtpSent(true)
       clearError()
@@ -93,12 +94,10 @@ const OtpVerificationModal = ({
   }
 
   const handleVerifyOtp = async () => {
-    console.log('handleVerifyOtp 호출됨, otpCode:', otpCode)
     if (!otpCode || otpCode.length !== 6) {
       alert('6자리 인증번호를 입력해주세요.')
       return
     }
-
     console.log('OTP 검증 시작...')
     const result = await verifyOtpCode(otpCode)
     console.log('OTP 검증 결과:', result)
@@ -129,7 +128,7 @@ const OtpVerificationModal = ({
   if (!isOpen) return null
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="mx-4 w-full max-w-md rounded-lg bg-white p-8">
         {/* 헤더 */}
         <div className="mb-6 flex items-center justify-between">

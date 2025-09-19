@@ -1,12 +1,17 @@
 'use client'
+<<<<<<< HEAD
 import { apiConfig, endpoints } from '@/api/config'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+=======
+import Image from 'next/image'
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 import { StoreDetailTabSection } from './StoreDetailTabSection'
 
 // 타입 정의
 interface StoreData {
+<<<<<<< HEAD
   storeId: number
   storeName: string
   description: string
@@ -15,6 +20,11 @@ interface StoreData {
   category: string
   storeStatus: string
   imageUrl?: string
+=======
+  name: string
+  description: string
+  galleryImages: string[]
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 }
 
 interface ChargeOptionData {
@@ -36,6 +46,21 @@ interface MenuData {
   alacarte: MenuItemData[]
 }
 
+<<<<<<< HEAD
+=======
+// 더미 데이터
+const STORE_DATA: StoreData = {
+  name: '코미도리',
+  description:
+    '"역삼 직장인들의 추천 맛집, 코미도리"\n숙성된 도미로 만드는 다양한 요리로 점심은 물론 저녁 술자리까지\n가능합니다 :)',
+  galleryImages: [
+    '/store/gallery1.jpg',
+    '/store/gallery2.jpg',
+    '/store/gallery3.jpg',
+  ],
+}
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 const CHARGE_OPTIONS: ChargeOptionData[] = [
   {
     discount: '3% 할인',
@@ -158,9 +183,13 @@ const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
     <div className="mx-auto w-full max-w-4xl">
       {/* 가게 이름 */}
       <div className="mb-8 text-center">
+<<<<<<< HEAD
         <h1 className="text-2xl font-extrabold text-black">
           {storeData.storeName}
         </h1>
+=======
+        <h1 className="text-2xl font-extrabold text-black">{storeData.name}</h1>
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       </div>
 
       {/* 가게 소개 섹션 */}
@@ -178,12 +207,34 @@ const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
           </p>
         </div>
       </div>
+<<<<<<< HEAD
+=======
+
+      {/* 가게 이미지 갤러리 */}
+      <div className="mb-8 grid grid-cols-3 gap-4 px-4">
+        {storeData.galleryImages.map((image, index) => (
+          <div
+            key={index}
+            className="aspect-[4/3] overflow-hidden rounded bg-gray-300"
+          >
+            <Image
+              src={image}
+              alt={`가게 이미지 ${index + 1}`}
+              width={200}
+              height={150}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     </div>
   )
 }
 
 // 메인 컴포넌트
 export const StoreDetailPage = () => {
+<<<<<<< HEAD
   const params = useParams()
   const storeId = params.id as string
 
@@ -281,6 +332,12 @@ export const StoreDetailPage = () => {
     <div className="min-h-screen bg-white py-8">
       <div className="container mx-auto px-4">
         <StoreInfo storeData={storeData} />
+=======
+  return (
+    <div className="min-h-screen bg-white py-8">
+      <div className="container mx-auto px-4">
+        <StoreInfo storeData={STORE_DATA} />
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         <StoreDetailTabSection
           chargeOptions={CHARGE_OPTIONS}
           menuData={MENU_DATA}

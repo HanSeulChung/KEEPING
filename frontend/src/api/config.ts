@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+=======
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
 export const apiConfig = {
   baseURL: API_BASE_URL,

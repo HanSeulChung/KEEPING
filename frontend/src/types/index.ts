@@ -45,4 +45,8 @@ export interface AuthForm {
   phoneNumber: string
   birthDate: string
   genderCode: string
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf

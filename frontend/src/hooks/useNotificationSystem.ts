@@ -1,5 +1,6 @@
 'use client'
 
+<<<<<<< HEAD
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getFcmToken, requestNotificationPermission, setupForegroundMessageListener } from '@/lib/firebase'
@@ -10,6 +11,18 @@ import {
   markAsReadForOwner,
   NotificationResponseDto 
 } from '@/api/notificationApi'
+=======
+import { registerFCMToken, unregisterFCMToken } from '@/api/fcmApi'
+import { notificationApi } from '@/api/notificationApi'
+import {
+  getFcmToken,
+  requestNotificationPermission,
+  setupForegroundMessageListener,
+} from '@/lib/firebase'
+import { useAuthStore } from '@/store/useAuthStore'
+import { NotificationAPI } from '@/types/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
 interface NotificationData {
   id: number
@@ -30,7 +43,13 @@ interface UseNotificationSystemReturn {
   requestPermission: () => Promise<boolean>
   markAsRead: (id: number) => void
   markAllAsRead: () => void
+<<<<<<< HEAD
   addNotification: (notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>) => void
+=======
+  addNotification: (
+    notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
+  ) => void
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   registerFCM: () => Promise<boolean>
   unregisterFCM: () => Promise<void>
 }
@@ -49,15 +68,35 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const maxReconnectAttempts = 5
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
+<<<<<<< HEAD
   const convertNotificationData = (backendData: NotificationResponseDto): NotificationData => {
     return {
       id: backendData.id,
       type: backendData.type,
+=======
+  const convertNotificationData = (
+    backendData: NotificationAPI.NotificationResponseDto
+  ): NotificationData => {
+    const mapType = (t: string): NotificationData['type'] => {
+      const lower = String(t).toLowerCase()
+      if (lower === 'payment') return 'payment'
+      if (lower === 'order') return 'order'
+      if (lower === 'review') return 'review'
+      return 'system'
+    }
+    return {
+      id: backendData.id,
+      type: mapType(backendData.type as unknown as string),
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       title: backendData.title,
       message: backendData.message,
       timestamp: backendData.createdAt,
       isRead: backendData.isRead,
+<<<<<<< HEAD
       data: backendData.data
+=======
+      data: backendData.data,
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     }
   }
 
@@ -69,7 +108,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       console.log('네트워크 연결됨')
       setIsOnline(true)
       reconnectAttemptsRef.current = 0
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       // 포그라운드에 있을 때만 즉시 재연결
       if (isVisibleRef.current) {
         connectSSE()
@@ -80,7 +123,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       console.log('네트워크 연결 끊김')
       setIsOnline(false)
       setIsConnected(false)
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       // 기존 재연결 타이머 정리
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
@@ -106,7 +153,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     const handleVisibilityChange = () => {
       isVisibleRef.current = !document.hidden
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       if (isVisibleRef.current && isOnline) {
         // 포그라운드로 돌아왔을 때 SSE 재연결
         connectSSE()
@@ -117,26 +168,43 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+<<<<<<< HEAD
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+=======
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   }, [isOnline])
 
   // SSE 연결 (개발 환경에서는 폴링으로 대체)
   const connectSSE = useCallback(() => {
     if (!user?.id || eventSourceRef.current || !isOnline) {
+<<<<<<< HEAD
       console.log('SSE 연결 조건 불만족:', { 
         hasUser: !!user?.id, 
         hasEventSource: !!eventSourceRef.current, 
         isOnline 
+=======
+      console.log('SSE 연결 조건 불만족:', {
+        hasUser: !!user?.id,
+        hasEventSource: !!eventSourceRef.current,
+        isOnline,
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       })
       return
     }
 
     console.log('SSE 연결 시도 중...', { userId: user.id })
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     // 개발 환경에서는 연결만 설정 (자동 알림 없음)
     if (process.env.NODE_ENV === 'development') {
       console.log('개발 환경: 알림 시스템 준비 완료 (수동 테스트만)')
       setIsConnected(true)
+<<<<<<< HEAD
       
       // 더미 연결 객체 생성 (실제 폴링은 하지 않음)
       eventSourceRef.current = { close: () => {} } as any
@@ -147,13 +215,31 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     // 프로덕션 환경에서는 실제 SSE 사용
     try {
       const eventSource = new EventSource(`/api/notifications/sse?userId=${user.id}`)
+=======
+
+      // 더미 연결 객체 생성 (실제 폴링은 하지 않음)
+      eventSourceRef.current = { close: () => {} } as any
+
+      return
+    }
+
+    // 프로덕션 환경에서는 실제 SSE 사용
+    try {
+      const eventSource = new EventSource(
+        `/api/notifications/sse?userId=${user.id}`
+      )
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       eventSourceRef.current = eventSource
 
       eventSource.onopen = () => {
         console.log('SSE 연결 성공')
         setIsConnected(true)
         reconnectAttemptsRef.current = 0
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         // 기존 재연결 타이머 정리
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current)
@@ -161,15 +247,24 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         }
       }
 
+<<<<<<< HEAD
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
           console.log('SSE 메시지 수신:', data)
           
+=======
+      eventSource.onmessage = event => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('SSE 메시지 수신:', data)
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
           // 연결 확인 메시지는 무시
           if (data.type === 'connection') {
             return
           }
+<<<<<<< HEAD
           
           const notification: NotificationData = data
           setNotifications(prev => [notification, ...prev])
@@ -188,10 +283,40 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         console.error('EventSource readyState:', eventSource.readyState)
         setIsConnected(false)
         
+=======
+
+          const notification: NotificationData = data
+          setNotifications(prev => [notification, ...prev])
+
+          // 포그라운드에서 브라우저 알림 표시
+          if (
+            isVisibleRef.current &&
+            'Notification' in window &&
+            Notification.permission === 'granted'
+          ) {
+            showBrowserNotification(notification)
+          }
+        } catch (error) {
+          console.error(
+            '알림 데이터 파싱 오류:',
+            error,
+            'Raw data:',
+            event.data
+          )
+        }
+      }
+
+      eventSource.onerror = error => {
+        console.error('SSE 연결 오류:', error)
+        console.error('EventSource readyState:', eventSource.readyState)
+        setIsConnected(false)
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         // 기존 재연결 타이머 정리
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current)
         }
+<<<<<<< HEAD
         
         // 재연결 시도 (지수 백오프)
         if (reconnectAttemptsRef.current < maxReconnectAttempts && isVisibleRef.current && isOnline) {
@@ -200,6 +325,25 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           
           console.log(`${delay}ms 후 재연결 시도 (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`)
           
+=======
+
+        // 재연결 시도 (지수 백오프)
+        if (
+          reconnectAttemptsRef.current < maxReconnectAttempts &&
+          isVisibleRef.current &&
+          isOnline
+        ) {
+          reconnectAttemptsRef.current++
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttemptsRef.current),
+            30000
+          ) // 최대 30초
+
+          console.log(
+            `${delay}ms 후 재연결 시도 (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+          )
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isVisibleRef.current && isOnline) {
               disconnectSSE()
@@ -223,7 +367,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       eventSourceRef.current = null
       setIsConnected(false)
     }
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     // 재연결 타이머 정리
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
@@ -238,8 +386,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         body: notification.message,
         icon: '/icons/notification-icon.png',
         badge: '/icons/badge-icon.png',
+<<<<<<< HEAD
         tag: notification.id,
         requireInteraction: true
+=======
+        tag: String(notification.id),
+        requireInteraction: true,
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         // actions는 Service Worker를 통해서만 사용 가능하므로 제거
       })
 
@@ -294,8 +447,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         token: token,
         deviceInfo: {
           userAgent: navigator.userAgent,
+<<<<<<< HEAD
           platform: navigator.platform
         }
+=======
+          platform: navigator.platform,
+        },
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       })
 
       console.log('FCM 토큰 등록 완료')
@@ -333,7 +491,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       // Push 구독
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
+<<<<<<< HEAD
         applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+=======
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       })
 
       // 서버에 구독 정보 전송
@@ -344,8 +506,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         },
         body: JSON.stringify({
           userId: user?.id,
+<<<<<<< HEAD
           subscription: subscription
         })
+=======
+          subscription: subscription,
+        }),
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       })
 
       console.log('Web Push 구독 완료')
@@ -355,6 +522,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }
 
   // 알림 읽음 처리
+<<<<<<< HEAD
   const markAsRead = useCallback(async (id: number) => {
     if (!user?.id) {
       console.error('사용자 정보가 없습니다.')
@@ -381,6 +549,37 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   // 모든 알림 읽음 처리
   const markAllAsRead = useCallback(() => {
     setNotifications(prev => 
+=======
+  const markAsRead = useCallback(
+    async (id: number) => {
+      if (!user?.id) {
+        console.error('사용자 정보가 없습니다.')
+        return
+      }
+
+      try {
+        // 서버에 읽음 상태 전송
+        await notificationApi.markAsRead(parseInt(user.id), id)
+
+        // 로컬 상태 업데이트
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === id
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        )
+      } catch (error) {
+        console.error('읽음 상태 업데이트 오류:', error)
+      }
+    },
+    [user?.id]
+  )
+
+  // 모든 알림 읽음 처리
+  const markAllAsRead = useCallback(() => {
+    setNotifications(prev =>
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
       prev.map(notification => ({ ...notification, isRead: true }))
     )
 
@@ -390,13 +589,18 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       headers: {
         'Content-Type': 'application/json',
       },
+<<<<<<< HEAD
       body: JSON.stringify({ userId: user?.id })
+=======
+      body: JSON.stringify({ userId: user?.id }),
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     }).catch(error => {
       console.error('모든 알림 읽음 상태 업데이트 오류:', error)
     })
   }, [user?.id])
 
   // 알림 추가 함수
+<<<<<<< HEAD
   const addNotification = useCallback((notificationData: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>) => {
     const newNotification: NotificationData = {
       ...notificationData,
@@ -417,6 +621,33 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       })
     }
   }, [])
+=======
+  const addNotification = useCallback(
+    (
+      notificationData: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
+    ) => {
+      const newNotification: NotificationData = {
+        ...notificationData,
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        isRead: false,
+      }
+
+      setNotifications(prev => [newNotification, ...prev])
+
+      // 브라우저 알림 표시
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(newNotification.title, {
+          body: newNotification.message,
+          icon: '/icons/qr.png',
+          badge: '/icons/qr.png',
+          tag: String(newNotification.id),
+        })
+      }
+    },
+    []
+  )
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
   // 초기화
   useEffect(() => {
@@ -429,6 +660,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
         // 기존 알림 로드
         fetchNotifications()
+<<<<<<< HEAD
         
         // SSE 연결 (포그라운드용)
         connectSSE()
@@ -436,6 +668,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         // FCM 설정 (백그라운드용)
         registerFCM()
         
+=======
+
+        // SSE 연결 (포그라운드용)
+        connectSSE()
+
+        // FCM 설정 (백그라운드용)
+        registerFCM()
+
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         // 포그라운드 메시지 리스너 설정
         await setupForegroundMessageListener()
       }
@@ -457,6 +698,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
 
     try {
+<<<<<<< HEAD
       const response = await getNotificationListForOwner(parseInt(user.id), 0, 50) // 최근 50개 알림
       if (response.success) {
         const convertedNotifications = response.data.content.map(convertNotificationData)
@@ -464,6 +706,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       } else {
         console.error('알림 로드 실패:', response.message)
       }
+=======
+      const list = await notificationApi.getNotificationList(
+        parseInt(user.id),
+        0,
+        50
+      )
+      const convertedNotifications = list.map(convertNotificationData)
+      setNotifications(convertedNotifications)
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     } catch (error) {
       console.error('알림 로드 오류:', error)
     }
@@ -482,6 +733,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     markAllAsRead,
     addNotification,
     registerFCM,
+<<<<<<< HEAD
     unregisterFCM
+=======
+    unregisterFCM,
+>>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   }
 }
