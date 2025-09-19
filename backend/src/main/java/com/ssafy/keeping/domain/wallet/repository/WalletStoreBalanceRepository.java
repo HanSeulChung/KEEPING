@@ -63,47 +63,37 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
             """, nativeQuery = true)
     int decrementIfEnough(@Param("walletId") Long walletId, @Param("storeId") Long storeId, @Param("amount") Long amount);
 
+
+
+    /**
+     * 개인지갑 - 고객의 모든 가게별 잔액 조회 (간단한 방식)
+     */
     @Query("""
-        select new com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto(
-            s.storeId,
-            s.storeName,
-            coalesce(sum(case when t.transactionType = 'CHARGE' then t.amount else 0 end), 0),
-            wsb.balance,
-            wsb.updatedAt
-        )
-        from WalletStoreBalance wsb
-        join fetch wsb.store s
-        join fetch wsb.wallet w
-        left join Transaction t on t.wallet = w and t.store = s
-        where w.customer.customerId = :customerId
-        and w.walletType = 'INDIVIDUAL'
-        and wsb.balance >= 0
-        group by s.storeId, s.storeName, wsb.balance, wsb.updatedAt
-        order by wsb.updatedAt desc
+        SELECT wsb FROM WalletStoreBalance wsb
+        JOIN FETCH wsb.store s
+        JOIN FETCH wsb.wallet w
+        WHERE w.customer.customerId = :customerId
+        AND w.walletType = 'INDIVIDUAL'
+        AND wsb.balance > 0
+        ORDER BY wsb.updatedAt DESC
         """)
-    Page<com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto> findPersonalWalletBalancesByCustomerId(
+    Page<WalletStoreBalance> findPersonalWalletBalancesByCustomerIdSimple(
             @Param("customerId") Long customerId,
             Pageable pageable);
 
+    /**
+     * 모임지갑 - 모임의 모든 가게별 잔액 조회 (간단한 방식)
+     */
     @Query("""
-        select new com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto(
-            s.storeId,
-            s.storeName,
-            coalesce(sum(case when t.transactionType = 'TRANSFER_IN' then t.amount else 0 end), 0),
-            wsb.balance,
-            wsb.updatedAt
-        )
-        from WalletStoreBalance wsb
-        join fetch wsb.store s
-        join fetch wsb.wallet w
-        left join Transaction t on t.wallet = w and t.store = s
-        where w.group.groupId = :groupId
-        and w.walletType = 'GROUP'
-        and wsb.balance >= 0
-        group by s.storeId, s.storeName, wsb.balance, wsb.updatedAt
-        order by wsb.updatedAt desc
+        SELECT wsb FROM WalletStoreBalance wsb
+        JOIN FETCH wsb.store s
+        JOIN FETCH wsb.wallet w
+        WHERE w.group.groupId = :groupId
+        AND w.walletType = 'GROUP'
+        AND wsb.balance > 0
+        ORDER BY wsb.updatedAt DESC
         """)
-    Page<com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto> findGroupWalletBalancesByGroupId(
+    Page<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
             @Param("groupId") Long groupId,
             Pageable pageable);
 }

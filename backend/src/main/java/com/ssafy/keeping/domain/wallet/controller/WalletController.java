@@ -45,6 +45,9 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success("모임 지갑에 포인트 공유에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
+    /**
+     * 개인 지갑 잔액 조회
+     */
     @GetMapping("/individual/{customerId}/balance")
     public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
             @PathVariable Long customerId,
@@ -56,6 +59,9 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success("개인 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
+    /**
+     * 모임 지갑 잔액 조회
+     */
     @GetMapping("/groups/{groupId}/{customerId}/balance")
     public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
             @PathVariable Long groupId,

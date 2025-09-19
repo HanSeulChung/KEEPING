@@ -244,14 +244,31 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
     @Transactional(readOnly = true)
     public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
+        // 1. 고객 및 지갑 검증
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
 
-        Page<WalletStoreBalanceDetailDto> storeBalances =
-                balanceRepository.findPersonalWalletBalancesByCustomerId(customerId, pageable);
+        // 2. 간단한 방식으로 잔액 조회
+        Page<WalletStoreBalance> balances = balanceRepository
+                .findPersonalWalletBalancesByCustomerIdSimple(customerId, pageable);
+
+        // 3. Service에서 DTO 조합
+        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
+            // 해당 가게의 총 충전 금액 조회
+            Long totalChargeAmount = transactionRepository
+                    .getTotalGainAmountByCustomerAndStore(customerId, balance.getStore().getStoreId());
+
+            return new WalletStoreBalanceDetailDto(
+                    balance.getStore().getStoreId(),
+                    balance.getStore().getStoreName(),
+                    totalChargeAmount,
+                    balance.getBalance(),
+                    balance.getUpdatedAt()
+            );
+        });
 
         return new PersonalWalletBalanceResponseDto(
                 customerId,
@@ -262,6 +279,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
     @Transactional(readOnly = true)
     public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
+        // 1. 고객, 모임, 멤버십 검증
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -275,8 +293,24 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         Wallet groupWallet = walletRepository.findByGroupId(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
 
-        Page<WalletStoreBalanceDetailDto> storeBalances =
-                balanceRepository.findGroupWalletBalancesByGroupId(groupId, pageable);
+        // 2. 간단한 방식으로 잔액 조회
+        Page<WalletStoreBalance> balances = balanceRepository
+                .findGroupWalletBalancesByGroupIdSimple(groupId, pageable);
+
+        // 3. Service에서 DTO 조합
+        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
+            // 해당 가게의 총 공유받은 금액 조회
+            Long totalTransferInAmount = transactionRepository
+                    .getTotalTransferInAmountByGroupAndStore(groupId, balance.getStore().getStoreId());
+
+            return new WalletStoreBalanceDetailDto(
+                    balance.getStore().getStoreId(),
+                    balance.getStore().getStoreName(),
+                    totalTransferInAmount,
+                    balance.getBalance(),
+                    balance.getUpdatedAt()
+            );
+        });
 
         return new GroupWalletBalanceResponseDto(
                 groupId,
