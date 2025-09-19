@@ -120,8 +120,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            // TODO: 프론트 주소로 변경
-            response.sendRedirect("/otp/start?regSessionId=" + regSessionId);
+            if(role == UserRole.OWNER) {
+                response.sendRedirect(feBaseUrl + "/owner/register/step1?regSessionId=" + regSessionId);
+                return;
+            }
+
+            if(role == UserRole.CUSTOMER) {
+                response.sendRedirect(feBaseUrl + "/customer/register/step1" + regSessionId);
+            }
         }
 
     }
@@ -1306,7 +1312,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private boolean devFallback() {
 //        return feBaseUrl == null || feBaseUrl.isBlank();
-        return true;
+        return false;
     }
 
 }
