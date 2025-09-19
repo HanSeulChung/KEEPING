@@ -24,7 +24,7 @@ public class PaymentQrController {
     @PostMapping("/new")
     public ResponseEntity<ApiResponse<QrCreateResponse>> create(
             //@AuthenticationPrincipal Customer customer,
-            @AuthenticationPrincipal(expression = "id") Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @Valid @RequestBody QrCreateRequest req
             ) {
         QrCreateResponse data = qrTokenService.create(customerId, req);

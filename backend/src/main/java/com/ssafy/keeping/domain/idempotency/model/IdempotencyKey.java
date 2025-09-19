@@ -1,9 +1,12 @@
 package com.ssafy.keeping.domain.idempotency.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
 import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -56,9 +59,9 @@ public class IdempotencyKey {
     @Column(name="http_status")
     private Integer httpStatus; // 최초 응답 HTTP 코드
 
-    @Lob
-    @Column(name="response_json") // MySQL JSON 가능
-    private String responseJson; // 최초 응답 원문
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "response_json", columnDefinition = "json") // MySQL JSON 가능
+    private JsonNode responseJson; // 최초 응답 원문
 
     @Column(name = "intent_public_id", columnDefinition = "BINARY(16)")
     private UUID intentPublicId;

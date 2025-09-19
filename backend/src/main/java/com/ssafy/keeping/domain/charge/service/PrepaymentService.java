@@ -1,8 +1,20 @@
 package com.ssafy.keeping.domain.charge.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.keeping.domain.charge.canonical.CanonicalPrepayment;
 import com.ssafy.keeping.domain.charge.dto.request.PrepaymentRequestDto;
 import com.ssafy.keeping.domain.charge.dto.response.PrepaymentResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
+import com.ssafy.keeping.domain.charge.model.ChargeBonus;
+import com.ssafy.keeping.domain.charge.service.ChargeBonusService;
+import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
+import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
+import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
+import com.ssafy.keeping.domain.idempotency.model.IdempotencyKey;
+import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
+import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
+import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
@@ -13,6 +25,8 @@ import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
+import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
@@ -25,11 +39,17 @@ import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -46,11 +66,67 @@ public class PrepaymentService {
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
     private final NotificationService notificationService;
+    private final ChargeBonusService chargeBonusService;
 
+    private final IdempotencyKeyRepository idempotencyKeyRepository;
+    private final IdempotencyService idempotencyService;
+    @Qualifier("canonicalObjectMapper")
+    private final ObjectMapper canonicalObjectMapper;
+
+    private final ObjectMapper objectMapper;
+
+    // ObjectMapper : 자바객체 -> JSON / JSON -> 자바객체
     /**
-     * 선결제 처리
+     * 선결제 처리 (멱등성 적용)
+     * - 멱등 스코프: (actorType=CUSTOMER, actorId=userId, path=/stores/{storeId}/prepayment, key=Idempotency-Key)
+     * - 상태 흐름:
+     *   DONE                           → 저장된 응답 재생(200 OK)
+     *   IN_PROGRESS(타 프로세스 선점)     → 202 Accepted
+     *   신규                            → 본 처리 수행 → DONE 기록 후 201 Created
      */
-    public PrepaymentResponseDto processPayment(Long storeId, PrepaymentRequestDto requestDto) {
+    public IdempotentResult<PrepaymentResponseDto> processPayment(Long storeId, String idempotencyKeyHeader, PrepaymentRequestDto requestDto) {
+        // 입력 검증
+        if (requestDto == null) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+        if (idempotencyKeyHeader == null || idempotencyKeyHeader.isBlank()) {
+            throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
+        }
+
+        // 멱등 바디 정규화 → SHA-256
+        String canonicalBody = canonicalizeRequestBody(requestDto);
+        byte[] bodyHash = IdempotencyService.sha256(canonicalBody); // 암호화
+        // sha256 : 해시 암호화의 알고리즘
+
+        // 멱등 선점 또는 로드
+        UUID keyUuid = UUID.fromString(idempotencyKeyHeader);
+        // 클라이언트가 보내준 텍스트(String) 형식의 키를, 서버가 사용하기 좋은 객체(UUID) 형식으로 변환
+        String path = "/stores/" + storeId + "/prepayment";
+        IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.CUSTOMER, requestDto.getUserId(), "POST", path, keyUuid, bodyHash);
+        // 이미 키가 있으면 기존 상태를 로드하고, 없으면 새로 생성해서 IN_PROGRESS로 설정
+        IdempotencyKey slot = begin.getRow();
+
+        // 본문 충돌 확인
+        if (idempotencyService.isBodyConflict(slot, bodyHash)) { // 기존 키가 있는데 본문이 다르면 true -> 충돌남, 새로 만든 키거나 본문이 같으면 충돌 안남
+            throw new CustomException(ErrorCode.IDEMPOTENCY_BODY_CONFLICT);
+        }
+
+        if (slot.getStatus() == IdemStatus.DONE) {
+            // 스냅샷이 있으면 그대로, 없으면 리소스 재조회해서 응답 구성
+            PrepaymentResponseDto replay;
+            if (slot.getResponseJson() != null) { // DONE 인데, 응답 결과가 있다면 반환
+                replay = parseSnapshot(slot.getResponseJson().toString());
+            } else {
+                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+            }
+            return IdempotentResult.okReplay(replay);
+        }
+
+        // 다른 처리에서 IN_PROGRESS로 선점
+        if (!begin.isCreated() && slot.getStatus() == IdemStatus.IN_PROGRESS) { // IN_PROGRESS인데, 만들어지지 않았다면 (DONE 상태가 아니라면)
+            return IdempotentResult.acceptedWithRetryAfterSeconds(2); // 2초뒤에 응답을 만들어줘
+        }
+
         // 1. 사용자 정보 조회 및 검증
         Customer customer = customerRepository.findById(requestDto.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
@@ -79,19 +155,40 @@ public class PrepaymentService {
                 requestDto.getPaymentBalance()
         );
 
-        // 5. DB 업데이트 (트랜잭션 처리)
-        return updateDatabaseAfterPayment(wallet, store, requestDto.getPaymentBalance(), apiResponse);
+        // 5. 보너스 포인트 계산
+        long actualPaymentAmount = requestDto.getPaymentBalance();
+        ChargeBonus chargeBonus = chargeBonusService.findChargeBonusByAmount(storeId, actualPaymentAmount).orElse(null);
+
+        long totalPoints = actualPaymentAmount;
+        int bonusPercentage = 0;
+        long bonusAmount = 0;
+
+        if (chargeBonus != null) {
+            bonusPercentage = chargeBonus.getBonusPercentage();
+            bonusAmount = actualPaymentAmount * bonusPercentage / 100;
+            totalPoints = actualPaymentAmount + bonusAmount;
+            log.info("보너스 적용 - 실제결제: {}원, 보너스: {}% ({}원), 총지급: {}포인트",
+                    actualPaymentAmount, bonusPercentage, bonusAmount, totalPoints);
+        }
+
+        // 6. DB 업데이트 (트랜잭션 처리)
+        PrepaymentResponseDto response = updateDatabaseAfterPayment(wallet, store, actualPaymentAmount, totalPoints, bonusPercentage, bonusAmount, apiResponse);
+
+        // 멱등 완료 기록(DONE + 응답 스냅샷)
+        idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), response);
+
+        return IdempotentResult.created(response);
     }
 
     /**
      * 개인 지갑 조회 또는 생성
      */
     private Wallet findOrCreateIndividualWallet(Customer customer) {
-        return walletRepository.findByCustomerAndWalletType(customer, Wallet.WalletType.INDIVIDUAL)
+        return walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseGet(() -> {
                     Wallet newWallet = Wallet.builder()
                             .customer(customer)
-                            .walletType(Wallet.WalletType.INDIVIDUAL)
+                            .walletType(WalletType.INDIVIDUAL)
                             .build();
                     return walletRepository.save(newWallet);
                 });
@@ -101,32 +198,36 @@ public class PrepaymentService {
      * 결제 성공 후 DB 업데이트
      */
     private PrepaymentResponseDto updateDatabaseAfterPayment(
-            Wallet wallet, 
-            Store store, 
-            long paymentAmount,
+            Wallet wallet,
+            Store store,
+            long actualPaymentAmount,
+            long totalPoints,
+            int bonusPercentage,
+            long bonusAmount,
             SsafyCardPaymentResponseDto apiResponse) {
 
-        // 1. Transaction 생성
+        // 1. Transaction 생성 (총 지급 포인트로 기록)
         Transaction transaction = Transaction.builder()
                 .wallet(wallet)
                 .customer(wallet.getCustomer())
                 .store(store)
                 .transactionType(TransactionType.CHARGE)
-                .amount(paymentAmount)
+                .amount(totalPoints)
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .build();
         transaction = transactionRepository.save(transaction);
 
-        // 2. WalletStoreLot 생성 (만료일: 1년 후)
+        // 2. WalletStoreLot 생성 (총 지급 포인트로 생성, 만료일: 1년 후)
         LocalDateTime expiredAt = LocalDateTime.now().plusYears(1);
         WalletStoreLot lot = WalletStoreLot.builder()
                 .wallet(wallet)
                 .store(store)
-                .amountTotal(paymentAmount)
-                .amountRemaining(paymentAmount)
+                .amountTotal(totalPoints)
+                .amountRemaining(totalPoints)
                 .acquiredAt(LocalDateTime.now())
                 .expiredAt(expiredAt)
                 .sourceType(LotSourceType.CHARGE)
+                .lotStatus(LotStatus.ACTIVE)
                 .originChargeTransaction(transaction)
                 .build();
         walletStoreLotRepository.save(lot);
@@ -140,12 +241,13 @@ public class PrepaymentService {
                         .balance(0L)
                         .build());
 
-        balance.addBalance(paymentAmount);
+        balance.addBalance(totalPoints);
         walletStoreBalanceRepository.save(balance);
 
-        // 4. SettlementTask 생성 (후에 정산 예정)
+        // 4. SettlementTask 생성 (실제 결제 금액으로 정산 예정)
         SettlementTask settlementTask = SettlementTask.builder()
                 .transaction(transaction)
+                .actualPaymentAmount(actualPaymentAmount)
                 .status(SettlementTask.Status.PENDING)
                 .build();
         settlementTaskRepository.save(settlementTask);
@@ -154,17 +256,16 @@ public class PrepaymentService {
         try {
             Long ownerId = store.getOwner().getOwnerId();
             String customerName = wallet.getCustomer().getName();
-            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다", 
-                    customerName, paymentAmount);
+            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다 (포인트: %,d)",
+                    customerName, actualPaymentAmount, totalPoints);
             
             notificationService.sendToOwner(
                     ownerId,
                     NotificationType.POINT_CHARGE,
-                    notificationContent,
-                    "/" // 점주가 매출 확인할 수 있는 페이지 (아직 관련 페이지, 로직 없음)
+                    notificationContent
             );
             
-            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}", ownerId, paymentAmount);
+            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}, 총포인트: {}", ownerId, actualPaymentAmount, totalPoints);
         } catch (Exception e) {
             log.warn("점주 알림 전송 실패 - 점주ID: {}, 오류: {}", store.getOwner().getOwnerId(), e.getMessage());
             // 알림 실패는 비즈니스 로직에 영향을 주지 않음
@@ -172,15 +273,82 @@ public class PrepaymentService {
 
         // 6. 응답 생성
         long updatedBalance = balance.getBalance();
-        
+
         return PrepaymentResponseDto.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionUniqueNo(apiResponse.getRec().getTransactionUniqueNo())
                 .storeId(store.getStoreId())
                 .storeName(store.getStoreName())
-                .paymentAmount(paymentAmount)
+                .paymentAmount(actualPaymentAmount)
+                .bonusPercentage(bonusPercentage)
+                .bonusAmount(bonusAmount)
+                .totalPoints(totalPoints)
                 .transactionTime(transaction.getCreatedAt())
                 .remainingBalance(updatedBalance)
+                .build();
+    }
+
+    /**
+     * 요청 바디 정규화 (키 정렬 + 공백 제거 등: ObjectMapper 설정에 따름)
+     */
+    private String canonicalizeRequestBody(PrepaymentRequestDto requestDto) {
+        CanonicalPrepayment canonical = CanonicalPrepayment.builder()
+                .userId(requestDto.getUserId())
+                .cardNo(requestDto.getCardNo())
+                .cvc(requestDto.getCvc())
+                .paymentBalance(requestDto.getPaymentBalance())
+                .build();
+
+        try {
+            return canonicalObjectMapper.writeValueAsString(canonical);
+            // JSON 문자열로 변환
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorCode.REQUEST_CANONICALIZE_FAILED);
+        }
+    }
+
+    /**
+     * 스냅샷 JSON → DTO
+     */
+    private PrepaymentResponseDto parseSnapshot(String json) {
+        try {
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            return objectMapper.readValue(bytes, PrepaymentResponseDto.class);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.RESPONSE_SNAPSHOT_PARSE_FAILED);
+        }
+    }
+
+    /**
+     * transactionUniqueNo로 리소스를 재조회하여 응답 재구성 (스냅샷 없을 때 폴백)
+     */
+    private PrepaymentResponseDto rebuildFromResource(UUID transactionUniqueNo) {
+        Transaction transaction = transactionRepository.findByTransactionUniqueNo(transactionUniqueNo.toString())
+                .orElseThrow(() -> new CustomException(ErrorCode.TRANSACTION_NOT_FOUND));
+
+        WalletStoreBalance balance = walletStoreBalanceRepository
+                .findByWalletAndStore(transaction.getWallet(), transaction.getStore())
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_BALANCE_NOT_FOUND));
+
+        SettlementTask settlementTask = settlementTaskRepository.findByTransaction(transaction)
+                .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_TASK_NOT_FOUND));
+
+        long actualPaymentAmount = settlementTask.getActualPaymentAmount();
+        long totalPoints = transaction.getAmount();
+        long bonusAmount = totalPoints - actualPaymentAmount;
+        int bonusPercentage = actualPaymentAmount > 0 ? (int) (bonusAmount * 100 / actualPaymentAmount) : 0;
+
+        return PrepaymentResponseDto.builder()
+                .transactionId(transaction.getTransactionId())
+                .transactionUniqueNo(transaction.getTransactionUniqueNo())
+                .storeId(transaction.getStore().getStoreId())
+                .storeName(transaction.getStore().getStoreName())
+                .paymentAmount(actualPaymentAmount)
+                .bonusPercentage(bonusPercentage)
+                .bonusAmount(bonusAmount)
+                .totalPoints(totalPoints)
+                .transactionTime(transaction.getCreatedAt())
+                .remainingBalance(balance.getBalance())
                 .build();
     }
 }

@@ -17,7 +17,8 @@ import java.util.UUID;
 @Table(name = "qr_token", indexes = {
         @Index(name="idx_user_created", columnList = "customer_id, created_at"),
         @Index(name="idx_store_expires", columnList = "bind_store_id, expires_at"),
-        @Index(name="idx_state_expires", columnList = "state, expires_at")
+        @Index(name="idx_state_expires", columnList = "state, expires_at"),
+        @Index(name = "idx_wallet_state",   columnList = "wallet_id, state")
 })
 public class QrToken {
 
@@ -27,6 +28,9 @@ public class QrToken {
 
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
+
+    @Column(name = "wallet_id", nullable = false)
+    private Long walletId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "mode", nullable = false, length = 10)

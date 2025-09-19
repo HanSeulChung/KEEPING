@@ -25,7 +25,6 @@ import java.util.Objects;
 @Table(
         name = "menus",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_menu_name_per_store", columnNames = {"store_id","menu_name"}),
                 @UniqueConstraint(name = "uq_order_per_category",  columnNames = {"store_id","category_id","display_order"})
         },
         indexes = {

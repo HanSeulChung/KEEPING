@@ -8,7 +8,12 @@ import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
+import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
 import com.ssafy.keeping.domain.user.finopenapi.dto.*;
+import com.ssafy.keeping.global.s3.service.ImageService;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
@@ -16,8 +21,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 @Service
@@ -29,6 +36,8 @@ public class CustomerService {
     private final RegSessionStore sessionStore;
     private final FinOpenApiClient apiClient;
     private final PinAuthService pinAuthService;
+    private final WalletRepository walletRepository;
+    private final ImageService imageService;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -141,11 +150,44 @@ public class CustomerService {
             throw e;
         }
 
+        // 지갑 생성
+        Wallet wallet = Wallet.builder().customer(customer).walletType(WalletType.INDIVIDUAL).build();
+
+        try {
+            walletRepository.save(wallet);
+        } catch (CustomException e) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
         // 세션 만료
         sessionStore.deleteSession(SIGN_UP_INFO_KEY, dto.getRegSessionId());
         return CustomerRegisterResponse.register(customer);
     }
 
+    public Customer validCustomer(Long customerId) {
+        return customerRepository.findByCustomerIdAndDeletedAtIsNull(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 
+    // 프로필 이미지 변경
+    @Transactional
+    public ProfileUploadResponse uploadProfileImage(Long customerId, MultipartFile newImage) {
+        String oldImgUrl = customerRepository.findImageUrlByCustomerId(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
+
+        // 변경
+        try {
+            String newImgUrl = imageService.updateProfileImage(oldImgUrl, newImage);
+            customerRepository.updateImageUrl(customerId, newImgUrl);
+
+            log.info("사용자 {} 프로필 이미지 업데이트: {}", customerId, newImgUrl);
+            return ProfileUploadResponse.builder()
+                    .newImgUrl(newImgUrl)
+                    .build();
+
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+    }
 
 }

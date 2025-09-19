@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.wallet.service;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
@@ -27,7 +28,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import static com.ssafy.keeping.domain.wallet.model.Wallet.WalletType.GROUP;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
         Wallet saved = walletRepository.save(
                 Wallet.builder()
-                        .walletType(GROUP)
+                        .walletType(WalletType.GROUP)
                         .group(group)
                         .build()
         );
@@ -132,7 +132,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Wallet individual = validWallet(req.getIndividualWalletId());
         Wallet group = validWallet(req.getGroupWalletId());
-        if (individual.getWalletType() != Wallet.WalletType.INDIVIDUAL || group.getWalletType() != Wallet.WalletType.GROUP)
+        if (individual.getWalletType() != WalletType.INDIVIDUAL || group.getWalletType() != WalletType.GROUP)
             throw new CustomException(ErrorCode.BAD_REQUEST);
         ensureOwnershipAndMembership(userId, groupId, individual, group);
 

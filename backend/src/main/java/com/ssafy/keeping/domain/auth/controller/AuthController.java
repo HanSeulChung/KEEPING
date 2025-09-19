@@ -42,16 +42,19 @@ public class AuthController {
 
     @GetMapping("/kakao/customer")
     public void kakaoLoginAsCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // 세션에 role 저장
-        request.getSession().setAttribute("oauth_role", "CUSTOMER");
+        // redis에 role 저장
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
+        redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
+
         response.sendRedirect("/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
     public void kakaoLoginAsOwner(HttpServletRequest request,HttpServletResponse response) throws IOException {
-        request.getSession().setAttribute("oauth_role", "OWNER");
-        System.out.println("[AUTH CONTROLLER] Saved role=OWNER to session: " + request.getSession().getId());
+        // redis에 role 저장
+        System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
+        redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "OWNER");
+
         response.sendRedirect("/oauth2/authorization/kakao");
     }
 

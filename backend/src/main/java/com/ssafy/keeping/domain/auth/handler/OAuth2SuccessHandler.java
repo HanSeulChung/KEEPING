@@ -30,8 +30,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final CookieUtil cookieUtil;
 
     // 추후 환경변수로 저장
-    private final String FE_BASE_URL = "http://localhost:3000";
-    @Value("${fe.base-url:}")
+    @Value("${fe.base-url}")
     private String feBaseUrl;
 
     @Override
@@ -43,7 +42,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("[OAUTH SUCCESS] Code parameter: " + request.getParameter("code"));
 
         // role 복원
-        UserRole role = authService.extractRoleFromState(request);
+        UserRole role = authService.extractRoleFromState(request.getParameter("state"));
         System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
 
         // role이 null인 경우 처리
@@ -62,7 +61,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             }
 
             // 프론트엔드의 role 선택 페이지로 리다이렉트
-            response.sendRedirect(feBaseUrl + "/#/auth/select-role");
+            response.sendRedirect(feBaseUrl + "/");
             return;
         }
 
@@ -99,7 +98,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 프론트로 리다이렉트
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
+            response.sendRedirect("/owner/login/callback");
 
             return;
 
@@ -1306,7 +1305,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private boolean devFallback() {
-        return feBaseUrl == null || feBaseUrl.isBlank();
+//        return feBaseUrl == null || feBaseUrl.isBlank();
+        return true;
     }
 
 }

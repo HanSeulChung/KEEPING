@@ -1,9 +1,9 @@
 'use client'
 
+import OtpVerificationModal from '@/components/common/OtpVerificationModal'
+import { AuthForm } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { AuthForm } from '@/types'
-import OtpVerificationModal from '@/components/common/OtpVerificationModal'
 
 interface UserRegisterFormProps {
   onNext?: () => void
@@ -27,18 +27,33 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       alert('전화번호를 먼저 입력해주세요.')
       return
     }
-    
+
     // OTP 인증 모달 열기
     setIsOtpModalOpen(true)
   }
 
   const handleOtpSuccess = (token?: string) => {
+    console.log('OTP 인증 성공 콜백 호출됨')
+    console.log('받은 token 값:', token)
+    console.log('token 타입:', typeof token)
+    console.log('token 존재 여부:', !!token)
+
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
-    // 토큰이 있다면 저장 (실제로는 secure storage 사용)
+
+    // regSessionId 저장 (step3에서 회원가입 API 호출 시 사용)
+    // token이 실제로는 regSessionId입니다
     if (token) {
-      localStorage.setItem('keepingPassToken', token)
+      localStorage.setItem('regSessionId', token)
+      console.log('regSessionId 저장됨:', token)
+      console.log(
+        'localStorage에서 확인:',
+        localStorage.getItem('regSessionId')
+      )
+    } else {
+      console.error('token이 없어서 regSessionId를 저장할 수 없습니다!')
     }
+    console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')
   }
 
   const handleFormChange = (field: keyof AuthForm, value: string) => {
@@ -62,12 +77,12 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
 
     if (input.length <= 7) {
       const newBirthDate = input.slice(0, 6)
-      const newGenderCode = input.slice(6, 7)
+      const newGenderCode = input.slice(6, 7) // 7번째 자리만 (1자리)
 
       setAuthForm((prev: AuthForm) => ({
         ...prev,
         birthDate: newBirthDate,
-        genderCode: newGenderCode,
+        genderCode: newGenderCode, // 1자리만
       }))
 
       let displayValue = ''
@@ -85,6 +100,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   }
 
   const handleNextStep = () => {
+    console.log('step2로 이동')
     onNext?.()
   }
 
@@ -93,46 +109,43 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       {/* 개인정보 입력 폼 */}
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-['nanumsquare'] font-bold text-black mb-2">
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
             이름
           </label>
           <input
             type="text"
             value={authForm.name}
             onChange={e => handleFormChange('name', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg font-['nanumsquare'] focus:border-black focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 p-3 font-['nanumsquare'] focus:border-black focus:outline-none"
             placeholder="이름을 입력해주세요"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-['nanumsquare'] font-bold text-black mb-2">
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
             주민등록번호
           </label>
           <input
             type="text"
             value={authForm.residentNumber}
             onChange={handleResidentNumberChange}
-            className="w-full p-3 border border-gray-300 rounded-lg font-['nanumsquare'] focus:border-black focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 p-3 font-['nanumsquare'] focus:border-black focus:outline-none"
             placeholder="생년월일 6자리 - 성별코드 1자리"
             maxLength={14}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-['nanumsquare'] font-bold text-black mb-2">
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
             전화번호
           </label>
           <input
             type="tel"
             value={authForm.phoneNumber}
             onChange={e =>
-              handleFormChange(
-                'phoneNumber',
-                formatPhoneNumber(e.target.value)
-              )
+              handleFormChange('phoneNumber', formatPhoneNumber(e.target.value))
             }
-            className="w-full p-3 border border-gray-300 rounded-lg font-['nanumsquare'] focus:border-black focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 p-3 font-['nanumsquare'] focus:border-black focus:outline-none"
             placeholder="010-1234-5678"
             maxLength={13}
           />
@@ -144,22 +157,24 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         <button
           type="button"
           onClick={handlePassAuth}
-          disabled={!authForm.name || !authForm.residentNumber || !authForm.phoneNumber}
-          className="w-full py-3 bg-black text-white rounded-lg font-['nanumsquare'] font-bold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={
+            !authForm.name || !authForm.residentNumber || !authForm.phoneNumber
+          }
+          className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           KEEPING PASS로 본인 인증하기
         </button>
       ) : (
         <div className="space-y-3">
           <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-            <p className="font-['nanumsquare'] font-bold text-green-800 text-center">
+            <p className="text-center font-['nanumsquare'] font-bold text-green-800">
               ✅ 본인 인증이 완료되었습니다!
             </p>
           </div>
           <button
             type="button"
             onClick={handleNextStep}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg font-['nanumsquare'] font-bold hover:bg-blue-700 transition-colors"
+            className="w-full rounded-lg bg-blue-600 py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-blue-700"
           >
             다음 단계로
           </button>
@@ -171,6 +186,10 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         isOpen={isOtpModalOpen}
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
+        name={authForm.name}
+        birth={authForm.birthDate}
+        genderDigit={authForm.genderCode}
+        userRole="OWNER"
         purpose="REGISTER"
         onSuccess={handleOtpSuccess}
       />
