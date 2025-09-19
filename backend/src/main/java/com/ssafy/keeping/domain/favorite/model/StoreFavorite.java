@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_favorite_customer", columnList = "customer_id"),
                 @Index(name = "idx_favorite_store", columnList = "store_id"),
-                @Index(name = "idx_favorite_canceled", columnList = "canceled_at")
+                @Index(name = "idx_favorite_active", columnList = "active")
         }
 )
 @Getter
@@ -40,25 +40,28 @@ public class StoreFavorite {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    @Column(name = "favorite_number", nullable = false)
-    private String favoriteNumber;
+    @Column(name = "active", nullable = false)
+    private boolean active;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "favorited_at", nullable = false)
+    private LocalDateTime favoritedAt;
 
-    @Column(name = "canceled_at")
-    private LocalDateTime canceledAt;
+    @Column(name = "unfavorited_at")
+    private LocalDateTime unfavoritedAt;
 
     public boolean isActive() {
-        return this.canceledAt == null;
+        return this.active;
     }
 
     public void cancel() {
-        this.canceledAt = LocalDateTime.now();
+        this.active = false;
+        this.unfavoritedAt = LocalDateTime.now();
     }
 
     public void reactivate() {
-        this.canceledAt = null;
+        this.active = true;
+        this.favoritedAt = LocalDateTime.now();
+        this.unfavoritedAt = null;
     }
 }
