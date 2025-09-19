@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -71,17 +72,25 @@ public class SsafyFinanceApiService {
 
         try {
             response = restTemplate.postForEntity(url, requestEntity, SsafyCardPaymentResponseDto.class);
+        } catch (HttpClientErrorException e) {
+            String responseBody = e.getResponseBodyAsString();
+            if (responseBody.contains("A1054")) {
+                throw new CustomException(ErrorCode.INVALID_CARD_NUMBER);
+            } else if (responseBody.contains("A1055")) {
+                throw new CustomException(ErrorCode.INVALID_CVC);
+            }
+            throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
         } catch (Exception e) {
             // 여기서 연결 처리를 해주는게 맞다 생각해서 try-catch로 잡았음
             log.error("카드 결제 API 통신 오류", e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
-        
+
         SsafyCardPaymentResponseDto responseDto = response.getBody();
-        
+
         if (responseDto == null || !responseDto.isSuccess()) {
-            String errorMessage = (responseDto != null && responseDto.getHeader() != null) 
-                    ? responseDto.getHeader().getResponseMessage() 
+            String errorMessage = (responseDto != null && responseDto.getHeader() != null)
+                    ? responseDto.getHeader().getResponseMessage()
                     : "응답 없음";
             log.error("카드 결제 실패 - {}", errorMessage);
             throw new CustomException(ErrorCode.CARD_PAYMENT_FAILED);
@@ -281,6 +290,23 @@ public class SsafyFinanceApiService {
                 userKey,
                 apiName
 
+        );
+    }
+
+    public SsafyApiHeaderDto createCommonHeaderWithoutUserKey(String apiName) {
+        LocalDateTime now = LocalDateTime.now();
+        String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        log.debug("현재 시각 : {}", transmissionTime);
+
+        String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
+
+        return SsafyApiHeaderDto.createCommonHeaderWithoutUserKeyDto(
+                transmissionDate,
+                transmissionTime,
+                institutionTransactionUniqueNo,
+                apiKey,
+                apiName
         );
     }
 }

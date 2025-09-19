@@ -142,7 +142,7 @@ public class GroupService {
         final String url = "/groups/" + groupId + "/requests";
         afterCommit(() -> notificationService.sendToCustomer(
                 leaderId, NotificationType.GROUP_JOIN_REQUEST,
-                "새 가입 요청이 도착했습니다.", url));
+                "새 가입 요청이 도착했습니다."));
 
     }
 
@@ -217,9 +217,7 @@ public class GroupService {
         afterCommit(() -> notificationService.sendToCustomer(
                 requesterId,
                 accepted ? NotificationType.GROUP_JOIN_ACCEPTED : NotificationType.GROUP_JOIN_REJECTED,
-                accepted ? "가입이 승인되었습니다." : "가입이 거절되었습니다.",
-                url
-        ));
+                accepted ? "가입이 승인되었습니다." : "가입이 거절되었습니다."));
 
         return new AddRequestResponseDto(
             groupAddRequest.getGroupAddRequestId(), groupAddRequest.getUser().getName(),
@@ -268,14 +266,14 @@ public class GroupService {
         afterCommit(() -> {
             // 본인: 참여 완료
             notificationService.sendToCustomer(
-                    userId, NotificationType.GROUP_JOINED, "모임 참여가 완료되었습니다.", url);
+                    userId, NotificationType.GROUP_JOINED, "모임 참여가 완료되었습니다.");
 
             // 기존 멤버 전원: 새 멤버 참여 알림 (본인 제외, 스냅샷 기반)
             memberIdsToNotify.stream()
                     .filter(id -> !id.equals(userId))
                     .distinct()
                     .forEach(id -> notificationService.sendToCustomer(
-                            id, NotificationType.GROUP_JOINED, "새 멤버가 참여했습니다.", url));
+                            id, NotificationType.GROUP_JOINED, "새 멤버가 참여했습니다."));
         });
 
 
@@ -317,9 +315,9 @@ public class GroupService {
 
         afterCommit(() -> {
             notificationService.sendToCustomer(
-                    oldLeaderId, NotificationType.GROUP_LEADER_CHANGED, "리더 권한이 해제되었습니다.", url);
+                    oldLeaderId, NotificationType.GROUP_LEADER_CHANGED, "리더 권한이 해제되었습니다.");
             notificationService.sendToCustomer(
-                    newLeaderId, NotificationType.GROUP_LEADER_CHANGED, "새 리더로 지정되었습니다.", url);
+                    newLeaderId, NotificationType.GROUP_LEADER_CHANGED, "새 리더로 지정되었습니다.");
         });
 
         return new GroupLeaderChangeResponseDto(

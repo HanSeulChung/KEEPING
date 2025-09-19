@@ -16,6 +16,7 @@ public enum ErrorCode {
     STORE_INVALID(HttpStatus.BAD_REQUEST, "해당 매장의 운영상태를 확인해주세요."),
     STORE_NOT_MATCH(HttpStatus.BAD_REQUEST, "두 가게가 맞지 않습니다."),
     OWNER_NOT_MATCH(HttpStatus.BAD_REQUEST, "가게 주인과 가게가 맞지 않습니다."),
+    MERCHANTID_NOT_FOUND(HttpStatus.BAD_REQUEST, "가맹점 아이디를 찾을 수 없습니다."),
 
     // MenuCategory 관련
     MENU_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
@@ -30,7 +31,9 @@ public enum ErrorCode {
     CARD_PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "카드 결제에 실패했습니다."),
     ACCOUNT_DEPOSIT_FAILED(HttpStatus.BAD_REQUEST, "계좌 입금에 실패했습니다."),
     EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API 통신 중 오류가 발생했습니다."),
-    
+    INVALID_CARD_NUMBER(HttpStatus.BAD_REQUEST, "입력하신 카드번호가 올바르지 않습니다."),
+    INVALID_CVC(HttpStatus.BAD_REQUEST, "CVC 번호가 올바르지 않습니다."),
+
     // 취소 관련
     TRANSACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 거래를 찾을 수 없습니다."),
     SETTLEMENT_TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 정산 작업을 찾을 수 없습니다."),
@@ -147,7 +150,22 @@ public enum ErrorCode {
     INVALID_USER_KEY(HttpStatus.UNAUTHORIZED, "USER KEY가 유효하지 않습니다"),
     INVALID_INSTITUTION_TRANSACTION_NUMBER_DUPLICATE(HttpStatus.CONFLICT, "기관거래고유번호가 유효하지 않습니다"),
     INVALID_ACCOUNT_NUMBER(HttpStatus.BAD_REQUEST, "계좌번호가 유효하지 않습니다"),
-    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다.");
+    USER_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 ID 입니다."),
+
+    // 직렬화
+    JSON_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON 파싱/역직렬화에 실패했습니다."),
+
+    // 추가된 에러 코드들
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
+    WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다."),
+
+    // 충전 보너스 관련
+    CHARGE_BONUS_NOT_FOUND(HttpStatus.NOT_FOUND, "충전 보너스 설정을 찾을 수 없습니다."),
+    CHARGE_BONUS_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 충전 금액에 대한 보너스 설정이 이미 존재합니다."),
+    STORE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 가게에 대한 접근 권한이 없습니다."),
+
+    // 통계 관련
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 범위입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

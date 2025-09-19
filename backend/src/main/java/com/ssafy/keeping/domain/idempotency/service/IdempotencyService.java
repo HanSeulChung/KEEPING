@@ -80,8 +80,8 @@ public class IdempotencyService {
         row.setHttpStatus(httpStatus);
         row.setIntentPublicId(resourcePublicId);
         try {
-            String json = canonicalObjectMapper.writeValueAsString(responseBody); // JSON 직렬화
-            row.setResponseJson(json);
+            // String json = canonicalObjectMapper.writeValueAsString(responseBody); // JSON 직렬화
+            row.setResponseJson(canonicalObjectMapper.valueToTree(responseBody));
         } catch (Exception e) {
             log.warn("Response 직렬화 실패", e);
         }
@@ -98,8 +98,21 @@ public class IdempotencyService {
         row.setHttpStatus(httpStatus);
         row.setIntentPublicId(resourcePublicId);
 
-        String json = canonicalObjectMapper.writeValueAsString(responseBody); // throws 가능
-        row.setResponseJson(json);
+        // String json = canonicalObjectMapper.writeValueAsString(responseBody); // throws 가능
+        row.setResponseJson(canonicalObjectMapper.valueToTree(responseBody));
+
+        idempotencyKeyRepository.save(row);
+    }
+
+    @Transactional
+    public void completeCharge(IdempotencyKey row, int httpStatus, Object responseBody) {
+        row.setStatus(IdemStatus.DONE);
+        row.setHttpStatus(httpStatus);
+        try {
+            row.setResponseJson(canonicalObjectMapper.valueToTree(responseBody));
+        } catch (Exception e) {
+            log.warn("Response 직렬화 실패", e);
+        }
 
         idempotencyKeyRepository.save(row);
     }

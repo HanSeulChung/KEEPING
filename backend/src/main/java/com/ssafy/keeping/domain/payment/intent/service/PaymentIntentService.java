@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.payment.intent.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.pin.service.PinAuthService;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
@@ -12,6 +13,8 @@ import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
 import com.ssafy.keeping.domain.menu.model.Menu;
 import com.ssafy.keeping.domain.menu.repository.MenuRepository;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
 import com.ssafy.keeping.domain.payment.common.IdUtil;
 import com.ssafy.keeping.domain.payment.funds.dto.FundsResult;
 import com.ssafy.keeping.domain.payment.funds.service.FundsService;
@@ -27,8 +30,12 @@ import com.ssafy.keeping.domain.payment.qr.constant.QrMode;
 import com.ssafy.keeping.domain.payment.qr.constant.QrState;
 import com.ssafy.keeping.domain.payment.qr.model.QrToken;
 import com.ssafy.keeping.domain.payment.qr.repository.QrTokenRepository;
+import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.store.repository.StoreRepository;
+import com.ssafy.keeping.domain.store.service.StoreService;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +48,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentIntentService {
@@ -51,6 +59,8 @@ public class PaymentIntentService {
     private final MenuRepository menuRepository;
     private final PinAuthService pinAuthService;
     private final FundsService fundsService;
+    private final NotificationService notificationService;
+    private final StoreRepository storeRepository;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
@@ -102,14 +112,20 @@ public class PaymentIntentService {
         if (slot.getStatus() == IdemStatus.DONE) {
             // 스냅샷이 있으면 그대로, 없으면 리소스 재조회해서 응답 구성
             PaymentIntentDetailResponse replay;
-            if (slot.getResponseJson() != null) {
-                replay = parseSnapshot(slot.getResponseJson());
-            } else if (slot.getIntentPublicId() != null) {
-                replay = rebuildFromResource(slot.getIntentPublicId());
-            } else {
-                // 최소한의 폴백 (실무에선 거의 안탐)
-                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+
+            try {
+                var node = slot.getResponseJson(); // JsonNode
+                if (node != null && !node.isNull()) {
+                    replay = canonicalObjectMapper.treeToValue(node, PaymentIntentDetailResponse.class);
+                } else if (slot.getIntentPublicId() != null) {
+                    replay = rebuildFromResource(slot.getIntentPublicId());
+                } else {
+                    throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new CustomException(ErrorCode.JSON_PARSE_ERROR);
             }
+
             return IdempotentResult.okReplay(replay);
         }
 
@@ -209,6 +225,25 @@ public class PaymentIntentService {
         }
         PaymentIntentDetailResponse res = PaymentIntentDetailResponse.from(intent, itemViews);
 
+        try {
+            Long customerId = qr.getCustomerId();
+            Store store = storeRepository.findById(intent.getStoreId()).orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+            String storeName = store.getStoreName();
+
+            String notificationContent = String.format("%s에서 결제 요청이 도착하였습니다.", storeName);
+
+            notificationService.sendToCustomer(
+                    customerId,
+                    NotificationType.PAYMENT_REQUEST,
+                    notificationContent
+            );
+
+            log.info("결제 요청 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+        } catch (Exception e) {
+            log.info("결제 요청 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", qr.getCustomerId(), intent.getAmount(), intent.getStoreId());
+            // 알림 실패는 비즈니스 로직에 영향을 주지 않음
+        }
+
         // 멱등 완료 기록(DONE + 응답 스냅샷)
         idempotencyService.complete(slot, HttpStatus.CREATED.value(), res, intent.getPublicId());
 
@@ -272,14 +307,16 @@ public class PaymentIntentService {
         // DONE 재생
         if (slot.getStatus() == IdemStatus.DONE) {
             PaymentIntentDetailResponse replay;
-            if (slot.getResponseJson() != null) {
-                replay = parseSnapshot(slot.getResponseJson());
+            var node = slot.getResponseJson();
+
+            if (node != null && !node.isNull()) {
+                replay = parseSnapshot(node); // ← JsonNode 버전 사용
             } else if (slot.getIntentPublicId() != null) {
                 replay = rebuildFromResource(slot.getIntentPublicId());
             } else {
-                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE); // 이미 처리된 요청이나 응답을 복원할 수 없습니다.
+                throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
             }
-            return IdempotentResult.okReplay(replay); // 200 OK + replay
+            return IdempotentResult.okReplay(replay);
         }
 
         // 타 프로세스가 IN_PROGRESS 선점 중이면 202
@@ -414,10 +451,9 @@ public class PaymentIntentService {
     }
 
     /** 스냅샷 JSON → DTO */
-    private PaymentIntentDetailResponse parseSnapshot(String json) {
+    private PaymentIntentDetailResponse parseSnapshot(JsonNode node) {
         try {
-            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-            return objectMapper.readValue(bytes, PaymentIntentDetailResponse.class);
+            return canonicalObjectMapper.treeToValue(node, PaymentIntentDetailResponse.class);
         } catch (Exception e) {
             // 스냅샷 파싱이 불가능하면 리소스 재조회를 시도하도록 위에서 폴백 처리
             throw new CustomException(ErrorCode.RESPONSE_SNAPSHOT_PARSE_FAILED);

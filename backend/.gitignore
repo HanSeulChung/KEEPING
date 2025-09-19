@@ -39,7 +39,7 @@ out/
 
 
 ### yml ###
-src/main/resources/application.yml
+src/main/resources/**.yml
 
 ### generated ###
 src/main/generated/
@@ -56,3 +56,6 @@ src/main/generated/
 /src/main/resources/firebase/**.json
 /src/main/resources/**.json
 
+
+### firebase
+/resource/firebase/keeping-firebase-adminsdk.json
