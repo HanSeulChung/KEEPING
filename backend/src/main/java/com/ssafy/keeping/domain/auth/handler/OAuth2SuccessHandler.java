@@ -97,8 +97,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 
             // 프론트로 리다이렉트
-            response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
+//            response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+//            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
 
             return;
 
@@ -120,7 +120,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            response.sendRedirect(feBaseUrl +"//owner/register/step1");
+            response.sendRedirect(feBaseUrl +"/owner/register/step1");
         }
 
     }
