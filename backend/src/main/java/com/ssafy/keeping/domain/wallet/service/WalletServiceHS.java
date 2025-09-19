@@ -255,16 +255,11 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         Page<WalletStoreBalance> balances = balanceRepository
                 .findPersonalWalletBalancesByCustomerIdSimple(customerId, pageable);
 
-        // 3. Service에서 DTO 조합
+        // 3. Service에서 DTO 조합 (간소화)
         Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
-            // 해당 가게의 총 충전 금액 조회
-            Long totalChargeAmount = transactionRepository
-                    .getTotalGainAmountByCustomerAndStore(customerId, balance.getStore().getStoreId());
-
             return new WalletStoreBalanceDetailDto(
                     balance.getStore().getStoreId(),
                     balance.getStore().getStoreName(),
-                    totalChargeAmount,
                     balance.getBalance(),
                     balance.getUpdatedAt()
             );
@@ -297,16 +292,11 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         Page<WalletStoreBalance> balances = balanceRepository
                 .findGroupWalletBalancesByGroupIdSimple(groupId, pageable);
 
-        // 3. Service에서 DTO 조합
+        // 3. Service에서 DTO 조합 (간소화)
         Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
-            // 해당 가게의 총 공유받은 금액 조회
-            Long totalTransferInAmount = transactionRepository
-                    .getTotalTransferInAmountByGroupAndStore(groupId, balance.getStore().getStoreId());
-
             return new WalletStoreBalanceDetailDto(
                     balance.getStore().getStoreId(),
                     balance.getStore().getStoreName(),
-                    totalTransferInAmount,
                     balance.getBalance(),
                     balance.getUpdatedAt()
             );
@@ -344,34 +334,19 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .balance(0L)
                         .build());
 
-        // 4. 첫 충전 정보 조회
-        Optional<Transaction> firstCharge = transactionRepository
-                .findFirstValidChargeByCustomerAndStore(customerId, storeId);
-
-        // 5. 총 증가/감소 금액 계산
-        Long totalGainAmount = transactionRepository
-                .getTotalGainAmountByCustomerAndStore(customerId, storeId);
-        Long totalSpentAmount = transactionRepository
-                .getTotalSpentAmountByCustomerAndStore(customerId, storeId);
-
-        // 6. 거래내역 조회 (페이징)
+        // 4. 거래내역 조회 (페이징) - 간소화
         Page<Transaction> transactions = transactionRepository
                 .findValidTransactionsByCustomerAndStore(customerId, storeId, pageable);
 
-        // 7. Transaction을 DTO로 변환
+        // 5. Transaction을 DTO로 변환
         Page<WalletStoreTransactionDetailDto> transactionDtos = transactions
                 .map(WalletStoreTransactionDetailDto::from);
 
-        // 8. 응답 DTO 조립
+        // 6. 응답 DTO 조립 (간소화)
         return new WalletStoreDetailResponseDto(
                 store.getStoreId(),
                 store.getStoreName(),
                 balance.getBalance(),
-                firstCharge.map(Transaction::getAmount).orElse(0L),
-                firstCharge.map(Transaction::getAmount).orElse(0L), // 첫 충전 포인트 (보너스 로직 추가 가능)
-                firstCharge.map(Transaction::getCreatedAt).orElse(null),
-                totalGainAmount,
-                totalSpentAmount,
                 transactionDtos
         );
     }
@@ -408,34 +383,19 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .balance(0L)
                         .build());
 
-        // 5. 첫 공유받은 정보 조회
-        Optional<Transaction> firstTransferIn = transactionRepository
-                .findFirstValidTransferInByGroupAndStore(groupId, storeId);
-
-        // 6. 총 증가/감소 금액 계산
-        Long totalTransferInAmount = transactionRepository
-                .getTotalTransferInAmountByGroupAndStore(groupId, storeId);
-        Long totalSpentAmount = transactionRepository
-                .getTotalSpentAmountByGroupAndStore(groupId, storeId);
-
-        // 7. 거래내역 조회 (페이징)
+        // 5. 거래내역 조회 (페이징) - 간소화
         Page<Transaction> transactions = transactionRepository
                 .findValidTransactionsByGroupAndStore(groupId, storeId, pageable);
 
-        // 8. Transaction을 DTO로 변환
+        // 6. Transaction을 DTO로 변환
         Page<WalletStoreTransactionDetailDto> transactionDtos = transactions
                 .map(WalletStoreTransactionDetailDto::from);
 
-        // 9. 응답 DTO 조립
+        // 7. 응답 DTO 조립 (간소화)
         return new WalletStoreDetailResponseDto(
                 store.getStoreId(),
                 store.getStoreName(),
                 balance.getBalance(),
-                firstTransferIn.map(Transaction::getAmount).orElse(0L),
-                firstTransferIn.map(Transaction::getAmount).orElse(0L), // 첫 공유받은 포인트
-                firstTransferIn.map(Transaction::getCreatedAt).orElse(null),
-                totalTransferInAmount,
-                totalSpentAmount,
                 transactionDtos
         );
     }

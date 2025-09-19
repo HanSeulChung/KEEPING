@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public record WalletStoreBalanceDetailDto(
         Long storeId,
         String storeName,
-        Long totalChargedAmount,
         Long remainingPoints,
         LocalDateTime lastUpdatedAt
 ) {
