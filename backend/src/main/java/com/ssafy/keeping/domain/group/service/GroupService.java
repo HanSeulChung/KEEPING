@@ -356,24 +356,24 @@ public class GroupService {
     }
 
 
-    private Group validGroup(Long groupId) {
+    public Group validGroup(Long groupId) {
         return groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
     }
 
-    private GroupMember validGroupMember(Long groupId, Long userId) {
+    public GroupMember validGroupMember(Long groupId, Long userId) {
         return groupMemberRepository.findGroupMember(groupId, userId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND)
         );
     }
 
-    private Customer validCustomer(Long customerId) {
+    public Customer validCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
     // 유틸: 트랜잭션 커밋 후 실행
-    private void afterCommit(Runnable r) {
+    public void afterCommit(Runnable r) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override public void afterCommit() { r.run(); }
