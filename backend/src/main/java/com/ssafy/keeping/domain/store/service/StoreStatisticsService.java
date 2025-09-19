@@ -30,11 +30,11 @@ public class StoreStatisticsService {
     /**
      * 가게 전체 누적 통계 조회
      */
-    public StoreOverallStatisticsResponseDto getOverallStatistics(Long storeId, StatisticsRequestDto requestDto) {
-        log.info("전체 통계 조회 시작 - 가게ID: {}, 점주ID: {}", storeId, requestDto.getOwnerId());
+    public StoreOverallStatisticsResponseDto getOverallStatistics(Long storeId, Long ownerId, StatisticsRequestDto requestDto) {
+        log.info("전체 통계 조회 시작 - 가게ID: {}, 점주ID: {}", storeId, ownerId);
 
         // 1. 가게 존재 및 권한 검증
-        Store store = validateStoreOwnership(storeId, requestDto.getOwnerId());
+        Store store = validateStoreOwnership(storeId, ownerId);
 
         // 2. 통계 데이터 조회
         Long totalPaymentAmount = transactionRepository.getTotalPaymentAmountByStore(storeId); // 총 결제 금액 - 취소는 조회 안하게끔함
@@ -62,12 +62,12 @@ public class StoreStatisticsService {
     /**
      * 가게 일별 통계 조회
      */
-    public DailyStatisticsResponseDto getDailyStatistics(Long storeId, StatisticsRequestDto requestDto) {
+    public DailyStatisticsResponseDto getDailyStatistics(Long storeId, Long ownerId, StatisticsRequestDto requestDto) {
         log.info("일별 통계 조회 시작 - 가게ID: {}, 점주ID: {}, 날짜: {}",
-                storeId, requestDto.getOwnerId(), requestDto.getDate());
+                storeId, ownerId, requestDto.getDate());
 
         // 1. 가게 존재 및 권한 검증
-        Store store = validateStoreOwnership(storeId, requestDto.getOwnerId());
+        Store store = validateStoreOwnership(storeId, ownerId);
 
         // 2. 날짜 검증
         LocalDate date = requestDto.getDate();
@@ -102,12 +102,12 @@ public class StoreStatisticsService {
     /**
      * 가게 기간별 통계 조회
      */
-    public PeriodStatisticsResponseDto getPeriodStatistics(Long storeId, StatisticsRequestDto requestDto) {
+    public PeriodStatisticsResponseDto getPeriodStatistics(Long storeId, Long ownerId, StatisticsRequestDto requestDto) {
         log.info("기간별 통계 조회 시작 - 가게ID: {}, 점주ID: {}, 기간: {} ~ {}",
-                storeId, requestDto.getOwnerId(), requestDto.getStartDate(), requestDto.getEndDate());
+                storeId, ownerId, requestDto.getStartDate(), requestDto.getEndDate());
 
         // 1. 가게 존재 및 권한 검증
-        Store store = validateStoreOwnership(storeId, requestDto.getOwnerId());
+        Store store = validateStoreOwnership(storeId, ownerId);
 
         // 2. 날짜 검증
         LocalDate startDate = requestDto.getStartDate();
@@ -156,11 +156,11 @@ public class StoreStatisticsService {
     /**
      * 가게 월별 통계 조회
      */
-    public MonthlyStatisticsResponseDto getMonthlyStatistics(Long storeId, StatisticsRequestDto requestDto) {
-        log.info("월별 통계 조회 시작 - 가게ID: {}, 점주ID: {}", storeId, requestDto.getOwnerId());
+    public MonthlyStatisticsResponseDto getMonthlyStatistics(Long storeId, Long ownerId, StatisticsRequestDto requestDto) {
+        log.info("월별 통계 조회 시작 - 가게ID: {}, 점주ID: {}", storeId, ownerId);
 
         // 1. 가게 존재 및 권한 검증
-        Store store = validateStoreOwnership(storeId, requestDto.getOwnerId());
+        Store store = validateStoreOwnership(storeId, ownerId);
 
         // 2. 연월 검증 (기본값: 이번 달)
         LocalDate now = LocalDate.now();
