@@ -5,6 +5,6 @@ import org.springframework.data.domain.Page;
 public record StoreFavoriteResponseDto(
         Long customerId,
         long totalFavoriteCount,
-        Page<FavoriteStoreDetailDto> favoriteStores
+        Page<SimpleFavoriteDto> favoriteStores
 ) {
 }

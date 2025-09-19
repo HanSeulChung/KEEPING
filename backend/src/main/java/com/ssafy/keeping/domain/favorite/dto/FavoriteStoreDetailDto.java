@@ -8,7 +8,7 @@ public record FavoriteStoreDetailDto(
         String category,
         String address,
         String imgUrl,
-        String favoriteNumber,
+        Long favoriteId,
         LocalDateTime favoritedAt
 ) {
 }

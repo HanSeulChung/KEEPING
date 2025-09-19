@@ -4,6 +4,6 @@ public record FavoriteCheckResponseDto(
         Long customerId,
         Long storeId,
         boolean isFavorited,
-        String favoriteNumber
+        Long favoriteId
 ) {
 }
