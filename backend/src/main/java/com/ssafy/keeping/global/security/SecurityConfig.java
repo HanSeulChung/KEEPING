@@ -43,6 +43,7 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "/favicon.ico",
             "/.well-known/**",
+            "/s3/**",
             "/owners/stores/**",
             "/api/v1/stores/**"
     };
@@ -167,6 +168,8 @@ public class SecurityConfig {
                         .requestMatchers("/cpqr/new").hasRole("CUSTOMER")
                         .requestMatchers("/cpqr/*/initiate").hasRole("OWNER")
                         .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
+                        .requestMatchers("/stores/*/transactions/*/refund").hasRole("OWNER")
+
 
                                 // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()
