@@ -77,11 +77,10 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       const newBirthDate = input.slice(0, 6)
       const newGenderCode = input.slice(6, 7) // 7번째 자리만 (1자리)
 
-
       setAuthForm((prev: AuthForm) => ({
         ...prev,
         birthDate: newBirthDate,
-        genderCode: newGenderCode, 
+        genderCode: newGenderCode,
       }))
 
       let displayValue = ''
@@ -155,37 +154,24 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         <button
           type="button"
           onClick={handlePassAuth}
-<<<<<<< HEAD
           disabled={
             !authForm.name || !authForm.residentNumber || !authForm.phoneNumber
           }
           className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-=======
-          disabled={!authForm.name || !authForm.residentNumber || !authForm.phoneNumber}
-          className="w-full py-3 bg-black text-white rounded-lg font-['nanumsquare'] font-bold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         >
           KEEPING PASS로 본인 인증하기
         </button>
       ) : (
         <div className="space-y-3">
           <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-<<<<<<< HEAD
             <p className="text-center font-['nanumsquare'] font-bold text-green-800">
-=======
-            <p className="font-['nanumsquare'] font-bold text-green-800 text-center">
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
               ✅ 본인 인증이 완료되었습니다!
             </p>
           </div>
           <button
             type="button"
             onClick={handleNextStep}
-<<<<<<< HEAD
             className="w-full rounded-lg bg-blue-600 py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-blue-700"
-=======
-            className="w-full py-3 bg-blue-600 text-white rounded-lg font-['nanumsquare'] font-bold hover:bg-blue-700 transition-colors"
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
           >
             다음 단계로
           </button>
@@ -197,13 +183,10 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         isOpen={isOtpModalOpen}
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
-<<<<<<< HEAD
         name={authForm.name}
         birth={authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="OWNER"
-=======
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
         purpose="REGISTER"
         onSuccess={handleOtpSuccess}
       />
