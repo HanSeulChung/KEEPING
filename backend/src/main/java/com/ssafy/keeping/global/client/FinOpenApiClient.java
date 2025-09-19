@@ -5,6 +5,8 @@ import com.ssafy.keeping.domain.charge.service.SsafyFinanceApiService;
 import com.ssafy.keeping.domain.user.finopenapi.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.sql.results.graph.collection.internal.MapInitializer;
+import org.hibernate.sql.results.graph.collection.internal.MapInitializerProducer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,9 @@ public class FinOpenApiClient {
 
     @Value("${ssafy.finance.value.card-unique-no}")
     private String cardUniqueNo;
+
+    @Value("${ssafy.finance.value.category-id}")
+    private String categoryId;
 
     public <TReq, TRes> TRes post(String path, TReq body, Class<TRes> resType) {
         log.debug("FinOpenAPI 요청 - Path: {}", path);
@@ -111,6 +116,27 @@ public class FinOpenApiClient {
         return post(FinOpenApiPaths.ACCOUNT_DEPOSIT, request, AccountDepositResponse.class);
     }
 
+    // 카테고리 조회
+    public SearchCategoriesResponse searchCategories() {
+        String apiName = "inquireCategoryList";
+
+        SsafyApiHeaderDto header = ssafyFinanceApiService.createCommonHeaderWithoutUserKey(apiName);
+
+        SearchCategoriesRequest request = SearchCategoriesRequest.create(header);
+
+        return post(FinOpenApiPaths.SEARCH_CATEGORIES, request, SearchCategoriesResponse.class);
+    }
+
+    // 가맹점 등록
+    public InsertMerchantResponse insertMerchant(String merchantName) {
+        String apiName = "createMerchant";
+
+        SsafyApiHeaderDto header = ssafyFinanceApiService.createCommonHeaderWithoutUserKey(apiName);
+
+        InsertMerchantRequest request = InsertMerchantRequest.create(header, categoryId, merchantName);
+
+        return post(FinOpenApiPaths.INSERT_MERCHANT, request, InsertMerchantResponse.class);
+    }
 
 
 }

@@ -29,7 +29,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenService tokenService;
     private final CookieUtil cookieUtil;
 
-    @Value("${fe.base-url:}")
+    // 추후 환경변수로 저장
+    @Value("${fe.base-url}")
     private String feBaseUrl;
 
     @Override
@@ -121,7 +122,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            response.sendRedirect(feBaseUrl +"/owner/register/step1");
+            if(role == UserRole.OWNER) {
+                response.sendRedirect(feBaseUrl + "/owner/register/step1?regSessionId=" + regSessionId);
+                return;
+            }
+
+            if(role == UserRole.CUSTOMER) {
+                response.sendRedirect(feBaseUrl + "/customer/register/step1" + regSessionId);
+            }
         }
 
     }
