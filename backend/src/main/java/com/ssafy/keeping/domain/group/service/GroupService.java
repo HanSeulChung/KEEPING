@@ -139,7 +139,6 @@ public class GroupService {
         Long leaderId = groupMemberRepository.findLeaderId(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_LEADER_NOT_FOUND));
 
-        final String url = "/groups/" + groupId + "/requests";
         afterCommit(() -> notificationService.sendToCustomer(
                 leaderId, NotificationType.GROUP_JOIN_REQUEST,
                 "새 가입 요청이 도착했습니다."));
@@ -212,7 +211,6 @@ public class GroupService {
 
         boolean accepted = (changeStatus == RequestStatus.ACCEPT);
         final Long requesterId = groupAddRequest.getUser().getCustomerId();
-        final String url = "/groups/" + groupId;
 
         afterCommit(() -> notificationService.sendToCustomer(
                 requesterId,
@@ -259,8 +257,6 @@ public class GroupService {
                         .user(user)
                         .build()
         );
-
-        final String url = "/groups/" + groupId;
 
         // 커밋 후 알림
         afterCommit(() -> {
@@ -309,7 +305,6 @@ public class GroupService {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
-        final String url = "/groups/" + groupId;
         final Long oldLeaderId = originGroupLeader.getUser().getCustomerId();
         final Long newLeaderId = newGroupLeader.getUser().getCustomerId();
 
@@ -343,7 +338,6 @@ public class GroupService {
 
         groupMemberRepository.delete(target);
 
-        final String url = "/groups/" + groupId;
         afterCommit(() -> {
             notificationService.sendToCustomer(
                     targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.");
