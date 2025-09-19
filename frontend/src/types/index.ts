@@ -31,3 +31,18 @@ export interface Pagination {
  * 로딩 상태 타입
  */
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
+
+/**
+ * 사용자 등록 폼 관련 타입
+ */
+export interface UserRegisterFormProps {
+  onNext?: () => void
+}
+
+export interface AuthForm {
+  name: string
+  residentNumber: string
+  phoneNumber: string
+  birthDate: string
+  genderCode: string
+}
