@@ -15,9 +15,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class StatisticsRequestDto {
 
-    @NotNull(message = "점주 ID는 필수입니다.")
-    @Positive(message = "점주 ID는 양수여야 합니다.")
-    private Long ownerId;
 
     private LocalDate date;
 
