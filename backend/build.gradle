@@ -58,7 +58,7 @@ dependencies {
 	implementation 'com.amazonaws:aws-java-sdk-s3:1.12.767'
 
 
-	implementation 'org/springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+	// implementation 'org/springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 
 	testImplementation 'com.h2database:h2:2.2.224'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
