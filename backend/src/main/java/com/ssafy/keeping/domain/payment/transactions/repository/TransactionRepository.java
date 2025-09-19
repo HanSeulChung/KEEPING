@@ -6,7 +6,7 @@ import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.query.Param;
+//import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
@@ -291,7 +291,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Long getMonthlyTransactionCountByStore(@Param("storeId") Long storeId,
                                            @Param("year") int year,
                                            @Param("month") int month);
-=======
+
     /**
      * PK로 조회 + 쓰기 락 (SELECT ... FOR UPDATE)
      * - 동시성 하에서 동일 TX를 중복 취소/변경하지 않도록 보호!!!
