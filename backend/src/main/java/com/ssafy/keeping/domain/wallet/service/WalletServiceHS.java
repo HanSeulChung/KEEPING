@@ -29,6 +29,11 @@ import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
+import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreDetailResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreTransactionDetailDto;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
@@ -40,6 +45,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -578,5 +585,163 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
             throw new CustomException(ErrorCode.BAD_REQUEST);
         if (!groupMemberRepository.existsMember(groupId, userId))
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+    }
+
+    @Transactional(readOnly = true)
+    public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
+        // 1. 고객 및 지갑 검증
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 2. 간단한 방식으로 잔액 조회
+        Page<WalletStoreBalance> balances = balanceRepository
+                .findPersonalWalletBalancesByCustomerIdSimple(customerId, pageable);
+
+        // 3. Service에서 DTO 조합 (간소화)
+        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
+            return new WalletStoreBalanceDetailDto(
+                    balance.getStore().getStoreId(),
+                    balance.getStore().getStoreName(),
+                    balance.getBalance(),
+                    balance.getUpdatedAt()
+            );
+        });
+
+        return new PersonalWalletBalanceResponseDto(
+                customerId,
+                personalWallet.getWalletId(),
+                storeBalances
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
+        // 1. 고객, 모임, 멤버십 검증
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+
+        Wallet groupWallet = walletRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 2. 간단한 방식으로 잔액 조회
+        Page<WalletStoreBalance> balances = balanceRepository
+                .findGroupWalletBalancesByGroupIdSimple(groupId, pageable);
+
+        // 3. Service에서 DTO 조합 (간소화)
+        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
+            return new WalletStoreBalanceDetailDto(
+                    balance.getStore().getStoreId(),
+                    balance.getStore().getStoreName(),
+                    balance.getBalance(),
+                    balance.getUpdatedAt()
+            );
+        });
+
+        return new GroupWalletBalanceResponseDto(
+                groupId,
+                groupWallet.getWalletId(),
+                group.getGroupName(),
+                storeBalances
+        );
+    }
+
+    /**
+     * 개인지갑 - 특정 가게의 상세 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public WalletStoreDetailResponseDto getPersonalWalletStoreDetail(Long customerId, Long storeId, Pageable pageable) {
+        // 1. 고객 및 가게 검증
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // 2. 개인지갑 조회
+        Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 3. 현재 잔액 조회
+        WalletStoreBalance balance = balanceRepository.findByWalletAndStore(personalWallet, store)
+                .orElse(WalletStoreBalance.builder()
+                        .wallet(personalWallet)
+                        .store(store)
+                        .balance(0L)
+                        .build());
+
+        // 4. 거래내역 조회 (페이징) - 간소화
+        Page<Transaction> transactions = transactionRepository
+                .findValidTransactionsByCustomerAndStore(customerId, storeId, pageable);
+
+        // 5. Transaction을 DTO로 변환
+        Page<WalletStoreTransactionDetailDto> transactionDtos = transactions
+                .map(WalletStoreTransactionDetailDto::from);
+
+        // 6. 응답 DTO 조립 (간소화)
+        return new WalletStoreDetailResponseDto(
+                store.getStoreId(),
+                store.getStoreName(),
+                balance.getBalance(),
+                transactionDtos
+        );
+    }
+
+    /**
+     * 모임지갑 - 특정 가게의 상세 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public WalletStoreDetailResponseDto getGroupWalletStoreDetail(Long groupId, Long customerId, Long storeId, Pageable pageable) {
+        // 1. 고객, 모임, 가게 검증
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // 2. 모임 멤버십 검증
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+
+        // 3. 모임지갑 조회
+        Wallet groupWallet = walletRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 4. 현재 잔액 조회
+        WalletStoreBalance balance = balanceRepository.findByWalletAndStore(groupWallet, store)
+                .orElse(WalletStoreBalance.builder()
+                        .wallet(groupWallet)
+                        .store(store)
+                        .balance(0L)
+                        .build());
+
+        // 5. 거래내역 조회 (페이징) - 간소화
+        Page<Transaction> transactions = transactionRepository
+                .findValidTransactionsByGroupAndStore(groupId, storeId, pageable);
+
+        // 6. Transaction을 DTO로 변환
+        Page<WalletStoreTransactionDetailDto> transactionDtos = transactions
+                .map(WalletStoreTransactionDetailDto::from);
+
+        // 7. 응답 DTO 조립 (간소화)
+        return new WalletStoreDetailResponseDto(
+                store.getStoreId(),
+                store.getStoreName(),
+                balance.getBalance(),
+                transactionDtos
+        );
     }
 }

@@ -4,6 +4,9 @@ import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.WalletStoreDetailResponseDto;
 import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -12,6 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/wallets")
@@ -82,4 +88,64 @@ public class WalletController {
         return ResponseEntity.status(status)
                 .body(ApiResponse.success("모임 지갑에서 포인트를 회수했습니다.", status.value(), result.getBody()));
     }
+    /**
+     * 개인 지갑 잔액 조회
+     */
+    @GetMapping("/individual/balance")
+    public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
+            @AuthenticationPrincipal Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        PersonalWalletBalanceResponseDto dto = walletService.getPersonalWalletBalance(customerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("개인 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    /**
+     * 모임 지갑 잔액 조회
+     */
+    @GetMapping("/groups/{groupId}/balance")
+    public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        GroupWalletBalanceResponseDto dto = walletService.getGroupWalletBalance(groupId, customerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("모임 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    /**
+     * 개인지갑 - 특정 가게의 상세 정보 조회
+     */
+    @GetMapping("/individual/stores/{storeId}/detail")
+    public ResponseEntity<ApiResponse<WalletStoreDetailResponseDto>> getPersonalWalletStoreDetail(
+            @AuthenticationPrincipal Long customerId,
+            @PathVariable Long storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        WalletStoreDetailResponseDto dto = walletService.getPersonalWalletStoreDetail(customerId, storeId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("개인 지갑 가게별 상세 정보 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    /**
+     * 모임지갑 - 특정 가게의 상세 정보 조회
+     */
+    @GetMapping("/groups/{groupId}/stores/{storeId}/detail")
+    public ResponseEntity<ApiResponse<WalletStoreDetailResponseDto>> getGroupWalletStoreDetail(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long customerId,
+            @PathVariable Long storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        WalletStoreDetailResponseDto dto = walletService.getGroupWalletStoreDetail(groupId, customerId, storeId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("모임 지갑 가게별 상세 정보 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
+
 }
