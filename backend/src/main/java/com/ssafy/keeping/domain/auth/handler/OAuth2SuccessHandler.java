@@ -96,13 +96,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 
             // 프론트로 리다이렉트
-<<<<<<< backend/src/main/java/com/ssafy/keeping/domain/auth/handler/OAuth2SuccessHandler.java
+            String redirectUrl = "";
+            redirectUrl = "OWNER".equals(role) ? "/owner/dashboard" : "/customer/home";
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.sendRedirect("/owner/login/callback");
-=======
-//            response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-//            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
->>>>>>> backend/src/main/java/com/ssafy/keeping/domain/auth/handler/OAuth2SuccessHandler.java
+            response.sendRedirect(redirectUrl);
 
             return;
 
