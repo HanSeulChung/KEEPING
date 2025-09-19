@@ -1,7 +1,7 @@
 package com.ssafy.keeping.domain.favorite.service;
 
 import com.ssafy.keeping.domain.favorite.dto.FavoriteCheckResponseDto;
-import com.ssafy.keeping.domain.favorite.dto.FavoriteStoreDetailDto;
+import com.ssafy.keeping.domain.favorite.dto.SimpleFavoriteDto;
 import com.ssafy.keeping.domain.favorite.dto.FavoriteToggleResponseDto;
 import com.ssafy.keeping.domain.favorite.dto.StoreFavoriteResponseDto;
 import com.ssafy.keeping.domain.favorite.model.StoreFavorite;
@@ -18,9 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +37,7 @@ public class StoreFavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         Optional<StoreFavorite> existingFavorite =
-                storeFavoriteRepository.findByCustomerIdAndStoreId(customerId, storeId);
+                storeFavoriteRepository.findByCustomerAndStore(customer, store);
 
         if (existingFavorite.isPresent()) {
             StoreFavorite favorite = existingFavorite.get();
@@ -49,53 +47,51 @@ public class StoreFavoriteService {
                 return new FavoriteToggleResponseDto(
                         customerId,
                         storeId,
-                        store.getStoreName(),
                         false,
-                        favorite.getFavoriteNumber(),
-                        LocalDateTime.now()
+                        favorite.getFavoriteId()
                 );
             } else {
                 favorite.reactivate();
                 return new FavoriteToggleResponseDto(
                         customerId,
                         storeId,
-                        store.getStoreName(),
                         true,
-                        favorite.getFavoriteNumber(),
-                        LocalDateTime.now()
+                        favorite.getFavoriteId()
                 );
             }
         } else {
-            String favoriteNumber = generateFavoriteNumber(customerId);
             StoreFavorite newFavorite = StoreFavorite.builder()
                     .customer(customer)
                     .store(store)
-                    .favoriteNumber(favoriteNumber)
+                    .active(true)
                     .build();
 
-            storeFavoriteRepository.save(newFavorite);
+            StoreFavorite savedFavorite = storeFavoriteRepository.save(newFavorite);
 
             return new FavoriteToggleResponseDto(
                     customerId,
                     storeId,
-                    store.getStoreName(),
                     true,
-                    favoriteNumber,
-                    LocalDateTime.now()
+                    savedFavorite.getFavoriteId()
             );
         }
     }
 
     @Transactional(readOnly = true)
     public StoreFavoriteResponseDto getFavoriteStores(Long customerId, Pageable pageable) {
-        if (!customerRepository.existsById(customerId)) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        Page<FavoriteStoreDetailDto> favoriteStores =
-                storeFavoriteRepository.findActiveFavoritesByCustomerId(customerId, pageable);
+        Page<StoreFavorite> favoritePage =
+                storeFavoriteRepository.findByCustomerAndActiveTrueOrderByFavoritedAtDesc(customer, pageable);
 
-        long totalCount = storeFavoriteRepository.countActiveFavoritesByCustomerId(customerId);
+        Page<SimpleFavoriteDto> favoriteStores = favoritePage.map(sf -> new SimpleFavoriteDto(
+                sf.getFavoriteId(),
+                sf.getStore().getStoreId(),
+                sf.getFavoritedAt()
+        ));
+
+        long totalCount = storeFavoriteRepository.countByCustomerAndActiveTrue(customer);
 
         return new StoreFavoriteResponseDto(
                 customerId,
@@ -106,26 +102,21 @@ public class StoreFavoriteService {
 
     @Transactional(readOnly = true)
     public FavoriteCheckResponseDto checkFavoriteStatus(Long customerId, Long storeId) {
-        if (!customerRepository.existsById(customerId)) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (!storeRepository.existsById(storeId)) {
-            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
-        }
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         Optional<StoreFavorite> activeFavorite =
-                storeFavoriteRepository.findActiveByCustomerIdAndStoreId(customerId, storeId);
+                storeFavoriteRepository.findByCustomerAndStoreAndActiveTrue(customer, store);
 
         return new FavoriteCheckResponseDto(
                 customerId,
                 storeId,
                 activeFavorite.isPresent(),
-                activeFavorite.map(StoreFavorite::getFavoriteNumber).orElse(null)
+                activeFavorite.map(StoreFavorite::getFavoriteId).orElse(null)
         );
     }
 
-    private String generateFavoriteNumber(Long customerId) {
-        return "FAV-" + customerId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
 }
