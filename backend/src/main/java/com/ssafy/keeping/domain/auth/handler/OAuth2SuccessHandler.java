@@ -41,7 +41,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("[OAUTH SUCCESS] Code parameter: " + request.getParameter("code"));
 
         // role 복원
-        UserRole role = authService.extractRoleFromState(request.getParameter("state"));
+        UserRole role = authService.extractRoleFromState(   request.getParameter("state"));
         System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
 
         // role이 null인 경우 처리
