@@ -29,8 +29,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenService tokenService;
     private final CookieUtil cookieUtil;
 
-    // 추후 환경변수로 저장
-    @Value("${fe.base-url}")
+    @Value("${fe.base-url:}")
     private String feBaseUrl;
 
     @Override
@@ -97,8 +96,13 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 
             // 프론트로 리다이렉트
+<<<<<<< backend/src/main/java/com/ssafy/keeping/domain/auth/handler/OAuth2SuccessHandler.java
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
             response.sendRedirect("/owner/login/callback");
+=======
+//            response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+//            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
+>>>>>>> backend/src/main/java/com/ssafy/keeping/domain/auth/handler/OAuth2SuccessHandler.java
 
             return;
 
@@ -120,8 +124,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            // TODO: 프론트 주소로 변경
-            response.sendRedirect("/otp/start?regSessionId=" + regSessionId);
+            response.sendRedirect(feBaseUrl +"/owner/register/step1");
         }
 
     }
@@ -1306,7 +1309,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private boolean devFallback() {
 //        return feBaseUrl == null || feBaseUrl.isBlank();
-        return true;
+        return false; // 배포에서는 false로 두어야 우리 프론트로 들어감
     }
 
 }
