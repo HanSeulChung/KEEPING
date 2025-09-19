@@ -1,6 +1,6 @@
 package com.ssafy.keeping.domain.charge.model;
 
-import com.ssafy.keeping.domain.core.transaction.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -39,6 +39,9 @@ public class SettlementTask {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "actual_payment_amount", nullable = false)
+    private Long actualPaymentAmount;
 
     public enum Status {
         PENDING,    // 대기 중 (3일 후 처리 예정)

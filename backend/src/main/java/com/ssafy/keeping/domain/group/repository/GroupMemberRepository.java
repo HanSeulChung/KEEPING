@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
@@ -16,7 +17,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     select count(gm) > 0
     from GroupMember gm
     where gm.group.groupId = :groupId
-      and gm.user.userId  = :userId
+      and gm.user.customerId  = :userId
     """)
     boolean existsMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
@@ -24,18 +25,41 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     select count(gm) > 0
     from GroupMember gm
     where gm.group.groupId = :groupId
-      and gm.user.userId  = :userId
-      and gm.isLeader = true
+      and gm.user.customerId  = :userId
+      and gm.leader = true
     """)
     boolean existsLeader(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Query("""
     select new com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto(
-        :groupId, u.userId, u.name, gm.isLeader, gm.groupMemberId
+        :groupId, u.customerId, u.name, gm.leader, gm.groupMemberId
     )
     from GroupMember gm
     join gm.user u
     where gm.group.groupId = :groupId
     """)
     List<GroupMemberResponseDto> findAllGroupMembers(@Param("groupId") Long groupId);
+
+    @Query("""
+    select gm
+    from GroupMember gm
+    where gm.group.groupId = :groupId
+      and gm.user.customerId  = :userId
+    """)
+    Optional<GroupMember> findGroupMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
+    @Query("""
+        select gm.user.customerId
+        from GroupMember gm
+        where gm.group.groupId = :groupId
+    """)
+    List<Long> findMemberIdsByGroupId(@Param("groupId") Long groupId);
+
+    @Query("""
+        select gm.user.customerId
+        from GroupMember gm
+        where gm.group.groupId = :groupId
+        and gm.leader = true
+    """)
+    Optional<Long> findLeaderId(@Param("groupId") Long groupId);
 }

@@ -3,12 +3,10 @@ package com.ssafy.keeping.domain.charge.service;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
 import com.ssafy.keeping.domain.charge.model.SettlementTask;
 import com.ssafy.keeping.domain.charge.repository.SettlementTaskRepository;
-import com.ssafy.keeping.domain.core.owner.model.Owner;
-import com.ssafy.keeping.domain.core.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.global.exception.CustomException;
-import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -121,35 +119,36 @@ public class SettlementScheduler {
         try {
             log.info("가게 정산 처리 시작 - 가게: {}, 작업 수: {}", store.getStoreName(), tasks.size());
             
-            // 1. 정산 금액 계산
-            BigDecimal totalAmount = tasks.stream()
-                    .map(task -> task.getTransaction().getAmount())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // 1. 정산 금액 계산 (실제 결제금액 사용)
+            Long totalAmount = tasks.stream()
+                    .map(SettlementTask::getActualPaymentAmount) // 실제 결제금액 합산
+                    .reduce(0L, Long::sum);
             
-            if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (totalAmount <= 0) {
                 log.warn("정산 금액이 0 이하입니다. 가게: {}, 금액: {}", store.getStoreName(), totalAmount);
                 return;
             }
             
-            // 2. 점주 정보 조회 - 연관관계 활용
-            Owner owner = store.getOwner();
-            
-            if (owner == null) {
-                log.error("가게에 연결된 점주가 없습니다. 가게 ID: {}", store.getStoreId());
-                markTasksAsFailed(tasks, "가게에 연결된 점주가 없습니다.");
-                return;
-            }
-            
-            if (owner.getUserKey() == null || owner.getUserKey().trim().isEmpty()) {
-                log.error("점주의 userKey가 없습니다. 점주 ID: {}", owner.getOwnerId());
-                markTasksAsFailed(tasks, "점주의 SSAFY 은행 계정이 없습니다.");
-                return;
-            }
-            
+//            // 2. 점주 정보 조회 - 연관관계 활용
+//            Owner owner = store.getOwner();
+//
+//            if (owner == null) {
+//                log.error("가게에 연결된 점주가 없습니다. 가게 ID: {}", store.getStoreId());
+//                markTasksAsFailed(tasks, "가게에 연결된 점주가 없습니다.");
+//                return;
+//            }
+//
+//            if (owner.getUserKey() == null || owner.getUserKey().trim().isEmpty()) {
+//                log.error("점주의 userKey가 없습니다. 점주 ID: {}", owner.getOwnerId());
+//                markTasksAsFailed(tasks, "점주의 SSAFY 은행 계정이 없습니다.");
+//                return;
+//            }
+//
             // 3. 외부 API 호출 (계좌 입금) - CustomException이 자동으로 던져짐 (SsafyFinanceApiService 에서 알아서 예외 처리)
             String transactionSummary = String.format("정산 입금 - %s", store.getStoreName());
             SsafyAccountDepositResponseDto response = ssafyFinanceApiService.requestAccountDeposit(
-                    owner.getUserKey(),
+//                    owner.getUserKey(),
+                    "현재는 임의",
                     store.getBankAccount(),
                     totalAmount,
                     transactionSummary
@@ -157,7 +156,7 @@ public class SettlementScheduler {
             
             // 4. 정산 완료 처리
             markTasksAsCompleted(tasks);
-            log.info("가게 정산 완료 - 가게: {}, 금액: {}, 거래번호: {}", 
+            log.info("가게 정산 완료 - 가게: {}, 실제결제금액: {}, 거래번호: {}",
                     store.getStoreName(), totalAmount, response.getRec().getTransactionUniqueNo());
             
         } catch (CustomException e) {
