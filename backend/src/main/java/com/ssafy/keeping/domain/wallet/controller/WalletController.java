@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.wallet.controller;
 
+import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
 import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,27 +19,40 @@ import org.springframework.web.bind.annotation.*;
 public class WalletController {
     private final WalletServiceHS walletService;
 
-    // TODO: principal 적용되면 {userId} 삭제
-    @GetMapping("/groups/{groupId}/{userId}")
+    @GetMapping("/groups/{groupId}")
     public ResponseEntity<ApiResponse<WalletResponseDto>> getGroupWallets(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long customerId,
             @PathVariable Long groupId
     ){
-        WalletResponseDto dto = walletService.getGroupWallet(groupId, userId);
+        WalletResponseDto dto = walletService.getGroupWallet(groupId, customerId);
         return ResponseEntity.ok(ApiResponse.success("모임 지갑 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
     // 모임 <-> 가게별 공유
-    @PostMapping("/groups/{groupId}/{userId}/stores/{storeId}")
+    @PostMapping("/groups/{groupId}/stores/{storeId}")
     public ResponseEntity<ApiResponse<PointShareResponseDto>> createSharePoints(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long customerId,
             @PathVariable Long groupId,
             @PathVariable Long storeId,
-//            TODO: 현서 커밋 이후 추가(현재 현서 진행중)
-//            @RequestHeader("Idempotency-Key") String idemKey,
+            @RequestHeader("Idempotency-Key") String idemKey,
             @RequestBody @Valid PointShareRequestDto req
     ){
-        PointShareResponseDto dto = walletService.sharePoints(groupId, userId, storeId, req);
-        return ResponseEntity.ok(ApiResponse.success("모임 지갑에 포인트 공유에 성공했습니다.", HttpStatus.OK.value(), dto));
-    }
+        IdempotentResult<PointShareResponseDto> result =
+                walletService.sharePoints(groupId, customerId, storeId, idemKey, req);
 
+        HttpStatus status = result.getHttpStatus();
+        String msg;
+        if (result.isReplay()) {
+            msg = "이전에 처리된 포인트 공유 결과를 반환합니다.";
+        } else if (status == HttpStatus.ACCEPTED) {
+            ResponseEntity.BodyBuilder b = ResponseEntity.status(status);
+            if (result.getRetryAfterSeconds() != null) {
+                b.header("Retry-After", String.valueOf(result.getRetryAfterSeconds()));
+            }
+            return b.body(ApiResponse.success("포인트 공유가 처리 중입니다. 잠시 후 다시 시도하세요.", status.value(), null));
+        } else {
+            msg = "모임 지갑으로 포인트 공유를 완료했습니다.";
+        }
+        return ResponseEntity.status(status)
+                .body(ApiResponse.success(msg, status.value(), result.getBody()));
+    }
 }

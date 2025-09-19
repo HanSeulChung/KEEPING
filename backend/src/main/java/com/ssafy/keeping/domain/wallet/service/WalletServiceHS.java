@@ -1,5 +1,14 @@
 package com.ssafy.keeping.domain.wallet.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
+import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
+import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
+import com.ssafy.keeping.domain.idempotency.model.IdempotencyKey;
+import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
+import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
@@ -26,7 +35,10 @@ import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -44,6 +56,11 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     private final TransactionRepository transactionRepository;
     private final WalletStoreLotRepository lotRepository;
     private final GroupMemberRepository groupMemberRepository;
+
+    private final IdempotencyService idempotencyService;
+    @Qualifier("canonicalObjectMapper")
+    private final ObjectMapper canonicalObjectMapper;
+
 
     public WalletResponseDto createGroupWallet(Group group) {
 
@@ -89,7 +106,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
     // id만 넘어오는 호출용(검증을 여기서 직접 수행)
     public WalletResponseDto getGroupWallet(Long groupId, Long customerId) {
-        //TODO: principal으로 변경
         if (!customerRepository.existsById(customerId)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
@@ -120,8 +136,55 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public IdempotentResult<PointShareResponseDto> sharePoints(
+            Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
+
+        if (req == null) throw new CustomException(ErrorCode.BAD_REQUEST);
+        if (idemKeyHeader == null || idemKeyHeader.isBlank())
+            throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
+
+        // 바디 정규화 + 해시
+        String canonicalBody = canonicalizeShareBody(groupId, userId, storeId, req);
+        byte[] bodyHash = IdempotencyService.sha256(canonicalBody);
+
+        UUID keyUuid = UUID.fromString(idemKeyHeader);
+        String path = "/groups/" + groupId + "/stores/" + storeId;
+
+        IdemBegin begin = idempotencyService.beginOrLoad(
+                IdemActorType.CUSTOMER, userId, "POST", path, keyUuid, bodyHash);
+        IdempotencyKey slot = begin.getRow();
+
+        // 본문 충돌
+        if (idempotencyService.isBodyConflict(slot, bodyHash)) {
+            throw new CustomException(ErrorCode.IDEMPOTENCY_BODY_CONFLICT);
+        }
+
+        // DONE → 재생
+        if (slot.getStatus() == IdemStatus.DONE) {
+            JsonNode snap = slot.getResponseJson();
+            if (snap == null) throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+            PointShareResponseDto replay = parseSnapshot(snap);
+            return IdempotentResult.okReplay(replay);
+        }
+
+        // 타 트랜잭션 IN_PROGRESS 선점 → 202
+        if (!begin.isCreated() && slot.getStatus() == IdemStatus.IN_PROGRESS) {
+            return IdempotentResult.acceptedWithRetryAfterSeconds(2);
+        }
+
+        // 실제 처리
+        PointShareResponseDto created = doSharePoints(groupId, userId, storeId, req);
+
+        // 완료 기록(DONE) + 스냅샷
+        idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), created);
+
+        return IdempotentResult.created(created);
+    }
+
+    // ===== 실제 처리 본문  =====
     @Transactional
-    public PointShareResponseDto sharePoints(Long groupId, Long userId, Long storeId, @Valid PointShareRequestDto req) {
+    protected PointShareResponseDto doSharePoints(Long groupId, Long userId, Long storeId, @Valid PointShareRequestDto req) {
         // 1) 입력·기본 엔티티 조회
         final long shareAmount = req.getShareAmount();
         if (shareAmount <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
@@ -140,7 +203,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         // 2) 잔액 행잠금 조회
         WalletStoreBalance indivBal = balanceRepository.lockByWalletIdAndStoreId(individual.getWalletId(), storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BEFORE_INDIVIDUAL_CHARGE));
-        if (indivBal.getBalance().compareTo(shareAmount) < 0) // 개인 balance보다 많은 양의 포인트를 공유하려고하면 안됨
+        if (indivBal.getBalance().compareTo(shareAmount) < 0)
             throw new CustomException(ErrorCode.OVER_INDIVIDUAL_POINT);
 
         WalletStoreBalance groupBal = balanceRepository.lockByWalletIdAndStoreId(group.getWalletId(), storeId)
@@ -155,10 +218,10 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
             if (shareLeft == 0) break;
             if (src.isExpired() || src.isFullyUsed()) continue;
 
-            Long movable = Math.min(src.getAmountRemaining(), shareLeft); // 기존 코드 -> src.getAmountRemaining().min(shareLeft).setScale(2, RoundingMode.DOWN);
+            Long movable = Math.min(src.getAmountRemaining(), shareLeft);
             if (movable == 0) continue;
 
-            src.usePoints(movable);                            // 개인 LOT 차감
+            src.usePoints(movable);               // 개인 LOT 차감
             shareLeft -= movable;
 
             // 수신 LOT: 동일 origin_charge_tx 기준으로 1개에 누적
@@ -215,8 +278,29 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         return new PointShareResponseDto(
                 txOut.getTransactionId(), txIn.getTransactionId(),
                 individual.getWalletId(), group.getWalletId(), storeId, shareAmount,
-                groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false // 멱등성 관련해서는 추후 적용
+                groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false
         );
+    }
+
+    // ===== Helpers =====
+    private String canonicalizeShareBody(Long groupId, Long userId, Long storeId, PointShareRequestDto req) {
+        // 키 순서 고정 직렬화
+        ObjectNode n = canonicalObjectMapper.createObjectNode();
+        n.put("groupId", groupId);
+        n.put("userId", userId);
+        n.put("storeId", storeId);
+        n.put("individualWalletId", req.getIndividualWalletId());
+        n.put("groupWalletId", req.getGroupWalletId());
+        n.put("shareAmount", req.getShareAmount());
+        return n.toString();
+    }
+
+    private PointShareResponseDto parseSnapshot(JsonNode snap) {
+        try {
+            return canonicalObjectMapper.treeToValue(snap, PointShareResponseDto.class);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.IDEMPOTENCY_REPLAY_UNAVAILABLE);
+        }
     }
 
     @Transactional(readOnly = true)
