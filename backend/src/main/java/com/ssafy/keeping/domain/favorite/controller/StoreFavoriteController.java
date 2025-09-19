@@ -19,6 +19,9 @@ public class StoreFavoriteController {
 
     private final StoreFavoriteService storeFavoriteService;
 
+    /**
+     * 좋아요 버튼 누르기
+     */
     @PostMapping("/customers/{customerId}/stores/{storeId}")
     public ResponseEntity<ApiResponse<FavoriteToggleResponseDto>> toggleFavorite(
             @PathVariable Long customerId,
@@ -29,6 +32,9 @@ public class StoreFavoriteController {
         return ResponseEntity.ok(ApiResponse.success(message, HttpStatus.OK.value(), dto));
     }
 
+    /**
+     * 좋아요 목록 보기
+     */
     @GetMapping("/customers/{customerId}")
     public ResponseEntity<ApiResponse<StoreFavoriteResponseDto>> getFavoriteStores(
             @PathVariable Long customerId,
@@ -40,6 +46,9 @@ public class StoreFavoriteController {
         return ResponseEntity.ok(ApiResponse.success("찜 목록 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
+    /**
+     * 가게 좋아요 눌러져있는지 확인하는 것 (찜 버튼 on / off 여부)
+     */
     @GetMapping("/customers/{customerId}/stores/{storeId}/check")
     public ResponseEntity<ApiResponse<FavoriteCheckResponseDto>> checkFavoriteStatus(
             @PathVariable Long customerId,
