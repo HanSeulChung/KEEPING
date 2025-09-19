@@ -19,5 +19,5 @@ public class InsertMerchantResponse {
     private SsafyApiResponseHeaderDto header;
 
     @JsonProperty("REC")
-    private List<DeatilDto> REC;
+    private List<DetailDto> REC;
 }
