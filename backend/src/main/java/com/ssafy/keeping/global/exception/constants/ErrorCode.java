@@ -62,7 +62,8 @@ public enum ErrorCode {
     BEFORE_INDIVIDUAL_CHARGE(HttpStatus.BAD_REQUEST, "개인 지갑에 충전이 먼저 되어야합니다."),
     OVER_INDIVIDUAL_POINT(HttpStatus.BAD_REQUEST, "개인 지갑 포인트 이하로 공유 가능합니다."),
     INCONSISTENT_STATE(HttpStatus.CONFLICT, "처리 중 상태가 일치하지 않습니다."),
-
+    BEFORE_GROUP_CHARGE(HttpStatus.BAD_REQUEST,  "그룹 지갑에 해당 매장 잔액이 없습니다."),
+    OVER_GROUP_POINT   (HttpStatus.BAD_REQUEST,  "그룹 지갑 잔액이 부족합니다."),
     // user 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
 

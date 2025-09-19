@@ -23,6 +23,7 @@ public enum NotificationType {
     GROUP_JOIN_REJECTED("모임 가입 거절"),
     GROUP_JOINED("모임 참여 완료"),
     GROUP_LEADER_CHANGED("모임 리더 변경"),
+    MEMBER_EXPELLED("모임원 내보내기"),
     
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),
