@@ -7,6 +7,7 @@ import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenService tokenService;
     private final CookieUtil cookieUtil;
 
-    // 추후 환경변수로 저장
-    @Value("${fe.base-url}")
+    @Value("${fe.base-url:}")
     private String feBaseUrl;
 
     @Override
@@ -42,7 +42,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("[OAUTH SUCCESS] Code parameter: " + request.getParameter("code"));
 
         // role 복원
-        UserRole role = authService.extractRoleFromState(request.getParameter("state"));
+        UserRole role = authService.extractRoleFromState(   request.getParameter("state"));
         System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
 
         // role이 null인 경우 처리
@@ -97,8 +97,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 
             // 프론트로 리다이렉트
+            String redirectUrl = "";
+            redirectUrl = "OWNER".equals(role) ? "/owner/dashboard" : "/customer/home";
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.sendRedirect("/owner/login/callback");
+            response.sendRedirect(redirectUrl);
 
             return;
 
@@ -119,9 +121,15 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 ));
                 return;
             }
+            Cookie regCookie = new Cookie("regSessionId", regSessionId);
+            regCookie.setHttpOnly(true);
+            regCookie.setSecure(false);
+            regCookie.setPath("/");
+            regCookie.setMaxAge(300); // 5분 만료
+            response.addCookie(regCookie);
 
-            // TODO: 프론트 주소로 변경
-            response.sendRedirect("/otp/start?regSessionId=" + regSessionId);
+// URL에서는 regSessionId 제거
+            response.sendRedirect(feBaseUrl + "/owner/register/step1");
         }
 
     }
@@ -1306,7 +1314,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private boolean devFallback() {
 //        return feBaseUrl == null || feBaseUrl.isBlank();
-        return true;
+        return false; // 배포에서는 false로 두어야 우리 프론트로 들어감
     }
 
 }

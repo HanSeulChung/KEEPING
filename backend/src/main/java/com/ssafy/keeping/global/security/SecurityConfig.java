@@ -43,9 +43,10 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "/favicon.ico",
             "/.well-known/**",
-            "/s3/**"
+            "/s3/**",
             "/owners/stores/**",
-            "/api/v1/stores/**"
+            "/api/v1/stores/**",
+            "/session-info"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {

@@ -15,6 +15,7 @@ import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
 import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
 import com.ssafy.keeping.domain.user.owner.service.OwnerService;
 import com.ssafy.keeping.global.response.ApiResponse;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +47,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
 
-        response.sendRedirect("/oauth2/authorization/kakao");
+        response.sendRedirect("/api/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
@@ -264,5 +265,29 @@ public class AuthController {
         } catch (Exception e) {
             return "<p>Error: " + e.getMessage() + "</p>";
         }
+    }
+
+    @GetMapping("/session-info")
+    public ResponseEntity<ApiResponse<String>> getRegSessionId(HttpServletRequest request) {
+        System.out.println("[DEBUG] /auth/session-info called");
+
+        // 모든 쿠키 출력
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                System.out.println("[DEBUG] Cookie found: " + cookie.getName() + " = " + cookie.getValue());
+            }
+        } else {
+            System.out.println("[DEBUG] No cookies found in request");
+        }
+
+        String regSessionId = cookieUtil.getRegSessionIdFromCookie(request);
+        System.out.println("[DEBUG] Extracted regSessionId: " + regSessionId);
+
+        if (regSessionId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("세션 정보를 찾을 수 없습니다", 404));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("세션 정보 조회 성공", 200, regSessionId));
     }
 }

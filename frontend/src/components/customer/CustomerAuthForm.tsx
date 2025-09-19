@@ -1,9 +1,10 @@
 'use client'
 
+import { buildURL } from '@/api/config'
 import OtpVerificationModal from '@/components/common/OtpVerificationModal'
 import { AuthForm } from '@/types'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface CustomerAuthFormProps {
   onNext?: () => void
@@ -13,6 +14,7 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
   const router = useRouter()
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
+  const [sessionRegSessionId, setSessionRegSessionId] = useState<string | null>(null)
   const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
@@ -21,10 +23,38 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
     genderCode: '',
   })
 
+  useEffect(() => {
+    // 세션에서 regSessionId 가져오기
+    const fetchSessionInfo = async () => {
+      try {
+        const response = await fetch(buildURL('/auth/session-info'), {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        })
+        const data = await response.json()
+        if (data.success && data.data) {
+          setSessionRegSessionId(data.data as string)
+          console.log('세션에서 가져온 regSessionId:', data.data)
+        } else {
+          console.log('세션 정보를 가져올 수 없습니다.')
+        }
+      } catch (error) {
+        console.error('세션 정보 조회 실패:', error)
+      }
+    }
+
+    fetchSessionInfo()
+  }, [])
+
   const handlePassAuth = () => {
     // 전화번호가 입력되어 있는지 확인
     if (!authForm.phoneNumber) {
       alert('전화번호를 먼저 입력해주세요.')
+      return
+    }
+    if (!sessionRegSessionId) {
+      alert('세션 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
       return
     }
 
@@ -32,18 +62,16 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
     setIsOtpModalOpen(true)
   }
 
-  const handleOtpSuccess = (token?: string) => {
-    console.log('OTP 인증 성공 콜백 호출됨')
+  const handleOtpSuccess = () => {
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
 
-    // regSessionId 저장 (step3에서 회원가입 API 호출 시 사용)
-    // token이 실제로는 regSessionId입니다
-    if (token) {
-      localStorage.setItem('regSessionId', token)
-      console.log('regSessionId 저장됨:', token)
+    // 세션에서 가져온 UUID만 저장(모달에서 받은 토큰 무시)
+    if (sessionRegSessionId) {
+      localStorage.setItem('regSessionId', sessionRegSessionId)
+      console.log('세션 regSessionId 저장:', sessionRegSessionId)
     }
-    console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')
+    console.log('인증 완료 → 다음 단계 버튼 활성화')
   }
 
   const handleFormChange = (field: keyof AuthForm, value: string) => {
@@ -96,7 +124,22 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* 개인정보 입력 폼 */}
+      {/* 세션 상태 */}
+      {!sessionRegSessionId ? (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-center font-['nanumsquare'] font-bold text-blue-800">
+            🔄 세션 정보를 불러오는 중...
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <p className="text-center font-['nanumsquare'] font-bold text-green-800">
+            ✅ 세션 정보를 성공적으로 가져왔습니다
+          </p>
+        </div>
+      )}
+
+      {/* 입력 폼 */}
       <div className="space-y-4">
         <div>
           <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
@@ -177,11 +220,11 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={authForm.birthDate}
+        birth={authForm.birthDate && authForm.birthDate.length === 6 
+          ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
+          : authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="CUSTOMER"
-        purpose="REGISTER"
-        onSuccess={handleOtpSuccess}
       />
     </div>
   )
