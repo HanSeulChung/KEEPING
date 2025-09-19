@@ -20,4 +20,6 @@ public interface StoreFavoriteRepository extends JpaRepository<StoreFavorite, Lo
     Page<StoreFavorite> findByCustomerAndActiveTrueOrderByFavoritedAtDesc(Customer customer, Pageable pageable);
 
     long countByCustomerAndActiveTrue(Customer customer);
+
+    long countByStoreAndActiveTrue(Store store);
 }
