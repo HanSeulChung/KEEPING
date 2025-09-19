@@ -8,16 +8,12 @@ import com.ssafy.keeping.domain.store.dto.StoreRequestDto;
 import com.ssafy.keeping.domain.store.dto.StoreResponseDto;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
-import com.ssafy.keeping.domain.user.finopenapi.dto.DetailDto;
-import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMerchantResponse;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
-import com.ssafy.keeping.global.s3.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,8 +28,6 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final OwnerRepository ownerRepository;
     private final WalletStoreBalanceRepository balanceRepository;
-    private final FinOpenApiClient apiClient;
-    private final ImageService imageService;
 
     /*
      * ==================================
@@ -50,24 +44,8 @@ public class StoreService {
             throw new CustomException(ErrorCode.STORE_ALREADY_EXISTS);
         }
 
-        // merchantId 생성
-        InsertMerchantResponse response = apiClient.insertMerchant(requestDto.getStoreName());
-        if(response == null) {
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        }
-
-        String merchantId = getMerchantId(response, requestDto.getStoreName());
-        if(merchantId == null || merchantId.isEmpty()) {
-            throw new CustomException(ErrorCode.MERCHANTID_NOT_FOUND);
-        }
-
-
-        // 이미지 파일
-        String imgUrl = imageService.uploadImage((requestDto.getImgFile()));
-        if(imgUrl == null || imgUrl.isEmpty()) {
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        }
-
+        // TODO: 이미지 파일은 추후
+        String imgUrl = makeImgUrl(requestDto.getImgFile());
         return StoreResponseDto.fromEntity(
                 storeRepository.save(
                         Store.builder()
@@ -76,7 +54,7 @@ public class StoreService {
                                 .storeName(requestDto.getStoreName())
                                 .address(requestDto.getAddress())
                                 .phoneNumber(requestDto.getPhoneNumber())
-                                .merchantId(Long.valueOf(merchantId))
+                                .merchantId(requestDto.getMerchantId())
                                 .category(requestDto.getCategory())
                                 .bankAccount(requestDto.getBankAccount())
                                 .description(requestDto.getDescription())
@@ -102,11 +80,7 @@ public class StoreService {
             throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
         }
 
-        String editImgUrl = imageService.updateProfileImage(store.getImgUrl(), requestDto.getImgFile());
-        if(editImgUrl == null || editImgUrl.isEmpty()) {
-            throw new CustomException(ErrorCode.IMAGE_UPDATE_ERROR);
-        }
-
+        String editImgUrl = makeImgUrl(requestDto.getImgFile());
         String taxId = store.getTaxIdNumber();
         String address = requestDto.getAddress();
 
@@ -193,16 +167,5 @@ public class StoreService {
         return storeRepository.findById(storeId).orElseThrow(
                 () -> new CustomException(ErrorCode.STORE_NOT_FOUND)
         );
-    }
-    private String getMerchantId(InsertMerchantResponse response, String requestedMerchantName) {
-        if (response == null || response.getREC() == null) {
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        }
-
-        return response.getREC().stream()
-                .filter(detail -> requestedMerchantName.equals(detail.getMerchantName()))
-                .map(DetailDto::getMerchantId)
-                .findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
     }
 }

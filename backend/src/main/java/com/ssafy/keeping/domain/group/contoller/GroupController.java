@@ -74,6 +74,7 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("모임 신청 내역을 조회했습니다.", HttpStatus.OK.value(), dtos));
     }
 
+    // 임의 user id로 체킹
     @PatchMapping("/{groupId}/add-requests")
     public ResponseEntity<ApiResponse<AddRequestResponseDto>> updateAddRequestStatus(
             @AuthenticationPrincipal Long customerId,
@@ -105,15 +106,10 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("모임장 위임에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
-    // 모임원 내보내기
-    @PostMapping("/{groupId}/group-member")
-    public ResponseEntity<ApiResponse<Void>> expelMember(
-            @AuthenticationPrincipal Long leaderId,
-            @PathVariable Long groupId,
-            @Valid @RequestBody GroupExpelRequestDto req
-    ) {
-        groupService.expelMember(groupId, leaderId, req.getTargetCustomerId());
-        return ResponseEntity.ok(ApiResponse.success("모임원을 내보냈습니다.", 200, null));
-    }
-
+//    @GetMapping("/{groupId}")
+//    public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
+//            @PathVariable Long groupId
+//    ) {GroupResponseDto dto = groupService.getGroup(groupId);
+//        return ResponseEntity.ok(ApiResponse.success("해당 모임이 조회되었습니다.", HttpStatus.OK.value(), dto));
+//    }
 }

@@ -8,11 +8,7 @@ public enum NotificationType {
     
     // 결제/정산 관련
     POINT_CHARGE("포인트 충전"),
-    PERSONAL_POINT_USE("개인 포인트 사용"),
-    GROUP_POINT_USE("모임 포인트 사용"),
-
-    PAYMENT_APPROVED("결제 수락"),
-    PAYMENT_REQUEST("포인트 결제 요청"),
+    POINT_USE("포인트 사용"),
     PAYMENT_CANCELED("결제 취소"),
     SETTLEMENT_COMPLETED("정산 완료"),
     
@@ -23,7 +19,6 @@ public enum NotificationType {
     GROUP_JOIN_REJECTED("모임 가입 거절"),
     GROUP_JOINED("모임 참여 완료"),
     GROUP_LEADER_CHANGED("모임 리더 변경"),
-    MEMBER_EXPELLED("모임원 내보내기"),
     
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),

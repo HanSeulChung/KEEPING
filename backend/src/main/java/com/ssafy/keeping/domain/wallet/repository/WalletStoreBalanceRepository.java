@@ -12,8 +12,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreBalance, Long> {
@@ -62,50 +60,4 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
                AND balance >= :amount
             """, nativeQuery = true)
     int decrementIfEnough(@Param("walletId") Long walletId, @Param("storeId") Long storeId, @Param("amount") Long amount);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-      select b
-      from WalletStoreBalance b
-      where b.wallet = :wallet and b.store = :store
-    """)
-    Optional<WalletStoreBalance> findByWalletAndStoreForUpdate(
-            @Param("wallet") Wallet wallet,
-            @Param("store") Store store
-    );
-
-
-
-
-    /**
-     * 개인지갑 - 고객의 모든 가게별 잔액 조회 (간단한 방식)
-     */
-    @Query("""
-        SELECT wsb FROM WalletStoreBalance wsb
-        JOIN FETCH wsb.store s
-        JOIN FETCH wsb.wallet w
-        WHERE w.customer.customerId = :customerId
-        AND w.walletType = 'INDIVIDUAL'
-        AND wsb.balance > 0
-        ORDER BY wsb.updatedAt DESC
-        """)
-    Page<WalletStoreBalance> findPersonalWalletBalancesByCustomerIdSimple(
-            @Param("customerId") Long customerId,
-            Pageable pageable);
-
-    /**
-     * 모임지갑 - 모임의 모든 가게별 잔액 조회 (간단한 방식)
-     */
-    @Query("""
-        SELECT wsb FROM WalletStoreBalance wsb
-        JOIN FETCH wsb.store s
-        JOIN FETCH wsb.wallet w
-        WHERE w.group.groupId = :groupId
-        AND w.walletType = 'GROUP'
-        AND wsb.balance > 0
-        ORDER BY wsb.updatedAt DESC
-        """)
-    Page<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
-            @Param("groupId") Long groupId,
-            Pageable pageable);
 }
