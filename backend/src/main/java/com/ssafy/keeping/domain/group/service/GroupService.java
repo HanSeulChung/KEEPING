@@ -327,6 +327,35 @@ public class GroupService {
         );
     }
 
+    @Transactional
+    public void expelMember(Long groupId, Long leaderId, Long targetCustomerId) {
+        Group group = validGroup(groupId);
+
+        if (!groupMemberRepository.existsLeader(groupId, leaderId))
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+        if (leaderId.equals(targetCustomerId))
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+
+        GroupMember target = validGroupMember(groupId, targetCustomerId);
+        if (target.isLeader())
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+
+        long remain = walletService.getMemberSharedBalance(group, targetCustomerId);
+        if (remain > 0L) walletService.settleShareToIndividual(group, targetCustomerId);
+
+        groupMemberRepository.delete(target);
+
+        final String url = "/groups/" + groupId;
+        afterCommit(() -> {
+            notificationService.sendToCustomer(
+                    targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.", url);
+            groupMemberRepository.findMemberIdsByGroupId(groupId).forEach(id ->
+                    notificationService.sendToCustomer(
+                            id, NotificationType.MEMBER_EXPELLED, "모임원이 내보내졌습니다.", url));
+        });
+    }
+
+
     private Group validGroup(Long groupId) {
         return groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));

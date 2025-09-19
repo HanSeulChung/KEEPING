@@ -30,10 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -219,6 +217,114 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 individual.getWalletId(), group.getWalletId(), storeId, shareAmount,
                 groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false // 멱등성 관련해서는 추후 적용
         );
+    }
+
+    @Transactional(readOnly = true)
+    public long getMemberSharedBalance(Group group, Long customerId) {
+        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 해당 사용자가 기여한 lot 중 아직 남아있는 양만 합산
+        List<WalletStoreLot> lots = lotRepository
+                .findActiveByWalletIdAndContributorCustomerId(groupWallet.getWalletId(), customerId);
+
+        return lots.stream()
+                .mapToLong(WalletStoreLot::getAmountRemaining)
+                .sum();
+    }
+
+
+    @Transactional
+    public void settleShareToIndividual(Group group, Long customerId) {
+        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        if (!groupMemberRepository.existsMember(group.getGroupId(), customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+
+        // 해당 모임원이 기여한 group LOT 스냅샷
+        List<WalletStoreLot> srcLots = lotRepository
+                .findActiveByWalletIdAndContributorCustomerId(groupWallet.getWalletId(), customerId);
+
+        if (srcLots.isEmpty()) return;
+
+        Wallet individual = srcLots.get(0).getContributorWallet();
+        if (individual == null || individual.getCustomer() == null ||
+                !individual.getCustomer().getCustomerId().equals(customerId)) {
+            throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+        }
+
+        // storeId 단위로 묶어서 balance 맞춰 회수
+        Map<Long, List<WalletStoreLot>> byStore =
+                srcLots.stream().collect(Collectors.groupingBy(l -> l.getStore().getStoreId()));
+
+        for (Map.Entry<Long, List<WalletStoreLot>> entry : byStore.entrySet()) {
+            Long storeId = entry.getKey();
+            Store store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+            WalletStoreBalance groupBal = balanceRepository
+                    .lockByWalletIdAndStoreId(groupWallet.getWalletId(), storeId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+            WalletStoreBalance indivBal = balanceRepository
+                    .lockByWalletIdAndStoreId(individual.getWalletId(), storeId)
+                    .orElseGet(() -> balanceRepository.save(
+                            WalletStoreBalance.builder().wallet(individual).store(store).balance(0L).build()
+                    ));
+
+            long movedSum = 0L;
+
+            for (WalletStoreLot src : entry.getValue()) {
+                long remain = src.getAmountRemaining();
+                if (remain <= 0) continue;
+
+                // 그룹 LOT 소진
+                src.usePoints(remain);
+
+                // 개인 LOT 증가 (originChargeTx 단위 합침)
+                WalletStoreLot dst = lotRepository
+                        .findByWalletIdAndStoreIdAndOriginChargeTxIdAndSourceType(
+                                individual.getWalletId(),
+                                storeId,
+                                src.getOriginChargeTransaction().getTransactionId(),
+                                LotSourceType.TRANSFER_IN
+                        )
+                        .orElseGet(() -> lotRepository.save(
+                                WalletStoreLot.builder()
+                                        .wallet(individual).store(store)
+                                        .amountTotal(0L).amountRemaining(0L)
+                                        .acquiredAt(src.getAcquiredAt())
+                                        .expiredAt(src.getExpiredAt())
+                                        .sourceType(LotSourceType.TRANSFER_IN)
+                                        .contributorWallet(groupWallet)
+                                        .originChargeTransaction(src.getOriginChargeTransaction())
+                                        .build()
+                        ));
+                dst.sharePoints(remain);
+
+                // 거래 기록
+                transactionRepository.save(Transaction.builder()
+                        .wallet(individual).relatedWallet(groupWallet)
+                        .customer(individual.getCustomer()).store(store)
+                        .transactionType(TransactionType.TRANSFER_IN).amount(remain).build());
+
+                transactionRepository.save(Transaction.builder()
+                        .wallet(groupWallet).relatedWallet(individual)
+                        .customer(individual.getCustomer()).store(store)
+                        .transactionType(TransactionType.USE).amount(remain).build());
+
+                movedSum += remain;
+            }
+
+            if (movedSum > 0) {
+                if (groupBal.getBalance() < movedSum) {
+                    throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+                }
+                groupBal.subtractBalance(movedSum);
+                indivBal.addBalance(movedSum);
+            }
+        }
     }
 
     private Wallet validWallet(Long walletId) {
