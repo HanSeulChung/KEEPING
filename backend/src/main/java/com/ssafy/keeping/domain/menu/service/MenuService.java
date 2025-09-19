@@ -14,7 +14,6 @@ import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
-import com.ssafy.keeping.global.s3.service.ImageService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,8 +30,6 @@ public class MenuService {
     private final StoreRepository storeRepository;
     private final OwnerRepository ownerRepository;
     private final MenuCategoryRepository menuCategoryRepository;
-
-    private final ImageService imageService;
 
     /*
     * 권한 필요 없는 메서드
@@ -69,12 +66,8 @@ public class MenuService {
         if (menuRepository.existsDuplicationName(storeId,  requestDto.getMenuName()))
             throw new CustomException(ErrorCode.DUPLICATE_RESOURCE);
 
-        // 이미지 url 수정
-        String imgUrl = imageService.uploadImage(requestDto.getImgFile());
-        if(imgUrl == null || imgUrl.isEmpty()) {
-            throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
-        }
-
+        // TODO: 이미지 서버 구축 후 같이 수정
+        String imgUrl = StoreService.makeImgUrl(requestDto.getImgFile());
         int order = menuRepository.nextOrderIncludingDeleted(storeId, categoryId);
         Menu saved = menuRepository.save(
                     Menu.builder()
@@ -115,7 +108,7 @@ public class MenuService {
 
         String imgUrl = menu.getImgUrl();
         if (requestDto.getImgFile() != null && !requestDto.getImgFile().isEmpty()) {
-            imgUrl = imageService.updateProfileImage(imgUrl, requestDto.getImgFile());
+            imgUrl = StoreService.makeImgUrl(requestDto.getImgFile());
         }
 
         int price = requestDto.getPrice();

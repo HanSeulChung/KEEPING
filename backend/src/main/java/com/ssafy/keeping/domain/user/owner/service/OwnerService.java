@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.user.owner.service;
 
-import com.ssafy.keeping.domain.user.finopenapi.dto.*;
+import com.ssafy.keeping.domain.user.finopenapi.dto.CreateAccountResponse;
+import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMemberResponseDto;
+import com.ssafy.keeping.domain.user.finopenapi.dto.SearchUserKeyResponseDto;
 import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
@@ -143,21 +145,9 @@ public class OwnerService {
                     .newImgUrl(newImgUrl)
                     .build();
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
     }
 
-    public InsertMerchantResponse insertMerchant(String merchantName) {
-        try {
-            log.debug("가맹점 등록 시도");
-            InsertMerchantResponse response = apiClient.insertMerchant(merchantName);
-            log.debug("생성된 merchantId : {}", response.getREC().get(response.getREC().size()-1).getMerchantId());
-            return response;
-
-        } catch (CustomException e) {
-            log.debug("가맹점 등록 실패");
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        }
-    }
 }

@@ -185,7 +185,7 @@ public class CustomerService {
                     .newImgUrl(newImgUrl)
                     .build();
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
     }
