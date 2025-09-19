@@ -1,5 +1,9 @@
 const API_BASE_URL =
+<<<<<<< Updated upstream
   process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+=======
+  process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/'
+>>>>>>> Stashed changes
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
