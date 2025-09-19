@@ -23,13 +23,7 @@ export const FoodCategory = () => {
   ]
 
   const handleCategoryClick = (category: string) => {
-<<<<<<< HEAD
     router.push(`/customer/list?category=${encodeURIComponent(category)}`)
-=======
-    router.push(
-      `/customer/list?type=food&category=${encodeURIComponent(category)}`
-    )
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   }
 
   return (

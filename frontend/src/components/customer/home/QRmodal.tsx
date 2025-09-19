@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
-=======
-import Image from 'next/image'
-import { useState } from 'react'
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
 const XIcon = ({ size = 20, className = '' }) => (
   <svg
@@ -33,7 +28,6 @@ const QRModal = ({
   onClose,
 }: QRModalProps) => {
   const [activeTab, setActiveTab] = useState('결제')
-<<<<<<< HEAD
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
 
   // QR 코드 생성
@@ -60,8 +54,6 @@ const QRModal = ({
       generateQRCode()
     }
   }, [isOpen])
-=======
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
   if (!isOpen) return null
 
@@ -121,7 +113,6 @@ const QRModal = ({
         {/* QR 코드 */}
         <div className="mb-6 flex justify-center">
           <div className="rounded-lg bg-gray-50 p-4">
-<<<<<<< HEAD
             {qrCodeDataUrl ? (
               <img
                 src={qrCodeDataUrl}
@@ -135,15 +126,6 @@ const QRModal = ({
                 <div className="text-sm text-gray-500">QR 코드 생성 중...</div>
               </div>
             )}
-=======
-            <Image
-              src="/icons/qr.png"
-              alt="QR Code"
-              width={160}
-              height={160}
-              className="bg-white"
-            />
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
           </div>
         </div>
 

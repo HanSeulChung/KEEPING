@@ -1,8 +1,5 @@
 // 푸시 알림 관련 함수들
-<<<<<<< HEAD
-=======
 const isProd = process.env.NODE_ENV === 'production'
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
 
 export interface NotificationData {
   title: string
@@ -11,53 +8,6 @@ export interface NotificationData {
   badge?: string
   tag?: string
   data?: any
-<<<<<<< HEAD
-  actions?: NotificationAction[]
-}
-
-export const requestPushSubscription = async (): Promise<PushSubscription | null> => {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return null
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.ready
-    
-    if (!('PushManager' in window)) {
-      console.log('Push messaging is not supported')
-      return null
-    }
-
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    })
-
-    console.log('Push subscription created:', subscription)
-    return subscription
-  } catch (error) {
-    console.error('Push subscription failed:', error)
-    return null
-  }
-}
-
-export const getPushSubscription = async (): Promise<PushSubscription | null> => {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return null
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.ready
-    const subscription = await registration.pushManager.getSubscription()
-    return subscription
-  } catch (error) {
-    console.error('Failed to get push subscription:', error)
-    return null
-  }
-}
-
-export const unsubscribePush = async (): Promise<boolean> => {
-=======
 }
 
 export const requestPushSubscription =
@@ -107,7 +57,6 @@ export const getPushSubscription =
 
 export const unsubscribePush = async (): Promise<boolean> => {
   if (!isProd) return true
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   try {
     const subscription = await getPushSubscription()
     if (subscription) {
@@ -122,14 +71,10 @@ export const unsubscribePush = async (): Promise<boolean> => {
   }
 }
 
-<<<<<<< HEAD
-export const sendPushNotification = async (data: NotificationData): Promise<void> => {
-=======
 export const sendPushNotification = async (
   data: NotificationData
 ): Promise<void> => {
   if (!isProd) return
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return
   }
@@ -145,11 +90,6 @@ export const sendPushNotification = async (
     badge: data.badge || '/icons/qr.png',
     tag: data.tag,
     data: data.data,
-<<<<<<< HEAD
-    actions: data.actions,
-    vibrate: [100, 50, 100],
-=======
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
     requireInteraction: false,
     silent: false,
   }
@@ -161,10 +101,7 @@ export const sendPushToServer = async (
   subscription: PushSubscription,
   data: NotificationData
 ): Promise<Response | null> => {
-<<<<<<< HEAD
-=======
   if (!isProd) return null
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   try {
     const response = await fetch('/api/push/send', {
       method: 'POST',
@@ -192,10 +129,7 @@ export const registerPushSubscription = async (
   subscription: PushSubscription,
   userId?: string
 ): Promise<Response | null> => {
-<<<<<<< HEAD
-=======
   if (!isProd) return null
->>>>>>> 2d04896a4a9e248fba0a61cd5e1698366d362bbf
   try {
     const response = await fetch('/api/push/register', {
       method: 'POST',
