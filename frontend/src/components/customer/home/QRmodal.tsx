@@ -1,5 +1,5 @@
-import Image from 'next/image'
-import { useState } from 'react'
+import QRCode from 'qrcode'
+import { useEffect, useState } from 'react'
 
 const XIcon = ({ size = 20, className = '' }) => (
   <svg
@@ -28,6 +28,32 @@ const QRModal = ({
   onClose,
 }: QRModalProps) => {
   const [activeTab, setActiveTab] = useState('결제')
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
+
+  // QR 코드 생성
+  useEffect(() => {
+    const generateQRCode = async () => {
+      try {
+        const qrString =
+          'http://payapp.kr/q?v=1&t=1f0944fd-2dcd-6a9b-9378-af2d22653626&m=CPQR'
+        const dataUrl = await QRCode.toDataURL(qrString, {
+          width: 160,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF',
+          },
+        })
+        setQrCodeDataUrl(dataUrl)
+      } catch (error) {
+        console.error('QR 코드 생성 실패:', error)
+      }
+    }
+
+    if (isOpen) {
+      generateQRCode()
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -87,13 +113,19 @@ const QRModal = ({
         {/* QR 코드 */}
         <div className="mb-6 flex justify-center">
           <div className="rounded-lg bg-gray-50 p-4">
-            <Image
-              src="/icons/qr.png"
-              alt="QR Code"
-              width={160}
-              height={160}
-              className="bg-white"
-            />
+            {qrCodeDataUrl ? (
+              <img
+                src={qrCodeDataUrl}
+                alt="QR Code"
+                width={160}
+                height={160}
+                className="bg-white"
+              />
+            ) : (
+              <div className="flex h-40 w-40 items-center justify-center bg-white">
+                <div className="text-sm text-gray-500">QR 코드 생성 중...</div>
+              </div>
+            )}
           </div>
         </div>
 

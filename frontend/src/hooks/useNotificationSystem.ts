@@ -8,7 +8,6 @@ import {
   setupForegroundMessageListener,
 } from '@/lib/firebase'
 import { useAuthStore } from '@/store/useAuthStore'
-import { NotificationAPI } from '@/types/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface NotificationData {
@@ -51,19 +50,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const maxReconnectAttempts = 5
 
   // 백엔드 응답을 프론트엔드 형식으로 변환
-  const convertNotificationData = (
-    backendData: NotificationAPI.NotificationResponseDto
-  ): NotificationData => {
-    const mapType = (t: string): NotificationData['type'] => {
-      const lower = String(t).toLowerCase()
-      if (lower === 'payment') return 'payment'
-      if (lower === 'order') return 'order'
-      if (lower === 'review') return 'review'
-      return 'system'
-    }
+  const convertNotificationData = (backendData: any): NotificationData => {
     return {
       id: backendData.id,
-      type: mapType(backendData.type as unknown as string),
+      type: backendData.type,
       title: backendData.title,
       message: backendData.message,
       timestamp: backendData.createdAt,
@@ -80,7 +70,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       console.log('네트워크 연결됨')
       setIsOnline(true)
       reconnectAttemptsRef.current = 0
-
       // 포그라운드에 있을 때만 즉시 재연결
       if (isVisibleRef.current) {
         connectSSE()
@@ -91,7 +80,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       console.log('네트워크 연결 끊김')
       setIsOnline(false)
       setIsConnected(false)
-
       // 기존 재연결 타이머 정리
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
@@ -117,7 +105,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     const handleVisibilityChange = () => {
       isVisibleRef.current = !document.hidden
-
       if (isVisibleRef.current && isOnline) {
         // 포그라운드로 돌아왔을 때 SSE 재연결
         connectSSE()
@@ -144,7 +131,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
 
     console.log('SSE 연결 시도 중...', { userId: user.id })
-
     // 개발 환경에서는 연결만 설정 (자동 알림 없음)
     if (process.env.NODE_ENV === 'development') {
       console.log('개발 환경: 알림 시스템 준비 완료 (수동 테스트만)')
@@ -167,7 +153,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         console.log('SSE 연결 성공')
         setIsConnected(true)
         reconnectAttemptsRef.current = 0
-
         // 기존 재연결 타이머 정리
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current)
@@ -179,7 +164,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         try {
           const data = JSON.parse(event.data)
           console.log('SSE 메시지 수신:', data)
-
           // 연결 확인 메시지는 무시
           if (data.type === 'connection') {
             return
@@ -231,7 +215,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           console.log(
             `${delay}ms 후 재연결 시도 (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
           )
-
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isVisibleRef.current && isOnline) {
               disconnectSSE()
@@ -255,7 +238,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       eventSourceRef.current = null
       setIsConnected(false)
     }
-
     // 재연결 타이머 정리
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
@@ -497,12 +479,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
 
     try {
-      const list = await notificationApi.getNotificationList(
+      const notifications = await notificationApi.getNotificationList(
         parseInt(user.id),
         0,
         50
-      )
-      const convertedNotifications = list.map(convertNotificationData)
+      ) // 최근 50개 알림
+
+      const convertedNotifications = notifications.map(convertNotificationData)
       setNotifications(convertedNotifications)
     } catch (error) {
       console.error('알림 로드 오류:', error)

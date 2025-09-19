@@ -1,20 +1,28 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import PhoneNumberInput from '@/components/common/PhoneNumberInput'
 import OtpVerificationModal from '@/components/common/OtpVerificationModal'
+import PhoneNumberInput from '@/components/common/PhoneNumberInput'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 interface KeepingPassAuthProps {
   purpose: 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
   onSuccess?: (token?: string) => void
   redirectTo?: string
+  name?: string
+  birth?: string
+  genderDigit?: string
+  userRole?: 'CUSTOMER' | 'OWNER'
 }
 
-const KeepingPassAuth = ({ 
-  purpose, 
-  onSuccess, 
-  redirectTo 
+const KeepingPassAuth = ({
+  purpose,
+  onSuccess,
+  redirectTo,
+  name = '',
+  birth = '',
+  genderDigit = '',
+  userRole = 'CUSTOMER',
 }: KeepingPassAuthProps) => {
   const router = useRouter()
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -77,7 +85,7 @@ const KeepingPassAuth = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
         <PhoneNumberInput
           onPhoneSubmit={handlePhoneSubmit}
@@ -92,6 +100,10 @@ const KeepingPassAuth = ({
         isOpen={showOtpModal}
         onClose={() => setShowOtpModal(false)}
         phoneNumber={phoneNumber}
+        name={name}
+        birth={birth}
+        genderDigit={genderDigit}
+        userRole={userRole}
         purpose={purpose}
         onSuccess={handleOtpSuccess}
       />
