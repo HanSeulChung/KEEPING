@@ -30,7 +30,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final CookieUtil cookieUtil;
 
     // 추후 환경변수로 저장
-    private final String FE_BASE_URL = "http://localhost:3000";
     @Value("${fe.base-url:}")
     private String feBaseUrl;
 
@@ -121,8 +120,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            // TODO: 프론트 주소로 변경
-            response.sendRedirect("/otp/start?regSessionId=" + regSessionId);
+            response.sendRedirect(feBaseUrl +"//owner/register/step1");
         }
 
     }
