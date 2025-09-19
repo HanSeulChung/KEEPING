@@ -1,4 +1,5 @@
 'use client'
+
 export const dynamic = 'force-dynamic'
 import { StoreList } from '@/components/customer/store/StoreList'
 import { useSearchParams } from 'next/navigation'
