@@ -3,23 +3,18 @@ package com.ssafy.keeping.global.s3.service;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.menu.repository.MenuRepository;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
-import com.ssafy.keeping.global.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -31,7 +26,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final S3Service s3Service;
     private final AmazonS3 amazonS3;
     private final CustomerRepository customerRepository;
     private final OwnerRepository ownerRepository;
