@@ -346,10 +346,10 @@ public class GroupService {
         final String url = "/groups/" + groupId;
         afterCommit(() -> {
             notificationService.sendToCustomer(
-                    targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.", url);
+                    targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.");
             groupMemberRepository.findMemberIdsByGroupId(groupId).forEach(id ->
                     notificationService.sendToCustomer(
-                            id, NotificationType.MEMBER_EXPELLED, "모임원이 내보내졌습니다.", url));
+                            id, NotificationType.MEMBER_EXPELLED, "모임원이 내보내졌습니다."));
         });
     }
 
