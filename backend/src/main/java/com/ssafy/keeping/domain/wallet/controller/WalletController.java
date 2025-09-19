@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 
@@ -48,9 +49,9 @@ public class WalletController {
     /**
      * 개인 지갑 잔액 조회
      */
-    @GetMapping("/individual/{customerId}/balance")
+    @GetMapping("/individual/balance")
     public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -62,10 +63,10 @@ public class WalletController {
     /**
      * 모임 지갑 잔액 조회
      */
-    @GetMapping("/groups/{groupId}/{customerId}/balance")
+    @GetMapping("/groups/{groupId}/balance")
     public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
             @PathVariable Long groupId,
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -77,9 +78,9 @@ public class WalletController {
     /**
      * 개인지갑 - 특정 가게의 상세 정보 조회
      */
-    @GetMapping("/individual/{customerId}/stores/{storeId}/detail")
+    @GetMapping("/individual/stores/{storeId}/detail")
     public ResponseEntity<ApiResponse<WalletStoreDetailResponseDto>> getPersonalWalletStoreDetail(
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @PathVariable Long storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -92,10 +93,10 @@ public class WalletController {
     /**
      * 모임지갑 - 특정 가게의 상세 정보 조회
      */
-    @GetMapping("/groups/{groupId}/{customerId}/stores/{storeId}/detail")
+    @GetMapping("/groups/{groupId}/stores/{storeId}/detail")
     public ResponseEntity<ApiResponse<WalletStoreDetailResponseDto>> getGroupWalletStoreDetail(
             @PathVariable Long groupId,
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @PathVariable Long storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
