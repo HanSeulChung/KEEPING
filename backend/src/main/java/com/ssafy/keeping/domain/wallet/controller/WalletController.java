@@ -55,4 +55,31 @@ public class WalletController {
         return ResponseEntity.status(status)
                 .body(ApiResponse.success(msg, status.value(), result.getBody()));
     }
+
+    @PostMapping("/groups/{groupId}/stores/{storeId}/reclaim")
+    public ResponseEntity<ApiResponse<PointShareResponseDto>> reclaimPoints(
+            @AuthenticationPrincipal Long customerId,
+            @PathVariable Long groupId,
+            @PathVariable Long storeId,
+            @RequestHeader("Idempotency-Key") String idemKey,
+            @RequestBody @Valid PointShareRequestDto req
+    ) {
+        IdempotentResult<PointShareResponseDto> result =
+                walletService.reclaimPoints(groupId, customerId, storeId, idemKey, req);
+
+        HttpStatus status = result.getHttpStatus();
+        if (result.isReplay()) {
+            return ResponseEntity.status(status)
+                    .body(ApiResponse.success("이전에 처리된 포인트 회수 결과를 반환합니다.", status.value(), result.getBody()));
+        }
+        if (status == HttpStatus.ACCEPTED) {
+            ResponseEntity.BodyBuilder b = ResponseEntity.status(status);
+            if (result.getRetryAfterSeconds() != null) {
+                b.header("Retry-After", String.valueOf(result.getRetryAfterSeconds()));
+            }
+            return b.body(ApiResponse.success("포인트 회수가 처리 중입니다. 잠시 후 다시 시도하세요.", status.value(), null));
+        }
+        return ResponseEntity.status(status)
+                .body(ApiResponse.success("모임 지갑에서 포인트를 회수했습니다.", status.value(), result.getBody()));
+    }
 }

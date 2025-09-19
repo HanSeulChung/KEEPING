@@ -282,6 +282,149 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public IdempotentResult<PointShareResponseDto> reclaimPoints(
+            Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
+
+        if (req == null) throw new CustomException(ErrorCode.BAD_REQUEST);
+        if (idemKeyHeader == null || idemKeyHeader.isBlank())
+            throw new CustomException(ErrorCode.IDEMPOTENCY_KEY_REQUIRED);
+
+        String canonicalBody = canonicalizeReclaimBody(groupId, userId, storeId, req);
+        byte[] bodyHash = IdempotencyService.sha256(canonicalBody);
+
+        UUID keyUuid = UUID.fromString(idemKeyHeader);
+        String path = "/groups/" + groupId + "/stores/" + storeId + "/reclaim";
+
+        IdemBegin begin = idempotencyService.beginOrLoad(
+                IdemActorType.CUSTOMER, userId, "POST", path, keyUuid, bodyHash);
+        IdempotencyKey slot = begin.getRow();
+
+        if (idempotencyService.isBodyConflict(slot, bodyHash)) {
+            throw new CustomException(ErrorCode.IDEMPOTENCY_BODY_CONFLICT);
+        }
+
+        if (slot.getStatus() == IdemStatus.DONE) {
+            PointShareResponseDto replay = parseSnapshot(slot.getResponseJson());
+            return IdempotentResult.okReplay(replay);
+        }
+
+        if (!begin.isCreated() && slot.getStatus() == IdemStatus.IN_PROGRESS) {
+            return IdempotentResult.acceptedWithRetryAfterSeconds(2);
+        }
+
+        PointShareResponseDto created = doReclaimPoints(groupId, userId, storeId, req);
+
+        idempotencyService.completeCharge(slot, HttpStatus.CREATED.value(), created);
+        return IdempotentResult.created(created);
+    }
+
+    // 실제 회수 처리
+    @Transactional
+    protected PointShareResponseDto doReclaimPoints(Long groupId, Long userId, Long storeId, @Valid PointShareRequestDto req) {
+        final long amount = req.getShareAmount(); // 재사용
+        if (amount <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
+
+        Customer actor = customerRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Wallet individual = validWallet(req.getIndividualWalletId());
+        Wallet group = validWallet(req.getGroupWalletId());
+        if (individual.getWalletType() != WalletType.INDIVIDUAL || group.getWalletType() != WalletType.GROUP)
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        ensureOwnershipAndMembership(userId, groupId, individual, group);
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        // 잔액 행잠금
+        WalletStoreBalance indivBal = balanceRepository.lockByWalletIdAndStoreId(individual.getWalletId(), storeId)
+                .orElseGet(() -> balanceRepository.save(
+                        WalletStoreBalance.builder().wallet(individual).store(store).balance(0L).build()
+                ));
+        WalletStoreBalance groupBal = balanceRepository.lockByWalletIdAndStoreId(group.getWalletId(), storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BEFORE_GROUP_CHARGE)); // 그룹에 해당 매장 잔액이 있어야 함
+        if (groupBal.getBalance().compareTo(amount) < 0)
+            throw new CustomException(ErrorCode.OVER_GROUP_POINT);
+
+        // LOT 회수: 그룹 → 개인, FIFO
+        Long left = amount;
+        List<WalletStoreLot> srcLots =
+                lotRepository.lockAllByWalletIdAndStoreIdOrderByAcquiredAt(group.getWalletId(), storeId);
+        for (WalletStoreLot src : srcLots) {
+            if (left == 0) break;
+            if (src.isExpired() || src.isFullyUsed()) continue;
+
+            // 개인이 기여한 LOT만 회수하도록 제한(선택). 필요 없으면 이 if 제거.
+            if (src.getContributorWallet() != null
+                    && !src.getContributorWallet().getWalletId().equals(individual.getWalletId())) {
+                continue;
+            }
+
+            Long movable = Math.min(src.getAmountRemaining(), left);
+            if (movable == 0) continue;
+
+            // 그룹 LOT 차감
+            src.usePoints(movable);
+            left -= movable;
+
+            // 개인 LOT 누적: origin_charge_tx 기준 1개에 합산
+            WalletStoreLot dst = lotRepository
+                    .findByWalletIdAndStoreIdAndOriginChargeTxIdAndSourceType(
+                            individual.getWalletId(),
+                            storeId,
+                            src.getOriginChargeTransaction().getTransactionId(),
+                            LotSourceType.TRANSFER_IN // 내부 이관은 TRANSFER_IN 재사용
+                    )
+                    .orElseGet(() -> lotRepository.save(
+                            WalletStoreLot.builder()
+                                    .wallet(individual)
+                                    .store(store)
+                                    .amountTotal(0L)
+                                    .amountRemaining(0L)
+                                    .acquiredAt(src.getAcquiredAt())
+                                    .expiredAt(src.getExpiredAt())
+                                    .sourceType(LotSourceType.TRANSFER_IN)
+                                    .contributorWallet(group) // 출처 표기
+                                    .originChargeTransaction(src.getOriginChargeTransaction())
+                                    .build()
+                    ));
+            dst.sharePoints(movable);
+        }
+        if (left != 0) throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+
+        // 잔액 이동: 그룹 감소, 개인 증가
+        groupBal.subtractBalance(amount);
+        indivBal.addBalance(amount);
+
+        // 거래 기록 2건
+        Transaction txOut = transactionRepository.save(
+                Transaction.builder()
+                        .wallet(group)
+                        .relatedWallet(individual)
+                        .customer(actor)
+                        .store(store)
+                        .transactionType(TransactionType.USE)           // 그룹에서 차감
+                        .amount(amount)
+                        .build()
+        );
+        Transaction txIn = transactionRepository.save(
+                Transaction.builder()
+                        .wallet(individual)
+                        .relatedWallet(group)
+                        .customer(actor)
+                        .store(store)
+                        .transactionType(TransactionType.TRANSFER_IN)   // 개인으로 유입
+                        .amount(amount)
+                        .build()
+        );
+
+        return new PointShareResponseDto(
+                txOut.getTransactionId(), txIn.getTransactionId(),
+                individual.getWalletId(), group.getWalletId(), storeId, amount,
+                groupBal.getBalance(), indivBal.getBalance(), LocalDateTime.now(), false
+        );
+    }
+
     // ===== Helpers =====
     private String canonicalizeShareBody(Long groupId, Long userId, Long storeId, PointShareRequestDto req) {
         // 키 순서 고정 직렬화
@@ -292,6 +435,18 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         n.put("individualWalletId", req.getIndividualWalletId());
         n.put("groupWalletId", req.getGroupWalletId());
         n.put("shareAmount", req.getShareAmount());
+        return n.toString();
+    }
+
+    // === canonical helpers ===
+    private String canonicalizeReclaimBody(Long groupId, Long userId, Long storeId, PointShareRequestDto req) {
+        ObjectNode n = canonicalObjectMapper.createObjectNode();
+        n.put("groupId", groupId);
+        n.put("userId", userId);
+        n.put("storeId", storeId);
+        n.put("individualWalletId", req.getIndividualWalletId());
+        n.put("groupWalletId", req.getGroupWalletId());
+        n.put("reclaimAmount", req.getShareAmount()); // 필드 재사용
         return n.toString();
     }
 
