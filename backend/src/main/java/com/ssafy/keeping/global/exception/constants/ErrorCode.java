@@ -158,6 +158,8 @@ public enum ErrorCode {
     // 추가된 에러 코드들
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
     WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다."),
+    IMAGE_UPLOAD_ERROR(HttpStatus.BAD_REQUEST, "이미지 업로드에 실패했습니다"),
+    IMAGE_UPDATE_ERROR(HttpStatus.BAD_REQUEST, "이미지 업데이트에 실패했습니다"),
 
     // 충전 보너스 관련
     CHARGE_BONUS_NOT_FOUND(HttpStatus.NOT_FOUND, "충전 보너스 설정을 찾을 수 없습니다."),

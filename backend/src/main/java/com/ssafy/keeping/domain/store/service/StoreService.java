@@ -17,6 +17,7 @@ import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import com.ssafy.keeping.global.s3.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class StoreService {
     private final OwnerRepository ownerRepository;
     private final WalletStoreBalanceRepository balanceRepository;
     private final FinOpenApiClient apiClient;
+    private final ImageService imageService;
 
     /*
      * ==================================
@@ -60,8 +62,12 @@ public class StoreService {
         }
 
 
-        // TODO: 이미지 파일은 추후
-        String imgUrl = makeImgUrl(requestDto.getImgFile());
+        // 이미지 파일
+        String imgUrl = imageService.uploadImage((requestDto.getImgFile()));
+        if(imgUrl == null || imgUrl.isEmpty()) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
         return StoreResponseDto.fromEntity(
                 storeRepository.save(
                         Store.builder()
@@ -96,7 +102,11 @@ public class StoreService {
             throw new CustomException(ErrorCode.STORE_INVALID); // 승인 상태일때만 edit 허용
         }
 
-        String editImgUrl = makeImgUrl(requestDto.getImgFile());
+        String editImgUrl = imageService.updateProfileImage(store.getImgUrl(), requestDto.getImgFile());
+        if(editImgUrl == null || editImgUrl.isEmpty()) {
+            throw new CustomException(ErrorCode.IMAGE_UPDATE_ERROR);
+        }
+
         String taxId = store.getTaxIdNumber();
         String address = requestDto.getAddress();
 

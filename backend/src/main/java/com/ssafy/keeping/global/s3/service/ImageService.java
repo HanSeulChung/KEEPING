@@ -8,6 +8,8 @@ import com.ssafy.keeping.domain.menu.repository.MenuRepository;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import com.ssafy.keeping.global.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +42,7 @@ public class ImageService {
     private String bucketName;
 
     // 이미지 저장/업데이트
-    public String updateProfileImage(String oldImgUrl, MultipartFile newImage) throws IOException {
+    public String updateProfileImage(String oldImgUrl, MultipartFile newImage) {
 
         deleteFileFromS3(oldImgUrl);
 
@@ -51,7 +53,31 @@ public class ImageService {
         metadata.setContentType(newImage.getContentType());
         metadata.setContentLength(newImage.getSize());
 
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, newImage.getInputStream(), metadata);
+        PutObjectRequest putObjectRequest = null;
+        try {
+            putObjectRequest = new PutObjectRequest(bucketName, fileName, newImage.getInputStream(), metadata);
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
+        }
+        amazonS3.putObject(putObjectRequest);
+
+        return getPublicUrl(fileName);
+    }
+
+    public String uploadImage(MultipartFile image) {
+        String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
+
+        // 메타데이터 설정
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(image.getContentType());
+        metadata.setContentLength(image.getSize());
+
+        PutObjectRequest putObjectRequest = null;
+        try {
+            putObjectRequest = new PutObjectRequest(bucketName, fileName, image.getInputStream(), metadata);
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
+        }
         amazonS3.putObject(putObjectRequest);
 
         return getPublicUrl(fileName);
