@@ -66,4 +66,6 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
                                                        @Param("status") StoreStatus status);
 
     Optional<Store> findByStoreIdAndOwner(Long storeId, Owner owner);
+    /** 점주가 해당 가게의 소유자인지 빠르게 존재 체크 */
+    boolean existsByStoreIdAndOwner_OwnerId(Long storeId, Long ownerId);
 }

@@ -29,8 +29,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenService tokenService;
     private final CookieUtil cookieUtil;
 
-    // 추후 환경변수로 저장
-    private final String FE_BASE_URL = "http://localhost:3000";
     @Value("${fe.base-url:}")
     private String feBaseUrl;
 
@@ -62,7 +60,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             }
 
             // 프론트엔드의 role 선택 페이지로 리다이렉트
-            response.sendRedirect(feBaseUrl + "/#/auth/select-role");
+            response.sendRedirect(feBaseUrl + "/");
             return;
         }
 
@@ -98,8 +96,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 
             // 프론트로 리다이렉트
+            String redirectUrl = "";
+            redirectUrl = "OWNER".equals(role) ? "/owner/dashboard" : "/customer/home";
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.setHeader("Location", feBaseUrl + "/#/auth/done?mode=login&role=" + role);
+            response.sendRedirect(redirectUrl);
 
             return;
 
@@ -121,8 +121,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
 
-            // TODO: 프론트 주소로 변경
-            response.sendRedirect("/otp/start?regSessionId=" + regSessionId);
+            response.sendRedirect(feBaseUrl +"/owner/register/step1");
         }
 
     }
@@ -1306,7 +1305,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private boolean devFallback() {
-        return feBaseUrl == null || feBaseUrl.isBlank();
+//        return feBaseUrl == null || feBaseUrl.isBlank();
+        return false; // 배포에서는 false로 두어야 우리 프론트로 들어감
     }
 
 }
