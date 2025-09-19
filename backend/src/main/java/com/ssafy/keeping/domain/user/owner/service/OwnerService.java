@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.user.owner.service;
 import com.ssafy.keeping.domain.user.finopenapi.dto.CreateAccountResponse;
 import com.ssafy.keeping.domain.user.finopenapi.dto.InsertMemberResponseDto;
 import com.ssafy.keeping.domain.user.finopenapi.dto.SearchUserKeyResponseDto;
+import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.otp.session.RegSession;
@@ -10,6 +11,7 @@ import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterRequest;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
+import com.ssafy.keeping.global.s3.service.ImageService;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
@@ -18,6 +20,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 @Service
@@ -27,6 +32,7 @@ public class OwnerService {
 
     private final OwnerRepository ownerRepository;
     private final RegSessionStore sessionStore;
+    private final ImageService imageService;
     private final FinOpenApiClient apiClient;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
@@ -120,6 +126,28 @@ public class OwnerService {
         // 세션 만료
         sessionStore.deleteSession(SIGN_UP_INFO_KEY, dto.getRegSessionId());
         return OwnerRegisterResponse.register(owner);
+    }
+
+
+    // 프로필 이미지 변경
+    @Transactional
+    public ProfileUploadResponse uploadProfileImage(Long ownerId, MultipartFile newImage) {
+        String oldImgUrl = ownerRepository.findImageUrlByOwnerId(ownerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
+
+        // 변경
+        try {
+            String newImgUrl = imageService.updateProfileImage(oldImgUrl, newImage);
+            ownerRepository.updateImageUrl(ownerId, newImgUrl);
+
+            log.info("사용자 {} 프로필 이미지 업데이트: {}", ownerId, newImgUrl);
+            return ProfileUploadResponse.builder()
+                    .newImgUrl(newImgUrl)
+                    .build();
+
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
     }
 
 }

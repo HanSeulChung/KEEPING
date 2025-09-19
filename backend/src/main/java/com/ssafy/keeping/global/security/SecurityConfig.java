@@ -42,15 +42,19 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-resources/**",
             "/favicon.ico",
-            "/.well-known/**"
+            "/.well-known/**",
+            "/s3/**",
+            "/owners/stores/**",
+            "/api/v1/stores/**"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
             "/stores/**",
             "/api/**",
-            "/groups/**",
             "/api/v1/stores/**",
-            "/wallets/**"
+            "/wallets/**",
+            "/owners/*/stores/*/charge-bonus",
+            "/owners/*/stores/*/charge-bonus/*"
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;
@@ -161,11 +165,16 @@ public class SecurityConfig {
 //                        .requestMatchers("PATCH", "/stores/*/menus/categories/*").hasRole("OWNER")
 //                        .requestMatchers("DELETE", "/stores/*/menus/categories/*").hasRole("OWNER")
 
-                        // 그룹 관리
+                        .requestMatchers("/cpqr/new").hasRole("CUSTOMER")
+                        .requestMatchers("/cpqr/*/initiate").hasRole("OWNER")
+                        .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
+
+                                // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()
 
                         // 고객 권한만 필요한 URL
                         .requestMatchers("/customers/**").hasRole("CUSTOMER")
+                        .requestMatchers("/groups/**").hasRole("CUSTOMER")
 
                         // 결제
 //                        .requestMatchers("/charge/**", "/payments/**", "/cpqr/**").authenticated()

@@ -54,4 +54,8 @@ src/main/generated/
 /src/CLAUD.md
 /src/data_erd.md
 /src/main/resources/firebase/**.json
+/src/main/resources/**.json
 
+
+### firebase
+/resource/firebase/keeping-firebase-adminsdk.json
