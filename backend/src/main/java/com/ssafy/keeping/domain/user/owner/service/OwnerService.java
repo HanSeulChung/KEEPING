@@ -143,7 +143,7 @@ public class OwnerService {
                     .newImgUrl(newImgUrl)
                     .build();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
     }
