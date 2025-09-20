@@ -47,7 +47,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
 
-        response.sendRedirect("/api/oauth2/authorization/kakao");
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
@@ -56,7 +56,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "OWNER");
 
-        response.sendRedirect("/api/oauth2/authorization/kakao");
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
 

@@ -8,8 +8,8 @@ const StoreRegistration = () => {
   const router = useRouter()
   const [formData, setFormData] = useState({
     storeName: '',
-    storeDescription: '',
-    businessType: '',
+    description: '',
+    category: '',
     address: '',
     phoneNumber: '',
     bankAccount: '',
@@ -17,15 +17,15 @@ const StoreRegistration = () => {
   })
   const [errors, setErrors] = useState({
     storeName: false,
-    storeDescription: false,
-    businessType: false,
+    description: false,
+    category: false,
     address: false,
     phoneNumber: false,
     bankAccount: false,
     merchantId: false,
   })
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
@@ -39,21 +39,18 @@ const StoreRegistration = () => {
   const validateForm = () => {
     const newErrors = {
       storeName: !formData.storeName.trim(),
-      storeDescription: !formData.storeDescription.trim(),
-      businessType: !formData.businessType.trim(),
+      description: !formData.description.trim(),
+      category: !formData.category.trim(),
       address: !formData.address.trim(),
       phoneNumber: !formData.phoneNumber.trim(),
       bankAccount: !formData.bankAccount.trim(),
       merchantId: !formData.merchantId.trim(),
-
     }
     setErrors(newErrors)
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -69,32 +66,14 @@ const StoreRegistration = () => {
       return
     }
 
-    setIsUploading(true)
-
-    try {
-      // FormData 생성
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // 이미지 업로드 API 호출
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('이미지 업로드 실패')
-      }
-
-      const result = await response.json()
-      setUploadedImage(result.url)
-      console.log('이미지 업로드 성공:', result.url)
-    } catch (error) {
-      console.error('이미지 업로드 오류:', error)
-      alert('이미지 업로드 중 오류가 발생했습니다.')
-    } finally {
-      setIsUploading(false)
+    setUploadedFile(file)
+    
+    // 미리보기 URL 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string)
     }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async () => {
@@ -133,36 +112,47 @@ const StoreRegistration = () => {
         localStorage.setItem('user', JSON.stringify(signupResult.user))
       }
 
-      // 2. 매장 등록 API 호출 (multipart/form-data)
+      // 2. 사업자 정보 가져오기 (로컬 스토리지나 세션에서)
+      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}')
+      
+      // 3. 매장 등록 API 호출 (multipart/form-data)
       const storeFormData = new FormData()
+      
+      // 사업자 번호를 taxIdNumber로 추가
+      if (businessInfo.businessNumber) {
+        storeFormData.append('taxIdNumber', businessInfo.businessNumber)
+      } else {
+        alert('사업자 정보를 찾을 수 없습니다. 다시 진행해주세요.')
+        router.push('/owner/register/step2')
+        return
+      }
+      
       storeFormData.append('storeName', formData.storeName)
-      storeFormData.append('storeDescription', formData.storeDescription)
-      storeFormData.append('businessType', formData.businessType)
+      storeFormData.append('description', formData.description)
+      storeFormData.append('category', formData.category)
       storeFormData.append('address', formData.address)
       storeFormData.append('phoneNumber', formData.phoneNumber)
       storeFormData.append('bankAccount', formData.bankAccount)
       storeFormData.append('merchantId', formData.merchantId)
 
-      // 이미지가 있으면 추가
-      if (uploadedImage) {
-        // uploadedImage가 URL인 경우, fetch로 blob으로 변환
-        const response = await fetch(uploadedImage)
-        const blob = await response.blob()
-        storeFormData.append('storeImage', blob, 'store-image.jpg')
+      // 이미지 파일 추가
+      if (uploadedFile) {
+        storeFormData.append('imgFile', uploadedFile)
       }
 
       console.log('매장 등록 API 호출:', {
+        taxIdNumber: businessInfo.businessNumber,
         storeName: formData.storeName,
-        storeDescription: formData.storeDescription,
-        businessType: formData.businessType,
+        description: formData.description,
+        category: formData.category,
         address: formData.address,
         phoneNumber: formData.phoneNumber,
         bankAccount: formData.bankAccount,
         merchantId: formData.merchantId,
-        hasImage: !!uploadedImage
+        hasImage: !!uploadedFile
       })
 
-      const storeResponse = await fetch('/owners/store', {
+      const storeResponse = await fetch('/owners/stores', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${signupResult.accessToken}`,
@@ -173,12 +163,15 @@ const StoreRegistration = () => {
       if (!storeResponse.ok) {
         const errorText = await storeResponse.text()
         console.error('매장 등록 API 에러:', storeResponse.status, errorText)
-        throw new Error(`매장 등록 실패: ${errorText}`)
+        throw new Error(`매장 등록 실패: ${storeResponse.status}`)
       }
 
       const storeResult = await storeResponse.json()
       console.log('매장 등록 성공:', storeResult)
 
+      // 사업자 정보 정리
+      localStorage.removeItem('businessInfo')
+      
       alert('회원가입 및 매장 등록이 완료되었습니다!')
       router.push('/owner/dashboard')
     } catch (error) {
@@ -186,7 +179,6 @@ const StoreRegistration = () => {
       alert('회원가입 또는 매장 등록 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
-
     }
   }
 
@@ -227,17 +219,17 @@ const StoreRegistration = () => {
             가게 설명 *
           </label>
           <textarea
-            value={formData.storeDescription}
-            onChange={e => handleInputChange('storeDescription', e.target.value)}
+            value={formData.description}
+            onChange={e => handleInputChange('description', e.target.value)}
             className={`w-full rounded-lg border p-3 ${
-              errors.storeDescription
+              errors.description
                 ? 'border-red-500 focus:border-red-500'
                 : 'border-gray-300 focus:border-blue-500'
             } focus:outline-none`}
             rows={4}
             placeholder="가게에 대한 간단한 설명을 입력해주세요"
           />
-          {errors.storeDescription && (
+          {errors.description && (
             <p className="mt-1 text-sm text-red-500">가게 설명을 입력해주세요</p>
           )}
         </div>
@@ -248,10 +240,10 @@ const StoreRegistration = () => {
             업종 *
           </label>
           <select
-            value={formData.businessType}
-            onChange={e => handleInputChange('businessType', e.target.value)}
+            value={formData.category}
+            onChange={e => handleInputChange('category', e.target.value)}
             className={`w-full rounded-lg border p-3 ${
-              errors.businessType
+              errors.category
                 ? 'border-red-500 focus:border-red-500'
                 : 'border-gray-300 focus:border-blue-500'
             } focus:outline-none`}
@@ -278,7 +270,7 @@ const StoreRegistration = () => {
             <option value="클래스">클래스</option>
             <option value="잡화">잡화</option>
           </select>
-          {errors.businessType && (
+          {errors.category && (
             <p className="mt-1 text-sm text-red-500">업종을 선택해주세요</p>
           )}
         </div>
@@ -377,17 +369,13 @@ const StoreRegistration = () => {
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
-              disabled={isUploading}
               className="w-full rounded-lg border border-gray-300 p-3 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-500 file:px-4 file:py-2 file:text-white file:hover:bg-blue-600"
             />
-            {isUploading && (
-              <p className="text-sm text-blue-600">이미지 업로드 중...</p>
-            )}
-            {uploadedImage && (
+            {previewUrl && (
               <div className="mt-4">
                 <img
-                  src={uploadedImage}
-                  alt="업로드된 이미지"
+                  src={previewUrl}
+                  alt="미리보기"
                   className="h-32 w-32 rounded-lg object-cover"
                 />
               </div>
@@ -402,7 +390,7 @@ const StoreRegistration = () => {
           type="button"
           onClick={() => router.back()}
           disabled={isSubmitting}
-          className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-gray-500 px-6 py-3 text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           이전
         </button>
@@ -420,4 +408,3 @@ const StoreRegistration = () => {
 }
 
 export default StoreRegistration
-

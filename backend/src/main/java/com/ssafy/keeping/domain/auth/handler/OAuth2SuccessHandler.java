@@ -129,10 +129,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             response.addCookie(regCookie);
 
             if(role.equals(UserRole.CUSTOMER)){
-                response.sendRedirect("/customer/register/step1");
+                response.sendRedirect(feBaseUrl + "/customer/register/step1");
             }
             else {
-                response.sendRedirect( "/owner/register/step1");
+                response.sendRedirect( feBaseUrl + "/owner/register/step1");
             }
         }
 
