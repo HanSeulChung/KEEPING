@@ -201,6 +201,7 @@ const CustomerPinSetup = () => {
             onClick={handleBack}
             disabled={isSubmitting}
             className="w-full rounded-lg bg-gray-200 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+
           >
             이전 단계로
           </button>

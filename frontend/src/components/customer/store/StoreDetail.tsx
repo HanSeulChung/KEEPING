@@ -1,4 +1,5 @@
 'use client'
+
 import { apiConfig, endpoints } from '@/api/config'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
@@ -248,25 +249,25 @@ export const StoreDetailPage = () => {
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">가게 정보를 불러오는 중...</div>
           </div>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   if (error) {
-  return (
+    return (
       <div className="min-h-screen bg-white py-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center py-8">
             <div className="text-red-500">{error}</div>
           </div>
         </div>
-    </div>
-  )
-}
+      </div>
+    )
+  }
 
   if (!storeData) {
-  return (
+    return (
       <div className="min-h-screen bg-white py-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center py-8">

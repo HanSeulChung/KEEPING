@@ -45,6 +45,7 @@ const StoreRegistration = () => {
       phoneNumber: !formData.phoneNumber.trim(),
       bankAccount: !formData.bankAccount.trim(),
       merchantId: !formData.merchantId.trim(),
+
     }
     setErrors(newErrors)
     return !Object.values(newErrors).some(error => error)
@@ -185,6 +186,7 @@ const StoreRegistration = () => {
       alert('회원가입 또는 매장 등록 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
+
     }
   }
 
@@ -418,3 +420,4 @@ const StoreRegistration = () => {
 }
 
 export default StoreRegistration
+

@@ -21,10 +21,12 @@ export default function OwnerLogin() {
         authApi.kakaoOwnerLogin()
         return
       }
+      
       // if (provider === 'google') {
       //   authApi.googleOwnerLogin()
       //   return
       // }
+
     } catch (error) {
       console.error('로그인 오류:', error)
       alert(`로그인 중 오류가 발생했습니다: ${error}`)

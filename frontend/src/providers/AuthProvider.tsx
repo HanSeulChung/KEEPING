@@ -15,8 +15,28 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth()
 
     const bootstrapRefresh = async () => {
-      const token = localStorage.getItem('accessToken')
-      if (token) return
+      // Cookie에서 토큰 확인
+      const getCookie = (name: string): string | null => {
+        if (typeof document === 'undefined') return null
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) {
+          return parts.pop()?.split(';').shift() || null
+        }
+        return null
+      }
+
+      // 가능한 쿠키 이름들 시도
+      const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt', 'refreshToken']
+      let token = null
+      
+      for (const name of possibleTokenNames) {
+        token = getCookie(name)
+        if (token) break
+      }
+      
+      if (token) return // 이미 토큰이 있으면 리프레시 불필요
+      
       try {
         const res = await fetch(buildURL(API_ENDPOINTS.auth.refresh), {
           method: 'POST',
@@ -25,9 +45,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         })
         if (!res.ok) return
         const data = await res.json()
-        if (data?.data?.accessToken) {
-          localStorage.setItem('accessToken', data.data.accessToken)
-        }
+        // 토큰은 서버에서 Cookie로 설정되므로 클라이언트에서 저장할 필요 없음
         if (data?.data?.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user))
         }

@@ -11,8 +11,8 @@ export default function OwnerLogin() {
   const router = useRouter()
   const { login } = useAuthStore()
   const [loading, setLoading] = useState<string | null>(null)
-
   const handleSocialLogin = async (provider: 'kakao') => {
+
     setLoading(provider)
 
     try {
@@ -39,7 +39,7 @@ export default function OwnerLogin() {
       <div className="mb-10">
         <Image
           src="/customer.png"
-          alt="고객 캐릭터"
+          alt="고객객 캐릭터"
           width={180}
           height={180}
           priority
@@ -94,7 +94,6 @@ export default function OwnerLogin() {
       >
         <Image src="/customer.png" alt="고객 아이콘" width={20} height={20} />
         <span className="font-medium text-yellow-600">고객</span>
-        <span>으로 로그인하기</span>
       </Link>
     </div>
   )

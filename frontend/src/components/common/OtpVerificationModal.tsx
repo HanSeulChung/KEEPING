@@ -94,7 +94,6 @@ const OtpVerificationModal = ({
       alert('6자리 인증번호를 입력해주세요.')
       return
     }
-
     console.log('OTP 검증 시작...')
     const result = await verifyOtpCode(otpCode)
     console.log('OTP 검증 결과:', result)

@@ -124,20 +124,6 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* 세션 상태 */}
-      {!sessionRegSessionId ? (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="text-center font-['nanumsquare'] font-bold text-blue-800">
-            🔄 세션 정보를 불러오는 중...
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-          <p className="text-center font-['nanumsquare'] font-bold text-green-800">
-            ✅ 세션 정보를 성공적으로 가져왔습니다
-          </p>
-        </div>
-      )}
 
       {/* 입력 폼 */}
       <div className="space-y-4">

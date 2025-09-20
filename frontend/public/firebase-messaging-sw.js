@@ -2,15 +2,15 @@
 importScripts("https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js");
 
-// Firebase 설정
+// Firebase 설정 - 실제 값으로 교체 필요
 firebase.initializeApp({
-  apiKey: "AIzaSyCHbM7Fm03JD_EqLI3xrvNiY3WoFJw1PhM",
-  authDomain: "keeping-6130e.firebaseapp.com",
-  projectId: "keeping-6130e",
-  storageBucket: "keeping-6130e.firebasestorage.app",
-  messagingSenderId: "381411579605",
-  appId: "1:381411579605:web:bcc34d8ab7481e732cf45c",
-  measurementId: "G-CLZVC2TEN8"
+  apiKey: "your_firebase_api_key",
+  authDomain: "your_firebase_auth_domain",
+  projectId: "your_firebase_project_id",
+  storageBucket: "your_firebase_storage_bucket",
+  messagingSenderId: "your_firebase_messaging_sender_id",
+  appId: "your_firebase_app_id",
+  measurementId: "your_firebase_measurement_id"
 });
 
 const messaging = firebase.messaging();
