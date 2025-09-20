@@ -18,7 +18,7 @@ import jakarta.validation.constraints.Positive;
 import java.util.List;
 
 @RestController
-@RequestMapping("/owners/{ownerId}/stores/{storeId}/charge-bonus")
+@RequestMapping("/owners/stores/{storeId}/charge-bonus")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
@@ -31,7 +31,7 @@ public class ChargeBonusController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<ChargeBonusResponseDto>> createChargeBonus(
-            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
             @RequestBody @Valid ChargeBonusRequestDto requestDto) {
 
@@ -48,7 +48,7 @@ public class ChargeBonusController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<ChargeBonusListResponseDto>>> getChargeBonusList(
-            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId) {
 
         log.info("충전 보너스 설정 목록 조회 요청 수신 - 점주ID: {}, 가게ID: {}", ownerId, storeId);
@@ -64,7 +64,7 @@ public class ChargeBonusController {
      */
     @GetMapping("/{chargeBonusId}")
     public ResponseEntity<ApiResponse<ChargeBonusResponseDto>> getChargeBonus(
-            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
             @PathVariable @Positive(message = "충전 보너스 ID는 양수여야 합니다.") Long chargeBonusId) {
 
@@ -81,7 +81,7 @@ public class ChargeBonusController {
      */
     @PutMapping("/{chargeBonusId}")
     public ResponseEntity<ApiResponse<ChargeBonusResponseDto>> updateChargeBonus(
-            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
             @PathVariable @Positive(message = "충전 보너스 ID는 양수여야 합니다.") Long chargeBonusId,
             @RequestBody @Valid ChargeBonusRequestDto requestDto) {
@@ -99,7 +99,7 @@ public class ChargeBonusController {
      */
     @DeleteMapping("/{chargeBonusId}")
     public ResponseEntity<ApiResponse<Void>> deleteChargeBonus(
-            @PathVariable @Positive(message = "점주 ID는 양수여야 합니다.") Long ownerId,
+            @AuthenticationPrincipal Long ownerId,
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
             @PathVariable @Positive(message = "충전 보너스 ID는 양수여야 합니다.") Long chargeBonusId) {
 
