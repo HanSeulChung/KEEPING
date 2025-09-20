@@ -168,7 +168,15 @@ public enum ErrorCode {
     STORE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 가게에 대한 접근 권한이 없습니다."),
 
     // 통계 관련
-    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 범위입니다.");
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 범위입니다."),
+
+    // OCR 업로드/검증
+    OCR_INFER_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "OCR 추출에 실패했습니다."),
+    OCR_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "이미지 파일이 필요합니다."),
+    OCR_FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. (jpg, jpeg, png)"),
+    OCR_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 용량이 너무 큽니다. (최대 10MB)"),
+    OCR_UPSTREAM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "OCR 요청 형식이 올바르지 않습니다."),
+    OCR_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "OCR 외부 API 호출 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

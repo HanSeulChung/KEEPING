@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.ocr.service;
 
 import com.ssafy.keeping.domain.ocr.dto.BizLicenseOcrResponse;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,12 +44,6 @@ public class BizLicenseOcrService {
             rootHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
             rootHeaders.set("X-OCR-SECRET", clovaSecret);
 
-
-
-
-
-
-
             // 요청 바디
             MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
 
@@ -66,6 +62,12 @@ public class BizLicenseOcrService {
             };
             HttpHeaders fileHeaders = new HttpHeaders();
             fileHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            fileHeaders.setContentDisposition(
+                    ContentDisposition.builder("form-data")
+                            .name("file")
+                            .filename(guessFilename(file.getOriginalFilename(), file.getContentType()))
+                            .build()
+            );
             HttpEntity<ByteArrayResource> filePart = new HttpEntity<>(fileResource, fileHeaders);
             multipart.add("file", filePart);
 
@@ -73,8 +75,11 @@ public class BizLicenseOcrService {
 
             // 2) 외부 호출
             ResponseEntity<Map> resp = restTemplate.exchange(clovaUrl, HttpMethod.POST, requestEntity, Map.class);
-            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
-                throw new IllegalStateException("CLOVA Template OCR 응답이 비정상입니다.");
+            if (resp == null || resp.getBody() == null || !resp.getStatusCode().is2xxSuccessful()) {
+                if (resp != null && resp.getStatusCode().is4xxClientError()) {
+                    throw new CustomException(ErrorCode.OCR_UPSTREAM_BAD_REQUEST);
+                }
+                throw new CustomException(ErrorCode.OCR_UPSTREAM_ERROR);
             }
 
             // 3) 응답 파싱/정규화
@@ -82,10 +87,14 @@ public class BizLicenseOcrService {
 
         } catch (HttpStatusCodeException e) {
             log.error("CLOVA Template OCR 실패 status={} body={}", e.getStatusCode(), safe(e.getResponseBodyAsString()));
-            throw new IllegalStateException("OCR 서비스 호출에 실패했습니다.", e);
+            if (e.getStatusCode().is4xxClientError()) {
+                throw new CustomException(ErrorCode.OCR_UPSTREAM_BAD_REQUEST);
+            }
+            // 그 외는 외부 API 장애로 간주
+            throw new CustomException(ErrorCode.OCR_UPSTREAM_ERROR);
         } catch (Exception e) {
             log.error("OCR 처리 중 오류", e);
-            throw new IllegalStateException("OCR 처리 중 오류가 발생했습니다.", e);
+            throw new CustomException(ErrorCode.OCR_UPSTREAM_ERROR);
         }
     }
 
@@ -124,17 +133,6 @@ public class BizLicenseOcrService {
         return out;
     }
 
-//    private List<String> parseTemplateIds(String prop) {
-//        if (prop == null || prop.isBlank()) return List.of();
-//        String[] arr = prop.split(",");
-//        List<String> out = new ArrayList<>();
-//        for (String s : arr) {
-//            String t = s.trim();
-//            if (!t.isEmpty()) out.add(t);
-//        }
-//        return out;
-//    }
-
     private String guessFilename(String originalName, String contentType) {
         if (originalName != null && !originalName.isBlank()) return originalName;
         return "upload." + guessFormat(contentType, "upload");
@@ -161,10 +159,11 @@ public class BizLicenseOcrService {
         Map<String, String> byName = new HashMap<>();
         List<Double> confidences = new ArrayList<>();
         for (Map<String, Object> f : fields) {
-            String name = String.valueOf(f.getOrDefault("name", "")).trim();       // 템플릿 라벨 그대로
+            String name = String.valueOf(f.getOrDefault("name", "")).trim();
             String text = String.valueOf(f.getOrDefault("inferText", "")).trim();
             if (!name.isEmpty() && !text.isEmpty()) byName.put(name, text);
-            Object c = f.get("confidence");
+
+            Object c = f.containsKey("inferConfidence") ? f.get("inferConfidence") : f.get("confidence");
             if (c instanceof Number) confidences.add(((Number) c).doubleValue());
         }
 
