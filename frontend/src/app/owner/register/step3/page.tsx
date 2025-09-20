@@ -7,19 +7,26 @@ import React, { useState } from 'react'
 const StoreRegistration = () => {
   const router = useRouter()
   const [formData, setFormData] = useState({
+    storeName: '',
     storeDescription: '',
     businessType: '',
-    postalCode: '',
     address: '',
+    phoneNumber: '',
+    bankAccount: '',
+    merchantId: '',
   })
   const [errors, setErrors] = useState({
+    storeName: false,
     storeDescription: false,
     businessType: false,
-    postalCode: false,
     address: false,
+    phoneNumber: false,
+    bankAccount: false,
+    merchantId: false,
   })
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -31,10 +38,13 @@ const StoreRegistration = () => {
 
   const validateForm = () => {
     const newErrors = {
+      storeName: !formData.storeName.trim(),
       storeDescription: !formData.storeDescription.trim(),
       businessType: !formData.businessType.trim(),
-      postalCode: !formData.postalCode || !/^\d{5}$/.test(formData.postalCode),
       address: !formData.address.trim(),
+      phoneNumber: !formData.phoneNumber.trim(),
+      bankAccount: !formData.bankAccount.trim(),
+      merchantId: !formData.merchantId.trim(),
     }
     setErrors(newErrors)
     return !Object.values(newErrors).some(error => error)
@@ -89,6 +99,7 @@ const StoreRegistration = () => {
   const handleSubmit = async () => {
     if (!validateForm()) return
 
+    setIsSubmitting(true)
     try {
       // 세션에서 regSessionId 가져오기
       const sessionInfo = await authApi.getSessionInfo()
@@ -105,27 +116,75 @@ const StoreRegistration = () => {
 
       console.log('회원가입 API 호출:', { regSessionId })
 
-      // 회원가입 완료 API 호출
+      // 1. 회원가입 완료 API 호출
       const signupData = {
         regSessionId: regSessionId
       }
 
-      const result = await authApi.completeOwnerSignup(signupData)
-      console.log('회원가입 성공:', result)
+      const signupResult = await authApi.completeOwnerSignup(signupData)
+      console.log('회원가입 성공:', signupResult)
 
       // 회원가입 성공 시 토큰 저장
-      if (result.accessToken) {
-        localStorage.setItem('accessToken', result.accessToken)
+      if (signupResult.accessToken) {
+        localStorage.setItem('accessToken', signupResult.accessToken)
       }
-      if (result.user) {
-        localStorage.setItem('user', JSON.stringify(result.user))
+      if (signupResult.user) {
+        localStorage.setItem('user', JSON.stringify(signupResult.user))
       }
 
-      alert('회원가입이 완료되었습니다!')
+      // 2. 매장 등록 API 호출 (multipart/form-data)
+      const storeFormData = new FormData()
+      storeFormData.append('storeName', formData.storeName)
+      storeFormData.append('storeDescription', formData.storeDescription)
+      storeFormData.append('businessType', formData.businessType)
+      storeFormData.append('address', formData.address)
+      storeFormData.append('phoneNumber', formData.phoneNumber)
+      storeFormData.append('bankAccount', formData.bankAccount)
+      storeFormData.append('merchantId', formData.merchantId)
+
+      // 이미지가 있으면 추가
+      if (uploadedImage) {
+        // uploadedImage가 URL인 경우, fetch로 blob으로 변환
+        const response = await fetch(uploadedImage)
+        const blob = await response.blob()
+        storeFormData.append('storeImage', blob, 'store-image.jpg')
+      }
+
+      console.log('매장 등록 API 호출:', {
+        storeName: formData.storeName,
+        storeDescription: formData.storeDescription,
+        businessType: formData.businessType,
+        address: formData.address,
+        phoneNumber: formData.phoneNumber,
+        bankAccount: formData.bankAccount,
+        merchantId: formData.merchantId,
+        hasImage: !!uploadedImage
+      })
+
+      const storeResponse = await fetch('/owners/store', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${signupResult.accessToken}`,
+        },
+        body: storeFormData,
+      })
+
+      if (!storeResponse.ok) {
+        const errorText = await storeResponse.text()
+        console.error('매장 등록 API 에러:', storeResponse.status, errorText)
+        throw new Error(`매장 등록 실패: ${errorText}`)
+      }
+
+      const storeResult = await storeResponse.json()
+      console.log('매장 등록 성공:', storeResult)
+
+      alert('회원가입 및 매장 등록이 완료되었습니다!')
       router.push('/owner/dashboard')
     } catch (error) {
-      console.error('회원가입 오류:', error)
-      alert('회원가입 중 오류가 발생했습니다.')
+      console.error('회원가입/매장 등록 오류:', error)
+      alert('회원가입 또는 매장 등록 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -139,6 +198,27 @@ const StoreRegistration = () => {
       </div>
 
       <div className="space-y-6">
+        {/* 매장명 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            매장명 *
+          </label>
+          <input
+            type="text"
+            value={formData.storeName}
+            onChange={e => handleInputChange('storeName', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.storeName
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="매장명을 입력해주세요"
+          />
+          {errors.storeName && (
+            <p className="mt-1 text-sm text-red-500">매장명을 입력해주세요</p>
+          )}
+        </div>
+
         {/* 가게 설명 */}
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -175,45 +255,36 @@ const StoreRegistration = () => {
             } focus:outline-none`}
           >
             <option value="">업종을 선택해주세요</option>
-            <option value="RESTAURANT">음식점</option>
-            <option value="CAFE">카페</option>
-            <option value="BAKERY">베이커리</option>
-            <option value="BAR">바</option>
-            <option value="OTHER">기타</option>
+            <option value="한식">한식</option>
+            <option value="중식">중식</option>
+            <option value="일식">일식</option>
+            <option value="양식">양식</option>
+            <option value="분식">분식</option>
+            <option value="아시안">아시안</option>
+            <option value="패스트푸드">패스트푸드</option>
+            <option value="카페">카페</option>
+            <option value="식료품">식료품</option>
+            <option value="반찬/밀키트">반찬/밀키트</option>
+            <option value="헤어">헤어</option>
+            <option value="뷰티">뷰티</option>
+            <option value="꽃">꽃</option>
+            <option value="엔터테인먼트">엔터테인먼트</option>
+            <option value="스포츠">스포츠</option>
+            <option value="자동차">자동차</option>
+            <option value="반려동물">반려동물</option>
+            <option value="주류">주류</option>
+            <option value="클래스">클래스</option>
+            <option value="잡화">잡화</option>
           </select>
           {errors.businessType && (
             <p className="mt-1 text-sm text-red-500">업종을 선택해주세요</p>
           )}
         </div>
 
-        {/* 우편번호 */}
+        {/* 매장 주소 */}
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            우편번호 *
-          </label>
-          <input
-            type="text"
-            value={formData.postalCode}
-            onChange={e => handleInputChange('postalCode', e.target.value)}
-            className={`w-full rounded-lg border p-3 ${
-              errors.postalCode
-                ? 'border-red-500 focus:border-red-500'
-                : 'border-gray-300 focus:border-blue-500'
-            } focus:outline-none`}
-            placeholder="12345"
-            maxLength={5}
-          />
-          {errors.postalCode && (
-            <p className="mt-1 text-sm text-red-500">
-              올바른 우편번호를 입력해주세요 (5자리 숫자)
-            </p>
-          )}
-        </div>
-
-        {/* 주소 */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            주소 *
+            매장 주소 *
           </label>
           <input
             type="text"
@@ -224,10 +295,73 @@ const StoreRegistration = () => {
                 ? 'border-red-500 focus:border-red-500'
                 : 'border-gray-300 focus:border-blue-500'
             } focus:outline-none`}
-            placeholder="상세 주소를 입력해주세요"
+            placeholder="매장 주소를 입력해주세요"
           />
           {errors.address && (
-            <p className="mt-1 text-sm text-red-500">주소를 입력해주세요</p>
+            <p className="mt-1 text-sm text-red-500">매장 주소를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 매장 전화번호 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            매장 전화번호 *
+          </label>
+          <input
+            type="tel"
+            value={formData.phoneNumber}
+            onChange={e => handleInputChange('phoneNumber', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.phoneNumber
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="매장 전화번호를 입력해주세요"
+          />
+          {errors.phoneNumber && (
+            <p className="mt-1 text-sm text-red-500">매장 전화번호를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 정산 계좌 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            정산 계좌 *
+          </label>
+          <input
+            type="text"
+            value={formData.bankAccount}
+            onChange={e => handleInputChange('bankAccount', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.bankAccount
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="정산 계좌를 입력해주세요"
+          />
+          {errors.bankAccount && (
+            <p className="mt-1 text-sm text-red-500">정산 계좌를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 가맹점ID */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            가맹점ID *
+          </label>
+          <input
+            type="text"
+            value={formData.merchantId}
+            onChange={e => handleInputChange('merchantId', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.merchantId
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="가맹점ID를 입력해주세요"
+          />
+          {errors.merchantId && (
+            <p className="mt-1 text-sm text-red-500">가맹점ID를 입력해주세요</p>
           )}
         </div>
 
@@ -265,16 +399,18 @@ const StoreRegistration = () => {
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-lg border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50"
+          disabled={isSubmitting}
+          className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           이전
         </button>
         <button
           type="button"
           onClick={handleSubmit}
-          className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+          disabled={isSubmitting}
+          className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          회원가입 완료
+          {isSubmitting ? '처리 중...' : '회원가입 완료'}
         </button>
       </div>
     </div>

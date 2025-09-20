@@ -11,13 +11,13 @@ export const authApi = {
     window.location.href = buildURL(API_ENDPOINTS.auth.kakaoCustomer)
   },
 
-  googleOwnerLogin: () => {
-    window.location.href = buildURL(API_ENDPOINTS.auth.googleOwner)
-  },
+  // googleOwnerLogin: () => {
+  //   window.location.href = buildURL(API_ENDPOINTS.auth.googleOwner)
+  // },
 
-  googleCustomerLogin: () => {
-    window.location.href = buildURL(API_ENDPOINTS.auth.googleCustomer)
-  },
+  // googleCustomerLogin: () => {
+  //   window.location.href = buildURL(API_ENDPOINTS.auth.googleCustomer)
+  // },
 
   // 회원가입 완료
   completeOwnerSignup: async (

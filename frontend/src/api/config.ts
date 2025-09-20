@@ -26,8 +26,8 @@ export const endpoints = {
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',
     // 소셜 로그인 (구글) - 향후 구현
-    googleOwner: '/auth/google/owner',
-    googleCustomer: '/auth/google/customer',
+    // googleOwner: '/auth/google/owner',
+    // googleCustomer: '/auth/google/customer',
     // 회원가입 완료
     signupCustomer: '/auth/signup/customer',
     signupOwner: '/auth/signup/owner',
