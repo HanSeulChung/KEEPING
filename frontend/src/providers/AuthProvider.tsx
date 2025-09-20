@@ -27,16 +27,16 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // 가능한 쿠키 이름들 시도
-      const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt', 'refreshToken']
+      const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
       let token = null
-      
+
       for (const name of possibleTokenNames) {
         token = getCookie(name)
         if (token) break
       }
-      
+
       if (token) return // 이미 토큰이 있으면 리프레시 불필요
-      
+
       try {
         const res = await fetch(buildURL(API_ENDPOINTS.auth.refresh), {
           method: 'POST',
@@ -45,9 +45,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         })
         if (!res.ok) return
         const data = await res.json()
-        // 토큰은 서버에서 Cookie로 설정되므로 클라이언트에서 저장할 필요 없음
+        // 토큰과 사용자 정보는 서버에서 Cookie로 설정되거나 응답으로 제공됨
+        // 사용자 정보를 store에 저장
         if (data?.data?.user) {
-          localStorage.setItem('user', JSON.stringify(data.data.user))
+          const { login } = useAuthStore.getState()
+          login(data.data.user, data.data.accessToken)
         }
       } catch {}
     }
