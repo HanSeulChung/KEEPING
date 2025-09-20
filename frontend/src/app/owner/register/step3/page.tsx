@@ -1,6 +1,6 @@
 'use client'
 
-import { buildURL, endpoints } from '@/api/config'
+import { authApi } from '@/api/authApi'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
@@ -87,58 +87,45 @@ const StoreRegistration = () => {
   }
 
   const handleSubmit = async () => {
-    if (validateForm()) {
-      try {
-        // localStorage에서 regSessionId 가져오기
-        const regSessionId = localStorage.getItem('regSessionId')
+    if (!validateForm()) return
 
-        console.log('회원가입에 사용할 regSessionId (localStorage에서):', regSessionId)
+    try {
+      // 세션에서 regSessionId 가져오기
+      const sessionInfo = await authApi.getSessionInfo()
+      const regSessionId = sessionInfo.data
 
-        if (!regSessionId) {
-          console.error('regSessionId를 찾을 수 없습니다!')
-          alert('인증 정보를 찾을 수 없습니다. 다시 인증해주세요.')
-          router.push('/owner/register/step1')
-          return
-        }
+      console.log('회원가입에 사용할 regSessionId (세션에서):', regSessionId)
 
-        console.log('회원가입 API 호출:', { regSessionId })
-
-        // 회원가입 API 호출
-        const response = await fetch(buildURL(endpoints.auth.signupOwner), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            regSessionId: regSessionId,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error('회원가입 API 에러:', response.status, errorText)
-          throw new Error(
-            `HTTP error! status: ${response.status}, message: ${errorText}`
-          )
-        }
-
-        const result = await response.json()
-        console.log('회원가입 성공:', result)
-
-        // 회원가입 성공 시 토큰 저장
-        if (result.data?.accessToken) {
-          localStorage.setItem('accessToken', result.data.accessToken)
-        }
-        if (result.data?.refreshToken) {
-          localStorage.setItem('refreshToken', result.data.refreshToken)
-        }
-
-        alert('회원가입이 완료되었습니다!')
-        router.push('/owner/dashboard')
-      } catch (error) {
-        console.error('회원가입 오류:', error)
-        alert('회원가입 중 오류가 발생했습니다.')
+      if (!regSessionId) {
+        console.error('regSessionId를 찾을 수 없습니다!')
+        alert('인증 정보를 찾을 수 없습니다. 다시 인증해주세요.')
+        router.push('/owner/register/step1')
+        return
       }
+
+      console.log('회원가입 API 호출:', { regSessionId })
+
+      // 회원가입 완료 API 호출
+      const signupData = {
+        regSessionId: regSessionId
+      }
+
+      const result = await authApi.completeOwnerSignup(signupData)
+      console.log('회원가입 성공:', result)
+
+      // 회원가입 성공 시 토큰 저장
+      if (result.accessToken) {
+        localStorage.setItem('accessToken', result.accessToken)
+      }
+      if (result.user) {
+        localStorage.setItem('user', JSON.stringify(result.user))
+      }
+
+      alert('회원가입이 완료되었습니다!')
+      router.push('/owner/dashboard')
+    } catch (error) {
+      console.error('회원가입 오류:', error)
+      alert('회원가입 중 오류가 발생했습니다.')
     }
   }
 

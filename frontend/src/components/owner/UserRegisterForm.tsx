@@ -1,8 +1,9 @@
 'use client'
 
-import OtpVerificationModal from '@/components/common/OtpVerificationModal';
-import { AuthForm } from '@/types'; // 기존 타입 사용
-import { useState } from 'react';
+import { authApi } from '@/api/authApi'
+import OtpVerificationModal from '@/components/common/OtpVerificationModal'
+import { AuthForm } from '@/types'
+import { useState } from 'react'
 
 interface UserRegisterFormProps {
   onNext?: () => void
@@ -27,17 +28,23 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     setIsOtpModalOpen(true)
   }
 
-  const handleOtpSuccess = (token?: string) => {
+  const handleOtpSuccess = async () => {
     console.log('OTP 인증 성공 콜백 호출됨')
-    console.log('받은 token 값:', token)
 
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
 
-    // OTP에서 받은 token을 localStorage에 저장
-    if (token) {
-      localStorage.setItem('regSessionId', token)
-      console.log('OTP에서 받은 token을 regSessionId로 저장:', token)
+    // 세션에서 regSessionId 가져와서 localStorage에 저장 (다음 단계에서 사용)
+    try {
+      const sessionInfo = await authApi.getSessionInfo()
+      const regSessionId = sessionInfo.data
+      
+      if (regSessionId) {
+        localStorage.setItem('regSessionId', regSessionId)
+        console.log('세션에서 가져온 regSessionId 저장:', regSessionId)
+      }
+    } catch (error) {
+      console.error('세션 정보 조회 실패:', error)
     }
 
     console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')

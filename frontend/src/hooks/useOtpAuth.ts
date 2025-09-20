@@ -1,6 +1,7 @@
 'use client'
 
 import { authApi } from '@/api/authApi'
+import { buildURL, endpoints } from '@/api/config'
 import { useCallback, useState } from 'react'
 
 type Purpose = 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
@@ -57,7 +58,7 @@ export function useOtpAuth() {
           throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
         }
 
-        const res = await fetch('/api/otp/request', {
+        const res = await fetch(buildURL(endpoints.auth.otpRequest), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include', // 쿠키 동반
@@ -105,7 +106,7 @@ export function useOtpAuth() {
           throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
         }
 
-        const res = await fetch('/api/otp/verify', {
+        const res = await fetch(buildURL(endpoints.auth.otpVerify), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include', // 쿠키 동반
