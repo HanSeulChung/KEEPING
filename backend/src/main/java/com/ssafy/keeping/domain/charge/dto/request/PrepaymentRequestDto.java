@@ -11,9 +11,6 @@ import java.math.BigDecimal;
 @Builder
 public class PrepaymentRequestDto {
 
-    @NotNull(message = "사용자 ID는 필수입니다.")
-    @Positive(message = "사용자 ID는 양수여야 합니다.")
-    private Long userId;
 
     @NotBlank(message = "카드 번호는 필수입니다.")
     @Pattern(regexp = "\\d{16}", message = "카드 번호는 16자리 숫자여야 합니다.")
