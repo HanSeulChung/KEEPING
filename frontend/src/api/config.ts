@@ -1,3 +1,6 @@
+//API 호출을 위한 클라이언트 사이드 설정
+//브라우저에서 서버로 API 요청할 때 사용
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
 
