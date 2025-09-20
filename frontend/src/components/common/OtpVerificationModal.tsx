@@ -29,35 +29,51 @@ const OtpVerificationModal = ({
     error,
     requestId,
     expiresAt,
-    clearError,
-    resetOtp,
     requestOtpCode,
     verifyOtpCode,
+    clearError,
+    resetOtp,
   } = useOtpAuth()
 
   const [otpCode, setOtpCode] = useState('')
-  const [isRequested, setIsRequested] = useState(false)
-  const [countdown, setCountdown] = useState(0)
+  const [timeLeft, setTimeLeft] = useState(0)
+  const [isOtpSent, setIsOtpSent] = useState(false)
 
-  // 모달이 열릴 때마다 상태 초기화
+  // 모달이 열릴 때 OTP 자동 요청
   useEffect(() => {
-    if (isOpen) {
-      setOtpCode('')
-      setIsRequested(false)
-      setCountdown(0)
-      clearError()
+    if (isOpen && !isOtpSent) {
+      handleRequestOtp()
     }
-  }, [isOpen, clearError])
+  }, [isOpen])
 
-  // 카운트다운 타이머
+  // 타이머 설정
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+    if (expiresAt && timeLeft > 0) {
+      const timer = setTimeout(() => {
+        setTimeLeft(prev => prev - 1)
+      }, 1000)
       return () => clearTimeout(timer)
     }
-  }, [countdown])
+  }, [timeLeft, expiresAt])
+
+  // 만료 시간 계산
+  useEffect(() => {
+    if (expiresAt) {
+      const expires = new Date(expiresAt).getTime()
+      const now = new Date().getTime()
+      const diff = Math.max(0, Math.floor((expires - now) / 1000))
+      setTimeLeft(diff)
+    }
+  }, [expiresAt])
 
   const handleRequestOtp = async () => {
+    console.log('OTP 요청 시작:', {
+      name,
+      phoneNumber,
+      birth,
+      genderDigit,
+      userRole,
+    })
     const success = await requestOtpCode(
       name,
       phoneNumber,
@@ -65,122 +81,146 @@ const OtpVerificationModal = ({
       genderDigit,
       userRole
     )
-    
+    console.log('OTP 요청 결과:', success)
     if (success) {
-      setIsRequested(true)
-      setCountdown(180) // 3분
+      setIsOtpSent(true)
+      clearError()
     }
   }
 
   const handleVerifyOtp = async () => {
-    const result = await verifyOtpCode(otpCode)
-    
-    if (result?.verified) {
-      onSuccess()
+    console.log('handleVerifyOtp 호출됨, otpCode:', otpCode)
+    if (!otpCode || otpCode.length !== 6) {
+      alert('6자리 인증번호를 입력해주세요.')
+      return
     }
+
+    console.log('OTP 검증 시작...')
+    const result = await verifyOtpCode(otpCode)
+    console.log('OTP 검증 결과:', result)
+
+    if (result?.verified) {
+      console.log('OTP 인증 성공:', result)
+      onSuccess()
+      onClose()
+      resetOtp()
+    } else {
+      console.log('OTP 인증 실패 또는 결과 없음')
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const handleClose = () => {
     resetOtp()
+    setIsOtpSent(false)
+    setOtpCode('')
     onClose()
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900">휴대폰 인증</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            입력하신 번호로 인증번호가 발송됩니다.
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+      <div className="mx-4 w-full max-w-md rounded-lg bg-white p-8">
+        {/* 헤더 */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-['Tenada'] text-2xl font-extrabold text-black">
+            KEEPING PASS 인증
+          </h2>
+          <button
+            onClick={handleClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* 전화번호 표시 */}
+        <div className="mb-6 rounded-lg bg-gray-50 p-4">
+          <p className="mb-1 font-['nanumsquare'] text-sm text-gray-600">
+            인증번호를 발송한 번호
+          </p>
+          <p className="font-['nanumsquare'] text-lg font-bold text-black">
+            {phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')}
           </p>
         </div>
 
-        {!isRequested ? (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">인증번호 발송 대상:</span>
-                <br />
-                {phoneNumber}
-              </p>
-            </div>
-
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleRequestOtp}
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? '인증번호 발송 중...' : '인증번호 발송'}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">인증번호를 입력해주세요:</span>
-                <br />
-                {phoneNumber}
-              </p>
-            </div>
-
-            <div>
-              <input
-                type="text"
-                value={otpCode}
-                onChange={e => setOtpCode(e.target.value)}
-                placeholder="인증번호 6자리"
-                maxLength={6}
-                className="w-full rounded-lg border border-gray-300 p-3 text-center text-lg tracking-widest focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-
-            {countdown > 0 && (
-              <p className="text-center text-sm text-gray-500">
-                {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')} 후 재발송 가능
-              </p>
-            )}
-
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            <div className="flex space-x-3">
-              <button
-                onClick={handleVerifyOtp}
-                disabled={loading || otpCode.length !== 6}
-                className="flex-1 rounded-lg bg-blue-600 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? '인증 중...' : '인증하기'}
-              </button>
-              
-              <button
-                onClick={handleRequestOtp}
-                disabled={loading || countdown > 0}
-                className="flex-1 rounded-lg border border-gray-300 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                재발송
-              </button>
-            </div>
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="font-['nanumsquare'] text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        <div className="mt-6 flex justify-end">
+        {/* OTP 입력 */}
+        <div className="mb-6">
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            인증번호 입력
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={otpCode}
+              onChange={e =>
+                setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+              }
+              placeholder="6자리 인증번호"
+              className="flex-1 rounded-lg border border-gray-300 p-3 text-center font-['nanumsquare'] text-lg font-bold tracking-widest"
+              maxLength={6}
+            />
+            {timeLeft > 0 && (
+              <div className="font-['nanumsquare'] text-sm font-bold text-red-500">
+                {formatTime(timeLeft)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 버튼들 */}
+        <div className="flex gap-3">
           <button
-            onClick={handleClose}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            onClick={handleRequestOtp}
+            disabled={loading || timeLeft > 0}
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            취소
+            {loading ? '전송 중...' : '인증번호 재전송'}
           </button>
+          <button
+            onClick={handleVerifyOtp}
+            disabled={loading || !otpCode || otpCode.length !== 6}
+            className="flex-1 rounded-lg bg-black px-4 py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? '인증 중...' : '인증하기'}
+          </button>
+        </div>
+
+        {/* 안내 메시지 */}
+        <div className="mt-6 rounded-lg bg-blue-50 p-4">
+          <p className="font-['nanumsquare'] text-sm text-blue-700">
+            • 인증번호는 3분 후 만료됩니다.
+            <br />
+            • 인증번호가 오지 않으면 스팸함을 확인해주세요.
+            <br />• 여러 번 시도해도 인증번호가 오지 않으면 재전송을 눌러주세요.
+          </p>
         </div>
       </div>
     </div>

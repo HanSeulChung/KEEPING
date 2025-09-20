@@ -29,19 +29,23 @@ export namespace AuthAPI {
   // GET /auth/kakao/owner
   // GET /auth/kakao/customer
   
+  // 세션 정보 조회
+  export interface SessionInfoResponse {
+    success: boolean
+    status: number
+    message: string
+    data: string
+    timestamp: string
+  }
+  
   // 회원가입 완료
   export interface CustomerSignupRequest {
-    name: string
-    phone: string
-    nickname?: string
-    profileImage?: string
+    regSessionId: string
+    paymentPin: string
   }
   
   export interface OwnerSignupRequest {
-    name: string
-    phone: string
-    businessNumber?: string
-    profileImage?: string
+    regSessionId: string
   }
   
   export interface SignupCustomerResponse {

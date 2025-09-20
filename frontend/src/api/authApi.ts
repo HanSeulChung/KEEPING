@@ -28,8 +28,8 @@ export const authApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
+      credentials: 'include',
       body: JSON.stringify(data),
     })
 
@@ -49,8 +49,8 @@ export const authApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
+      credentials: 'include',
       body: JSON.stringify(data),
     })
 
@@ -60,6 +60,24 @@ export const authApi = {
 
     const result = await response.json()
     return result.data
+  },
+
+  // 세션 정보 조회
+  getSessionInfo: async (): Promise<AuthAPI.SessionInfoResponse> => {
+    const url = buildURL(API_ENDPOINTS.auth.sessionInfo)
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return await response.json()
   },
 
   // 토큰 갱신

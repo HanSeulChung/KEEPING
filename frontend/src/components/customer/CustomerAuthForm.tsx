@@ -225,6 +225,7 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
           : authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="CUSTOMER"
+        onSuccess={handleOtpSuccess}
       />
     </div>
   )

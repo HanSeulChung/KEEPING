@@ -1,5 +1,6 @@
 'use client'
 
+import { authApi } from '@/api/authApi'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -7,6 +8,7 @@ const CustomerPinSetup = () => {
   const router = useRouter()
   const [pinNumber, setPinNumber] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState({
     pinNumber: false,
     confirmPin: false,
@@ -41,14 +43,50 @@ const CustomerPinSetup = () => {
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleSubmit = () => {
-    if (validateForm()) {
-      // PIN 번호 저장 (실제로는 암호화해서 저장)
-      localStorage.setItem('customerPaymentPin', pinNumber)
-      console.log('결제 PIN 설정 완료:', pinNumber)
+  const handleSubmit = async () => {
+    if (!validateForm()) return
 
-      // 완료 후 메인 페이지나 로그인 페이지로 이동
-      router.push('/customer/login')
+    setIsSubmitting(true)
+    try {
+      // 세션에서 regSessionId 가져오기
+      const sessionInfo = await authApi.getSessionInfo()
+      const regSessionId = sessionInfo.data
+
+      if (!regSessionId) {
+        alert('세션 정보를 찾을 수 없습니다. 다시 로그인해주세요.')
+        router.push('/customer/login')
+        return
+      }
+
+      // 회원가입 완료 API 호출
+      const signupData = {
+        regSessionId: regSessionId,
+        paymentPin: pinNumber
+      }
+
+      console.log('회원가입 요청 데이터:', signupData)
+      
+      const result = await authApi.completeCustomerSignup(signupData)
+      console.log('회원가입 완료:', result)
+
+      // 회원가입 성공 시 토큰 저장
+      if (result.accessToken) {
+        localStorage.setItem('accessToken', result.accessToken)
+        localStorage.setItem('user', JSON.stringify(result.user))
+      }
+
+      // PIN 번호도 localStorage에 저장 (결제 시 사용)
+      localStorage.setItem('customerPaymentPin', pinNumber)
+
+      alert('회원가입이 완료되었습니다!')
+      
+      // 홈페이지로 이동
+      router.push('/customer/home')
+    } catch (error) {
+      console.error('회원가입 실패:', error)
+      alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -153,14 +191,16 @@ const CustomerPinSetup = () => {
         <div className="mt-8 space-y-3">
           <button
             onClick={handleSubmit}
-            className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800"
+            disabled={isSubmitting}
+            className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            PIN 번호 설정 완료
+            {isSubmitting ? '회원가입 중...' : 'PIN 번호 설정 완료'}
           </button>
 
           <button
             onClick={handleBack}
-            className="w-full rounded-lg bg-gray-200 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-300"
+            disabled={isSubmitting}
+            className="w-full rounded-lg bg-gray-200 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             이전 단계로
           </button>

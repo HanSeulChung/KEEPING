@@ -128,8 +128,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             regCookie.setMaxAge(300); // 5분 만료
             response.addCookie(regCookie);
 
-// URL에서는 regSessionId 제거
-            response.sendRedirect(feBaseUrl + "/owner/register/step1");
+            if(role.equals(UserRole.CUSTOMER)){
+                response.sendRedirect(feBaseUrl + "/customer/register/step1");
+            }
+            else {
+                response.sendRedirect(feBaseUrl + "/owner/register/step1");
+            }
         }
 
     }

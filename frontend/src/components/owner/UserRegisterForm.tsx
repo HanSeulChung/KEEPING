@@ -1,9 +1,8 @@
 'use client'
 
-import { buildURL } from '@/api/config';
 import OtpVerificationModal from '@/components/common/OtpVerificationModal';
 import { AuthForm } from '@/types'; // 기존 타입 사용
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface UserRegisterFormProps {
   onNext?: () => void
@@ -12,7 +11,6 @@ interface UserRegisterFormProps {
 export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
-  const [sessionRegSessionId, setSessionRegSessionId] = useState<string | null>(null)
   const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
@@ -21,52 +19,28 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     genderCode: '',
   })
 
-  useEffect(() => {
-    // 세션에서 regSessionId 가져오기
-    const fetchSessionInfo = async () => {
-      try {
-        const response = await fetch(buildURL('/auth/session-info'), {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        })
-        const data = await response.json()
-        if (data.success && data.data) {
-          setSessionRegSessionId(data.data as string)
-          console.log('세션에서 가져온 regSessionId:', data.data)
-        } else {
-          console.log('세션 정보를 가져올 수 없습니다.')
-        }
-      } catch (error) {
-        console.error('세션 정보 조회 실패:', error)
-      }
-    }
-
-    fetchSessionInfo()
-  }, [])
-
   const handlePassAuth = () => {
     if (!authForm.phoneNumber) {
       alert('전화번호를 먼저 입력해주세요.')
       return
     }
-    if (!sessionRegSessionId) {
-      alert('세션 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-      return
-    }
     setIsOtpModalOpen(true)
   }
 
-  const handleOtpSuccess = () => {
+  const handleOtpSuccess = (token?: string) => {
+    console.log('OTP 인증 성공 콜백 호출됨')
+    console.log('받은 token 값:', token)
+
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
 
-    // 세션에서 가져온 UUID만 저장(모달에서 받은 토큰 무시)
-    if (sessionRegSessionId) {
-      localStorage.setItem('regSessionId', sessionRegSessionId)
-      console.log('세션 regSessionId 저장:', sessionRegSessionId)
+    // OTP에서 받은 token을 localStorage에 저장
+    if (token) {
+      localStorage.setItem('regSessionId', token)
+      console.log('OTP에서 받은 token을 regSessionId로 저장:', token)
     }
-    console.log('인증 완료 → 다음 단계 버튼 활성화')
+
+    console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')
   }
 
   const handleFormChange = (field: keyof AuthForm, value: string) => {
@@ -111,21 +85,6 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* 세션 상태 */}
-      {!sessionRegSessionId ? (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="text-center font-['nanumsquare'] font-bold text-blue-800">
-            🔄 세션 정보를 불러오는 중...
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-          <p className="text-center font-['nanumsquare'] font-bold text-green-800">
-            ✅ 세션 정보를 성공적으로 가져왔습니다
-          </p>
-        </div>
-      )}
-
       {/* 입력 폼 */}
       <div className="space-y-4">
         <div>

@@ -20,6 +20,8 @@ export const endpoints = {
     logout: '/auth/logout',
     // 토큰 갱신
     refresh: '/auth/refresh',
+    // 세션 정보 조회
+    sessionInfo: '/auth/session-info',
     // 소셜 로그인 (카카오)
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',

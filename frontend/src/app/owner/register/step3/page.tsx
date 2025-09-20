@@ -89,13 +89,10 @@ const StoreRegistration = () => {
   const handleSubmit = async () => {
     if (validateForm()) {
       try {
-        // 쿠키에서 regSessionId를 직접 가져오기 (백엔드에서 받은 값)
-        const regSessionId = document.cookie
-          .split(';')
-          .find(cookie => cookie.trim().startsWith('regSessionId='))
-          ?.split('=')[1]
+        // localStorage에서 regSessionId 가져오기
+        const regSessionId = localStorage.getItem('regSessionId')
 
-        console.log('회원가입에 사용할 regSessionId (쿠키에서):', regSessionId)
+        console.log('회원가입에 사용할 regSessionId (localStorage에서):', regSessionId)
 
         if (!regSessionId) {
           console.error('regSessionId를 찾을 수 없습니다!')
