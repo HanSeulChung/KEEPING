@@ -7,6 +7,7 @@ import com.ssafy.keeping.domain.auth.enums.AuthProvider;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.user.dto.UserProfile;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
@@ -16,6 +17,9 @@ import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
 import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
+import com.ssafy.keeping.domain.user.owner.service.OwnerService;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +69,7 @@ public class AuthService {
         if (role == null) {
             throw new IllegalArgumentException("Role cannot be null");
         }
-        
+
         AuthProvider providerType = toProviderType(provider);
 
         return switch (role) {
@@ -186,6 +190,26 @@ public class AuthService {
 
         return SignupOwnerResponse.builder().user(ownerResponse).token(token.withoutRefreshToken()).build();
 
+    }
+
+    // 유저 프로필 조회
+    public UserProfile getCurrentUserProfile(Long userId, UserRole role) {
+        switch (role) {
+            case CUSTOMER:
+                Customer customer = customerRepository.findByCustomerIdAndDeletedAtIsNull(userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+                return UserProfile.fromCustomer(customer);
+
+            case OWNER:
+                Owner owner = ownerRepository.findByOwnerIdAndDeletedAtIsNull(userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+                return UserProfile.fromOwner(owner);
+
+            default:
+                throw new CustomException(ErrorCode.INVALID_ROLE);
+        }
     }
 
 
