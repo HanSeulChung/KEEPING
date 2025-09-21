@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -35,12 +36,12 @@ public class CancelController {
      * @param pageable 페이지네이션 정보 (기본: page=0, size=10, sort=createdAt,desc)
      * @return 취소 가능한 거래 목록
      */
-    @GetMapping("/{customerId}/cancel-list")
+    @GetMapping("/cancel-list")
     public ResponseEntity<ApiResponse<Page<CancelListResponseDto>>> getCancelableTransactions(
-            @PathVariable Long customerId, // JWT 들오면 바꿔야함
+            @AuthenticationPrincipal Long customerId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        
-        log.info("취소 가능한 거래 목록 조회 요청 - 고객ID: {}, 페이지: {}, 크기: {}", 
+
+        log.info("취소 가능한 거래 목록 조회 요청 - 고객ID: {}, 페이지: {}, 크기: {}",
                 customerId, pageable.getPageNumber(), pageable.getPageSize());
 
         Page<CancelListResponseDto> cancelableTransactions = cancelService
@@ -64,9 +65,9 @@ public class CancelController {
      * @param cancelRequestDto 취소 요청 정보 (transactionUniqueNo, cardNo, cvc)
      * @return 취소 처리 결과
      */
-    @PostMapping("/{customerId}/payments/cancel")
+    @PostMapping("/payments/cancel")
     public ResponseEntity<ApiResponse<CancelResponseDto>> cancelPayment(
-            @PathVariable Long customerId, // JWT 들오면 바꿔야함
+            @AuthenticationPrincipal Long customerId,
             @RequestBody @Valid CancelRequestDto cancelRequestDto) {
         
         log.info("카드 결제 취소 요청 - 거래번호: {}, 카드번호: {}", 

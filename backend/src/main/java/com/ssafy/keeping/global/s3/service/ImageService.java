@@ -3,21 +3,18 @@ package com.ssafy.keeping.global.s3.service;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.menu.repository.MenuRepository;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
-import com.ssafy.keeping.global.s3.service.S3Service;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -29,7 +26,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final S3Service s3Service;
     private final AmazonS3 amazonS3;
     private final CustomerRepository customerRepository;
     private final OwnerRepository ownerRepository;
@@ -40,7 +36,7 @@ public class ImageService {
     private String bucketName;
 
     // 이미지 저장/업데이트
-    public String updateProfileImage(String oldImgUrl, MultipartFile newImage) throws IOException {
+    public String updateProfileImage(String oldImgUrl, MultipartFile newImage) {
 
         deleteFileFromS3(oldImgUrl);
 
@@ -51,7 +47,31 @@ public class ImageService {
         metadata.setContentType(newImage.getContentType());
         metadata.setContentLength(newImage.getSize());
 
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, newImage.getInputStream(), metadata);
+        PutObjectRequest putObjectRequest = null;
+        try {
+            putObjectRequest = new PutObjectRequest(bucketName, fileName, newImage.getInputStream(), metadata);
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
+        }
+        amazonS3.putObject(putObjectRequest);
+
+        return getPublicUrl(fileName);
+    }
+
+    public String uploadImage(MultipartFile image) {
+        String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
+
+        // 메타데이터 설정
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(image.getContentType());
+        metadata.setContentLength(image.getSize());
+
+        PutObjectRequest putObjectRequest = null;
+        try {
+            putObjectRequest = new PutObjectRequest(bucketName, fileName, image.getInputStream(), metadata);
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
+        }
         amazonS3.putObject(putObjectRequest);
 
         return getPublicUrl(fileName);

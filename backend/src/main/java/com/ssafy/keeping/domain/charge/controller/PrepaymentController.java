@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -35,13 +36,14 @@ public class PrepaymentController {
     @PostMapping("/{storeId}/prepayment")
     public ResponseEntity<ApiResponse<PrepaymentResponseDto>> processPrePayment(
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
+            @AuthenticationPrincipal Long customerId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody @Valid PrepaymentRequestDto requestDto) {
-        
-        log.info("선결제 요청 수신 - 가게ID: {}, 사용자ID: {}, 금액: {}, 멱등키: {}", 
-                storeId, requestDto.getUserId(), requestDto.getPaymentBalance(), idempotencyKey);
 
-        IdempotentResult<PrepaymentResponseDto> result = prepaymentService.processPayment(storeId, idempotencyKey, requestDto);
+        log.info("선결제 요청 수신 - 가게ID: {}, 사용자ID: {}, 금액: {}, 멱등키: {}",
+                storeId, customerId, requestDto.getPaymentBalance(), idempotencyKey);
+
+        IdempotentResult<PrepaymentResponseDto> result = prepaymentService.processPayment(storeId, customerId, idempotencyKey, requestDto);
         
         PrepaymentResponseDto responseDto = result.getBody();
         HttpStatus httpStatus = result.getHttpStatus();

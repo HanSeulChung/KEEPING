@@ -45,11 +45,12 @@ public class SecurityConfig {
             "/.well-known/**",
             "/s3/**",
             "/owners/stores/**",
-            "/api/v1/stores/**"
+            "/api/v1/stores/**",
+            "/ocr/*"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
-            "/stores/**",
+            "/stores/**", // 통계 API (/stores/{storeId}/statistics/**) 포함
             "/api/**",
             "/api/v1/stores/**",
             "/wallets/**",
@@ -168,6 +169,8 @@ public class SecurityConfig {
                         .requestMatchers("/cpqr/new").hasRole("CUSTOMER")
                         .requestMatchers("/cpqr/*/initiate").hasRole("OWNER")
                         .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
+                        .requestMatchers("/stores/*/transactions/*/refund").hasRole("OWNER")
+
 
                                 // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()

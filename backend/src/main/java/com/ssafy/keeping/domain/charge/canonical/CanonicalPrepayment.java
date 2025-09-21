@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CanonicalPrepayment {
 
-    private Long userId;
     private String cardNo;
     private String cvc;
     private Long paymentBalance;
