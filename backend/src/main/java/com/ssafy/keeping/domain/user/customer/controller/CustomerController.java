@@ -6,6 +6,7 @@ import com.ssafy.keeping.global.s3.service.ImageService;
 import com.ssafy.keeping.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,7 +21,7 @@ public class CustomerController {
 
 
     // 프로필 이미지 수정
-    @PostMapping("/{customerId}/profile-image/upload")
+    @PostMapping(value = "/{customerId}/profile-image/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProfileUploadResponse>> uploadProfileImage(@PathVariable Long customerId,
                                                                                  @RequestParam("file") MultipartFile file) {
         ProfileUploadResponse response = customerService.uploadProfileImage(customerId, file);
