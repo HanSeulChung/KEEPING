@@ -119,10 +119,34 @@ const fetchChargeOptions = async (storeId: number): Promise<ChargeOptionData[]> 
   }
 }
 
+// 거래 내역 API 응답 타입
+interface WalletTransactionResponse {
+  success: boolean
+  status: number
+  message: string
+  data: {
+    storeId: number
+    storeName: string
+    currentBalance: number
+    transactions: {
+      content: TransactionDetail[]
+      totalElements: number
+      totalPages: number
+      first: boolean
+      last: boolean
+      size: number
+      number: number
+      numberOfElements: number
+      empty: boolean
+    }
+  }
+  timestamp: string
+}
+
 // 거래 내역 API 호출 함수
-const fetchWalletTransactions = async (groupId: number, storeId: number): Promise<Transaction[]> => {
+const fetchWalletTransactions = async (groupId: number, storeId: number, page: number = 0): Promise<WalletTransactionResponse> => {
   try {
-    const response = await fetch(buildURL(`/wallets/individual/stores/${storeId}/detail`), {
+    const response = await fetch(buildURL(`/wallets/individual/stores/${storeId}/detail?page=${page}&size=10`), {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -137,26 +161,10 @@ const fetchWalletTransactions = async (groupId: number, storeId: number): Promis
     const result = await response.json()
     console.log('거래 내역 API 응답:', result)
 
-    // API 응답 데이터를 Transaction 형식으로 변환
-    const transactions: Transaction[] = result.data.transactions.content.map((transaction: TransactionDetail, index: number) => ({
-      id: index + 1,
-      type: transaction.transactionType.includes('CHARGE') || transaction.transactionType.includes('충전') ? 'charge' : 'usage',
-      amount: transaction.amount,
-      date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
-      transactionId: transaction.transactionId,
-      transactionType: transaction.transactionType,
-      transactionUniqueNo: transaction.transactionUniqueNo,
-      createdAt: transaction.createdAt,
-    }))
-
-    return transactions
+    return result
   } catch (error) {
     console.error('거래 내역 조회 실패:', error)
-    // 에러 발생 시 더미 데이터 반환
-    return [
-      { id: 1, type: 'charge', amount: 35000, date: '2025-09-01' },
-      { id: 2, type: 'usage', amount: 12000, date: '2025-09-07' },
-    ]
+    throw error
   }
 }
 
@@ -471,23 +479,62 @@ const Pagination = ({
   totalPages: number
   onPageChange: (page: number) => void
 }) => {
+  if (totalPages <= 1) return null
+
+  const getPageNumbers = () => {
+    const pages = []
+    const maxVisiblePages = 5
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 0; i < totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      const startPage = Math.max(0, currentPage - 2)
+      const endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1)
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i)
+      }
+    }
+    
+    return pages
+  }
+
   return (
-    <div className="w-[382px] h-[55px] relative overflow-hidden">
-      <div className="w-[30px] h-[30px]">
-        <div className="w-[30px] h-[30px] absolute left-[141px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-          <p className="text-[15px] font-bold text-black">1</p>
-        </div>
-      </div>
-      <div className="w-[65px] h-[30px]">
-        <div className="w-[30px] h-[30px] absolute left-[177px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-          <p className="text-[15px] font-bold text-black">2</p>
-        </div>
-        <div className="w-[30px] h-[30px]">
-          <div className="w-[30px] h-[30px] absolute left-[212px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-            <p className="text-[15px] font-bold text-black">3</p>
-          </div>
-        </div>
-      </div>
+    <div className="flex items-center justify-center gap-2 py-4">
+      {/* 이전 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 0}
+        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
+      >
+        ←
+      </button>
+      
+      {/* 페이지 번호들 */}
+      {getPageNumbers().map(page => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`flex h-8 w-8 items-center justify-center rounded border text-sm ${
+            currentPage === page
+              ? 'border-black bg-black text-white'
+              : 'border-gray-300 bg-white text-black hover:bg-gray-50'
+          }`}
+        >
+          {page + 1}
+        </button>
+      ))}
+      
+      {/* 다음 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages - 1}
+        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
+      >
+        →
+      </button>
     </div>
   )
 }
@@ -505,6 +552,8 @@ export const MyWallet = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [transactionsError, setTransactionsError] = useState<string | null>(null)
+  const [currentTransactionPage, setCurrentTransactionPage] = useState(0)
+  const [totalTransactionPages, setTotalTransactionPages] = useState(0)
   
   // 충전 옵션 관련 상태
   const [chargeOptions, setChargeOptions] = useState<ChargeOptionData[]>([])
@@ -539,7 +588,7 @@ export const MyWallet = () => {
       const selectedCardData = walletCards.find(card => card.id === selectedCard)
       if (selectedCardData?.storeId) {
         if (activeTab === 'history') {
-          loadTransactions(selectedCardData.storeId)
+          loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
         } else if (activeTab === 'charge') {
           loadChargeOptions(selectedCardData.storeId)
         }
@@ -551,16 +600,41 @@ export const MyWallet = () => {
     setSelectedCard(cardId)
   }
 
+  const handleTransactionPageChange = (page: number) => {
+    const selectedCardData = walletCards.find(card => card.id === selectedCard)
+    if (selectedCardData?.storeId) {
+      loadTransactions(selectedCardData.storeId, page)
+    }
+  }
+
+
   // 거래 내역 로드 함수
-  const loadTransactions = async (storeId: number) => {
+  const loadTransactions = async (storeId: number, page: number = 0) => {
     try {
       setTransactionsLoading(true)
       setTransactionsError(null)
       
       // 임시로 groupId를 1로 설정 (실제로는 사용자의 그룹 ID를 가져와야 함)
       const groupId = 1
-      const transactionData = await fetchWalletTransactions(groupId, storeId)
-      setTransactions(transactionData)
+      const result = await fetchWalletTransactions(groupId, storeId, page)
+      
+      if (result.success && result.data) {
+        // API 응답 데이터를 Transaction 형식으로 변환
+        const transactions: Transaction[] = result.data.transactions.content.map((transaction: TransactionDetail, index: number) => ({
+          id: index + 1,
+          type: transaction.transactionType.includes('CHARGE') || transaction.transactionType.includes('충전') ? 'charge' : 'usage',
+          amount: transaction.amount,
+          date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
+          transactionId: transaction.transactionId,
+          transactionType: transaction.transactionType,
+          transactionUniqueNo: transaction.transactionUniqueNo,
+          createdAt: transaction.createdAt,
+        }))
+        
+        setTransactions(transactions)
+        setCurrentTransactionPage(result.data.transactions.number)
+        setTotalTransactionPages(result.data.transactions.totalPages)
+      }
     } catch (err) {
       console.error('거래 내역 로드 실패:', err)
       setTransactionsError('거래 내역을 불러오는데 실패했습니다.')
@@ -592,7 +666,7 @@ export const MyWallet = () => {
     const selectedCardData = walletCards.find(card => card.id === selectedCard)
     if (selectedCardData?.storeId) {
       if (tabKey === 'history') {
-        loadTransactions(selectedCardData.storeId)
+        loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
       } else if (tabKey === 'charge') {
         loadChargeOptions(selectedCardData.storeId)
       }
@@ -720,6 +794,15 @@ export const MyWallet = () => {
             ))
           )}
         </div>
+      )}
+
+      {/* 페이지네이션 - 사용내역 탭에서만 표시 */}
+      {activeTab === 'history' && (
+        <Pagination
+          currentPage={currentTransactionPage}
+          totalPages={totalTransactionPages}
+          onPageChange={handleTransactionPageChange}
+        />
       )}
 
       {activeTab === 'charge' && (
