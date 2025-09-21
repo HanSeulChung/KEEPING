@@ -84,7 +84,7 @@ public class PrepaymentService {
      *   IN_PROGRESS(타 프로세스 선점)     → 202 Accepted
      *   신규                            → 본 처리 수행 → DONE 기록 후 201 Created
      */
-    public IdempotentResult<PrepaymentResponseDto> processPayment(Long storeId, String idempotencyKeyHeader, PrepaymentRequestDto requestDto) {
+    public IdempotentResult<PrepaymentResponseDto> processPayment(Long storeId, Long customerId, String idempotencyKeyHeader, PrepaymentRequestDto requestDto) {
         // 입력 검증
         if (requestDto == null) {
             throw new CustomException(ErrorCode.INVALID_REQUEST);
@@ -102,7 +102,7 @@ public class PrepaymentService {
         UUID keyUuid = UUID.fromString(idempotencyKeyHeader);
         // 클라이언트가 보내준 텍스트(String) 형식의 키를, 서버가 사용하기 좋은 객체(UUID) 형식으로 변환
         String path = "/stores/" + storeId + "/prepayment";
-        IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.CUSTOMER, requestDto.getUserId(), "POST", path, keyUuid, bodyHash);
+        IdemBegin begin = idempotencyService.beginOrLoad(IdemActorType.CUSTOMER, customerId, "POST", path, keyUuid, bodyHash);
         // 이미 키가 있으면 기존 상태를 로드하고, 없으면 새로 생성해서 IN_PROGRESS로 설정
         IdempotencyKey slot = begin.getRow();
 
@@ -128,7 +128,7 @@ public class PrepaymentService {
         }
 
         // 1. 사용자 정보 조회 및 검증
-        Customer customer = customerRepository.findById(requestDto.getUserId())
+        Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CUSTOMER_NOT_FOUND));
 
         String userKey = customer.getUserKey();
@@ -293,7 +293,6 @@ public class PrepaymentService {
      */
     private String canonicalizeRequestBody(PrepaymentRequestDto requestDto) {
         CanonicalPrepayment canonical = CanonicalPrepayment.builder()
-                .userId(requestDto.getUserId())
                 .cardNo(requestDto.getCardNo())
                 .cvc(requestDto.getCvc())
                 .paymentBalance(requestDto.getPaymentBalance())
