@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { buildURL } from '@/api/config'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -17,10 +19,8 @@ export async function POST(request: NextRequest) {
     console.log('OTP 요청 (포맷팅 후):', body)
 
     // 백엔드 API 호출
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
-    
     // 백엔드로 요청할 때 쿠키 전달
-    const response = await fetch(`${backendUrl}/otp/request`, {
+    const response = await fetch(buildURL('/otp/request'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

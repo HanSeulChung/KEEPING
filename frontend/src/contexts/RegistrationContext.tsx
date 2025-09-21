@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, ReactNode, useContext, useState } from 'react'
 
 // 사업자 정보 타입
 export interface BusinessInfo {
@@ -14,17 +14,13 @@ export interface BusinessInfo {
 // 점주 등록 전체 데이터 타입
 export interface OwnerRegistrationData {
   // Step 1 데이터
-  step1?: {
-    // 필요시 추가
-  }
+  step1?: Record<string, unknown>
 
   // Step 2 데이터 (사업자 인증)
   businessInfo?: BusinessInfo
 
   // Step 3 데이터
-  step3?: {
-    // 추가 정보들이 들어갈 예정
-  }
+  step3?: Record<string, unknown>
 }
 
 // Context 타입

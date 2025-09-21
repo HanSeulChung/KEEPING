@@ -1,5 +1,8 @@
 'use client'
+
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react'
+
+import { buildURL } from '@/api/config'
 
 interface User {
   userId: number
@@ -35,7 +38,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('🔄 앱 시작 - 토큰 초기화')
       
       // refresh token(쿠키)으로 access token 발급 - 타임아웃 증가
-      const response = await fetch('http://localhost:8080/auth/refresh', {
+      const response = await fetch(buildURL('/auth/refresh'), {
         method: 'POST',
         credentials: 'include', // refresh token 쿠키 포함
         signal: AbortSignal.timeout(30000) // 30초 타임아웃
@@ -46,26 +49,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
       
       const data = await response.json()
-      console.log('✅ 토큰 갱신 성공:', data)
       
       // localStorage에 access token 저장
       const accessToken = data.data.accessToken
       localStorage.setItem('accessToken', accessToken)
-      console.log('💾 accessToken을 localStorage에 저장:', accessToken.substring(0, 20) + '...')
       
       return accessToken
     } catch (error) {
-      console.error('❌ 토큰 초기화 실패:', error)
       throw error
     }
   }
 
-  // 이후 API 호출 시 (클로드 방식)
   const getCurrentUser = async (accessToken: string) => {
     try {
-      console.log('👤 사용자 정보 조회')
-      
-      const response = await fetch('http://localhost:8080/auth/me', {
+      const response = await fetch(buildURL('/auth/me'), {
         credentials: 'include',
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -78,11 +75,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
       
       const userData = await response.json()
-      console.log('✅ 사용자 데이터:', userData)
       
       return userData.data
     } catch (error) {
-      console.error('❌ 사용자 정보 조회 실패:', error)
       throw error
     }
   }
@@ -91,22 +86,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      
-      console.log('⏳ 토큰 갱신 시작...')
-      
-      // 1. 토큰 초기화 (더 오래 기다림)
+   
       const accessToken = await initializeAuth()
       
-      console.log('⏳ 사용자 정보 조회 시작...')
-      
-      // 2. 사용자 정보 조회
       const userData = await getCurrentUser(accessToken)
       setUser(userData)
       
-      console.log('🎉 인증 완료!')
-      
     } catch (err) {
-      console.error('❌ fetchUser 에러:', err)
       
       // 에러 타입별 처리
       if (err instanceof Error) {

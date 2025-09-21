@@ -39,7 +39,7 @@ export default function OwnerLogin() {
       <div className="mb-10">
         <Image
           src="/customer.png"
-          alt="고객객 캐릭터"
+          alt="고객 캐릭터"
           width={180}
           height={180}
           priority
@@ -89,11 +89,12 @@ export default function OwnerLogin() {
 
       {/* 고객 로그인 링크 */}
       <Link
-        href="/customer/login"
+        href="/owner/login"
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
       >
-        <Image src="/customer.png" alt="고객 아이콘" width={20} height={20} />
-        <span className="font-medium text-yellow-600">고객</span>
+        <span className="font-medium text-blue-600">사장님님</span>
+        <Image src="/owner.png" alt="사장님 아이콘" width={20} height={20} />
+        <span>으로 로그인하기</span>
       </Link>
     </div>
   )

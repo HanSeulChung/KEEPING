@@ -1,6 +1,8 @@
 import { endpoints as API_ENDPOINTS, buildURL } from '@/api/config'
 import { AuthAPI } from '@/types/api'
 
+import apiClient from './axios'
+
 // 인증 관련 API 함수들
 export const authApi = {
   kakaoOwnerLogin: () => {

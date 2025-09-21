@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { buildURL } from '@/api/config'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -7,9 +9,7 @@ export async function POST(request: NextRequest) {
     console.log('점주 회원가입 요청:', body)
 
     // 백엔드 API 호출
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
-    
-    const response = await fetch(`${backendUrl}/auth/signup/owner`, {
+    const response = await fetch(buildURL('/auth/signup/owner'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

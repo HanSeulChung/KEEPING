@@ -5,7 +5,7 @@ import { GroupCreateModal } from '../ui/GroupCreateModal'
 import { PaymentModal } from '../ui/PaymentModal'
 import FindGroup from './findGroup'
 
-import { apiConfig, endpoints } from '@/api/config'
+import { apiConfig, buildURL, endpoints } from '@/api/config'
 
 const createGroup = async (groupData: {
   groupLeaderId: number
@@ -13,7 +13,7 @@ const createGroup = async (groupData: {
   groupDescription: string
 }) => {
   try {
-    const url = `${apiConfig.baseURL}${endpoints.group.create}`
+    const url = buildURL(endpoints.group.create)
 
     const response = await fetch(url, {
       method: 'POST',
@@ -319,6 +319,7 @@ const ShareSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           amount={parseInt(shareAmount) || 0}
+          storeId="0"
           onPayment={() => {
             console.log(`${selectedCard.name} 포인트 공유 완료:`, shareAmount)
             // 공유 완료 후 로직

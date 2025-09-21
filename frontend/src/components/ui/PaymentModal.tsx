@@ -66,9 +66,6 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment, storeId }: Pa
         throw new Error('로그인이 필요합니다.')
       }
 
-      // HttpOnly 쿠키는 자동으로 전송됨
-
-      // 디버깅: 전송할 데이터 확인
       const requestBody = {
         cardNo: fullCardNumber,
         cvc: cvc,
@@ -82,18 +79,6 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment, storeId }: Pa
         'Idempotency-Key': idempotencyKey
       }
 
-      console.log('=== 결제 요청 데이터 ===')
-      console.log('전송할 요청 데이터:', requestBody)
-      console.log('카드번호:', fullCardNumber, '길이:', fullCardNumber.length)
-      console.log('CVC:', cvc, '길이:', cvc.length)
-      console.log('결제 금액:', amount)
-      console.log('사용자 ID:', user.userId)
-      console.log('=== 요청 헤더 정보 ===')
-      console.log('Content-Type:', headers['Content-Type'])
-      console.log('Idempotency-Key:', headers['Idempotency-Key'])
-      console.log('credentials:', 'include')
-      console.log('========================')
-
       // API 요청
       const response = await fetch(buildURL(`/api/v1/stores/${storeId}/prepayment`), {
         method: 'POST',
@@ -102,13 +87,6 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment, storeId }: Pa
         body: JSON.stringify(requestBody)
       })
 
-      // 응답 헤더 로그 출력
-      console.log('=== 응답 헤더 정보 ===')
-      response.headers.forEach((value, key) => {
-        console.log(`${key}: ${value}`)
-      })
-      console.log('응답 상태:', response.status, response.statusText)
-      console.log('===================')
 
       if (!response.ok) {
         const errorData = await response.json()
