@@ -3,8 +3,9 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { GroupCreateModal } from '../ui/GroupCreateModal'
 import { PaymentModal } from '../ui/PaymentModal'
+import FindGroup from './findGroup'
 
-import { apiConfig, endpoints } from '@/api/config'
+import { apiConfig, buildURL, endpoints } from '@/api/config'
 
 const createGroup = async (groupData: {
   groupLeaderId: number
@@ -12,14 +13,13 @@ const createGroup = async (groupData: {
   groupDescription: string
 }) => {
   try {
-    const url = `${apiConfig.baseURL}${endpoints.group.create}`
+    const url = buildURL(endpoints.group.create)
 
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         ...apiConfig.headers,
-        // 필요한 경우 Authorization 헤더 추가
-        // 'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         groupLeaderId: groupData.groupLeaderId,
@@ -319,6 +319,7 @@ const ShareSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           amount={parseInt(shareAmount) || 0}
+          storeId="0"
           onPayment={() => {
             console.log(`${selectedCard.name} 포인트 공유 완료:`, shareAmount)
             // 공유 완료 후 로직
@@ -772,6 +773,12 @@ export const GroupWallet = () => {
           isOpen={isGroupCreateModalOpen}
           onClose={() => setIsGroupCreateModalOpen(false)}
           onCreateGroup={handleCreateGroup}
+        />
+
+        {/* 그룹 검색 모달 */}
+        <FindGroup
+          isOpen={isFindGroupOpen}
+          onClose={() => setIsFindGroupOpen(false)}
         />
       </div>
     </div>

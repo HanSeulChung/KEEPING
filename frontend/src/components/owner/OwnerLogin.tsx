@@ -12,7 +12,7 @@ export default function OwnerLogin() {
   const { login } = useAuthStore()
   const [loading, setLoading] = useState<string | null>(null)
 
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+  const handleSocialLogin = async (provider: 'kakao') => {
     setLoading(provider)
 
     try {
@@ -21,10 +21,12 @@ export default function OwnerLogin() {
         authApi.kakaoOwnerLogin()
         return
       }
-      if (provider === 'google') {
-        authApi.googleOwnerLogin()
-        return
-      }
+      
+      // if (provider === 'google') {
+      //   authApi.googleOwnerLogin()
+      //   return
+      // }
+
     } catch (error) {
       console.error('로그인 오류:', error)
       alert(`로그인 중 오류가 발생했습니다: ${error}`)
@@ -51,8 +53,8 @@ export default function OwnerLogin() {
         사장님 로그인
       </h1>
 
-      {/* Google 버튼 */}
-      <button
+      {/* Google 버튼 - 주석처리 */}
+      {/* <button
         onClick={() => handleSocialLogin('google')}
         disabled={loading !== null}
         className="mb-4 flex h-12 w-72 items-center rounded-lg border border-[#DADCE0] bg-white transition hover:shadow-md disabled:opacity-50"
@@ -67,7 +69,7 @@ export default function OwnerLogin() {
         <span className="flex-1 text-center text-sm font-medium text-[#3C4043]">
           {loading === 'google' ? '로그인 중...' : 'Google로 시작하기'}
         </span>
-      </button>
+      </button> */}
 
       {/* Kakao 버튼 */}
       <button

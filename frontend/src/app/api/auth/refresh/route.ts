@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { buildURL } from '@/api/config'
+
 export async function POST(request: NextRequest) {
   try {
     // 쿠키에서 refresh token 추출
@@ -13,9 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 백엔드 API 호출
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
-    
-    const response = await fetch(`${backendUrl}/auth/refresh`, {
+    const response = await fetch(buildURL('/auth/refresh'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

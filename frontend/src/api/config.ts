@@ -24,12 +24,14 @@ export const endpoints = {
     logout: '/auth/logout',
     // 토큰 갱신
     refresh: '/auth/refresh',
+    // 세션 정보 조회
+    sessionInfo: '/auth/session-info',
     // 소셜 로그인 (카카오)
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',
     // 소셜 로그인 (구글) - 향후 구현
-    googleOwner: '/auth/google/owner',
-    googleCustomer: '/auth/google/customer',
+    // googleOwner: '/auth/google/owner',
+    // googleCustomer: '/auth/google/customer',
     // 회원가입 완료
     signupCustomer: '/auth/signup/customer',
     signupOwner: '/auth/signup/owner',
@@ -77,6 +79,7 @@ export const endpoints = {
     updateCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     deleteCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     listCategory: '/stores/{storeId}/menus/categories',
+    menuByCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     // 매출 관리
     salesCalendar: '/owners/stores/{storeId}/sales/calendar',
     salesStats: '/owners/stores/{storeId}/sales/stats',

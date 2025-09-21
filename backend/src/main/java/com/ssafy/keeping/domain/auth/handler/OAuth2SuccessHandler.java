@@ -7,6 +7,7 @@ import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -121,14 +122,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 ));
                 return;
             }
+            Cookie regCookie = new Cookie("regSessionId", regSessionId);
+            regCookie.setHttpOnly(true);
+            regCookie.setSecure(false);
+            regCookie.setPath("/");
+            regCookie.setMaxAge(300); // 5분 만료
+            response.addCookie(regCookie);
 
-            if(role == UserRole.OWNER) {
-                response.sendRedirect(feBaseUrl + "/owner/register/step1?regSessionId=" + regSessionId);
-                return;
+            if(role.equals(UserRole.CUSTOMER)){
+                response.sendRedirect("/customer/register/step1");
             }
-
-            if(role == UserRole.CUSTOMER) {
-                response.sendRedirect(feBaseUrl + "/customer/register/step1" + regSessionId);
+            else {
+                response.sendRedirect("/owner/register/step1");
             }
         }
 

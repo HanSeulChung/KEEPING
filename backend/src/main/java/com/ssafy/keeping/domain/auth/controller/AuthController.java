@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.Cookie;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -286,5 +287,29 @@ public class AuthController {
         } catch (Exception e) {
             return "<p>Error: " + e.getMessage() + "</p>";
         }
+    }
+
+    @GetMapping("/session-info")
+    public ResponseEntity<ApiResponse<String>> getRegSessionId(HttpServletRequest request) {
+        System.out.println("[DEBUG] /auth/session-info called");
+
+        // 모든 쿠키 출력
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                System.out.println("[DEBUG] Cookie found: " + cookie.getName() + " = " + cookie.getValue());
+            }
+        } else {
+            System.out.println("[DEBUG] No cookies found in request");
+        }
+
+        String regSessionId = cookieUtil.getRegSessionIdFromCookie(request);
+        System.out.println("[DEBUG] Extracted regSessionId: " + regSessionId);
+
+        if (regSessionId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("세션 정보를 찾을 수 없습니다", 404));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("세션 정보 조회 성공", 200, regSessionId));
     }
 }

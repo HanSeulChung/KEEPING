@@ -104,7 +104,6 @@ const KeepingPassAuth = ({
         birth={birth}
         genderDigit={genderDigit}
         userRole={userRole}
-        purpose={purpose}
         onSuccess={handleOtpSuccess}
       />
     </div>

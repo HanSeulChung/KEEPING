@@ -62,7 +62,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleDataIntegrity(DataIntegrityViolationException e) {
+        log.error("DataIntegrityViolationException 발생: {}", e.getMessage(), e);
+
         if (isUniqueViolation(e)) {
+            // 정확한 에러 메시지 로깅
+            Throwable cause = e.getCause();
+            while (cause != null) {
+                log.error("Cause: {}", cause.getMessage());
+                cause = cause.getCause();
+            }
+
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error("중복되는 입력값입니다.", 409));
         }
@@ -73,11 +82,18 @@ public class GlobalExceptionHandler {
     private boolean isUniqueViolation(Throwable t) {
         while (t != null) {
             if (t instanceof org.hibernate.exception.ConstraintViolationException cve) {
-                String state = cve.getSQLState();    // MySQL/MariaDB: 23000, Postgres: 23505
-                int code = cve.getErrorCode();       // MySQL dup: 1062
+                // 자세한 정보 로깅 추가
+                log.error("ConstraintViolationException - SQL: {}, SQLState: {}, ErrorCode: {}",
+                        cve.getSQL(), cve.getSQLState(), cve.getErrorCode());
+
+                String state = cve.getSQLState();
+                int code = cve.getErrorCode();
                 if ("23000".equals(state) || "23505".equals(state) || code == 1062) return true;
             }
-            if (t instanceof java.sql.SQLIntegrityConstraintViolationException) return true;
+            if (t instanceof java.sql.SQLIntegrityConstraintViolationException) {
+                log.error("SQLIntegrityConstraintViolationException: {}", t.getMessage());
+                return true;
+            }
             t = t.getCause();
         }
         return false;

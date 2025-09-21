@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import React from "react";
 
 import ConditionalLayout from "@/components/ConditionalLayout";
+import { UserProvider } from "@/contexts/UserContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,9 +33,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-white text-black">
-        <ConditionalLayout>
-          {children}
-        </ConditionalLayout>
+        <UserProvider>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+        </UserProvider>
       </body>
     </html>
   );
