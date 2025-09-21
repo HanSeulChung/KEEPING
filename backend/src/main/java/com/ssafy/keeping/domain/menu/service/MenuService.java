@@ -84,7 +84,8 @@ public class MenuService {
         return new MenuResponseDto(
                 saved.getMenuId(),
                 saved.getStore().getStoreId(), saved.getMenuName(), saved.getCategory().getCategoryId(),
-                saved.getCategory().getCategoryName(), saved.getDisplayOrder(), saved.isSoldOut()
+                saved.getCategory().getCategoryName(), saved.getDisplayOrder(), saved.isSoldOut(),
+                saved.getImgUrl(), saved.getDescription()
         );
     }
 
@@ -121,7 +122,9 @@ public class MenuService {
         return new MenuResponseDto(
                 menu.getMenuId(), storeId, menu.getMenuName(),
                 menu.getCategory().getCategoryId(), menu.getCategory().getCategoryName(),
-                menu.getDisplayOrder(), menu.isSoldOut());
+                menu.getDisplayOrder(), menu.isSoldOut(),
+                menu.getImgUrl(), menu.getDescription()
+        );
     }
 
     public void deleteMenu(Long ownerId, Long storeId, Long menusId) {
