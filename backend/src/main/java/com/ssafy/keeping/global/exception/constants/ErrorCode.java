@@ -171,6 +171,7 @@ public enum ErrorCode {
     INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 범위입니다."),
 
     // OCR 업로드/검증
+    OCR_EXTERNAL_API_FAILED(HttpStatus.BAD_GATEWAY, "외부 OCR 서비스 호출에 실패했습니다."),
     OCR_INFER_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "OCR 추출에 실패했습니다."),
     OCR_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "이미지 파일이 필요합니다."),
     OCR_FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. (jpg, jpeg, png)"),
