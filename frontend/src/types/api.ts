@@ -71,7 +71,7 @@ export namespace AuthAPI {
   // 토큰 갱신
   export interface TokenResponse {
     accessToken: string
-    refreshToken?: string
+    // refreshToken은 HttpOnly 쿠키로 관리되므로 프론트에서는 접근 불가
   }
 }
 
