@@ -12,6 +12,8 @@ import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
 import com.ssafy.keeping.domain.idempotency.model.IdempotencyKey;
 import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
 import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
 import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
 import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
@@ -44,6 +46,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
+
 @Service
 @RequiredArgsConstructor
 public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으나 추후 합치겠습니다.
@@ -55,6 +59,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     private final TransactionRepository transactionRepository;
     private final WalletStoreLotRepository lotRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final NotificationService notificationService;
 
     private final IdempotencyService idempotencyService;
     @Qualifier("canonicalObjectMapper")
@@ -265,6 +270,18 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .amount(shareAmount)
                         .build()
         );
+
+        afterCommit(() -> {
+            // 모임원 전원 조회 후 알림 전송
+            List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
+            memberIds.stream()
+                    .distinct()
+                    .forEach(id -> notificationService.sendToCustomer(
+                            id,
+                            NotificationType.GROUP_POINT_SHARED,
+                            "모임에 포인트가 공유되었습니다."
+                    ));
+        });
 
         return new PointShareResponseDto(
                 txOut.getTransactionId(), txIn.getTransactionId(),
