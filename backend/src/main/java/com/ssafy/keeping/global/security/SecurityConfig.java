@@ -171,6 +171,8 @@ public class SecurityConfig {
                         .requestMatchers("/payments/*/approve").hasRole("CUSTOMER")
                         .requestMatchers("/stores/*/transactions/*/refund").hasRole("OWNER")
 
+                        // customer
+                        .requestMatchers("/customers/me/groups").hasRole("CUSTOMER")
 
                                 // 그룹 관리
 //                        .requestMatchers("/groups/**").authenticated()
