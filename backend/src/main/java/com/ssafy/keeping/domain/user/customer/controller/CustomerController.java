@@ -1,5 +1,7 @@
 package com.ssafy.keeping.domain.user.customer.controller;
 
+import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
+import com.ssafy.keeping.domain.user.customer.dto.MyGroupsResponse;
 import com.ssafy.keeping.domain.user.customer.service.CustomerService;
 import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
 import com.ssafy.keeping.global.s3.service.ImageService;
@@ -8,8 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
@@ -17,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final GroupMemberRepository groupMemberRepository;
     private final ImageService imageService;
 
 
@@ -28,6 +34,14 @@ public class CustomerController {
 
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("성공적 변경", HttpStatus.OK.value(), response));
 
+    }
+
+    @GetMapping("/me/groups")
+    public ResponseEntity<ApiResponse<MyGroupsResponse>> myGroups(@AuthenticationPrincipal Long customerId) {
+
+        List<Long> ids = groupMemberRepository.findGroupIdsByCustomerId(customerId);
+        MyGroupsResponse data = MyGroupsResponse.of(ids);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("내가 속한 그룹을 조회하였습니다.", HttpStatus.CREATED.value(), data));
     }
 
     // 회원가입
