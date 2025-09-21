@@ -17,10 +17,9 @@ const createGroup = async (groupData: {
 
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         ...apiConfig.headers,
-        // 필요한 경우 Authorization 헤더 추가
-        // 'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         groupLeaderId: groupData.groupLeaderId,

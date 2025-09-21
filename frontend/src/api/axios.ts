@@ -1,12 +1,11 @@
 import axios from 'axios'
-import { apiConfig, endpoints } from './config'
-
-const build = (path: string) => `${apiConfig.baseURL.replace(/\/$/, '')}${path}`
+import { apiConfig } from './config'
 
 // axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: apiConfig.baseURL,
   timeout: apiConfig.timeout,
+  withCredentials: true, // HttpOnly 쿠키 포함
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,27 +14,13 @@ const apiClient = axios.create({
 // 요청 인터셉터 - 모든 요청에 자동으로 Authorization 헤더 추가
 apiClient.interceptors.request.use(
   config => {
-    // 쿠키에서 토큰 확인
-    const getCookie = (name: string): string | null => {
-      if (typeof document === 'undefined') return null
-      const value = `; ${document.cookie}`
-      const parts = value.split(`; ${name}=`)
-      if (parts.length === 2) {
-        return parts.pop()?.split(';').shift() || null
+    // localStorage에서 accessToken 확인
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`
+        console.log('🔑 Authorization 헤더 추가:', accessToken.substring(0, 20) + '...')
       }
-      return null
-    }
-
-    const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
-    let token = null
-
-    for (const name of possibleTokenNames) {
-      token = getCookie(name)
-      if (token) break
-    }
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -44,7 +29,7 @@ apiClient.interceptors.request.use(
   }
 )
 
-// 응답 인터셉터 - 토큰 만료 시 자동 갱신
+// 응답 인터셉터 - 토큰 만료 시 자동 갱신 (클로드 방식)
 apiClient.interceptors.response.use(
   response => {
     return response
@@ -57,29 +42,35 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        // 토큰 갱신 시도
-        const refreshUrl = build(endpoints.auth.refresh)
-        const refreshResponse = await axios.post(
-          refreshUrl,
-          {},
-          {
-            withCredentials: true,
-          }
-        )
+        console.log('🔄 401 에러 - 토큰 갱신 시도')
+        
+        // 클로드 방식: 직접 백엔드로 토큰 갱신 요청
+        const refreshResponse = await fetch('http://localhost:8080/auth/refresh', {
+          method: 'POST',
+          credentials: 'include'
+        })
 
-        const newToken = refreshResponse.data?.data?.accessToken
-        if (newToken) {
-          // 새 토큰은 쿠키로 설정되므로 별도 저장 불필요
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json()
+          const newAccessToken = refreshData.data.accessToken
+          
+          // 새로운 accessToken을 localStorage에 저장
+          localStorage.setItem('accessToken', newAccessToken)
+          console.log('🔄 새로운 accessToken으로 재시도:', newAccessToken.substring(0, 20) + '...')
+          
           // 실패한 요청을 새 토큰으로 재시도
-          originalRequest.headers.Authorization = `Bearer ${newToken}`
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
           return apiClient(originalRequest)
         }
 
-        // 토큰이 없다면 실패 처리
-        throw new Error('No accessToken from refresh')
+        // 토큰 갱신 실패 시 로그아웃 처리
+        throw new Error('Token refresh failed')
       } catch (refreshError) {
         // 토큰 갱신 실패 시 로그아웃 처리
-        window.location.href = '/owner/login'
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken')
+          window.location.href = '/customer/login'
+        }
         return Promise.reject(refreshError)
       }
     }

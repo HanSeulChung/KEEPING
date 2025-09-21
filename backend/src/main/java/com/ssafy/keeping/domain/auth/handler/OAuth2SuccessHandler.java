@@ -99,7 +99,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 프론트로 리다이렉트
             String redirectUrl = "";
-            redirectUrl = "OWNER".equals(role) ? "/owner/dashboard" : "/customer/home";
+            redirectUrl = "OWNER".equals(role) ? feBaseUrl + "/owner/dashboard" : feBaseUrl + "/customer/home";
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
             response.sendRedirect(redirectUrl);
 
@@ -128,14 +128,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             regCookie.setPath("/");
             regCookie.setMaxAge(300); // 5분 만료
             response.addCookie(regCookie);
-            
-            if(role == UserRole.OWNER) {
-                response.sendRedirect(feBaseUrl + "/owner/register/step1?regSessionId=" + regSessionId);
-                return;
-            }
 
-            if(role == UserRole.CUSTOMER) {
-                response.sendRedirect(feBaseUrl + "/customer/register/step1" + regSessionId);
+            if(role.equals(UserRole.CUSTOMER)){
+                response.sendRedirect(feBaseUrl + "/customer/register/step1");
+            }
+            else {
+                response.sendRedirect(feBaseUrl + "/owner/register/step1");
             }
         }
 

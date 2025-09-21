@@ -24,7 +24,8 @@ public enum NotificationType {
     GROUP_JOINED("모임 참여 완료"),
     GROUP_LEADER_CHANGED("모임 리더 변경"),
     MEMBER_EXPELLED("모임원 내보내기"),
-    
+    GROUP_POINT_SHARED("모임 지갑에 포인트 공유"),
+
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),
     SYSTEM_MAINTENANCE("시스템 점검");

@@ -1,6 +1,8 @@
 'use client'
 
-import { apiConfig, endpoints } from '@/api/config'
+import { apiConfig, buildURL } from '@/api/config'
+import { useUser } from '@/contexts/UserContext'
+import { Heart } from 'lucide-react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -16,13 +18,14 @@ interface StoreData {
   category: string
   storeStatus: string
   imageUrl?: string
+  likes: number
+  isLiked: boolean
 }
 
 interface ChargeOptionData {
-  discount: string
-  points: string
-  originalPrice: number
-  discountRate: number
+  chargeAmount: number
+  bonusPercentage: number
+  expectedTotalPoints: number
 }
 
 interface MenuItemData {
@@ -37,132 +40,63 @@ interface MenuData {
   alacarte: MenuItemData[]
 }
 
-const CHARGE_OPTIONS: ChargeOptionData[] = [
-  {
-    discount: '3% 할인',
-    points: '30,000 포인트',
-    originalPrice: 30000,
-    discountRate: 0.03,
-  },
-  {
-    discount: '5% 할인',
-    points: '50,000 포인트',
-    originalPrice: 50000,
-    discountRate: 0.05,
-  },
-  {
-    discount: '7% 할인',
-    points: '100,000 포인트',
-    originalPrice: 100000,
-    discountRate: 0.07,
-  },
-  {
-    discount: '10% 할인',
-    points: '150,000 포인트',
-    originalPrice: 150000,
-    discountRate: 0.1,
-  },
-  {
-    discount: '12% 할인',
-    points: '200,000 포인트',
-    originalPrice: 200000,
-    discountRate: 0.12,
-  },
-  {
-    discount: '15% 할인',
-    points: '300,000 포인트',
-    originalPrice: 300000,
-    discountRate: 0.15,
-  },
-]
-
-const MENU_DATA: MenuData = {
-  meal: [
-    {
-      name: '도미정식 1人',
-      description:
-        '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥',
-      price: 39000,
-    },
-    {
-      name: '도미정식 2人',
-      description:
-        '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면 OR 도미덮밥 (2인분)',
-      price: 75000,
-    },
-    {
-      name: '런치 세트',
-      description: '도미회 + 된장국 + 밥 + 반찬 3종',
-      price: 28000,
-    },
-  ],
-  course: [
-    {
-      name: '프리미엄 도미 코스',
-      description: '전채 + 도미숙성회 + 도미머리구이 + 도미탕 + 디저트',
-      price: 65000,
-    },
-    {
-      name: '스탠다드 도미 코스',
-      description:
-        '도라지탕 + 도미숙성회 + 도미머리구이 + 모듬튀김 + 도미해물라면',
-      price: 45000,
-    },
-    {
-      name: '라이트 도미 코스',
-      description: '도미회 + 도미구이 + 된장국 + 밥',
-      price: 35000,
-    },
-    {
-      name: '시그니처 코스',
-      description: '셰프 특선 도미 요리 7품 + 와인 페어링',
-      price: 89000,
-    },
-  ],
-  alacarte: [
-    {
-      name: '도미숙성회',
-      description: '72시간 숙성한 프리미엄 도미회 (소/중/대)',
-      price: 28000,
-    },
-    {
-      name: '도미머리구이',
-      description: '도미 머리를 정성껏 구워낸 특별 요리',
-      price: 22000,
-    },
-    {
-      name: '도미해물라면',
-      description: '도미와 신선한 해물이 들어간 진한 국물 라면',
-      price: 15000,
-    },
-    {
-      name: '도미덮밥',
-      description: '숙성 도미회와 신선한 야채를 올린 덮밥',
-      price: 18000,
-    },
-    {
-      name: '도미카라아게',
-      description: '바삭하게 튀긴 도미 튀김',
-      price: 16000,
-    },
-    {
-      name: '도미탕',
-      description: '진한 국물의 도미탕 (2-3인분)',
-      price: 32000,
-    },
-  ],
-}
-
 // 가게 정보 컴포넌트
-const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
+const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggleLike: (storeId: number) => void }) => {
   return (
     <div className="mx-auto w-full max-w-4xl">
-      {/* 가게 이름 */}
-      <div className="mb-8 text-center">
+      {/* 가게 이름과 하트 버튼 */}
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-extrabold text-black">
           {storeData.storeName}
         </h1>
+        <div className="flex items-center gap-2">
+          <Heart
+            size={20}
+            fill={storeData.isLiked ? 'currentColor' : 'none'}
+            className={`transition-colors cursor-pointer ${
+              storeData.isLiked
+                ? 'fill-red-500 text-red-500'
+                : 'text-gray-400 hover:text-red-500'
+            }`}
+            onClick={() => onToggleLike(storeData.storeId)}
+          />
+        </div>
       </div>
+
+      {/* 가게 이미지들 - 좌우 스크롤 */}
+      {storeData.imageUrl && (
+        <div className="mb-8">
+          <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+            {Array.isArray(storeData.imageUrl) ? (
+              storeData.imageUrl.map((image, index) => (
+                <div key={index} className="flex-shrink-0">
+                  <div className="relative h-48 w-64 rounded-lg overflow-hidden bg-gray-200">
+                    <Image
+                      src={image}
+                      alt={`${storeData.storeName} 이미지 ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex-shrink-0">
+                <div className="relative h-48 w-64 rounded-lg overflow-hidden bg-gray-200">
+                  <Image
+                    src={storeData.imageUrl}
+                    alt={`${storeData.storeName} 이미지`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 가게 소개 섹션 */}
       <div className="mb-8 flex items-center gap-4 px-4">
@@ -187,10 +121,143 @@ const StoreInfo = ({ storeData }: { storeData: StoreData }) => {
 export const StoreDetailPage = () => {
   const params = useParams()
   const storeId = params.id as string
-
+  
+  const { user, loading: userLoading, error: userError } = useUser()
+  console.log('StoreDetail - useUser 상태:', { user, loading: userLoading, error: userError })
+  
   const [storeData, setStoreData] = useState<StoreData | null>(null)
+  const [chargeOptions, setChargeOptions] = useState<ChargeOptionData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 찜하기 상태 확인 API 호출 함수
+  const checkFavoriteStatus = async (storeId: string) => {
+    if (!user) return false
+
+    try {
+      const url = buildURL(`/favorites/stores/${storeId}/check`)
+      console.log('찜하기 상태 확인 URL:', url)
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      console.log('찜하기 상태 확인 응답:', responseData)
+
+      // 응답에서 isFavorited 상태 추출
+      const isFavorited = responseData?.data?.isFavorited || false
+      
+      // storeData 업데이트
+      setStoreData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          isLiked: isFavorited,
+        }
+      })
+
+      return isFavorited
+    } catch (error) {
+      console.error('찜하기 상태 확인 실패:', error)
+      return false
+    }
+  }
+
+  // 찜하기/찜취소 API 호출 함수
+  const toggleLike = async (storeId: number) => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    if (!storeData) return
+
+    try {
+      const url = buildURL(`/favorites/stores/${storeId}`)
+      console.log('찜하기 토글 URL:', url)
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      console.log('찜하기 토글 응답:', responseData)
+
+      // 성공 시 로컬 상태 즉시 업데이트
+      setStoreData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          isLiked: !prev.isLiked,
+          likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1,
+        }
+      })
+      
+    } catch (error) {
+      console.error('찜하기 토글 실패:', error)
+      // 에러 발생 시 사용자에게 알림
+      alert('찜하기 처리 중 오류가 발생했습니다.')
+    }
+  }
+
+  // 충전 옵션 조회
+  const fetchChargeOptions = async (storeId: string) => {
+    try {
+      const url = buildURL(`/api/v1/stores/${storeId}/charge-bonus`)
+      console.log('충전 옵션 조회 URL:', url) // 디버깅용
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include', // HttpOnly 쿠키 포함 (PaymentModal과 동일)
+        headers: {
+          ...apiConfig.headers,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      console.log('충전 옵션 응답 데이터:', responseData) // 디버깅용
+
+      // 응답 데이터에서 실제 데이터 추출
+      let data = responseData
+      if (responseData && responseData.data) {
+        data = responseData.data
+      }
+
+      console.log('추출된 충전 옵션 데이터:', data) // 디버깅용
+
+      // 배열인지 확인
+      if (Array.isArray(data)) {
+        setChargeOptions(data)
+      } else {
+        console.warn('충전 옵션 데이터가 배열이 아닙니다:', data)
+        setChargeOptions([])
+      }
+    } catch (error) {
+      console.error('충전 옵션 조회 실패:', error)
+      setChargeOptions([])
+    }
+  }
 
   // 가게 상세 정보 조회
   useEffect(() => {
@@ -201,11 +268,12 @@ export const StoreDetailPage = () => {
       setError(null)
 
       try {
-        const url = `${apiConfig.baseURL}${endpoints.stores.searchById.replace('{storeId}', storeId)}`
+        const url = buildURL(`/stores/${storeId}`)
         console.log('가게 상세 조회 URL:', url) // 디버깅용
 
         const response = await fetch(url, {
           method: 'GET',
+          credentials: 'include', // HttpOnly 쿠키 포함 (PaymentModal과 동일)
           headers: {
             ...apiConfig.headers,
           },
@@ -215,22 +283,40 @@ export const StoreDetailPage = () => {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const data = await response.json()
-        console.log('가게 상세 응답 데이터:', data) // 디버깅용
+        const responseData = await response.json()
+        console.log('가게 상세 응답 데이터:', responseData) // 디버깅용
+
+        // 응답 데이터에서 실제 데이터 추출
+        let data = responseData
+        if (responseData && responseData.data) {
+          data = responseData.data
+        }
+
+        console.log('추출된 데이터:', data) // 디버깅용
 
         // 백엔드 응답 데이터를 StoreData 타입에 맞게 변환
         const transformedStoreData: StoreData = {
-          storeId: data.storeId,
-          storeName: data.storeName,
-          description: data.description,
-          address: data.address,
-          category: data.category,
-          storeStatus: data.storeStatus,
-          imageUrl: data.imageUrl || data.image,
-          phoneNumber: data.phoneNumber,
+          storeId: data.storeId || data.id,
+          storeName: data.storeName || data.name,
+          description: data.description || data.storeDescription,
+          address: data.address || data.location,
+          category: data.category || data.businessType,
+          storeStatus: data.storeStatus || 'ACTIVE',
+          imageUrl: data.imageUrl || data.image || data.storeImage,
+          phoneNumber: data.phoneNumber || data.phone,
+          likes: data.likes || data.likeCount || 0,
+          isLiked: data.isLiked || false,
         }
+        
+        console.log('변환된 가게 데이터:', transformedStoreData) // 디버깅용
 
         setStoreData(transformedStoreData)
+        
+        // 가게 정보 조회 성공 후 충전 옵션과 찜하기 상태도 조회
+        await Promise.all([
+          fetchChargeOptions(storeId),
+          checkFavoriteStatus(storeId)
+        ])
       } catch (error) {
         console.error('가게 상세 조회 실패:', error)
         setError('가게 정보를 불러오는데 실패했습니다.')
@@ -272,19 +358,19 @@ export const StoreDetailPage = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">가게 정보를 찾을 수 없습니다.</div>
+          </div>
+        </div>
       </div>
-      </div>
-    </div>
-  )
-}
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white py-8">
       <div className="container mx-auto px-4">
-        <StoreInfo storeData={storeData} />
+        <StoreInfo storeData={storeData} onToggleLike={toggleLike} />
         <StoreDetailTabSection
-          chargeOptions={CHARGE_OPTIONS}
-          menuData={MENU_DATA}
+          chargeOptions={chargeOptions}
+          storeId={storeId}
         />
       </div>
     </div>

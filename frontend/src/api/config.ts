@@ -79,6 +79,7 @@ export const endpoints = {
     updateCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     deleteCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     listCategory: '/stores/{storeId}/menus/categories',
+    menuByCategory: '/stores/{storeId}/menus/categories/{categoryId}',
     // 매출 관리
     salesCalendar: '/owners/stores/{storeId}/sales/calendar',
     salesStats: '/owners/stores/{storeId}/sales/stats',
