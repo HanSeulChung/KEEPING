@@ -3,54 +3,50 @@ package com.ssafy.keeping.domain.wallet.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ssafy.keeping.domain.group.model.Group;
+import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
+import com.ssafy.keeping.domain.group.repository.GroupRepository;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
 import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
 import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
 import com.ssafy.keeping.domain.idempotency.model.IdempotencyKey;
 import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
+import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
+import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
+import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
+import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
 import com.ssafy.keeping.domain.wallet.constant.WalletType;
-import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.*;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
-import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
-import com.ssafy.keeping.domain.group.model.Group;
-import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
-import com.ssafy.keeping.domain.group.repository.GroupRepository;
-import com.ssafy.keeping.domain.store.model.Store;
-import com.ssafy.keeping.domain.store.repository.StoreRepository;
-import com.ssafy.keeping.global.exception.CustomException;
-import com.ssafy.keeping.global.exception.constants.ErrorCode;
-import com.ssafy.keeping.domain.payment.transactions.repository.TransactionRepository;
-import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
-import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
-import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
-import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.WalletStoreBalanceDetailDto;
-import com.ssafy.keeping.domain.wallet.dto.WalletStoreDetailResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.WalletStoreTransactionDetailDto;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
-import com.ssafy.keeping.domain.payment.transactions.model.Transaction;
-import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import java.math.RoundingMode;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +59,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     private final TransactionRepository transactionRepository;
     private final WalletStoreLotRepository lotRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final NotificationService notificationService;
 
     private final IdempotencyService idempotencyService;
     @Qualifier("canonicalObjectMapper")
@@ -89,8 +86,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     // Group 엔티티가 이미 있는 호출용
     public WalletResponseDto getGroupWallet(Group group) {
 
-        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
 
         List<WalletStoreBalanceResponseDto> groupStoreBalanceDtoList =
                 Optional.ofNullable(groupWallet.getWalletStoreBalances())
@@ -113,15 +109,9 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
     // id만 넘어오는 호출용(검증을 여기서 직접 수행)
     public WalletResponseDto getGroupWallet(Long groupId, Long customerId) {
-        if (!customerRepository.existsById(customerId)) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-
-
-        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        validCustomer(customerId);
+        Group group = validGroup(groupId);
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
 
         List<WalletStoreBalanceResponseDto> groupStoreBalanceDtoList =
                 Optional.ofNullable(groupWallet.getWalletStoreBalances())
@@ -196,16 +186,15 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         final long shareAmount = req.getShareAmount();
         if (shareAmount <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
 
-        Customer actor = customerRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer actor = validCustomer(userId);
         Wallet individual = validWallet(req.getIndividualWalletId());
         Wallet group = validWallet(req.getGroupWalletId());
+
         if (individual.getWalletType() != WalletType.INDIVIDUAL || group.getWalletType() != WalletType.GROUP)
             throw new CustomException(ErrorCode.BAD_REQUEST);
-        ensureOwnershipAndMembership(userId, groupId, individual, group);
+        validOwnershipAndMembership(userId, groupId, individual, group);
 
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Store store = validStore(storeId);
 
         // 2) 잔액 행잠금 조회
         WalletStoreBalance indivBal = balanceRepository.lockByWalletIdAndStoreId(individual.getWalletId(), storeId)
@@ -282,6 +271,18 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .build()
         );
 
+        afterCommit(() -> {
+            // 모임원 전원 조회 후 알림 전송
+            List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
+            memberIds.stream()
+                    .distinct()
+                    .forEach(id -> notificationService.sendToCustomer(
+                            id,
+                            NotificationType.GROUP_POINT_SHARED,
+                            "모임에 포인트가 공유되었습니다."
+                    ));
+        });
+
         return new PointShareResponseDto(
                 txOut.getTransactionId(), txIn.getTransactionId(),
                 individual.getWalletId(), group.getWalletId(), storeId, shareAmount,
@@ -332,16 +333,15 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         final long amount = req.getShareAmount(); // 재사용
         if (amount <= 0) throw new CustomException(ErrorCode.BAD_REQUEST);
 
-        Customer actor = customerRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer actor = validCustomer(userId);
         Wallet individual = validWallet(req.getIndividualWalletId());
         Wallet group = validWallet(req.getGroupWalletId());
+
         if (individual.getWalletType() != WalletType.INDIVIDUAL || group.getWalletType() != WalletType.GROUP)
             throw new CustomException(ErrorCode.BAD_REQUEST);
-        ensureOwnershipAndMembership(userId, groupId, individual, group);
+        validOwnershipAndMembership(userId, groupId, individual, group);
 
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Store store = validStore(storeId);
 
         // 잔액 행잠금
         WalletStoreBalance indivBal = balanceRepository.lockByWalletIdAndStoreId(individual.getWalletId(), storeId)
@@ -465,10 +465,24 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         }
     }
 
+
+    @Transactional(readOnly = true)
+    public AvailablePointResponseDto getReclaimablePoints(Long groupId, Long customerId) {
+        Group group = validGroup(groupId);
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
+
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+
+        long available = getMemberSharedBalance(group, customerId);
+
+        return new AvailablePointResponseDto(groupWallet.getWalletId(), customerId, available);
+    }
+
     @Transactional(readOnly = true)
     public long getMemberSharedBalance(Group group, Long customerId) {
-        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
 
         // 해당 사용자가 기여한 lot 중 아직 남아있는 양만 합산
         List<WalletStoreLot> lots = lotRepository
@@ -482,8 +496,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
     @Transactional
     public void settleShareToIndividual(Group group, Long customerId) {
-        Wallet groupWallet = walletRepository.findByGroupId(group.getGroupId())
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
 
         if (!groupMemberRepository.existsMember(group.getGroupId(), customerId)) {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
@@ -507,8 +520,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
         for (Map.Entry<Long, List<WalletStoreLot>> entry : byStore.entrySet()) {
             Long storeId = entry.getKey();
-            Store store = storeRepository.findById(storeId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+            Store store = validStore(storeId);
 
             WalletStoreBalance groupBal = balanceRepository
                     .lockByWalletIdAndStoreId(groupWallet.getWalletId(), storeId)
@@ -573,25 +585,10 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         }
     }
 
-    private Wallet validWallet(Long walletId) {
-        return walletRepository.findById(walletId)
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
-    }
-
-    private void ensureOwnershipAndMembership(Long userId, Long groupId, Wallet individual, Wallet group) {
-        if (individual.getCustomer() == null || !individual.getCustomer().getCustomerId().equals(userId))
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        if (group.getGroup() == null || !group.getGroup().getGroupId().equals(groupId))
-            throw new CustomException(ErrorCode.BAD_REQUEST);
-        if (!groupMemberRepository.existsMember(groupId, userId))
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
-    }
-
     @Transactional(readOnly = true)
     public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
         // 1. 고객 및 지갑 검증
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer customer = validCustomer(customerId);
 
         Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
@@ -620,18 +617,15 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     @Transactional(readOnly = true)
     public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
         // 1. 고객, 모임, 멤버십 검증
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer customer = validCustomer(customerId);
 
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
         if (!groupMemberRepository.existsMember(groupId, customerId)) {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
         }
 
-        Wallet groupWallet = walletRepository.findByGroupId(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        Wallet groupWallet = validGroupWallet(groupId);
 
         // 2. 간단한 방식으로 잔액 조회
         Page<WalletStoreBalance> balances = balanceRepository
@@ -661,11 +655,9 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     @Transactional(readOnly = true)
     public WalletStoreDetailResponseDto getPersonalWalletStoreDetail(Long customerId, Long storeId, Pageable pageable) {
         // 1. 고객 및 가게 검증
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer customer = validCustomer(customerId);
 
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Store store = validStore(storeId);                ;
 
         // 2. 개인지갑 조회
         Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
@@ -702,14 +694,11 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     @Transactional(readOnly = true)
     public WalletStoreDetailResponseDto getGroupWalletStoreDetail(Long groupId, Long customerId, Long storeId, Pageable pageable) {
         // 1. 고객, 모임, 가게 검증
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Customer customer = validCustomer(customerId);
 
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+        Group group = validGroup(groupId);
 
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Store store = validStore(storeId);
 
         // 2. 모임 멤버십 검증
         if (!groupMemberRepository.existsMember(groupId, customerId)) {
@@ -717,8 +706,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         }
 
         // 3. 모임지갑 조회
-        Wallet groupWallet = walletRepository.findByGroupId(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+        Wallet groupWallet = validGroupWallet(groupId);
 
         // 4. 현재 잔액 조회
         WalletStoreBalance balance = balanceRepository.findByWalletAndStore(groupWallet, store)
@@ -743,5 +731,46 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 balance.getBalance(),
                 transactionDtos
         );
+    }
+
+
+    // ===== Validation Helpers =====
+    private Customer validCustomer(Long customerId) {
+        return customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Group validGroup(Long groupId) {
+        return groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    private Store validStore(Long storeId) {
+        return storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+    }
+
+    private Wallet validWallet(Long walletId) {
+        return walletRepository.findById(walletId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+    }
+
+    private Wallet validGroupWallet(Long groupId) {
+        return walletRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+    }
+
+    private void validMembership(Long groupId, Long customerId) {
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
+        }
+    }
+
+    private void validOwnershipAndMembership(Long userId, Long groupId, Wallet individual, Wallet group) {
+        if (individual.getCustomer() == null || !individual.getCustomer().getCustomerId().equals(userId))
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        if (group.getGroup() == null || !group.getGroup().getGroupId().equals(groupId))
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        validMembership(groupId, userId);
     }
 }

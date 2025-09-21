@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
+
 @Service
 @RequiredArgsConstructor
 public class GroupService {
@@ -362,14 +364,5 @@ public class GroupService {
     public Customer validCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    // 유틸: 트랜잭션 커밋 후 실행
-    public void afterCommit(Runnable r) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override public void afterCommit() { r.run(); }
-            });
-        } else { r.run(); }
     }
 }
