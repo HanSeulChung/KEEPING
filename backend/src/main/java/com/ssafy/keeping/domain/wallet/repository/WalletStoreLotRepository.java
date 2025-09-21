@@ -90,10 +90,23 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
         where l.wallet.walletId = :walletId
           and c.customerId = :customerId
           and l.amountRemaining > 0
+          and l.lotStatus = com.ssafy.keeping.domain.wallet.constant.LotStatus.ACTIVE
           and (l.expiredAt is null or l.expiredAt > CURRENT_TIMESTAMP)
         """)
     List<WalletStoreLot> findActiveByWalletIdAndContributorCustomerId(
             @Param("walletId") Long walletId,
             @Param("customerId") Long customerId
     );
+
+    @Query("""
+           select coalesce(sum(l.amountRemaining), 0)
+           from WalletStoreLot l
+           where l.wallet.walletId = :groupWalletId
+             and l.contributorWallet.walletId = :memberWalletId
+             and l.lotStatus = com.ssafy.keeping.domain.wallet.constant.LotStatus.ACTIVE
+             and l.amountRemaining > 0
+             and (l.expiredAt is null or l.expiredAt > CURRENT_TIMESTAMP)
+           """)
+    long sumAvailablePoints(@Param("groupWalletId") Long groupWalletId,
+                            @Param("memberWalletId") Long memberWalletId);
 }
