@@ -69,4 +69,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         where gm.user.customerId = :customerId
     """)
     List<Long> findMemberGroupsByCustomerId(@Param("customerId") Long customerId);
+
+    List<GroupMember> findAllByGroup_GroupId(Long groupId);
+
 }
