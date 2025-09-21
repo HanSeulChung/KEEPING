@@ -26,24 +26,26 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     @Query("""
     select new com.ssafy.keeping.domain.menu.dto.MenuResponseDto(
         m.menuId, m.store.storeId, m.menuName, m.category.categoryId,
-        m.category.categoryName, m.displayOrder, m.soldOut
+        m.category.categoryName, m.displayOrder, m.soldOut,
+        m.imgUrl, m.description
     )
     from Menu m
     where m.store.storeId = :storeId
     and m.active and m.deletedAt is null
     """)
-    List<MenuResponseDto> findAllMenusByStoreId(Long storeId);
+    List<MenuResponseDto> findAllMenusByStoreId(@Param("storeId") Long storeId);
 
     @Query("""
     select new com.ssafy.keeping.domain.menu.dto.MenuResponseDto(
         m.menuId, m.store.storeId, m.menuName, m.category.categoryId,
-        m.category.categoryName, m.displayOrder, m.soldOut
+        m.category.categoryName, m.displayOrder, m.soldOut,
+        m.imgUrl, m.description
     )
     from Menu m
     where m.category.categoryId = :categoryId
     and m.active and m.deletedAt is null
     """)
-    List<MenuResponseDto> findAllMenusByCategoryId(Long categoryId);
+    List<MenuResponseDto> findAllMenusByCategoryId(@Param("categoryId") Long categoryId);
 
     @Query("""
     select (count(m) > 0) from Menu m
