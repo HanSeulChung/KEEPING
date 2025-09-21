@@ -54,7 +54,7 @@ public class Store {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Column(name = "bank_account", nullable = false)
+    @Column(name = "bank_account")
     private String bankAccount;
 
     @Column(name = "merchant_id", nullable = false)
