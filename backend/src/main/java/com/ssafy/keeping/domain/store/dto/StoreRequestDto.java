@@ -24,8 +24,8 @@ public class StoreRequestDto {
     private String bankAccount;
     @NotBlank
     private String category;
-//    @NotNull
-//    private Long merchantId;
+    @NotNull
+    private Long merchantId;
     private String description;
     //TODO: 파일서버 구축 후 수정
     @Nullable

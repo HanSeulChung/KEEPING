@@ -16,7 +16,6 @@ public enum ErrorCode {
     STORE_INVALID(HttpStatus.BAD_REQUEST, "해당 매장의 운영상태를 확인해주세요."),
     STORE_NOT_MATCH(HttpStatus.BAD_REQUEST, "두 가게가 맞지 않습니다."),
     OWNER_NOT_MATCH(HttpStatus.BAD_REQUEST, "가게 주인과 가게가 맞지 않습니다."),
-    MERCHANTID_NOT_FOUND(HttpStatus.BAD_REQUEST, "가맹점 아이디를 찾을 수 없습니다."),
 
     // MenuCategory 관련
     MENU_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
@@ -110,8 +109,6 @@ public enum ErrorCode {
     NOTIFICATION_UNAUTHORIZED_ACCESS(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
     NOTIFICATION_ALREADY_READ(HttpStatus.BAD_REQUEST, "이미 읽은 알림입니다."),
 
-    // global
-    BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다."),
 
     // 결제 요청(Payment Intent) / 승인 검증 추가
     PAYMENT_INTENT_STATUS_CONFLICT(HttpStatus.CONFLICT, "결제 요청 상태가 승인 가능 상태가 아닙니다."),
@@ -159,12 +156,11 @@ public enum ErrorCode {
     // 추가된 에러 코드들
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
     WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다."),
-    IMAGE_UPLOAD_ERROR(HttpStatus.BAD_REQUEST, "이미지 업로드에 실패했습니다"),
-    IMAGE_UPDATE_ERROR(HttpStatus.BAD_REQUEST, "이미지 업데이트에 실패했습니다"),
 
     // 충전 보너스 관련
     CHARGE_BONUS_NOT_FOUND(HttpStatus.NOT_FOUND, "충전 보너스 설정을 찾을 수 없습니다."),
     CHARGE_BONUS_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 충전 금액에 대한 보너스 설정이 이미 존재합니다."),
+
     STORE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 가게에 대한 접근 권한이 없습니다."),
 
     // 통계 관련
@@ -176,8 +172,10 @@ public enum ErrorCode {
     OCR_FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. (jpg, jpeg, png)"),
     OCR_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 용량이 너무 큽니다. (최대 10MB)"),
     OCR_UPSTREAM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "OCR 요청 형식이 올바르지 않습니다."),
-    OCR_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "OCR 외부 API 호출 중 오류가 발생했습니다.");
+    OCR_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "OCR 외부 API 호출 중 오류가 발생했습니다."),
 
+    // global
+    BAD_REQUEST(HttpStatus.BAD_REQUEST, "올바르지 않은 요청값입니다.");
     private final HttpStatus httpStatus;
     private final String message;
 }

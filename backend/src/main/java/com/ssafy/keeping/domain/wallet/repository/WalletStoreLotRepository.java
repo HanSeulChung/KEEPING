@@ -81,19 +81,4 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
     int decrementLotIfEnough(@Param("lotId") Long lotId,
                              @Param("use") Long use,
                              @Param("now") LocalDateTime now);
-
-    @Query("""
-        select l
-        from WalletStoreLot l
-        join l.contributorWallet cw
-        join cw.customer c
-        where l.wallet.walletId = :walletId
-          and c.customerId = :customerId
-          and l.amountRemaining > 0
-          and (l.expiredAt is null or l.expiredAt > CURRENT_TIMESTAMP)
-        """)
-    List<WalletStoreLot> findActiveByWalletIdAndContributorCustomerId(
-            @Param("walletId") Long walletId,
-            @Param("customerId") Long customerId
-    );
 }
