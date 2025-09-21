@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@types/qrcode':
+        specifier: ^1.5.5
+        version: 1.5.5
       axios:
         specifier: ^1.7.7
         version: 1.12.2
@@ -54,9 +57,6 @@ importers:
       '@types/node':
         specifier: ^20.19.13
         version: 20.19.13
-      '@types/qrcode':
-        specifier: ^1.5.5
-        version: 1.5.5
       '@types/react':
         specifier: ^19.1.12
         version: 19.1.13

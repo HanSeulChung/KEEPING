@@ -16,6 +16,7 @@ public enum ErrorCode {
     STORE_INVALID(HttpStatus.BAD_REQUEST, "해당 매장의 운영상태를 확인해주세요."),
     STORE_NOT_MATCH(HttpStatus.BAD_REQUEST, "두 가게가 맞지 않습니다."),
     OWNER_NOT_MATCH(HttpStatus.BAD_REQUEST, "가게 주인과 가게가 맞지 않습니다."),
+    MERCHANTID_NOT_FOUND(HttpStatus.BAD_REQUEST, "가맹점 아이디를 찾을 수 없습니다."),
 
     // MenuCategory 관련
     MENU_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
@@ -61,7 +62,8 @@ public enum ErrorCode {
     BEFORE_INDIVIDUAL_CHARGE(HttpStatus.BAD_REQUEST, "개인 지갑에 충전이 먼저 되어야합니다."),
     OVER_INDIVIDUAL_POINT(HttpStatus.BAD_REQUEST, "개인 지갑 포인트 이하로 공유 가능합니다."),
     INCONSISTENT_STATE(HttpStatus.CONFLICT, "처리 중 상태가 일치하지 않습니다."),
-
+    BEFORE_GROUP_CHARGE(HttpStatus.BAD_REQUEST,  "그룹 지갑에 해당 매장 잔액이 없습니다."),
+    OVER_GROUP_POINT   (HttpStatus.BAD_REQUEST,  "그룹 지갑 잔액이 부족합니다."),
     // user 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
 
@@ -157,11 +159,24 @@ public enum ErrorCode {
     // 추가된 에러 코드들
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "유효하지 않은 요청입니다."),
     WALLET_BALANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "지갑 잔액 정보를 찾을 수 없습니다."),
+    IMAGE_UPLOAD_ERROR(HttpStatus.BAD_REQUEST, "이미지 업로드에 실패했습니다"),
+    IMAGE_UPDATE_ERROR(HttpStatus.BAD_REQUEST, "이미지 업데이트에 실패했습니다"),
 
     // 충전 보너스 관련
     CHARGE_BONUS_NOT_FOUND(HttpStatus.NOT_FOUND, "충전 보너스 설정을 찾을 수 없습니다."),
     CHARGE_BONUS_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 충전 금액에 대한 보너스 설정이 이미 존재합니다."),
-    STORE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 가게에 대한 접근 권한이 없습니다.");
+    STORE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 가게에 대한 접근 권한이 없습니다."),
+
+    // 통계 관련
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 범위입니다."),
+
+    // OCR 업로드/검증
+    OCR_INFER_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "OCR 추출에 실패했습니다."),
+    OCR_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "이미지 파일이 필요합니다."),
+    OCR_FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. (jpg, jpeg, png)"),
+    OCR_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 용량이 너무 큽니다. (최대 10MB)"),
+    OCR_UPSTREAM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "OCR 요청 형식이 올바르지 않습니다."),
+    OCR_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "OCR 외부 API 호출 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

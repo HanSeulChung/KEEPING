@@ -7,6 +7,7 @@ import com.ssafy.keeping.domain.auth.service.AuthService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenService tokenService;
     private final CookieUtil cookieUtil;
 
-    @Value("${fe.base-url:}")
+    // 추후 환경변수로 저장
+    @Value("${fe.base-url}")
     private String feBaseUrl;
 
     @Override
@@ -41,7 +43,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("[OAUTH SUCCESS] Code parameter: " + request.getParameter("code"));
 
         // role 복원
-        UserRole role = authService.extractRoleFromState(request.getParameter("state"));
+        UserRole role = authService.extractRoleFromState(   request.getParameter("state"));
         System.out.println("[OAUTH SUCCESS] Extracted role: " + role);
 
         // role이 null인 경우 처리
@@ -120,8 +122,19 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 ));
                 return;
             }
+            Cookie regCookie = new Cookie("regSessionId", regSessionId);
+            regCookie.setHttpOnly(true);
+            regCookie.setSecure(false);
+            regCookie.setPath("/");
+            regCookie.setMaxAge(300); // 5분 만료
+            response.addCookie(regCookie);
 
-            response.sendRedirect(feBaseUrl +"/owner/register/step1");
+            if(role.equals(UserRole.CUSTOMER)){
+                response.sendRedirect("/customer/register/step1");
+            }
+            else {
+                response.sendRedirect("/owner/register/step1");
+            }
         }
 
     }

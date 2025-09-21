@@ -1,5 +1,6 @@
 'use client'
 import { apiConfig, endpoints } from '@/api/config'
+import { useUser } from '@/contexts/UserContext'
 import { Heart } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -22,6 +23,7 @@ interface StoreListProps {
 export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, loading: userLoading } = useUser()
 
   const foodCategories = [
     '한식',
@@ -60,6 +62,32 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+
+  // 찜하기 상태 확인 함수
+  const checkFavoriteStatus = async (storeId: number): Promise<boolean> => {
+    if (!user || !storeId) return false
+
+    try {
+      console.log('찜하기 상태 확인 - storeId:', storeId)
+      const response = await fetch(`${apiConfig.baseURL}/favorites/stores/${storeId}/check`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('찜하기 상태 응답:', data)
+        return data.data?.isFavorited || false
+      }
+      return false
+    } catch (error) {
+      console.error('찜하기 상태 확인 실패:', error)
+      return false
+    }
+  }
 
   // API 호출 함수
   const fetchStoresByCategory = async (category: string) => {
@@ -106,14 +134,26 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
       }
 
       // 백엔드 응답 데이터를 Store 타입에 맞게 변환
-      const transformedStores: Store[] = storesData.map((store: any) => ({
-        id: store.id || store.storeId,
-        name: store.name || store.storeName,
-        location: store.address || store.location,
+      let transformedStores: Store[] = storesData.map((store: any) => ({
+        id: store.storeId, // 백엔드에서 storeId로 들어옴
+        name: store.storeName, // 백엔드에서 storeName으로 들어옴
+        location: store.address, // 백엔드에서 address로 들어옴
         likes: store.likes || store.likeCount || 0,
         isLiked: store.isLiked || false,
-        image: store.imageUrl || store.image,
+        image: store.imgUrl, // 백엔드에서 imgUrl로 들어옴
       }))
+
+      console.log('변환된 가게 데이터:', transformedStores)
+
+      // 사용자 정보가 있을 때 찜하기 상태 확인
+      if (user) {
+        transformedStores = await Promise.all(
+          transformedStores.map(async (store: Store) => {
+            const isFavorited = await checkFavoriteStatus(store.id)
+            return { ...store, isLiked: isFavorited }
+          })
+        )
+      }
 
       setStores(transformedStores)
     } catch (error) {
@@ -131,7 +171,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     if (activeCategory) {
       fetchStoresByCategory(activeCategory)
     }
-  }, [activeCategory])
+  }, [activeCategory, user])
 
   // URL 파라미터 변경 감지
   useEffect(() => {
@@ -150,18 +190,46 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   }
 
   // 좋아요 토글
-  const toggleLike = (storeId: number) => {
-    setStores(prev =>
-      prev.map(store =>
-        store.id === storeId
-          ? {
-              ...store,
-              isLiked: !store.isLiked,
-              likes: store.isLiked ? store.likes - 1 : store.likes + 1,
-            }
-          : store
-      )
-    )
+  const toggleLike = async (storeId: number) => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    if (!storeId) {
+      console.error('storeId가 없습니다:', storeId)
+      return
+    }
+
+    try {
+      console.log('찜하기 토글 - storeId:', storeId)
+      const response = await fetch(`${apiConfig.baseURL}/favorites/stores/${storeId}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        // 성공 시 로컬 상태 업데이트
+        setStores(prev =>
+          prev.map(store =>
+            store.id === storeId
+              ? {
+                  ...store,
+                  isLiked: !store.isLiked,
+                  likes: store.isLiked ? store.likes - 1 : store.likes + 1,
+                }
+              : store
+          )
+        )
+      } else {
+        console.error('찜하기 실패')
+      }
+    } catch (error) {
+      console.error('찜하기 요청 실패:', error)
+    }
   }
 
   // 가게 클릭 핸들러
@@ -282,11 +350,23 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
           stores.map((store, index) => (
             <div key={store.id}>
               <div className="flex items-center gap-4 bg-white p-4 transition-colors hover:bg-gray-50">
-                {/* 가게 이미지 (플레이스홀더) */}
+                {/* 가게 이미지 */}
                 <div
-                  className="h-16 w-16 flex-shrink-0 cursor-pointer bg-gray-200"
+                  className="h-16 w-16 flex-shrink-0 cursor-pointer bg-gray-200 rounded overflow-hidden"
                   onClick={() => handleStoreClick(store.id)}
-                ></div>
+                >
+                  {store.image ? (
+                    <img 
+                      src={Array.isArray(store.image) ? store.image[0] : store.image} 
+                      alt={store.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                      이미지 없음
+                    </div>
+                  )}
+                </div>
 
                 {/* 가게 정보 */}
                 <div
@@ -296,12 +376,6 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
                   <h3 className="mb-1 font-medium text-black">{store.name}</h3>
                   <p className="mb-2 text-sm text-gray-600">{store.location}</p>
                   <div className="flex items-center gap-1">
-                    <Heart
-                      size={16}
-                      fill={store.isLiked ? 'currentColor' : 'none'}
-                      className={`${store.isLiked ? 'fill-gray-400 text-gray-400' : 'text-gray-400'}`}
-                    />
-                    <span className="text-sm text-gray-600">{store.likes}</span>
                   </div>
                 </div>
 
@@ -351,25 +425,6 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
           ))
         )}
       </div>
-
-      {/* 페이지네이션 */}
-      {stores.length > 0 && (
-        <div className="mt-8 flex justify-center gap-2">
-          {[1, 2, 3].map(page => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`h-8 w-8 rounded-full border transition-colors ${
-                currentPage === page
-                  ? 'border-black bg-black text-white'
-                  : 'border-gray-300 bg-white text-black hover:bg-gray-50'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

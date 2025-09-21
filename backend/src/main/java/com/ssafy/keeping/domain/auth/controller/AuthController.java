@@ -10,6 +10,7 @@ import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.user.customer.dto.SignupCustomerResponse;
 import com.ssafy.keeping.domain.user.customer.service.CustomerService;
+import com.ssafy.keeping.domain.user.dto.UserProfile;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterRequest;
 import com.ssafy.keeping.domain.user.owner.dto.OwnerRegisterResponse;
 import com.ssafy.keeping.domain.user.owner.dto.SignupOwnerResponse;
@@ -21,7 +22,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.Cookie;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -46,7 +49,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
 
-        response.sendRedirect("/oauth2/authorization/kakao");
+        response.sendRedirect("/api/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
@@ -55,7 +58,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "OWNER");
 
-        response.sendRedirect("/oauth2/authorization/kakao");
+        response.sendRedirect("/api/oauth2/authorization/kakao");
     }
 
 
@@ -140,6 +143,26 @@ public class AuthController {
             return ResponseEntity.ok()
                     .body(ApiResponse.success("로그아웃 완료", HttpStatus.OK.value(), null));
         }
+    }
+
+    // 현재 사용자 검색
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserProfile>> getCurrentUser(Authentication authentication) {
+
+        if(authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("인증 토큰이 필요합니다.", HttpStatus.UNAUTHORIZED.value()));
+        }
+
+        Long userId = (Long) authentication.getPrincipal();
+        String roleStr = authentication.getAuthorities().iterator().next().getAuthority().substring(5);
+        UserRole role = UserRole.valueOf(roleStr);
+
+        UserProfile currentUser = authService.getCurrentUserProfile(userId, role);
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("사용자 정보 조회 성공", HttpStatus.OK.value(), currentUser));
+
     }
 
 
@@ -264,5 +287,29 @@ public class AuthController {
         } catch (Exception e) {
             return "<p>Error: " + e.getMessage() + "</p>";
         }
+    }
+
+    @GetMapping("/session-info")
+    public ResponseEntity<ApiResponse<String>> getRegSessionId(HttpServletRequest request) {
+        System.out.println("[DEBUG] /auth/session-info called");
+
+        // 모든 쿠키 출력
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                System.out.println("[DEBUG] Cookie found: " + cookie.getName() + " = " + cookie.getValue());
+            }
+        } else {
+            System.out.println("[DEBUG] No cookies found in request");
+        }
+
+        String regSessionId = cookieUtil.getRegSessionIdFromCookie(request);
+        System.out.println("[DEBUG] Extracted regSessionId: " + regSessionId);
+
+        if (regSessionId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("세션 정보를 찾을 수 없습니다", 404));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("세션 정보 조회 성공", 200, regSessionId));
     }
 }

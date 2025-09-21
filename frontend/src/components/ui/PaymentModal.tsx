@@ -1,4 +1,6 @@
 'use client'
+import { buildURL } from '@/api/config'
+import { useUser } from '@/contexts/UserContext'
 import { useState } from 'react'
 
 interface PaymentModalProps {
@@ -6,12 +8,17 @@ interface PaymentModalProps {
   onClose: () => void
   amount: number
   onPayment: () => void
+  storeId: string
 }
 
-export const PaymentModal = ({ isOpen, onClose, amount, onPayment }: PaymentModalProps) => {
-  const [cardNumber, setCardNumber] = useState(['9411', '9411', '9411', '9411'])
-  const [expiryDate, setExpiryDate] = useState('')
+export const PaymentModal = ({ isOpen, onClose, amount, onPayment, storeId }: PaymentModalProps) => {
+  const [cardNumber, setCardNumber] = useState(['', '', '', ''])
   const [cvc, setCvc] = useState('')
+  const [showCvc, setShowCvc] = useState(false)
+  const [showCardNumber, setShowCardNumber] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  
+  const { user, loading, error } = useUser()
 
   if (!isOpen) return null
 
@@ -21,38 +28,99 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment }: PaymentModa
     setCardNumber(newCardNumber)
   }
 
-  const handleExpiryDateChange = (value: string) => {
-    const formatted = value.replace(/\D/g, '').slice(0, 4)
-    if (formatted.length >= 2) {
-      setExpiryDate(`${formatted.slice(0, 2)}/${formatted.slice(2)}`)
-    } else {
-      setExpiryDate(formatted)
-    }
-  }
-
   const handleCvcChange = (value: string) => {
     setCvc(value.replace(/\D/g, '').slice(0, 3))
   }
 
-  const handlePayment = () => {
-    // 결제 로직 구현
-    onPayment()
-    onClose()
+  // UUID 생성 함수 (표준 UUID v4 형식)
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  }
+
+  // 결제 처리 함수
+  const handlePayment = async () => {
+    if (isProcessing) return
+
+    // 입력 검증
+    const fullCardNumber = cardNumber.join('')
+    if (fullCardNumber.length !== 16) {
+      alert('카드번호를 16자리 모두 입력해주세요.')
+      return
+    }
+    if (cvc.length !== 3) {
+      alert('CVC를 3자리 입력해주세요.')
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      // 로그인 상태 확인
+      console.log('로그인 상태:', { user, loading, error })
+      
+      if (!user) {
+        throw new Error('로그인이 필요합니다.')
+      }
+
+      const requestBody = {
+        cardNo: fullCardNumber,
+        cvc: cvc,
+        paymentBalance: amount
+      }
+
+      // 헤더 정보 생성 및 로그 출력
+      const idempotencyKey = generateUUID()
+      const headers = {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey
+      }
+
+      // API 요청
+      const response = await fetch(buildURL(`/api/v1/stores/${storeId}/prepayment`), {
+        method: 'POST',
+        credentials: 'include', 
+        headers: headers,
+        body: JSON.stringify(requestBody)
+      })
+
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || '결제 처리 중 오류가 발생했습니다.')
+      }
+
+      const result = await response.json()
+      console.log('결제 성공:', result)
+      
+      // 성공 시 콜백 호출 및 모달 닫기
+      onPayment()
+      onClose()
+      
+    } catch (error) {
+      console.error('결제 실패:', error)
+      alert(error instanceof Error ? error.message : '결제 처리 중 오류가 발생했습니다.')
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div
-        className="w-[600px] h-[789px] md:w-[90vw] md:h-[80vh] md:max-w-[600px] md:max-h-[789px] relative overflow-hidden rounded-[10px] bg-white mx-4"
+        className="w-full max-w-md h-auto max-h-[90vh] relative overflow-hidden rounded-[10px] bg-white"
         style={{ boxShadow: "0px 4px 4px 0 rgba(0,0,0,0.25)" }}
       >
         {/* 헤더 */}
         <div className="flex justify-between items-start p-4">
           <div>
-            <p className="text-2xl md:text-4xl font-bold text-black mb-2">
+            <p className="text-xl font-bold text-black mb-2">
               카드 결제
             </p>
-            <p className="text-xs md:text-[10px] text-black">
+            <p className="text-xs text-black">
               본인 명의의 카드 정보를 입력해주세요.
             </p>
           </div>
@@ -61,15 +129,15 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment }: PaymentModa
             className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
           >
             <svg
-              width={36}
-              height={36}
-              viewBox="0 0 36 36"
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 md:w-9 md:h-9"
+              className="w-6 h-6"
             >
               <path
-                d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                d="M15 9L9 15M9 9L15 15M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z"
                 stroke="#1E1E1E"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -85,98 +153,90 @@ export const PaymentModal = ({ isOpen, onClose, amount, onPayment }: PaymentModa
         <div className="p-4 space-y-6">
           {/* 카드 번호 */}
           <div className="space-y-2">
-            <p className="text-sm md:text-[13.6px] font-bold text-black">
+            <p className="text-sm font-bold text-black">
               카드 번호
             </p>
-            <div className="flex gap-1 p-2 rounded-md bg-white border border-gray-300">
-              {cardNumber.map((number, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  value={number}
-                  onChange={(e) => handleCardNumberChange(index, e.target.value)}
-                  className="flex-1 text-center text-sm md:text-sm text-black border-b border-black bg-transparent outline-none"
-                  maxLength={4}
-                />
-              ))}
+            <div className="relative">
+              <div className="flex gap-2 p-3 pr-12 rounded-md bg-white border border-gray-300">
+                {cardNumber.map((number, index) => (
+                  <input
+                    key={index}
+                    type={showCardNumber ? "text" : "password"}
+                    value={number}
+                    onChange={(e) => handleCardNumberChange(index, e.target.value)}
+                    className="w-14 text-center text-base text-black border-b border-black bg-transparent outline-none py-2"
+                    maxLength={4}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCardNumber(!showCardNumber)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showCardNumber ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
             </div>
-          </div>
-
-          {/* 유효 기간 */}
-          <div className="space-y-2">
-            <p className="text-sm md:text-[13.6px] font-bold text-black">
-              유효 기간
-            </p>
-            <input
-              type="text"
-              value={expiryDate}
-              onChange={(e) => handleExpiryDateChange(e.target.value)}
-              placeholder="월/년도(MMYY) 순서로 4자리 숫자"
-              className="w-full h-[42px] p-2 rounded-md bg-white border border-gray-300 text-xs text-black outline-none"
-              maxLength={5}
-            />
           </div>
 
           {/* CVC */}
           <div className="space-y-2">
-            <p className="text-sm md:text-[13.6px] font-bold text-black">
+            <p className="text-sm font-bold text-black">
               CVC
             </p>
-            <input
-              type="text"
-              value={cvc}
-              onChange={(e) => handleCvcChange(e.target.value)}
-              placeholder="3자리를 입력해주세요."
-              className="w-full h-[42px] p-2 rounded-md bg-white border border-gray-300 text-xs text-black outline-none"
-              maxLength={3}
-            />
-          </div>
-
-          {/* 카드 타입 */}
-          <div className="flex justify-center">
-            <div className="px-4 py-2 rounded border border-black bg-gray-200">
-              <p className="text-xs md:text-[10px] font-bold text-black">
-                싸피 카드
-              </p>
+            <div className="relative">
+              <input
+                type={showCvc ? "text" : "password"}
+                value={cvc}
+                onChange={(e) => handleCvcChange(e.target.value)}
+                placeholder="3자리를 입력해주세요."
+                className="w-full h-12 p-3 pr-12 rounded-md bg-white border border-gray-300 text-base text-black outline-none"
+                maxLength={3}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCvc(!showCvc)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showCvc ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* 숫자 패드 */}
-          <div className="grid grid-cols-3 gap-2 p-2 border border-black rounded bg-gray-100">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((num) => (
-              <button
-                key={num}
-                className="h-[42px] rounded-[8.5px] flex items-center justify-center text-lg md:text-[23px] text-black hover:bg-gray-200 transition-colors"
-                onClick={() => {
-                  // 숫자 패드 클릭 로직 (현재 포커스된 필드에 숫자 입력)
-                  console.log(`Number ${num} clicked`)
-                }}
-              >
-                {num}
-              </button>
-            ))}
-            <button className="h-[42px] rounded-[8.5px] flex items-center justify-center text-lg md:text-[19px] text-black hover:bg-gray-200 transition-colors">
-              ⌫
-            </button>
-          </div>
+
         </div>
 
         {/* 결제 버튼 */}
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="p-4">
           <button
             onClick={handlePayment}
-            className="w-full h-12 md:h-[42px] bg-black text-white text-sm md:text-[13.6px] font-bold rounded-md hover:bg-gray-800 transition-colors"
+            disabled={isProcessing}
+            className={`w-full h-12 bg-black text-white text-base font-bold rounded-md transition-colors ${
+              isProcessing 
+                ? 'cursor-not-allowed bg-gray-400' 
+                : 'hover:bg-gray-800'
+            }`}
           >
-            결제하기
+            {isProcessing ? '결제 처리 중...' : '결제하기'}
           </button>
-        </div>
-
-        {/* 하단 구분선 및 로고 */}
-        <div className="absolute bottom-16 left-4 right-4 h-px bg-gray-300"></div>
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-          <p className="text-lg md:text-[17px] font-bold text-black">
-            KEEPING
-          </p>
         </div>
       </div>
     </div>

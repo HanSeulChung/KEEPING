@@ -112,7 +112,6 @@ export const GroupCreateModal = ({
         </div>
 
         {/* 하단 구분선 및 로고 */}
-
         <div className="absolute right-4 bottom-16 left-4 h-px bg-gray-300"></div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 transform">
           <p className="text-lg font-bold text-black md:text-[17px]">KEEPING</p>

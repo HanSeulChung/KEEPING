@@ -11,8 +11,7 @@ interface OtpVerificationModalProps {
   birth: string
   genderDigit: string
   userRole?: 'CUSTOMER' | 'OWNER'
-  purpose: 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
-  onSuccess: (token?: string) => void
+  onSuccess: () => void
 }
 
 const OtpVerificationModal = ({
@@ -23,7 +22,6 @@ const OtpVerificationModal = ({
   birth,
   genderDigit,
   userRole = 'CUSTOMER',
-  purpose,
   onSuccess,
 }: OtpVerificationModalProps) => {
   const {
@@ -75,18 +73,15 @@ const OtpVerificationModal = ({
       birth,
       genderDigit,
       userRole,
-      purpose,
     })
     const success = await requestOtpCode(
       name,
       phoneNumber,
       birth,
       genderDigit,
-      userRole,
-      purpose
+      userRole
     )
     console.log('OTP 요청 결과:', success)
-
     if (success) {
       setIsOtpSent(true)
       clearError()
@@ -94,6 +89,7 @@ const OtpVerificationModal = ({
   }
 
   const handleVerifyOtp = async () => {
+    console.log('handleVerifyOtp 호출됨, otpCode:', otpCode)
     if (!otpCode || otpCode.length !== 6) {
       alert('6자리 인증번호를 입력해주세요.')
       return
@@ -104,7 +100,7 @@ const OtpVerificationModal = ({
 
     if (result?.verified) {
       console.log('OTP 인증 성공:', result)
-      onSuccess(result.token)
+      onSuccess()
       onClose()
       resetOtp()
     } else {
@@ -128,7 +124,7 @@ const OtpVerificationModal = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="mx-4 w-full max-w-md rounded-lg bg-white p-8">
         {/* 헤더 */}
         <div className="mb-6 flex items-center justify-between">

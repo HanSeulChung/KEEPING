@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
+
 @Service
 @RequiredArgsConstructor
 public class GroupService {
@@ -139,7 +141,6 @@ public class GroupService {
         Long leaderId = groupMemberRepository.findLeaderId(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_LEADER_NOT_FOUND));
 
-        final String url = "/groups/" + groupId + "/requests";
         afterCommit(() -> notificationService.sendToCustomer(
                 leaderId, NotificationType.GROUP_JOIN_REQUEST,
                 "새 가입 요청이 도착했습니다."));
@@ -212,7 +213,6 @@ public class GroupService {
 
         boolean accepted = (changeStatus == RequestStatus.ACCEPT);
         final Long requesterId = groupAddRequest.getUser().getCustomerId();
-        final String url = "/groups/" + groupId;
 
         afterCommit(() -> notificationService.sendToCustomer(
                 requesterId,
@@ -259,8 +259,6 @@ public class GroupService {
                         .user(user)
                         .build()
         );
-
-        final String url = "/groups/" + groupId;
 
         // 커밋 후 알림
         afterCommit(() -> {
@@ -309,7 +307,6 @@ public class GroupService {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
-        final String url = "/groups/" + groupId;
         final Long oldLeaderId = originGroupLeader.getUser().getCustomerId();
         final Long newLeaderId = newGroupLeader.getUser().getCustomerId();
 
@@ -325,28 +322,47 @@ public class GroupService {
         );
     }
 
-    private Group validGroup(Long groupId) {
+    @Transactional
+    public void expelMember(Long groupId, Long leaderId, Long targetCustomerId) {
+        Group group = validGroup(groupId);
+
+        if (!groupMemberRepository.existsLeader(groupId, leaderId))
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+        if (leaderId.equals(targetCustomerId))
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+
+        GroupMember target = validGroupMember(groupId, targetCustomerId);
+        if (target.isLeader())
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+
+        long remain = walletService.getMemberSharedBalance(group, targetCustomerId);
+        if (remain > 0L) walletService.settleShareToIndividual(group, targetCustomerId);
+
+        groupMemberRepository.delete(target);
+
+        afterCommit(() -> {
+            notificationService.sendToCustomer(
+                    targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.");
+            groupMemberRepository.findMemberIdsByGroupId(groupId).forEach(id ->
+                    notificationService.sendToCustomer(
+                            id, NotificationType.MEMBER_EXPELLED, "모임원이 내보내졌습니다."));
+        });
+    }
+
+
+    public Group validGroup(Long groupId) {
         return groupRepository.findById(groupId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
     }
 
-    private GroupMember validGroupMember(Long groupId, Long userId) {
+    public GroupMember validGroupMember(Long groupId, Long userId) {
         return groupMemberRepository.findGroupMember(groupId, userId).orElseThrow(
                 () -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND)
         );
     }
 
-    private Customer validCustomer(Long customerId) {
+    public Customer validCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    // 유틸: 트랜잭션 커밋 후 실행
-    private void afterCommit(Runnable r) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override public void afterCommit() { r.run(); }
-            });
-        } else { r.run(); }
     }
 }

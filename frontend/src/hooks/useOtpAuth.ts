@@ -1,102 +1,89 @@
 'use client'
 
-import {
-  OtpRequest,
-  OtpVerifyRequest,
-  OtpVerifyResponse,
-  requestOtp,
-  verifyOtp,
-} from '@/api/otpApi'
+import { authApi } from '@/api/authApi'
+import { buildURL, endpoints } from '@/api/config'
 import { useCallback, useState } from 'react'
 
-interface UseOtpAuthReturn {
-  loading: boolean
-  error: string | null
-  requestId: string | null
-  expiresAt: string | null
+type Purpose = 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
+type Role = 'CUSTOMER' | 'OWNER'
 
-  requestOtpCode: (
-    name: string,
-    phoneNumber: string,
-    birth: string,
-    genderDigit: string,
-    userRole?: 'CUSTOMER' | 'OWNER',
-    purpose?: 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
-  ) => Promise<boolean>
-  verifyOtpCode: (otpCode: string) => Promise<OtpVerifyResponse | null>
-  clearError: () => void
-  resetOtp: () => void
-}
+type VerifyResult = { verified: boolean }
 
-export const useOtpAuth = (): UseOtpAuthReturn => {
+export function useOtpAuth() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [requestId, setRequestId] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
 
-  // OTP 요청
+  const clearError = useCallback(() => setError(null), [])
+  const resetOtp = useCallback(() => {
+    setLoading(false)
+    setError(null)
+    setRequestId(null)
+    setExpiresAt(null)
+  }, [])
+
   const requestOtpCode = useCallback(
     async (
       name: string,
       phoneNumber: string,
       birth: string,
       genderDigit: string,
-      userRole: 'CUSTOMER' | 'OWNER' = 'CUSTOMER',
-      purpose: 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET' = 'REGISTER'
-    ): Promise<boolean> => {
+      userRole: Role
+    ) => {
+      setLoading(true)
+      setError(null)
       try {
-        setLoading(true)
-        setError(null)
-
-        // regSessionId 생성 (현재 시간 기반 UUID 또는 세션 ID)
-        const regSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
         // birth를 YYYY-MM-DD 형식으로 변환 (6자리 YYMMDD -> YYYY-MM-DD)
         const formattedBirth =
           birth && birth.length === 6
-            ? `19${birth.slice(0, 2)}-${birth.slice(2, 4)}-${birth.slice(4, 6)}`
+            ? `20${birth.slice(0, 2)}-${birth.slice(2, 4)}-${birth.slice(4, 6)}`
             : birth || ''
 
-        const otpRequest: OtpRequest = {
-          regSessionId,
-          userRole,
-          name: name || '',
-          phoneNumber: phoneNumber || '',
-          birth: formattedBirth,
-          genderDigit: genderDigit || '',
+        console.log('OTP 요청 데이터:', {
+          name,
+          phoneNumber,
+          originalBirth: birth,
+          formattedBirth,
+          genderDigit,
+          userRole
+        })
+
+        // /auth/session-info에서 regSessionId 가져오기
+        const sessionInfo = await authApi.getSessionInfo()
+        const regSessionId = sessionInfo.data
+        console.log('/auth/session-info에서 가져온 regSessionId:', regSessionId)
+
+        if (!regSessionId) {
+          throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
         }
 
-        // 디버깅용 로그
-        console.log('OTP 요청 데이터:', otpRequest)
-        console.log(
-          'genderDigit 길이:',
-          genderDigit?.length || 0,
-          '값:',
-          genderDigit || 'undefined'
-        )
+        const res = await fetch(buildURL(endpoints.auth.otpRequest), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // 쿠키 동반
+          body: JSON.stringify({
+            name,
+            phoneNumber,
+            birth: formattedBirth,
+            genderDigit,
+            userRole,
+            regSessionId,
+          }),
+        })
 
-        const response = await requestOtp(otpRequest)
-        console.log('OTP 요청 응답:', response)
-
-        if (response.success) {
-          setRequestId(response.data.regSessionId) // regSessionId를 requestId로 사용
-          // expiresAt은 백엔드에서 제공하지 않으므로 임시로 3분 후로 설정
-          const expiresTime = new Date(Date.now() + 3 * 60 * 1000).toISOString()
-          setExpiresAt(expiresTime)
-          console.log(
-            'OTP 요청 성공, requestId(regSessionId) 설정됨:',
-            response.data.regSessionId
-          )
-          console.log('발급된 OTP 번호:', response.data.otpNumber)
-          return true
-        } else {
-          console.error('OTP 요청 실패:', response.message)
-          setError(response.message || 'OTP 요청에 실패했습니다.')
-          return false
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || data?.success === false) {
+          throw new Error(data?.message || `OTP 요청 실패 (HTTP ${res.status})`)
         }
-      } catch (err) {
-        console.error('OTP 요청 오류:', err)
-        setError('OTP 요청 중 오류가 발생했습니다.')
+
+        // 서버가 만약 requestId/만료시각을 내려주면 저장
+        setRequestId(data?.data?.requestId ?? null)
+        setExpiresAt(data?.data?.expiresAt ?? null)
+        
+        return true
+      } catch (e: any) {
+        setError(e?.message ?? 'OTP 요청 중 오류가 발생했습니다.')
         return false
       } finally {
         setLoading(false)
@@ -105,41 +92,44 @@ export const useOtpAuth = (): UseOtpAuthReturn => {
     []
   )
 
-  // OTP 검증
   const verifyOtpCode = useCallback(
-    async (otpCode: string): Promise<OtpVerifyResponse | null> => {
-      if (!requestId) {
-        setError('OTP 요청이 필요합니다.')
-        return null
-      }
-
+    async (code: string): Promise<VerifyResult | null> => {
+      setLoading(true)
+      setError(null)
       try {
-        setLoading(true)
-        setError(null)
+        // /auth/session-info에서 regSessionId 가져오기
+        const sessionInfo = await authApi.getSessionInfo()
+        const regSessionId = sessionInfo.data
+        console.log('OTP 검증에 사용할 regSessionId:', regSessionId)
 
-        const verifyRequest: OtpVerifyRequest = {
-          regSessionId: requestId, // requestId는 실제로는 regSessionId
-          code: otpCode,
+        if (!regSessionId) {
+          throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
         }
 
-        const response = await verifyOtp(verifyRequest)
-        console.log('OTP 검증 API 응답:', response)
+        const res = await fetch(buildURL(endpoints.auth.otpVerify), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // 쿠키 동반
+          body: JSON.stringify({
+            regSessionId,
+            code,
+          }),
+        })
 
-        if (response.success) {
-          console.log('OTP 검증 성공, 응답 데이터:', response.data)
-          // regSessionId를 token 필드에 포함해서 반환
-          return {
-            ...response.data,
-            token: requestId, // regSessionId를 token으로 사용
-          }
-        } else {
-          console.log('OTP 검증 실패:', response.message)
-          setError(response.message || 'OTP 검증에 실패했습니다.')
-          return null
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || data?.success === false) {
+          throw new Error(data?.message || `OTP 검증 실패 (HTTP ${res.status})`)
         }
-      } catch (err) {
-        console.error('OTP 검증 오류:', err)
-        setError('OTP 검증 중 오류가 발생했습니다.')
+
+        // OTP 검증 성공 시 백엔드에 OTP 인증 완료 상태 알림
+        if (data?.success) {
+          console.log('OTP 검증 성공! 백엔드에 OTP 인증 완료 상태 전달')
+        }
+
+        // 서버가 success 플래그를 내려준다고 가정
+        return { verified: true }
+      } catch (e: any) {
+        setError(e?.message ?? 'OTP 검증 중 오류가 발생했습니다.')
         return null
       } finally {
         setLoading(false)
@@ -148,26 +138,14 @@ export const useOtpAuth = (): UseOtpAuthReturn => {
     [requestId]
   )
 
-  // 에러 초기화
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
-
-  // OTP 상태 초기화
-  const resetOtp = useCallback(() => {
-    setRequestId(null)
-    setExpiresAt(null)
-    setError(null)
-  }, [])
-
   return {
     loading,
     error,
     requestId,
     expiresAt,
-    requestOtpCode,
-    verifyOtpCode,
     clearError,
     resetOtp,
+    requestOtpCode,
+    verifyOtpCode,
   }
 }

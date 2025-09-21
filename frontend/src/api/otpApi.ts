@@ -67,7 +67,6 @@ export const verifyOtp = async (
       headers: {
         'Content-Type': 'application/json',
       },
-
       body: JSON.stringify(verifyData),
     })
 

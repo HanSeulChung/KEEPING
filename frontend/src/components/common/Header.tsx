@@ -1,6 +1,6 @@
 'use client'
-import { useAuthStore } from '@/store/useAuthStore'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
+import { useAuthStore } from '@/store/useAuthStore'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -14,13 +14,20 @@ export default function Header() {
   // 홈페이지인지 확인
   const isHomePage = pathname === '/'
 
-  const handleLogout = () => {
-    logout()
-    // 로컬 스토리지에서 토큰 제거
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
-    router.push('/')
+  const handleLogout = async () => {
+    try {
+      // 서버에 로그아웃 요청 (Cookie 제거를 위해)
+      await fetch('/auth/logout', {
+        method: 'GET',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('로그아웃 요청 실패:', error)
+    } finally {
+      // 로컬 상태 업데이트
+      logout()
+      router.push('/')
+    }
   }
 
   const handleNotificationClick = () => {

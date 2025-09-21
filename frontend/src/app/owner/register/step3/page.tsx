@@ -1,24 +1,32 @@
 'use client'
-import { buildURL, endpoints } from '@/api/config'
+
+import { authApi } from '@/api/authApi'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
 const StoreRegistration = () => {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    storeDescription: '',
-    businessType: '',
-    postalCode: '',
+    storeName: '',
+    description: '',
+    category: '',
     address: '',
+    phoneNumber: '',
+    bankAccount: '',
+    merchantId: '',
   })
   const [errors, setErrors] = useState({
-    storeDescription: false,
-    businessType: false,
-    postalCode: false,
+    storeName: false,
+    description: false,
+    category: false,
     address: false,
+    phoneNumber: false,
+    bankAccount: false,
+    merchantId: false,
   })
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -30,18 +38,19 @@ const StoreRegistration = () => {
 
   const validateForm = () => {
     const newErrors = {
-      storeDescription: !formData.storeDescription.trim(),
-      businessType: !formData.businessType.trim(),
-      postalCode: !formData.postalCode || !/^\d{5}$/.test(formData.postalCode),
+      storeName: !formData.storeName.trim(),
+      description: !formData.description.trim(),
+      category: !formData.category.trim(),
       address: !formData.address.trim(),
+      phoneNumber: !formData.phoneNumber.trim(),
+      bankAccount: !formData.bankAccount.trim(),
+      merchantId: !formData.merchantId.trim(),
     }
     setErrors(newErrors)
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -57,266 +66,342 @@ const StoreRegistration = () => {
       return
     }
 
-    setIsUploading(true)
-
-    try {
-      // FormData 생성
-      const formData = new FormData()
-      formData.append('image', file)
-      // 실제 스토어 ID를 사용해야 함 - 스토어 등록 후 받은 ID 사용
-      const storeId =
-        localStorage.getItem('currentStoreId') || 'pending-store-registration'
-      formData.append('storeId', storeId)
-      formData.append('imageIndex', '0')
-
-      // 이미지 업로드 API 호출
-      const response = await fetch('/api/stores/temp-store-id/images', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        setUploadedImage(result.imageUrl)
-        console.log('이미지 업로드 성공:', result.imageUrl)
-      } else {
-        throw new Error('이미지 업로드 실패')
-      }
-    } catch (error) {
-      console.error('이미지 업로드 오류:', error)
-      alert('이미지 업로드에 실패했습니다.')
-    } finally {
-      setIsUploading(false)
+    setUploadedFile(file)
+    
+    // 미리보기 URL 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string)
     }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async () => {
-    if (validateForm()) {
-      try {
-        // regSessionId 가져오기 (OTP 인증 시 저장된 것)
-        console.log('localStorage 전체 내용:', localStorage)
-        console.log(
-          'regSessionId 키 존재 여부:',
-          localStorage.getItem('regSessionId') !== null
-        )
-        const regSessionId = localStorage.getItem('regSessionId')
-        console.log('가져온 regSessionId:', regSessionId)
+    if (!validateForm()) return
 
-        if (!regSessionId) {
-          console.error('regSessionId를 찾을 수 없습니다!')
-          alert('인증 정보를 찾을 수 없습니다. 다시 인증해주세요.')
-          router.push('/owner/register/step1')
-          return
-        }
+    setIsSubmitting(true)
+    try {
+      // 세션에서 regSessionId 가져오기
+      const sessionInfo = await authApi.getSessionInfo()
+      const regSessionId = sessionInfo.data
 
-        console.log('회원가입 API 호출:', { regSessionId })
+      console.log('회원가입에 사용할 regSessionId (세션에서):', regSessionId)
 
-        // 회원가입 API 호출
-        const response = await fetch(buildURL(endpoints.auth.signupOwner), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            regSessionId: regSessionId,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error('회원가입 API 에러:', response.status, errorText)
-          throw new Error(
-            `HTTP error! status: ${response.status}, message: ${errorText}`
-          )
-        }
-
-        const result = await response.json()
-        console.log('회원가입 성공:', result)
-
-        // 회원가입 성공 시 토큰 저장
-        if (result.data?.accessToken) {
-          localStorage.setItem('accessToken', result.data.accessToken)
-        }
-        if (result.data?.refreshToken) {
-          localStorage.setItem('refreshToken', result.data.refreshToken)
-        }
-
-        // 임시 regSessionId 삭제
-        localStorage.removeItem('regSessionId')
-
-        alert('회원가입이 완료되었습니다!')
-        router.push('/owner/dashboard')
-      } catch (error) {
-        console.error('회원가입 실패:', error)
-        alert('회원가입에 실패했습니다. 다시 시도해주세요.')
+      if (!regSessionId) {
+        console.error('regSessionId를 찾을 수 없습니다!')
+        alert('인증 정보를 찾을 수 없습니다. 다시 인증해주세요.')
+        router.push('/owner/register/step1')
+        return
       }
+
+      console.log('회원가입 API 호출:', { regSessionId })
+
+      // 1. 회원가입 완료 API 호출
+      const signupData = {
+        regSessionId: regSessionId
+      }
+
+      const signupResult = await authApi.completeOwnerSignup(signupData)
+      console.log('회원가입 성공:', signupResult)
+
+      // 회원가입 성공 시 토큰 저장
+      if (signupResult.accessToken) {
+        localStorage.setItem('accessToken', signupResult.accessToken)
+      }
+      if (signupResult.user) {
+        localStorage.setItem('user', JSON.stringify(signupResult.user))
+      }
+
+      // 2. 사업자 정보 가져오기 (로컬 스토리지나 세션에서)
+      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}')
+      
+      // 3. 매장 등록 API 호출 (multipart/form-data)
+      const storeFormData = new FormData()
+      
+      // 사업자 번호를 taxIdNumber로 추가
+      if (businessInfo.businessNumber) {
+        storeFormData.append('taxIdNumber', businessInfo.businessNumber)
+      } else {
+        alert('사업자 정보를 찾을 수 없습니다. 다시 진행해주세요.')
+        router.push('/owner/register/step2')
+        return
+      }
+      
+      storeFormData.append('storeName', formData.storeName)
+      storeFormData.append('description', formData.description)
+      storeFormData.append('category', formData.category)
+      storeFormData.append('address', formData.address)
+      storeFormData.append('phoneNumber', formData.phoneNumber)
+      storeFormData.append('bankAccount', formData.bankAccount)
+      storeFormData.append('merchantId', formData.merchantId)
+
+      // 이미지 파일 추가
+      if (uploadedFile) {
+        storeFormData.append('imgFile', uploadedFile)
+      }
+
+      console.log('매장 등록 API 호출:', {
+        taxIdNumber: businessInfo.businessNumber,
+        storeName: formData.storeName,
+        description: formData.description,
+        category: formData.category,
+        address: formData.address,
+        phoneNumber: formData.phoneNumber,
+        bankAccount: formData.bankAccount,
+        merchantId: formData.merchantId,
+        hasImage: !!uploadedFile
+      })
+
+      const storeResponse = await fetch('/owners/stores', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${signupResult.accessToken}`,
+        },
+        body: storeFormData,
+      })
+
+      if (!storeResponse.ok) {
+        const errorText = await storeResponse.text()
+        console.error('매장 등록 API 에러:', storeResponse.status, errorText)
+        throw new Error(`매장 등록 실패: ${storeResponse.status}`)
+      }
+
+      const storeResult = await storeResponse.json()
+      console.log('매장 등록 성공:', storeResult)
+
+      // 사업자 정보 정리
+      localStorage.removeItem('businessInfo')
+      
+      alert('회원가입 및 매장 등록이 완료되었습니다!')
+      router.push('/owner/dashboard')
+    } catch (error) {
+      console.error('회원가입/매장 등록 오류:', error)
+      alert('회원가입 또는 매장 등록 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center justify-center">
-          <h1 className="mb-2 text-center font-['Tenada'] text-2xl font-extrabold leading-7 text-black sm:text-4xl">
-            매장 등록
-          </h1>
-          <div className="text-center font-['Tenada'] text-xl font-extrabold leading-7 text-black sm:text-4xl">
-            2/2
-          </div>
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900">가게 정보 등록</h1>
+        <p className="mt-2 text-gray-600">
+          가게에 대한 기본 정보를 입력해주세요
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* 매장명 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            매장명 *
+          </label>
+          <input
+            type="text"
+            value={formData.storeName}
+            onChange={e => handleInputChange('storeName', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.storeName
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="매장명을 입력해주세요"
+          />
+          {errors.storeName && (
+            <p className="mt-1 text-sm text-red-500">매장명을 입력해주세요</p>
+          )}
         </div>
 
-        <div className="flex w-full flex-col items-center gap-6">
-          {/* 이미지 업로드 */}
-          <div className="w-full">
-            <div className="relative flex h-48 w-full items-center justify-center overflow-hidden rounded-lg border border-[#000000]/[.11] bg-gray-100">
-              {uploadedImage ? (
+        {/* 가게 설명 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            가게 설명 *
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={e => handleInputChange('description', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.description
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            rows={4}
+            placeholder="가게에 대한 간단한 설명을 입력해주세요"
+          />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-500">가게 설명을 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 업종 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            업종 *
+          </label>
+          <select
+            value={formData.category}
+            onChange={e => handleInputChange('category', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.category
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+          >
+            <option value="">업종을 선택해주세요</option>
+            <option value="한식">한식</option>
+            <option value="중식">중식</option>
+            <option value="일식">일식</option>
+            <option value="양식">양식</option>
+            <option value="분식">분식</option>
+            <option value="아시안">아시안</option>
+            <option value="패스트푸드">패스트푸드</option>
+            <option value="카페">카페</option>
+            <option value="식료품">식료품</option>
+            <option value="반찬/밀키트">반찬/밀키트</option>
+            <option value="헤어">헤어</option>
+            <option value="뷰티">뷰티</option>
+            <option value="꽃">꽃</option>
+            <option value="엔터테인먼트">엔터테인먼트</option>
+            <option value="스포츠">스포츠</option>
+            <option value="자동차">자동차</option>
+            <option value="반려동물">반려동물</option>
+            <option value="주류">주류</option>
+            <option value="클래스">클래스</option>
+            <option value="잡화">잡화</option>
+          </select>
+          {errors.category && (
+            <p className="mt-1 text-sm text-red-500">업종을 선택해주세요</p>
+          )}
+        </div>
+
+        {/* 매장 주소 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            매장 주소 *
+          </label>
+          <input
+            type="text"
+            value={formData.address}
+            onChange={e => handleInputChange('address', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.address
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="매장 주소를 입력해주세요"
+          />
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-500">매장 주소를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 매장 전화번호 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            매장 전화번호 *
+          </label>
+          <input
+            type="tel"
+            value={formData.phoneNumber}
+            onChange={e => handleInputChange('phoneNumber', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.phoneNumber
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="매장 전화번호를 입력해주세요"
+          />
+          {errors.phoneNumber && (
+            <p className="mt-1 text-sm text-red-500">매장 전화번호를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 정산 계좌 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            정산 계좌 *
+          </label>
+          <input
+            type="text"
+            value={formData.bankAccount}
+            onChange={e => handleInputChange('bankAccount', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.bankAccount
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="정산 계좌를 입력해주세요"
+          />
+          {errors.bankAccount && (
+            <p className="mt-1 text-sm text-red-500">정산 계좌를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 가맹점ID */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            가맹점ID *
+          </label>
+          <input
+            type="text"
+            value={formData.merchantId}
+            onChange={e => handleInputChange('merchantId', e.target.value)}
+            className={`w-full rounded-lg border p-3 ${
+              errors.merchantId
+                ? 'border-red-500 focus:border-red-500'
+                : 'border-gray-300 focus:border-blue-500'
+            } focus:outline-none`}
+            placeholder="가맹점ID를 입력해주세요"
+          />
+          {errors.merchantId && (
+            <p className="mt-1 text-sm text-red-500">가맹점ID를 입력해주세요</p>
+          )}
+        </div>
+
+        {/* 이미지 업로드 */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            가게 이미지
+          </label>
+          <div className="space-y-4">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full rounded-lg border border-gray-300 p-3 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-500 file:px-4 file:py-2 file:text-white file:hover:bg-blue-600"
+            />
+            {previewUrl && (
+              <div className="mt-4">
                 <img
-                  src={uploadedImage}
-                  alt="업로드된 매장 이미지"
-                  className="h-full w-full object-cover"
+                  src={previewUrl}
+                  alt="미리보기"
+                  className="h-32 w-32 rounded-lg object-cover"
                 />
-              ) : (
-                <div className="text-center text-gray-500">
-                  <div className="mb-2 font-['nanumsquare'] text-sm">
-                    매장 이미지를 업로드해주세요
-                  </div>
-                  <div className="text-xs">JPG, PNG, GIF (최대 5MB)</div>
-                </div>
-              )}
-
-              <div className="absolute bottom-4 right-4">
-                <label className="text-1 flex h-[1.375rem] cursor-pointer flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black transition-colors hover:bg-gray-50">
-                  {isUploading ? '업로드 중...' : '이미지 업로드'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </label>
               </div>
-            </div>
-          </div>
-
-          {/* 가게 소개 */}
-          <div className="w-full">
-            <div className="flex flex-col items-start gap-2">
-              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
-                가게 소개
-              </div>
-              <textarea
-                value={formData.storeDescription}
-                onChange={e =>
-                  handleInputChange('storeDescription', e.target.value)
-                }
-                placeholder="가게 소개 입력"
-                rows={3}
-                className={`h-20 w-full resize-none rounded-md border bg-white p-2 font-['Inter'] leading-6 ${
-                  errors.storeDescription
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-gray-300 focus:border-gray-500'
-                } focus:outline-none`}
-              />
-              {errors.storeDescription && (
-                <p className="text-xs text-red-500">가게 소개를 입력해주세요</p>
-              )}
-            </div>
-          </div>
-
-          {/* 업종 선택 */}
-          <div className="w-full">
-            <div className="flex flex-col items-start gap-2">
-              <div className="text-2 flex h-[1.375rem] flex-col items-center justify-center gap-2.5 self-stretch rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
-                업종
-              </div>
-              <select
-                value={formData.businessType}
-                onChange={e =>
-                  handleInputChange('businessType', e.target.value)
-                }
-                className={`h-[2.4375rem] w-full rounded-md border bg-white p-2 font-['Inter'] leading-6 ${
-                  errors.businessType
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-gray-300 focus:border-gray-500'
-                } focus:outline-none`}
-              >
-                <option value="">업종 선택</option>
-                <option value="한식">한식</option>
-                <option value="중식">중식</option>
-                <option value="일식">일식</option>
-                <option value="양식">양식</option>
-                <option value="카페">카페</option>
-                <option value="베이커리">베이커리</option>
-                <option value="기타">기타</option>
-              </select>
-              {errors.businessType && (
-                <p className="text-xs text-red-500">업종을 선택해주세요</p>
-              )}
-            </div>
-          </div>
-
-          {/* 주소 */}
-          <div className="w-full">
-            <div className="flex flex-col items-start gap-2">
-              <div className="text-6 flex h-[1.375rem] items-center justify-center gap-2.5 rounded-lg border border-black bg-white px-4 pb-[0.5625rem] pt-[0.5625rem] text-center font-['nanumsquare'] text-[11px] font-bold leading-5 text-black">
-                주 소
-              </div>
-              <div className="flex h-[2.5625rem] w-full">
-                <input
-                  type="text"
-                  value={formData.postalCode}
-                  onChange={e =>
-                    handleInputChange(
-                      'postalCode',
-                      e.target.value.replace(/\D/g, '')
-                    )
-                  }
-                  placeholder="우편번호"
-                  maxLength={5}
-                  className={`h-[2.5625rem] flex-1 rounded-bl-md rounded-tl-md border bg-white p-2 font-['Inter'] leading-6 ${
-                    errors.postalCode
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-gray-300 focus:border-gray-500'
-                  } focus:outline-none`}
-                />
-                <button
-                  type="button"
-                  className="flex h-[2.5625rem] w-16 items-center justify-center rounded-br-md rounded-tr-md bg-gray-800 px-3 text-center font-['Inter'] text-[.8125rem] leading-6 text-white transition-colors hover:bg-gray-900"
-                >
-                  검색
-                </button>
-              </div>
-              {errors.postalCode && (
-                <p className="text-xs text-red-500">우편번호를 입력해주세요</p>
-              )}
-              <input
-                type="text"
-                value={formData.address}
-                onChange={e => handleInputChange('address', e.target.value)}
-                placeholder="기본 주소"
-                className={`h-[2.5625rem] w-full rounded-md border bg-white p-2 font-['Inter'] leading-6 ${
-                  errors.address
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-gray-300 focus:border-gray-500'
-                } focus:outline-none`}
-              />
-              {errors.address && (
-                <p className="text-xs text-red-500">주소를 입력해주세요</p>
-              )}
-            </div>
-          </div>
-
-          {/* 등록하기 버튼 */}
-          <div className="flex w-full items-center justify-center">
-            <button
-              onClick={handleSubmit}
-              className="flex items-center justify-center rounded bg-gray-800 px-3 py-2 text-center font-['nanumsquare'] text-[.8125rem] font-bold leading-6 text-white transition-colors hover:bg-gray-900"
-            >
-              등록하기
-            </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* 제출 버튼 */}
+      <div className="flex justify-end space-x-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          disabled={isSubmitting}
+          className="rounded-lg bg-gray-500 px-6 py-3 text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting ? '처리 중...' : '회원가입 완료'}
+        </button>
       </div>
     </div>
   )
