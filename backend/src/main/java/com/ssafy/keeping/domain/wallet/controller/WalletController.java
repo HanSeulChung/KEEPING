@@ -1,12 +1,7 @@
 package com.ssafy.keeping.domain.wallet.controller;
 
 import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
-import com.ssafy.keeping.domain.wallet.dto.PointShareRequestDto;
-import com.ssafy.keeping.domain.wallet.dto.PointShareResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.PersonalWalletBalanceResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.GroupWalletBalanceResponseDto;
-import com.ssafy.keeping.domain.wallet.dto.WalletStoreDetailResponseDto;
+import com.ssafy.keeping.domain.wallet.dto.*;
 import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -60,6 +55,17 @@ public class WalletController {
         }
         return ResponseEntity.status(status)
                 .body(ApiResponse.success(msg, status.value(), result.getBody()));
+    }
+
+    @GetMapping("/{walletId}/points/available")
+    public ResponseEntity<ApiResponse<AvailablePointResponseDto>> getReclaimable(
+            @PathVariable Long walletId,
+            @AuthenticationPrincipal Long customerId
+    ) {
+        AvailablePointResponseDto dto = walletService.getReclaimablePoints(walletId, customerId);
+        return ResponseEntity.ok(
+                ApiResponse.success("회수 가능한 포인트를 조회했습니다.",  HttpStatus.OK.value(), dto)
+        );
     }
 
     @PostMapping("/groups/{groupId}/stores/{storeId}/reclaim")
