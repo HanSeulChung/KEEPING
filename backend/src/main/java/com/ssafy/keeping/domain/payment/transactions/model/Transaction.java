@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class Transaction {
 
     @Id
@@ -53,5 +53,10 @@ public class Transaction {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ref_tx_id",
+            foreignKey = @ForeignKey(name = "fk_tx_ref_tx"))
+    private Transaction refTransaction;   // null: 일반거래, not null: CANCEL_*가 참조하는 부모
 
 }
