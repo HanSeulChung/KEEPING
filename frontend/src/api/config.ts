@@ -18,6 +18,12 @@ export const buildURL = (path: string): string => {
   return `${base}${path}`
 }
 
+export const fill = (tpl: string, params: Record<string, string | number>) =>
+  Object.entries(params).reduce(
+    (p, [k, v]) => p.replace(`{${k}}`, String(v)),
+    tpl
+  )
+
 export const endpoints = {
   auth: {
     // 로그아웃
@@ -47,19 +53,25 @@ export const endpoints = {
     signup: '/owners',
   },
   group: {
-    create: '/groups',
-    search: '/groups/{groupId}',
+    list: '/groups', // GET
+    create: '/groups', // POST
+    detail: '/groups/{groupId}', // GET
     members: '/groups/{groupId}/group-members',
-    request: '/groups/{groupId}/add-requests',
-    searchRequest: '/groups/{groupId}/add-requests?status=PENDING',
-    responseRequest: '/groups/{groupId}/add-requests',
-    enterGroup: '/groups/{groupId}/entrance',
-    searchGroupbyName: '/groups?name={groupName}',
-    changeLeader: '/groups/{groupId}/group-leader',
-    removeMember: '/groups/{groupId}/group-member',
-    leaveGroup: '/groups/{groupId}/group-member',
-    deleteGroup: '/groups/{groupId}',
+    addRequest: '/groups/{groupId}/add-requests', // POST
+    addRequestList: '/groups/{groupId}/add-requests?status=PENDING', // GET
+    entrance: '/groups/{groupId}/entrance', // POST
+    searchByName: '/groups?name={groupName}', // GET
+    changeLeader: '/groups/{groupId}/group-leader', // PATCH
+    leave: '/groups/{groupId}/group-member', // DELETE
+    delete: '/groups/{groupId}', // DELETE
   },
+  wallet: {
+    groupBalances: '/wallets/groups/{groupId}/balances', // GET
+    groupTransactions: '/wallets/groups/{groupId}/transactions', // GET?page=&size=
+    share: '/wallets/groups/{groupId}/share', // POST {amount}
+    withdraw: '/wallets/groups/{groupId}/withdraw', // POST {amount}
+  },
+
   stores: {
     // 매장 검색 및 조회
     search: '/stores',
