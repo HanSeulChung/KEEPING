@@ -84,14 +84,13 @@ const fetchGroupInfo = async (groupId: number) => {
   }
 }
 
-const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
+const fetchGroupMembers = async (groupId: number) => {
   try {
-    const url = buildURL(`/groups/${groupId}/group-member`)
+    const url = buildURL(`/groups/${groupId}/group-members`)
 
     console.log('그룹 멤버 조회 요청:', {
       url,
       groupId,
-      targetCustomerId,
     })
 
     // Authorization 헤더 추가
@@ -107,12 +106,9 @@ const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
     }
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'GET',
       credentials: 'include',
       headers,
-      body: JSON.stringify({
-        targetCustomerId: targetCustomerId,
-      }),
     })
 
     console.log('그룹 멤버 조회 응답 상태:', response.status)
@@ -267,6 +263,114 @@ const fetchIndividualBalance = async () => {
   }
 }
 
+// 회수 가능 금액 조회 API 함수
+const fetchAvailableReclaimAmount = async (walletId: number) => {
+  try {
+    const url = buildURL(`/wallets/${walletId}/points/available`)
+
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      console.log('회수 가능 금액 조회 - 토큰 확인:', { 
+        hasToken: !!accessToken, 
+        tokenLength: accessToken?.length,
+        tokenStart: accessToken?.substring(0, 20) + '...'
+      })
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      } else {
+        console.warn('회수 가능 금액 조회 - 토큰이 없습니다!')
+      }
+    }
+
+    console.log('회수 가능 금액 조회 요청:', { url, headers })
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    console.log('회수 가능 금액 API 응답:', result)
+    return result
+  } catch (error) {
+    console.error('회수 가능 금액 조회 실패:', error)
+    throw error
+  }
+}
+
+// 회수 API 함수
+const reclaimAmount = async (
+  groupId: number,
+  storeId: number,
+  individualWalletId: number,
+  groupWalletId: number,
+  shareAmount: number
+) => {
+  try {
+    const url = buildURL(`/wallets/groups/${groupId}/stores/${storeId}/reclaim`)
+
+    // UUID 생성 (IdempotencyKey용)
+    const idempotencyKey = crypto.randomUUID()
+
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const requestBody = {
+      individualWalletId,
+      groupWalletId,
+      shareAmount,
+    }
+
+    console.log('회수 요청:', { url, idempotencyKey, requestBody })
+
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`
+      try {
+        const errorData = await response.json()
+        console.error('회수 API 에러 응답:', errorData)
+        errorMessage = errorData.message || errorMessage
+      } catch (e) {
+        console.error('에러 응답 파싱 실패:', e)
+      }
+      throw new Error(errorMessage)
+    }
+
+    const result = await response.json()
+    console.log('회수 API 응답:', result)
+    return result
+  } catch (error) {
+    console.error('회수 실패:', error)
+    throw error
+  }
+}
+
 // 사용자가 속한 그룹 목록 조회 API 함수
 const fetchUserGroups = async () => {
   try {
@@ -370,7 +474,7 @@ interface GroupTransactionResponse {
 
 interface Transaction {
   id: number
-  type: 'charge' | 'usage'
+  type: 'charge' | 'use' | 'transfer-in' | 'transfer-out' | 'cancel-charge' | 'cancel-use' | 'unknown'
   amount: number
   date: string
   by: string
@@ -382,6 +486,26 @@ const TAB_CONFIG = {
   history: '사용내역',
   withdrawal: '회수',
 } as const
+
+// 거래 타입별 색상 및 라벨 정의
+const getTransactionDisplayInfo = (transactionType: string) => {
+  switch (transactionType) {
+    case 'CHARGE':
+      return { type: 'charge', label: '충전', color: 'blue' }
+    case 'USE':
+      return { type: 'use', label: '사용', color: 'red' }
+    case 'TRANSFER_IN':
+      return { type: 'transfer-in', label: '공유', color: 'green' }
+    case 'TRANSFER_OUT':
+      return { type: 'transfer-out', label: '회수', color: 'purple' }
+    case 'CANCEL_CHARGE':
+      return { type: 'cancel-charge', label: '충전취소', color: 'orange' }
+    case 'CANCEL_USE':
+      return { type: 'cancel-use', label: '사용취소', color: 'yellow' }
+    default:
+      return { type: 'unknown', label: '알 수 없음', color: 'gray' }
+  }
+}
 
 // 지갑 카드 컴포넌트 (MyWallet에서 가져옴)
 const WalletCard = ({
@@ -434,6 +558,46 @@ const WalletCard = ({
   )
 }
 
+// 거래 타입별 스타일 함수
+const getTransactionTypeStyle = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return 'border-blue-500 text-blue-500'
+    case 'use':
+      return 'border-red-500 text-red-500'
+    case 'transfer-in':
+      return 'border-green-500 text-green-500'
+    case 'transfer-out':
+      return 'border-purple-500 text-purple-500'
+    case 'cancel-charge':
+      return 'border-orange-500 text-orange-500'
+    case 'cancel-use':
+      return 'border-yellow-500 text-yellow-500'
+    default:
+      return 'border-gray-500 text-gray-500'
+  }
+}
+
+// 거래 타입별 라벨 함수
+const getTransactionTypeLabel = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return '충전'
+    case 'use':
+      return '사용'
+    case 'transfer-in':
+      return '공유'
+    case 'transfer-out':
+      return '회수'
+    case 'cancel-charge':
+      return '충전취소'
+    case 'cancel-use':
+      return '사용취소'
+    default:
+      return '알 수 없음'
+  }
+}
+
 // 거래 내역 아이템 컴포넌트 (MyWallet에서 가져와서 수정)
 const TransactionItem = ({
   transaction,
@@ -444,15 +608,11 @@ const TransactionItem = ({
 }) => {
   return (
     <div className="relative h-16 w-full">
-      {/* 충전/사용 라벨 */}
+      {/* 거래 타입 라벨 */}
       <div
-        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${
-          transaction.type === 'charge'
-            ? 'border-blue-500 text-blue-500'
-            : 'border-red-500 text-red-500'
-        }`}
+        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${getTransactionTypeStyle(transaction.type)}`}
       >
-        {transaction.type === 'charge' ? '충전' : '사용'}
+        {getTransactionTypeLabel(transaction.type)}
       </div>
 
       {/* 금액 */}
@@ -535,7 +695,7 @@ const ShareModal = ({
 
   // 첫 번째 개인 카드를 기본 선택으로 설정
   useEffect(() => {
-    if (individualBalance.length > 0 && !selectedIndividualCard) {
+    if (individualBalance && individualBalance.length > 0 && !selectedIndividualCard) {
       setSelectedIndividualCard(individualBalance[0])
     }
   }, [individualBalance, selectedIndividualCard])
@@ -681,7 +841,7 @@ const ShareModal = ({
             <select
               value={selectedIndividualCard?.storeId || ''}
               onChange={e => {
-                const selected = individualBalance.find(
+                const selected = individualBalance?.find(
                   balance => balance.storeId === parseInt(e.target.value)
                 )
                 setSelectedIndividualCard(selected)
@@ -689,12 +849,12 @@ const ShareModal = ({
               className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">카드를 선택해주세요</option>
-              {individualBalance.map(balance => (
+              {individualBalance?.map(balance => (
                 <option key={balance.storeId} value={balance.storeId}>
                   {balance.storeName} (잔액:{' '}
                   {balance.remainingPoints.toLocaleString()}원)
                 </option>
-              ))}
+              )) || []}
             </select>
           </div>
         </div>
@@ -762,20 +922,29 @@ const ShareModal = ({
   )
 }
 
-// 회수 섹션 컴포넌트 (환불 섹션과 유사)
+// 회수 섹션 컴포넌트
 const WithdrawalSection = ({
   selectedCard,
+  availableReclaimAmount,
+  reclaimAmountInput,
+  setReclaimAmountInput,
+  handleReclaim,
+  isReclaiming,
+  reclaimLoading,
 }: {
   selectedCard: WalletCard | undefined
+  availableReclaimAmount: number
+  reclaimAmountInput: string
+  setReclaimAmountInput: (value: string) => void
+  handleReclaim: () => void
+  isReclaiming: boolean
+  reclaimLoading: boolean
 }) => {
-  const [withdrawalAmount, setWithdrawalAmount] = useState<string>('')
-  const availableAmount = selectedCard?.amount || 0 // 회수 가능 금액
-
-  const handleWithdrawalAmountChange = (
+  const handleReclaimAmountChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = e.target.value.replace(/[^0-9]/g, '') // 숫자만 입력 가능
-    setWithdrawalAmount(value)
+    setReclaimAmountInput(value)
   }
 
   if (!selectedCard) {
@@ -805,7 +974,7 @@ const WithdrawalSection = ({
             className="h-[40px] w-[200px]"
           />
           <p className="absolute top-[12px] right-[20px] text-base font-bold text-black md:text-sm">
-            {availableAmount.toLocaleString()}
+            {availableReclaimAmount.toLocaleString()}
           </p>
         </div>
       </div>
@@ -824,16 +993,23 @@ const WithdrawalSection = ({
           />
           <input
             type="text"
-            value={withdrawalAmount}
-            onChange={handleWithdrawalAmountChange}
+            value={reclaimAmountInput}
+            onChange={handleReclaimAmountChange}
             placeholder="0"
             className="absolute top-[12px] right-[20px] w-[120px] border-none bg-transparent text-right text-base font-bold text-black outline-none md:text-sm"
+            disabled={reclaimLoading}
           />
         </div>
       </div>
 
-      <button className="flex h-10 w-full items-center justify-center border border-black bg-black">
-        <span className="text-sm font-bold text-white">회수하기</span>
+      <button 
+        onClick={handleReclaim}
+        disabled={reclaimLoading || isReclaiming}
+        className="flex h-10 w-full items-center justify-center border border-black bg-black disabled:bg-gray-400"
+      >
+        <span className="text-sm font-bold text-white">
+          {reclaimLoading || isReclaiming ? '회수 중...' : '회수하기'}
+        </span>
       </button>
     </div>
   )
@@ -956,7 +1132,7 @@ const MemberListModal = ({
             <div className="flex items-center justify-center py-8">
               <div className="text-sm text-gray-500">멤버 로딩 중...</div>
             </div>
-          ) : members.length > 0 ? (
+          ) : members && members.length > 0 ? (
             <div className="space-y-3">
               {members.map(member => (
                 <div
@@ -1054,6 +1230,15 @@ export const GroupWallet = () => {
   } | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // 회수 관련 상태
+  const [availableReclaimAmount, setAvailableReclaimAmount] = useState<number>(0)
+  const [reclaimAmountInput, setReclaimAmountInput] = useState<string>('')
+  const [isReclaiming, setIsReclaiming] = useState(false)
+  const [reclaimLoading, setReclaimLoading] = useState(false)
+
+  // 현재 사용자가 리더인지 확인하는 상태
+  const [isCurrentUserLeader, setIsCurrentUserLeader] = useState(false)
+
   // 사용자 그룹 목록 로드 함수
   const loadUserGroups = async () => {
     try {
@@ -1108,12 +1293,36 @@ export const GroupWallet = () => {
     fetchIndividualBalanceData()
   }, [])
 
+  // individualBalance 상태 변경 디버깅
+  useEffect(() => {
+    console.log('individualBalance 상태 변경:', individualBalance)
+  }, [individualBalance])
+
   // 카드나 탭이 변경될 때 거래 내역 조회
   useEffect(() => {
     if (activeTab === 'history' && selectedCard && selectedGroup !== null) {
       fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
     }
   }, [selectedCard, activeTab, selectedGroup])
+
+  // 선택된 그룹이 변경될 때 멤버 조회
+  useEffect(() => {
+    if (selectedGroup !== null) {
+      fetchMembers(selectedGroup)
+    }
+  }, [selectedGroup])
+
+  // 사용자 정보가 로드되면 리더 여부 다시 확인
+  useEffect(() => {
+    if (user && groupMembers.length > 0) {
+      const currentUserMember = groupMembers.find((member: GroupMember) => 
+        member.customerId === user.userId || 
+        member.customerName === user.name
+      )
+      console.log('사용자 정보 로드 후 리더 확인:', currentUserMember?.isLeader)
+      setIsCurrentUserLeader(currentUserMember?.isLeader || false)
+    }
+  }, [user, groupMembers])
 
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
@@ -1144,19 +1353,42 @@ export const GroupWallet = () => {
   const fetchMembers = async (groupId: number) => {
     console.log('fetchMembers 호출됨:', { groupId, user })
 
-    if (!user?.userId) {
-      console.log('user.userId가 없어서 멤버 조회 건너뜀')
-      return
-    }
-
     setMembersLoading(true)
     try {
-      const result = await fetchGroupMembers(groupId, user.userId)
+      const result = await fetchGroupMembers(groupId)
+      console.log('그룹 멤버 API 응답:', result) // 디버깅용 로그
+      
       if (result.success && result.data) {
-        setGroupMembers(result.data)
+        const members = Array.isArray(result.data) ? result.data : []
+        setGroupMembers(members)
+        
+        // 현재 사용자가 리더인지 확인
+        const currentUser = user
+        console.log('현재 사용자 정보:', currentUser)
+        console.log('그룹 멤버 목록:', members)
+        
+        if (currentUser) {
+          const currentUserMember = members.find((member: GroupMember) => 
+            member.customerId === currentUser.userId || 
+            member.customerName === currentUser.name
+          )
+          
+          console.log('찾은 현재 사용자 멤버:', currentUserMember)
+          console.log('리더 여부:', currentUserMember?.isLeader)
+          
+          setIsCurrentUserLeader(currentUserMember?.isLeader || false)
+        } else {
+          console.log('사용자 정보가 아직 로드되지 않음')
+          setIsCurrentUserLeader(false)
+        }
+      } else {
+        console.warn('그룹 멤버 데이터가 없습니다:', result)
+        setGroupMembers([])
+        setIsCurrentUserLeader(false)
       }
     } catch (error) {
       console.error('그룹 멤버 조회 실패:', error)
+      setGroupMembers([])
     } finally {
       setMembersLoading(false)
     }
@@ -1166,11 +1398,20 @@ export const GroupWallet = () => {
     setWalletLoading(true)
     try {
       const result = await fetchGroupWalletBalance(groupId)
+      console.log('그룹 지갑 카드 API 응답:', result) // 디버깅용 로그
+      
       if (result.success && result.data) {
-        setGroupWalletCards(result.data.storeBalances.content)
+        // 백엔드에서 페이징을 제거했다면 직접 배열을 반환할 것
+        const storeBalances = result.data.storeBalances?.content || result.data.storeBalances || []
+        console.log('처리된 그룹 지갑 storeBalances:', storeBalances) // 디버깅용
+        setGroupWalletCards(Array.isArray(storeBalances) ? storeBalances : [])
+      } else {
+        console.warn('그룹 지갑 카드 데이터가 없습니다:', result)
+        setGroupWalletCards([])
       }
     } catch (error) {
       console.error('그룹 지갑 카드 조회 실패:', error)
+      setGroupWalletCards([])
     } finally {
       setWalletLoading(false)
     }
@@ -1184,10 +1425,21 @@ export const GroupWallet = () => {
     setTransactionsLoading(true)
     try {
       const result = await fetchGroupTransactionHistory(groupId, storeId, page)
+      console.log('거래 내역 API 응답:', result) // 디버깅용 로그
+      
       if (result.success && result.data) {
-        setTransactions(result.data.transactions.content)
-        setCurrentPage(result.data.transactions.number)
-        setTotalPages(result.data.transactions.totalPages)
+        // 백엔드에서 페이징을 제거했다면 직접 배열을 반환할 것
+        const transactions = result.data.transactions?.content || result.data.transactions || []
+        console.log('처리된 거래 내역:', transactions) // 디버깅용
+        setTransactions(Array.isArray(transactions) ? transactions : [])
+        // 페이징이 제거되었다면 페이지 관련 상태는 기본값으로 설정
+        setCurrentPage(result.data.transactions?.number || 0)
+        setTotalPages(result.data.transactions?.totalPages || 1)
+      } else {
+        console.warn('거래 내역 데이터가 없습니다:', result)
+        setTransactions([])
+        setCurrentPage(0)
+        setTotalPages(0)
       }
     } catch (error) {
       console.error('그룹 거래 내역 조회 실패:', error)
@@ -1196,16 +1448,112 @@ export const GroupWallet = () => {
     }
   }
 
+  // 회수 가능 금액 조회
+  const fetchAvailableReclaimAmountData = async (walletId: number) => {
+    try {
+      const result = await fetchAvailableReclaimAmount(walletId)
+      console.log('회수 가능 금액 조회 결과:', result)
+      
+      if (result.success && result.data) {
+        setAvailableReclaimAmount(result.data.available || 0)
+      } else {
+        console.warn('회수 가능 금액 데이터가 없습니다:', result)
+        setAvailableReclaimAmount(0)
+      }
+    } catch (error) {
+      console.error('회수 가능 금액 조회 실패:', error)
+      // 임시로 기본값 설정 (백엔드 API가 구현되지 않은 경우)
+      console.log('회수 가능 금액 API가 구현되지 않았습니다. 기본값 0으로 설정합니다.')
+      setAvailableReclaimAmount(0)
+    }
+  }
+
   // 개인 지갑 잔액 가져오기
   const fetchIndividualBalanceData = async () => {
     try {
       const result = await fetchIndividualBalance()
+      console.log('개인 지갑 잔액 API 응답:', result) // 디버깅용 로그
+      
       if (result.success && result.data) {
-        setIndividualBalance(result.data.storeBalances.content)
-        setIndividualWalletId(result.data.walletId) // 개인 지갑 ID 저장
+        // 백엔드에서 페이징을 제거했으므로 직접 배열을 반환
+        const storeBalances = result.data.storeBalances || []
+        console.log('처리된 storeBalances:', storeBalances) // 디버깅용
+        console.log('storeBalances 타입:', typeof storeBalances, '길이:', storeBalances?.length) // 디버깅용
+        setIndividualBalance(Array.isArray(storeBalances) ? storeBalances : [])
+        setIndividualWalletId(result.data.walletId || 0) // 개인 지갑 ID 저장
+        console.log('individualBalance 상태 설정 완료') // 디버깅용
+      } else {
+        console.warn('개인 지갑 잔액 데이터가 없습니다:', result)
+        setIndividualBalance([])
+        setIndividualWalletId(0)
       }
     } catch (error) {
       console.error('개인 지갑 잔액 조회 실패:', error)
+      setIndividualBalance([])
+      setIndividualWalletId(0)
+    }
+  }
+
+  // 회수 실행 함수
+  const handleReclaim = async () => {
+    if (!selectedGroup || !selectedCard || !individualWalletId || !groupInfo) {
+      alert('필수 정보가 누락되었습니다.')
+      return
+    }
+
+    const amount = parseFloat(reclaimAmountInput)
+    if (!amount || amount <= 0) {
+      alert('올바른 금액을 입력해주세요.')
+      return
+    }
+
+    if (amount > availableReclaimAmount) {
+      alert('회수 가능 금액을 초과했습니다.')
+      return
+    }
+
+    setIsReclaiming(true)
+    setReclaimLoading(true)
+
+    // 요청 간격 추가 (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    try {
+      console.log('회수 실행 - 파라미터 확인:', {
+        selectedGroup,
+        selectedCard,
+        individualWalletId,
+        groupWalletId: groupInfo.walletId,
+        amount,
+        groupInfo
+      })
+      
+      const result = await reclaimAmount(
+        selectedGroup,
+        selectedCard,
+        individualWalletId,
+        groupInfo.walletId,
+        amount
+      )
+
+      if (result.success) {
+        alert('회수가 완료되었습니다.')
+        setReclaimAmountInput('')
+        // 데이터 새로고침
+        await Promise.all([
+          fetchIndividualBalanceData(),
+          fetchWalletCards(selectedGroup),
+          fetchAvailableReclaimAmountData(groupInfo.walletId)
+        ])
+      } else {
+        alert(`회수 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`)
+      }
+    } catch (error) {
+      console.error('회수 처리 중 오류:', error)
+      alert('회수 처리 중 오류가 발생했습니다.')
+    } finally {
+      setIsReclaiming(false)
+      setReclaimLoading(false)
     }
   }
 
@@ -1218,8 +1566,12 @@ export const GroupWallet = () => {
       if (result.success && result.data) {
         setGroupInfo(result.data)
       }
-      // 그룹 멤버와 지갑 카드도 함께 조회
-      await Promise.all([fetchMembers(groupId), fetchWalletCards(groupId)])
+      // 그룹 멤버, 지갑 카드, 회수 가능 금액도 함께 조회
+      await Promise.all([
+        fetchMembers(groupId), 
+        fetchWalletCards(groupId),
+        fetchAvailableReclaimAmountData(result.data.walletId)
+      ])
     } catch (error) {
       console.error('그룹 정보 조회 실패:', error)
     } finally {
@@ -1268,7 +1620,7 @@ export const GroupWallet = () => {
   }
 
   // API 데이터를 카드 형태로 변환
-  const cardsWithSelection = groupWalletCards.map(card => ({
+  const cardsWithSelection = (groupWalletCards || []).map(card => ({
     id: card.storeId,
     name: card.storeName,
     amount: card.remainingPoints,
@@ -1411,6 +1763,28 @@ export const GroupWallet = () => {
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                   </svg>
                 </button>
+
+                {/* 설정 버튼 (리더만 표시) */}
+                {isCurrentUserLeader && (
+                  <button
+                    onClick={() => window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 transition-colors hover:bg-blue-200"
+                    title="그룹 설정"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-blue-600"
+                    >
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* 그룹 코드 */}
@@ -1556,16 +1930,13 @@ export const GroupWallet = () => {
                   거래 내역 로딩 중...
                 </div>
               </div>
-            ) : transactions.length > 0 ? (
+            ) : transactions && transactions.length > 0 ? (
               transactions.map(transaction => (
                 <TransactionItem
                   key={transaction.transactionId}
                   transaction={{
                     id: transaction.transactionId,
-                    type:
-                      transaction.transactionType === 'CHARGE'
-                        ? 'charge'
-                        : 'usage',
+                    type: getTransactionDisplayInfo(transaction.transactionType).type as Transaction['type'],
                     amount: transaction.amount,
                     date: new Date(transaction.createdAt).toLocaleDateString(
                       'ko-KR'
@@ -1605,6 +1976,12 @@ export const GroupWallet = () => {
                 cardsWithSelection.find(card => card.isSelected) ||
                 cardsWithSelection[0]
               }
+              availableReclaimAmount={availableReclaimAmount}
+              reclaimAmountInput={reclaimAmountInput}
+              setReclaimAmountInput={setReclaimAmountInput}
+              handleReclaim={handleReclaim}
+              isReclaiming={isReclaiming}
+              reclaimLoading={reclaimLoading}
             />
           </div>
         )}
@@ -1633,7 +2010,7 @@ export const GroupWallet = () => {
           isOpen={isQRModalOpen}
           onClose={() => setIsQRModalOpen(false)}
           cardName={
-            groupWalletCards.find(card => card.storeId === selectedCard)
+            (groupWalletCards || []).find(card => card.storeId === selectedCard)
               ?.storeName || 'QR'
           }
           cardId={selectedCard}

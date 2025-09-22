@@ -213,7 +213,7 @@ const StoreRegistration = () => {
       
       // FormData 내용 확인
       console.log('📦 FormData 내용 확인:')
-      for (let [key, value] of storeFormData.entries()) {
+      for (const [key, value] of storeFormData.entries()) {
         console.log(`  ${key}:`, value)
       }
 
