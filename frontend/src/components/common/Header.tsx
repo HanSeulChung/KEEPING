@@ -1,45 +1,120 @@
 'use client'
+import { authApi } from '@/api/authApi'
+import { useUser } from '@/contexts/UserContext'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function Header() {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoggedIn, user, logout } = useAuthStore()
+  const [forceUpdate, setForceUpdate] = useState(0)
+
+  // 점주용 인증 상태
+  const {
+    isLoggedIn: ownerLoggedIn,
+    user: ownerUser,
+    logout: ownerLogout,
+  } = useAuthStore()
+
+  // 고객용 인증 상태
+  const { user: customerUser, loading: customerLoading } = useUser()
+
   const { unreadCount } = useNotificationSystem()
+
+  // 로그인 상태 변경 감지를 위한 useEffect
+  useEffect(() => {
+    const checkLoginStatus = () => {
+      setForceUpdate(prev => prev + 1)
+    }
+
+    // Next.js 내부 경로가 아닐 때만 로그인 상태 확인
+    if (!pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
+      // 주기적으로 로그인 상태 확인 (5초마다)
+      const interval = setInterval(checkLoginStatus, 5000)
+
+      // 컴포넌트 마운트 시 즉시 확인
+      checkLoginStatus()
+
+      return () => clearInterval(interval)
+    }
+  }, [pathname, customerUser, ownerLoggedIn])
+
+  // 현재 페이지가 고객 페이지인지 점주 페이지인지 확인
+  const isCustomerPage = pathname.startsWith('/customer')
+  const isOwnerPage = pathname.startsWith('/owner')
+
+  // localStorage에서 로그인 상태 확인 (여러 방법 체크)
+  const checkLoginStatus = () => {
+    if (typeof window === 'undefined') return false
+    
+    // 1. accessToken 직접 확인
+    const accessToken = localStorage.getItem('accessToken')
+    if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
+      return true
+    }
+    
+    // 2. auth-storage에서 확인 (Zustand store)
+    const authStorage = localStorage.getItem('auth-storage')
+    if (authStorage) {
+      try {
+        const parsed = JSON.parse(authStorage)
+        if (parsed.state?.isLoggedIn) {
+          return true
+        }
+      } catch (e) {
+        console.error('auth-storage 파싱 오류:', e)
+      }
+    }
+    
+    // 3. user 정보가 있으면 로그인된 상태로 간주
+    const userInfo = localStorage.getItem('user')
+    if (userInfo && userInfo !== 'null' && userInfo !== 'undefined') {
+      try {
+        const parsed = JSON.parse(userInfo)
+        if (parsed && (parsed.ownerId || parsed.userId)) {
+          return true
+        }
+      } catch (e) {
+        console.error('user 정보 파싱 오류:', e)
+      }
+    }
+    
+    return false
+  }
+
+  const isLoggedIn = checkLoginStatus()
+  const user = isCustomerPage ? customerUser : ownerUser
 
   // 홈페이지인지 확인
   const isHomePage = pathname === '/'
 
   const handleLogout = async () => {
     try {
-      // Authorization 헤더 추가
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
-      if (typeof window !== 'undefined') {
-        const accessToken = localStorage.getItem('accessToken')
-        if (accessToken) {
-          headers.Authorization = `Bearer ${accessToken}`
-        }
-      }
-
-      // 서버에 로그아웃 요청 (Cookie 제거를 위해)
-      await fetch('/auth/logout', {
-        method: 'GET',
-        headers,
-        credentials: 'include',
-      })
+      // 백엔드에 로그아웃 요청
+      await authApi.logout()
     } catch (error) {
       console.error('로그아웃 요청 실패:', error)
     } finally {
-      // 로컬 상태 업데이트
-      logout()
-      router.push('/')
+      // localStorage 정리
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+      }
+      
+      // 상태 업데이트
+      if (isCustomerPage) {
+        // 고객 로그아웃 처리
+        window.location.href = '/customer/login'
+      } else {
+        // 점주 로그아웃 처리
+        ownerLogout()
+        router.push('/')
+      }
     }
   }
 
@@ -129,7 +204,7 @@ export default function Header() {
                 </button>
               ) : (
                 <Link
-                  href="/owner/login"
+                  href={isCustomerPage ? '/customer/login' : '/owner/login'}
                   className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base"
                 >
                   로그인
