@@ -94,13 +94,16 @@ public class WalletController {
         return ResponseEntity.status(status)
                 .body(ApiResponse.success("모임 지갑에서 포인트를 회수했습니다.", status.value(), result.getBody()));
     }
-    
+
     // 개인 지갑 잔액
     @GetMapping("/individual/balance")
     public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
-            @AuthenticationPrincipal Long customerId
+            @AuthenticationPrincipal Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        PersonalWalletBalanceResponseDto dto = walletService.getPersonalWalletBalance(customerId);
+        Pageable pageable = PageRequest.of(page, size);
+        PersonalWalletBalanceResponseDto dto = walletService.getPersonalWalletBalance(customerId, pageable);
         return ResponseEntity.ok(ApiResponse.success("개인 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
@@ -108,9 +111,12 @@ public class WalletController {
     @GetMapping("/groups/{groupId}/balance")
     public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
             @PathVariable Long groupId,
-            @AuthenticationPrincipal Long customerId
+            @AuthenticationPrincipal Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        GroupWalletBalanceResponseDto dto = walletService.getGroupWalletBalance(groupId, customerId);
+        Pageable pageable = PageRequest.of(page, size);
+        GroupWalletBalanceResponseDto dto = walletService.getGroupWalletBalance(groupId, customerId, pageable);
         return ResponseEntity.ok(ApiResponse.success("모임 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
