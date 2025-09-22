@@ -76,15 +76,30 @@ interface WalletDetailResponse {
 }
 
 // 충전 옵션 API 호출 함수 (StoreDetail과 동일)
-const fetchChargeOptions = async (storeId: number): Promise<ChargeOptionData[]> => {
+const fetchChargeOptions = async (
+  storeId: number
+): Promise<ChargeOptionData[]> => {
   try {
-    const response = await fetch(buildURL(`/api/v1/stores/${storeId}/charge-bonus`), {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const response = await fetch(
+      buildURL(`/api/v1/stores/${storeId}/charge-bonus`),
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers,
+      }
+    )
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -119,16 +134,59 @@ const fetchChargeOptions = async (storeId: number): Promise<ChargeOptionData[]> 
   }
 }
 
+// 거래 내역 API 응답 타입
+interface WalletTransactionResponse {
+  success: boolean
+  status: number
+  message: string
+  data: {
+    storeId: number
+    storeName: string
+    currentBalance: number
+    transactions: {
+      content: TransactionDetail[]
+      totalElements: number
+      totalPages: number
+      first: boolean
+      last: boolean
+      size: number
+      number: number
+      numberOfElements: number
+      empty: boolean
+    }
+  }
+  timestamp: string
+}
+
 // 거래 내역 API 호출 함수
-const fetchWalletTransactions = async (groupId: number, storeId: number): Promise<Transaction[]> => {
+const fetchWalletTransactions = async (
+  groupId: number,
+  storeId: number,
+  page: number = 0
+): Promise<WalletTransactionResponse> => {
   try {
-    const response = await fetch(buildURL(`/wallets/individual/stores/${storeId}/detail`), {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const response = await fetch(
+      buildURL(
+        `/wallets/individual/stores/${storeId}/detail?page=${page}&size=10`
+      ),
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers,
+      }
+    )
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -137,38 +195,32 @@ const fetchWalletTransactions = async (groupId: number, storeId: number): Promis
     const result = await response.json()
     console.log('거래 내역 API 응답:', result)
 
-    // API 응답 데이터를 Transaction 형식으로 변환
-    const transactions: Transaction[] = result.data.transactions.content.map((transaction: TransactionDetail, index: number) => ({
-      id: index + 1,
-      type: transaction.transactionType.includes('CHARGE') || transaction.transactionType.includes('충전') ? 'charge' : 'usage',
-      amount: transaction.amount,
-      date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
-      transactionId: transaction.transactionId,
-      transactionType: transaction.transactionType,
-      transactionUniqueNo: transaction.transactionUniqueNo,
-      createdAt: transaction.createdAt,
-    }))
-
-    return transactions
+    return result
   } catch (error) {
     console.error('거래 내역 조회 실패:', error)
-    // 에러 발생 시 더미 데이터 반환
-    return [
-      { id: 1, type: 'charge', amount: 35000, date: '2025-09-01' },
-      { id: 2, type: 'usage', amount: 12000, date: '2025-09-07' },
-    ]
+    throw error
   }
 }
 
 // API 호출 함수
 const fetchWalletBalance = async (): Promise<WalletCard[]> => {
   try {
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
     const response = await fetch(buildURL('/wallets/individual/balance'), {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -179,22 +231,22 @@ const fetchWalletBalance = async (): Promise<WalletCard[]> => {
     console.log('지갑 잔액 API 응답:', result)
 
     // API 응답 데이터를 WalletCard 형식으로 변환
-    const walletCards: WalletCard[] = result.data.storeBalances.content.map((storeBalance: StoreBalance, index: number) => ({
-      id: index + 1,
-      name: storeBalance.storeName,
-      amount: storeBalance.remainingPoints,
-      storeId: storeBalance.storeId,
-      lastUpdatedAt: storeBalance.lastUpdatedAt,
-      isSelected: index === 0, // 첫 번째 카드를 기본 선택으로 설정
-    }))
+    const walletCards: WalletCard[] = result.data.storeBalances.content.map(
+      (storeBalance: StoreBalance, index: number) => ({
+        id: index + 1,
+        name: storeBalance.storeName,
+        amount: storeBalance.remainingPoints,
+        storeId: storeBalance.storeId,
+        lastUpdatedAt: storeBalance.lastUpdatedAt,
+        isSelected: index === 0, // 첫 번째 카드를 기본 선택으로 설정
+      })
+    )
 
     return walletCards
   } catch (error) {
     console.error('지갑 잔액 조회 실패:', error)
     // 에러 발생 시 더미 데이터 반환
-    return [
-      { id: 1, name: '아쭈맛나', amount: 35000, isSelected: true },
-    ]
+    return [{ id: 1, name: '아쭈맛나', amount: 35000, isSelected: true }]
   }
 }
 
@@ -223,18 +275,18 @@ const WalletCard = ({
 }) => {
   return (
     <div
-      className={`relative h-44 w-44 md:h-40 md:w-40 cursor-pointer border border-black transition-colors ${
+      className={`relative h-44 w-44 cursor-pointer border border-black transition-colors md:h-40 md:w-40 ${
         card.isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-gray-50'
       }`}
       onClick={onClick}
     >
       {/* 아쭈맛나 텍스트 */}
-      <div className="absolute top-4 left-4 text-base md:text-sm font-normal text-black">
+      <div className="absolute top-4 left-4 text-base font-normal text-black md:text-sm">
         {card.name}
       </div>
 
       {/* 01 텍스트 */}
-      <div className="absolute top-4 right-4 text-sm md:text-xs font-normal text-black">
+      <div className="absolute top-4 right-4 text-sm font-normal text-black md:text-xs">
         {card.id.toString().padStart(2, '0')}
       </div>
 
@@ -242,14 +294,16 @@ const WalletCard = ({
       <div className="absolute top-12 right-4 left-4 h-px bg-black"></div>
 
       {/* 금액 */}
-      <div className="absolute top-18 left-1/2 -translate-x-1/2 text-base md:text-sm font-extrabold text-black">
+      <div className="absolute top-18 left-1/2 -translate-x-1/2 text-base font-extrabold text-black md:text-sm">
         {card.amount.toLocaleString()}원
       </div>
 
       {/* 결제하기 버튼 */}
-      <div className="absolute top-32 md:top-28 left-1/2 -translate-x-1/2">
-        <div className="flex h-6 w-16 md:h-5 md:w-15 items-center justify-center border-2 border-blue-500 bg-white">
-          <span className="text-sm md:text-xs font-bold text-blue-500">결제하기</span>
+      <div className="absolute top-32 left-1/2 -translate-x-1/2 md:top-28">
+        <div className="flex h-6 w-16 items-center justify-center border-2 border-blue-500 bg-white md:h-5 md:w-15">
+          <span className="text-sm font-bold text-blue-500 md:text-xs">
+            결제하기
+          </span>
         </div>
       </div>
     </div>
@@ -309,13 +363,17 @@ const ChargeOption = ({
 }: ChargeOptionProps) => {
   return (
     <div
-      className={`flex h-16 md:h-14 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors ${
+      className={`flex h-16 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors md:h-14 ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
       onClick={onClick}
     >
-      <span className="text-base md:text-sm font-bold text-red-500">{bonusPercentage}% 보너스</span>
-      <span className="text-base md:text-sm font-bold text-black">{chargeAmount.toLocaleString()}원</span>
+      <span className="text-base font-bold text-red-500 md:text-sm">
+        {bonusPercentage}% 보너스
+      </span>
+      <span className="text-base font-bold text-black md:text-sm">
+        {chargeAmount.toLocaleString()}원
+      </span>
     </div>
   )
 }
@@ -324,12 +382,12 @@ const ChargeOption = ({
 const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
   return (
     <div className="w-full">
-      <p className="mb-6 text-lg md:text-[15px] font-bold text-black">
+      <p className="mb-6 text-lg font-bold text-black md:text-[15px]">
         "{selectedCard.name}" 포인트 환불받기
       </p>
-      
+
       <div className="mb-6 flex items-center gap-4">
-        <p className="text-base md:text-sm font-bold text-black">
+        <p className="text-base font-bold text-black md:text-sm">
           환불 가능 금액
         </p>
         <div className="relative">
@@ -338,16 +396,18 @@ const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
             alt="입력 박스"
             width={165}
             height={31}
-            className="w-[165px] h-[31px]"
+            className="h-[31px] w-[165px]"
           />
-          <p className="absolute left-[60px] top-[6px] text-sm md:text-[11px] font-bold text-black">
+          <p className="absolute top-[6px] left-[60px] text-sm font-bold text-black md:text-[11px]">
             {selectedCard.amount.toLocaleString()} 원
           </p>
         </div>
       </div>
-      
-      <button className="flex h-14 md:h-12 w-full items-center justify-center border border-black bg-black">
-        <span className="text-base md:text-sm font-bold text-white">환불받기</span>
+
+      <button className="flex h-14 w-full items-center justify-center border border-black bg-black md:h-12">
+        <span className="text-base font-bold text-white md:text-sm">
+          환불받기
+        </span>
       </button>
     </div>
   )
@@ -471,23 +531,62 @@ const Pagination = ({
   totalPages: number
   onPageChange: (page: number) => void
 }) => {
+  if (totalPages <= 1) return null
+
+  const getPageNumbers = () => {
+    const pages = []
+    const maxVisiblePages = 5
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 0; i < totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      const startPage = Math.max(0, currentPage - 2)
+      const endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1)
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i)
+      }
+    }
+
+    return pages
+  }
+
   return (
-    <div className="w-[382px] h-[55px] relative overflow-hidden">
-      <div className="w-[30px] h-[30px]">
-        <div className="w-[30px] h-[30px] absolute left-[141px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-          <p className="text-[15px] font-bold text-black">1</p>
-        </div>
-      </div>
-      <div className="w-[65px] h-[30px]">
-        <div className="w-[30px] h-[30px] absolute left-[177px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-          <p className="text-[15px] font-bold text-black">2</p>
-        </div>
-        <div className="w-[30px] h-[30px]">
-          <div className="w-[30px] h-[30px] absolute left-[212px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
-            <p className="text-[15px] font-bold text-black">3</p>
-          </div>
-        </div>
-      </div>
+    <div className="flex items-center justify-center gap-2 py-4">
+      {/* 이전 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 0}
+        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
+      >
+        ←
+      </button>
+
+      {/* 페이지 번호들 */}
+      {getPageNumbers().map(page => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`flex h-8 w-8 items-center justify-center rounded border text-sm ${
+            currentPage === page
+              ? 'border-black bg-black text-white'
+              : 'border-gray-300 bg-white text-black hover:bg-gray-50'
+          }`}
+        >
+          {page + 1}
+        </button>
+      ))}
+
+      {/* 다음 버튼 */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages - 1}
+        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
+      >
+        →
+      </button>
     </div>
   )
 }
@@ -500,16 +599,22 @@ export const MyWallet = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // 거래 내역 관련 상태
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
-  const [transactionsError, setTransactionsError] = useState<string | null>(null)
-  
+  const [transactionsError, setTransactionsError] = useState<string | null>(
+    null
+  )
+  const [currentTransactionPage, setCurrentTransactionPage] = useState(0)
+  const [totalTransactionPages, setTotalTransactionPages] = useState(0)
+
   // 충전 옵션 관련 상태
   const [chargeOptions, setChargeOptions] = useState<ChargeOptionData[]>([])
   const [chargeOptionsLoading, setChargeOptionsLoading] = useState(false)
-  const [chargeOptionsError, setChargeOptionsError] = useState<string | null>(null)
+  const [chargeOptionsError, setChargeOptionsError] = useState<string | null>(
+    null
+  )
 
   // API 호출하여 지갑 데이터 가져오기
   useEffect(() => {
@@ -536,10 +641,12 @@ export const MyWallet = () => {
   // 카드가 로드되고 선택된 카드가 있을 때 데이터 자동 로드
   useEffect(() => {
     if (walletCards.length > 0) {
-      const selectedCardData = walletCards.find(card => card.id === selectedCard)
+      const selectedCardData = walletCards.find(
+        card => card.id === selectedCard
+      )
       if (selectedCardData?.storeId) {
         if (activeTab === 'history') {
-          loadTransactions(selectedCardData.storeId)
+          loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
         } else if (activeTab === 'charge') {
           loadChargeOptions(selectedCardData.storeId)
         }
@@ -551,16 +658,47 @@ export const MyWallet = () => {
     setSelectedCard(cardId)
   }
 
+  const handleTransactionPageChange = (page: number) => {
+    const selectedCardData = walletCards.find(card => card.id === selectedCard)
+    if (selectedCardData?.storeId) {
+      loadTransactions(selectedCardData.storeId, page)
+    }
+  }
+
   // 거래 내역 로드 함수
-  const loadTransactions = async (storeId: number) => {
+  const loadTransactions = async (storeId: number, page: number = 0) => {
     try {
       setTransactionsLoading(true)
       setTransactionsError(null)
-      
+
       // 임시로 groupId를 1로 설정 (실제로는 사용자의 그룹 ID를 가져와야 함)
       const groupId = 1
-      const transactionData = await fetchWalletTransactions(groupId, storeId)
-      setTransactions(transactionData)
+      const result = await fetchWalletTransactions(groupId, storeId, page)
+
+      if (result.success && result.data) {
+        // API 응답 데이터를 Transaction 형식으로 변환
+        const transactions: Transaction[] =
+          result.data.transactions.content.map(
+            (transaction: TransactionDetail, index: number) => ({
+              id: index + 1,
+              type:
+                transaction.transactionType.includes('CHARGE') ||
+                transaction.transactionType.includes('충전')
+                  ? 'charge'
+                  : 'usage',
+              amount: transaction.amount,
+              date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
+              transactionId: transaction.transactionId,
+              transactionType: transaction.transactionType,
+              transactionUniqueNo: transaction.transactionUniqueNo,
+              createdAt: transaction.createdAt,
+            })
+          )
+
+        setTransactions(transactions)
+        setCurrentTransactionPage(result.data.transactions.number)
+        setTotalTransactionPages(result.data.transactions.totalPages)
+      }
     } catch (err) {
       console.error('거래 내역 로드 실패:', err)
       setTransactionsError('거래 내역을 불러오는데 실패했습니다.')
@@ -574,7 +712,7 @@ export const MyWallet = () => {
     try {
       setChargeOptionsLoading(true)
       setChargeOptionsError(null)
-      
+
       const chargeData = await fetchChargeOptions(storeId)
       setChargeOptions(chargeData)
     } catch (err) {
@@ -588,11 +726,11 @@ export const MyWallet = () => {
   // 탭 클릭 시 데이터 로드
   const handleTabChange = (tabKey: keyof typeof TAB_CONFIG) => {
     setActiveTab(tabKey)
-    
+
     const selectedCardData = walletCards.find(card => card.id === selectedCard)
     if (selectedCardData?.storeId) {
       if (tabKey === 'history') {
-        loadTransactions(selectedCardData.storeId)
+        loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
       } else if (tabKey === 'charge') {
         loadChargeOptions(selectedCardData.storeId)
       }
@@ -610,7 +748,12 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
+            <h1
+              className="text-2xl font-bold text-black md:text-xl"
+              style={{ fontFamily: 'Tenada' }}
+            >
+              내 지갑
+            </h1>
           </div>
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">지갑 정보를 불러오는 중...</div>
@@ -626,7 +769,12 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
+            <h1
+              className="text-2xl font-bold text-black md:text-xl"
+              style={{ fontFamily: 'Tenada' }}
+            >
+              내 지갑
+            </h1>
           </div>
           <div className="flex items-center justify-center py-8">
             <div className="text-red-500">{error}</div>
@@ -642,7 +790,12 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
+            <h1
+              className="text-2xl font-bold text-black md:text-xl"
+              style={{ fontFamily: 'Tenada' }}
+            >
+              내 지갑
+            </h1>
           </div>
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">등록된 지갑이 없습니다.</div>
@@ -657,31 +810,38 @@ export const MyWallet = () => {
       <div className="mx-auto max-w-md">
         {/* 헤더 */}
         <div className="mb-6">
-          <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
+          <h1
+            className="text-2xl font-bold text-black md:text-xl"
+            style={{ fontFamily: 'Tenada' }}
+          >
+            내 지갑
+          </h1>
         </div>
 
-      {/* 지갑 카드 캐러셀 */}
-      <div className="mb-6 w-full">
-        <div className="scrollbar-hide overflow-x-auto">
-          <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
-            {cardsWithSelection.map(card => (
-              <WalletCard
-                key={card.id}
-                card={card}
-                onClick={() => handleCardSelect(card.id)}
-              />
-            ))}
+        {/* 지갑 카드 캐러셀 */}
+        <div className="mb-6 w-full">
+          <div className="scrollbar-hide overflow-x-auto">
+            <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
+              {cardsWithSelection.map(card => (
+                <WalletCard
+                  key={card.id}
+                  card={card}
+                  onClick={() => handleCardSelect(card.id)}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
         {/* 탭 네비게이션 */}
-        <div className="relative mb-6 h-16 md:h-13 w-full">
+        <div className="relative mb-6 h-16 w-full md:h-13">
           {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
             <div key={tabKey} className="relative">
               <button
-                onClick={() => handleTabChange(tabKey as keyof typeof TAB_CONFIG)}
-                className={`absolute h-10 md:h-8 w-24 md:w-22 border border-black text-sm md:text-xs font-normal transition-colors ${
+                onClick={() =>
+                  handleTabChange(tabKey as keyof typeof TAB_CONFIG)
+                }
+                className={`absolute h-10 w-24 border border-black text-sm font-normal transition-colors md:h-8 md:w-22 md:text-xs ${
                   activeTab === tabKey
                     ? 'bg-[#efefef] text-black'
                     : 'bg-white text-black hover:bg-[#efefef]'
@@ -699,53 +859,74 @@ export const MyWallet = () => {
           ))}
         </div>
 
-      {/* 탭 내용 */}
-      {activeTab === 'history' && (
-        <div className="mb-6">
-          {transactionsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">거래 내역을 불러오는 중...</div>
-            </div>
-          ) : transactionsError ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-red-500">{transactionsError}</div>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">거래 내역이 없습니다.</div>
-            </div>
-          ) : (
-            transactions.map(transaction => (
-              <TransactionItem key={transaction.id} transaction={transaction} />
-            ))
-          )}
-        </div>
-      )}
+        {/* 탭 내용 */}
+        {activeTab === 'history' && (
+          <div className="mb-6">
+            {transactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">거래 내역을 불러오는 중...</div>
+              </div>
+            ) : transactionsError ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-red-500">{transactionsError}</div>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">거래 내역이 없습니다.</div>
+              </div>
+            ) : (
+              transactions.map(transaction => (
+                <TransactionItem
+                  key={transaction.id}
+                  transaction={transaction}
+                />
+              ))
+            )}
+          </div>
+        )}
 
-      {activeTab === 'charge' && (
-        <div className="mb-6">
-          {chargeOptionsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">충전 옵션을 불러오는 중...</div>
-            </div>
-          ) : chargeOptionsError ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-red-500">{chargeOptionsError}</div>
-            </div>
-          ) : (
-            <ChargeSection 
-              chargeOptions={chargeOptions} 
-              storeId={cardsWithSelection.find(card => card.isSelected)?.storeId?.toString() || '0'} 
+        {/* 페이지네이션 - 사용내역 탭에서만 표시 */}
+        {activeTab === 'history' && (
+          <Pagination
+            currentPage={currentTransactionPage}
+            totalPages={totalTransactionPages}
+            onPageChange={handleTransactionPageChange}
+          />
+        )}
+
+        {activeTab === 'charge' && (
+          <div className="mb-6">
+            {chargeOptionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">충전 옵션을 불러오는 중...</div>
+              </div>
+            ) : chargeOptionsError ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-red-500">{chargeOptionsError}</div>
+              </div>
+            ) : (
+              <ChargeSection
+                chargeOptions={chargeOptions}
+                storeId={
+                  cardsWithSelection
+                    .find(card => card.isSelected)
+                    ?.storeId?.toString() || '0'
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'refund' && (
+          <div className="mb-6">
+            <RefundSection
+              selectedCard={
+                cardsWithSelection.find(card => card.isSelected) ||
+                cardsWithSelection[0]
+              }
             />
-          )}
-        </div>
-      )}
-
-      {activeTab === 'refund' && (
-        <div className="mb-6">
-          <RefundSection selectedCard={cardsWithSelection.find(card => card.isSelected) || cardsWithSelection[0]} />
-        </div>
-      )}
+          </div>
+        )}
       </div>
     </div>
   )

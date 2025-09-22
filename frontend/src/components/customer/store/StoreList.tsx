@@ -23,7 +23,24 @@ interface StoreListProps {
 export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading: userLoading } = useUser()
+  const { user, loading: userLoading, error: userError } = useUser()
+
+  // 사용자 정보 디버깅
+  console.log('StoreList 사용자 정보:', {
+    user,
+    userLoading,
+    hasUserId: !!user?.userId,
+    userId: user?.userId,
+    userError,
+  })
+
+  // 인증 오류가 있으면 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    if (userError && !userLoading) {
+      console.warn('인증 오류로 인해 로그인 페이지로 리다이렉트:', userError)
+      router.push('/customer/login')
+    }
+  }, [userError, userLoading, router])
 
   const foodCategories = [
     '한식',
@@ -69,13 +86,27 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
 
     try {
       console.log('찜하기 상태 확인 - storeId:', storeId)
-      const response = await fetch(`${apiConfig.baseURL}/favorites/stores/${storeId}/check`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
+
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
         }
-      })
+      }
+
+      const response = await fetch(
+        `${apiConfig.baseURL}/favorites/stores/${storeId}/check`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers,
+        }
+      )
 
       if (response.ok) {
         const data = await response.json()
@@ -91,26 +122,68 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
 
   // API 호출 함수
   const fetchStoresByCategory = async (category: string) => {
+    console.log('🏪 가게 목록 조회 시작:', { category, userId: user?.userId })
     setLoading(true)
     setError(null)
 
     try {
-      const url = `${apiConfig.baseURL}${endpoints.stores.search}?category=${encodeURIComponent(category)}`
+      // URL 구성 - 먼저 전체 가게 목록을 가져와서 테스트
+      const url = `${apiConfig.baseURL}${endpoints.stores.search}`
+      console.log('🔗 요청 URL:', url)
+
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+          console.log(
+            '🔑 Access Token 있음:',
+            accessToken.substring(0, 20) + '...'
+          )
+        } else {
+          console.warn('⚠️ Access Token 없음')
+        }
+      }
+
+      console.log('📤 가게 목록 조회 요청:', {
+        url,
+        category,
+        hasAuthHeader: !!headers.Authorization,
+        headers,
+      })
+
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          ...apiConfig.headers,
-          // 필요한 경우 Authorization 헤더 추가
-          // 'Authorization': `Bearer ${token}`,
-        },
+        headers,
+        credentials: 'include',
+      })
+
+      console.log('📥 가게 목록 조회 응답:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url,
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error('❌ 가게 목록 조회 실패:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+          url: response.url,
+        })
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        )
       }
 
       const data = await response.json()
-      console.log('API 응답 데이터:', data) // 디버깅용
+      console.log('✅ 가게 목록 API 응답 데이터:', data)
 
       // 백엔드 응답 데이터 구조 확인 및 변환
       let storesData = data
@@ -135,26 +208,36 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
 
       // 백엔드 응답 데이터를 Store 타입에 맞게 변환
       let transformedStores: Store[] = storesData.map((store: any) => ({
-        id: store.storeId, // 백엔드에서 storeId로 들어옴
-        name: store.storeName, // 백엔드에서 storeName으로 들어옴
-        location: store.address, // 백엔드에서 address로 들어옴
+        id: store.storeId || store.id, // 백엔드에서 storeId 또는 id로 들어옴
+        name: store.storeName || store.name, // 백엔드에서 storeName 또는 name으로 들어옴
+        location: store.address || store.location || store.storeAddress, // 백엔드에서 다양한 필드명
         likes: store.likes || store.likeCount || 0,
         isLiked: store.isLiked || false,
-        image: store.imgUrl, // 백엔드에서 imgUrl로 들어옴
+        image: store.imgUrl || store.image || store.storeImageUrl, // 백엔드에서 다양한 필드명
       }))
 
       console.log('변환된 가게 데이터:', transformedStores)
 
-      // 사용자 정보가 있을 때 찜하기 상태 확인
-      if (user) {
-        transformedStores = await Promise.all(
-          transformedStores.map(async (store: Store) => {
-            const isFavorited = await checkFavoriteStatus(store.id)
-            return { ...store, isLiked: isFavorited }
-          })
+      // 사용자 정보가 있을 때 찜하기 상태 확인 (일단 스킵하고 나중에 추가)
+      if (user && transformedStores.length > 0) {
+        console.log(
+          '찜하기 상태 확인 시작:',
+          transformedStores.length,
+          '개 가게'
         )
+        try {
+          transformedStores = await Promise.all(
+            transformedStores.map(async (store: Store) => {
+              const isFavorited = await checkFavoriteStatus(store.id)
+              return { ...store, isLiked: isFavorited }
+            })
+          )
+        } catch (error) {
+          console.warn('찜하기 상태 확인 실패, 기본값 사용:', error)
+        }
       }
 
+      console.log('최종 가게 목록:', transformedStores)
       setStores(transformedStores)
     } catch (error) {
       console.error('가게 목록 조회 실패:', error)
@@ -166,12 +249,23 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     }
   }
 
-  // 카테고리 변경 시 API 호출
+  // 카테고리 변경 시 API 호출 (사용자 정보가 로드된 후에만)
   useEffect(() => {
-    if (activeCategory) {
+    if (activeCategory && !userLoading && user?.userId) {
+      console.log('사용자 정보 로드 완료, 가게 목록 조회 시작:', {
+        userId: user.userId,
+        activeCategory,
+      })
       fetchStoresByCategory(activeCategory)
+    } else if (activeCategory && userLoading) {
+      console.log('사용자 정보 로딩 중...')
+    } else if (activeCategory && !user?.userId) {
+      console.warn('사용자 정보가 없어서 가게 목록을 조회할 수 없습니다:', {
+        user,
+        userLoading,
+      })
     }
-  }, [activeCategory, user])
+  }, [activeCategory, user, userLoading, userError])
 
   // URL 파라미터 변경 감지
   useEffect(() => {
@@ -203,13 +297,27 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
 
     try {
       console.log('찜하기 토글 - storeId:', storeId)
-      const response = await fetch(`${apiConfig.baseURL}/favorites/stores/${storeId}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
+
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
         }
-      })
+      }
+
+      const response = await fetch(
+        `${apiConfig.baseURL}/favorites/stores/${storeId}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers,
+        }
+      )
 
       if (response.ok) {
         // 성공 시 로컬 상태 업데이트
@@ -352,17 +460,21 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
               <div className="flex items-center gap-4 bg-white p-4 transition-colors hover:bg-gray-50">
                 {/* 가게 이미지 */}
                 <div
-                  className="h-16 w-16 flex-shrink-0 cursor-pointer bg-gray-200 rounded overflow-hidden"
+                  className="h-16 w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded bg-gray-200"
                   onClick={() => handleStoreClick(store.id)}
                 >
                   {store.image ? (
-                    <img 
-                      src={Array.isArray(store.image) ? store.image[0] : store.image} 
+                    <img
+                      src={
+                        Array.isArray(store.image)
+                          ? store.image[0]
+                          : store.image
+                      }
                       alt={store.name}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                    <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
                       이미지 없음
                     </div>
                   )}
@@ -375,8 +487,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
                 >
                   <h3 className="mb-1 font-medium text-black">{store.name}</h3>
                   <p className="mb-2 text-sm text-gray-600">{store.location}</p>
-                  <div className="flex items-center gap-1">
-                  </div>
+                  <div className="flex items-center gap-1"></div>
                 </div>
 
                 {/* 좋아요 버튼 */}

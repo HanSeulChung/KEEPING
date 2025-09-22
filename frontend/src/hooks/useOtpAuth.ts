@@ -46,7 +46,7 @@ export function useOtpAuth() {
           originalBirth: birth,
           formattedBirth,
           genderDigit,
-          userRole
+          userRole,
         })
 
         // /auth/session-info에서 regSessionId 가져오기
@@ -55,12 +55,26 @@ export function useOtpAuth() {
         console.log('/auth/session-info에서 가져온 regSessionId:', regSessionId)
 
         if (!regSessionId) {
-          throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
+          throw new Error(
+            'regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.'
+          )
+        }
+
+        // Authorization 헤더 추가
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`
+          }
         }
 
         const res = await fetch(buildURL(endpoints.auth.otpRequest), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           credentials: 'include', // 쿠키 동반
           body: JSON.stringify({
             name,
@@ -80,7 +94,7 @@ export function useOtpAuth() {
         // 서버가 만약 requestId/만료시각을 내려주면 저장
         setRequestId(data?.data?.requestId ?? null)
         setExpiresAt(data?.data?.expiresAt ?? null)
-        
+
         return true
       } catch (e: any) {
         setError(e?.message ?? 'OTP 요청 중 오류가 발생했습니다.')
@@ -103,12 +117,26 @@ export function useOtpAuth() {
         console.log('OTP 검증에 사용할 regSessionId:', regSessionId)
 
         if (!regSessionId) {
-          throw new Error('regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.')
+          throw new Error(
+            'regSessionId가 없습니다. 소셜로그인을 먼저 해주세요.'
+          )
+        }
+
+        // Authorization 헤더 추가
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`
+          }
         }
 
         const res = await fetch(buildURL(endpoints.auth.otpVerify), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           credentials: 'include', // 쿠키 동반
           body: JSON.stringify({
             regSessionId,

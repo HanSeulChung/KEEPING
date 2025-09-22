@@ -13,13 +13,13 @@ export const FoodCategory = () => {
     { src: '/home/food/streetFood.svg', alt: 'Street food', category: '분식' },
     { src: '/home/food/asian.svg', alt: 'Asian food', category: '아시안' },
     {
-      src: '/home/food/fastFood.svg',
+      src: '/home/food/fastfood.svg',
       alt: 'Fast food',
       category: '패스트푸드',
     },
     { src: '/home/food/cafe.svg', alt: 'Cafe', category: '카페' },
     { src: '/home/food/grocery.svg', alt: 'Grocery', category: '식료품' },
-    { src: '/home/food/mealKit.svg', alt: 'Meal kit', category: '반찬/밀키트' },
+    { src: '/home/food/mealkit.svg', alt: 'Meal kit', category: '반찬/밀키트' },
   ]
 
   const handleCategoryClick = (category: string) => {

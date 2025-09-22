@@ -18,12 +18,14 @@ const XIcon = ({ size = 20, className = '' }) => (
 
 interface QRModalProps {
   cardName?: string
+  cardId?: number
   isOpen?: boolean
   onClose?: () => void
 }
 
 const QRModal = ({
   cardName = 'QR',
+  cardId,
   isOpen = false,
   onClose,
 }: QRModalProps) => {
@@ -34,8 +36,10 @@ const QRModal = ({
   useEffect(() => {
     const generateQRCode = async () => {
       try {
-        const qrString =
-          'http://payapp.kr/q?v=1&t=1f0944fd-2dcd-6a9b-9378-af2d22653626&m=CPQR'
+        // 카드 ID에 따라 다른 QR 코드 생성
+        const cardSpecificId = cardId ? `card-${cardId}` : 'default'
+        const qrString = `http://payapp.kr/q?v=1&t=${cardSpecificId}-${Date.now()}&m=CPQR`
+        
         const dataUrl = await QRCode.toDataURL(qrString, {
           width: 160,
           margin: 2,
@@ -53,7 +57,7 @@ const QRModal = ({
     if (isOpen) {
       generateQRCode()
     }
-  }, [isOpen])
+  }, [isOpen, cardId])
 
   if (!isOpen) return null
 

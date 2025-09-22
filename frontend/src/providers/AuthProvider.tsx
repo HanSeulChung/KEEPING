@@ -27,7 +27,13 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // 가능한 쿠키 이름들 시도
-      const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
+      const possibleTokenNames = [
+        'accessToken',
+        'access_token',
+        'token',
+        'authToken',
+        'jwt',
+      ]
       let token = null
 
       for (const name of possibleTokenNames) {
@@ -38,9 +44,21 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       if (token) return // 이미 토큰이 있으면 리프레시 불필요
 
       try {
+        // Authorization 헤더 추가
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`
+          }
+        }
+
         const res = await fetch(buildURL(API_ENDPOINTS.auth.refresh), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           credentials: 'include',
         })
         if (!res.ok) return

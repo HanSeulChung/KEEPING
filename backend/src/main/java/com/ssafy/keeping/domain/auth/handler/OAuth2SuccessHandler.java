@@ -62,7 +62,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             }
 
             // 프론트엔드의 role 선택 페이지로 리다이렉트
-            response.sendRedirect(feBaseUrl + "/");
+            response.sendRedirect("/");
             return;
         }
 

@@ -8,7 +8,7 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
-export function Input({
+export default function Inputfield({
   label,
   placeholder,
   type = 'text',
