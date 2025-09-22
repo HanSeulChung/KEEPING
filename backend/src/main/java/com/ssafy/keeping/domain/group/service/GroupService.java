@@ -365,4 +365,27 @@ public class GroupService {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
+
+    @Transactional
+    public GroupLeaveResponseDto leaveGroup(Long groupId, Long customerId) {
+        Group group = validGroup(groupId);
+        GroupMember me = validGroupMember(groupId, customerId);
+        if (me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        long refunded = walletService.settleShareToIndividual(group, customerId);
+        groupMemberRepository.delete(me);
+
+        long indivBalance = walletService.getTotalIndividualBalance(customerId);
+
+        List<Long> others = groupMemberRepository.findMemberIdsByGroupId(groupId);
+        afterCommit(() -> {
+            notificationService.sendToCustomer(
+                    customerId, NotificationType.GROUP_LEFT,
+                    String.format("모임 탈퇴, %dP 환급되었습니다. 잔액 %dP", refunded, indivBalance));
+            others.forEach(id -> notificationService.sendToCustomer(
+                    id, NotificationType.GROUP_LEFT, "모임원이 탈퇴했습니다."));
+        });
+
+        return new GroupLeaveResponseDto(groupId, customerId, refunded, indivBalance);
+    }
 }

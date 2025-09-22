@@ -83,20 +83,16 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
                              @Param("now") LocalDateTime now);
 
     @Query("""
-        select l
-        from WalletStoreLot l
-        join l.contributorWallet cw
-        join cw.customer c
-        where l.wallet.walletId = :walletId
-          and c.customerId = :customerId
-          and l.amountRemaining > 0
-          and l.lotStatus = com.ssafy.keeping.domain.wallet.constant.LotStatus.ACTIVE
-          and (l.expiredAt is null or l.expiredAt > CURRENT_TIMESTAMP)
-        """)
-    List<WalletStoreLot> findActiveByWalletIdAndContributorCustomerId(
-            @Param("walletId") Long walletId,
-            @Param("customerId") Long customerId
-    );
+    select l from WalletStoreLot l
+    where l.wallet.walletId = :walletId
+      and l.lotStatus = 'ACTIVE'
+      and l.amountRemaining > 0
+      and l.contributorWallet.customer.customerId = :customerId
+    order by l.acquiredAt asc
+    """)
+    List<WalletStoreLot> findActiveByWalletIdAndContributorCustomerId(@Param("walletId") Long walletId,
+                                                                      @Param("customerId") Long customerId);
+
 
     @Query("""
            select coalesce(sum(l.amountRemaining), 0)

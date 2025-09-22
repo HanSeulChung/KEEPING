@@ -116,4 +116,12 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("모임원을 내보냈습니다.", 200, null));
     }
 
+    @DeleteMapping("/{groupId}/group-member")
+    public ResponseEntity<ApiResponse<GroupLeaveResponseDto>> leaveGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long customerId
+    ) {
+        GroupLeaveResponseDto dto =groupService.leaveGroup(groupId, customerId);
+        return ResponseEntity.ok(ApiResponse.success("모임을 탈퇴했습니다.", 200, dto));
+    }
 }
