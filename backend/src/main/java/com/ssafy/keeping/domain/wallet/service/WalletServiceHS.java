@@ -413,7 +413,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(individual)
                         .customer(actor)
                         .store(store)
-                        .transactionType(TransactionType.TRANSFER_OUT)           // 그룹에서 차감
+                        .transactionType(TransactionType.TRANSFER_OUT)           // 그룹에서 회수
                         .amount(amount)
                         .build()
         );
