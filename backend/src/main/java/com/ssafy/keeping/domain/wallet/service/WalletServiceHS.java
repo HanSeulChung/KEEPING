@@ -251,7 +251,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         indivBal.subtractBalance(shareAmount);
         groupBal.addBalance(shareAmount);
 
-        String txnBase = UUID.randomUUID().toString();
         // 5) 거래기록 2건(반드시 store 세팅)
         Transaction txOut = transactionRepository.save(
                 Transaction.builder()
@@ -259,9 +258,8 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(group)
                         .customer(actor)
                         .store(store)
-                        .transactionUniqueNo(txnBase + "-OUT")
                         .transactionType(TransactionType.USE)
-                        .amount(shareAmount)
+                        .amount(-shareAmount)
                         .build()
         );
         Transaction txIn = transactionRepository.save(
@@ -271,7 +269,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .customer(actor)
                         .store(store)
                         .transactionType(TransactionType.TRANSFER_IN)
-                        .transactionUniqueNo(txnBase + "-IN")
                         .amount(shareAmount)
                         .build()
         );
@@ -409,8 +406,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         groupBal.subtractBalance(amount);
         indivBal.addBalance(amount);
 
-        String txnBase = UUID.randomUUID().toString();
-
         // 거래 기록 2건
         Transaction txOut = transactionRepository.save(
                 Transaction.builder()
@@ -418,9 +413,8 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(individual)
                         .customer(actor)
                         .store(store)
-                        .transactionType(TransactionType.USE)
-                        .transactionUniqueNo(txnBase + "-OUT")// 그룹에서 차감
-                        .amount(amount)
+                        .transactionType(TransactionType.USE)           // 그룹에서 차감
+                        .amount(-amount)
                         .build()
         );
         Transaction txIn = transactionRepository.save(
@@ -430,7 +424,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .customer(actor)
                         .store(store)
                         .transactionType(TransactionType.TRANSFER_IN)   // 개인으로 유입
-                        .transactionUniqueNo(txnBase + "-IN")
                         .amount(amount)
                         .build()
         );
@@ -572,20 +565,16 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         ));
                 dst.sharePoints(remain);
 
-                String txnBase = UUID.randomUUID().toString();
-
                 // 거래 기록
                 transactionRepository.save(Transaction.builder()
                         .wallet(individual).relatedWallet(groupWallet)
                         .customer(individual.getCustomer()).store(store)
-                        .transactionUniqueNo(txnBase + "-OUT")
                         .transactionType(TransactionType.TRANSFER_IN).amount(remain).build());
 
                 transactionRepository.save(Transaction.builder()
                         .wallet(groupWallet).relatedWallet(individual)
                         .customer(individual.getCustomer()).store(store)
-                        .transactionUniqueNo(txnBase + "-OUT")
-                        .transactionType(TransactionType.USE).amount(remain).build());
+                        .transactionType(TransactionType.USE).amount(-remain).build());
 
                 movedSum += remain;
             }
