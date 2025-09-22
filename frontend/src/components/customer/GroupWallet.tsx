@@ -84,14 +84,13 @@ const fetchGroupInfo = async (groupId: number) => {
   }
 }
 
-const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
+const fetchGroupMembers = async (groupId: number) => {
   try {
-    const url = buildURL(`/groups/${groupId}/group-member`)
+    const url = buildURL(`/groups/${groupId}/group-members`)
 
     console.log('그룹 멤버 조회 요청:', {
       url,
       groupId,
-      targetCustomerId,
     })
 
     // Authorization 헤더 추가
@@ -107,12 +106,9 @@ const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
     }
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'GET',
       credentials: 'include',
       headers,
-      body: JSON.stringify({
-        targetCustomerId: targetCustomerId,
-      }),
     })
 
     console.log('그룹 멤버 조회 응답 상태:', response.status)
@@ -1115,6 +1111,13 @@ export const GroupWallet = () => {
     }
   }, [selectedCard, activeTab, selectedGroup])
 
+  // 선택된 그룹이 변경될 때 멤버 조회
+  useEffect(() => {
+    if (selectedGroup !== null) {
+      fetchMembers(selectedGroup)
+    }
+  }, [selectedGroup])
+
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
     // 카드 선택 시 해당 카드의 거래 내역 조회
@@ -1144,14 +1147,9 @@ export const GroupWallet = () => {
   const fetchMembers = async (groupId: number) => {
     console.log('fetchMembers 호출됨:', { groupId, user })
 
-    if (!user?.userId) {
-      console.log('user.userId가 없어서 멤버 조회 건너뜀')
-      return
-    }
-
     setMembersLoading(true)
     try {
-      const result = await fetchGroupMembers(groupId, user.userId)
+      const result = await fetchGroupMembers(groupId)
       if (result.success && result.data) {
         setGroupMembers(result.data)
       }

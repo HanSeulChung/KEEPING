@@ -127,8 +127,8 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     setError(null)
 
     try {
-      // URL 구성 - 먼저 전체 가게 목록을 가져와서 테스트
-      const url = `${apiConfig.baseURL}${endpoints.stores.search}`
+      // URL 구성 - 카테고리 파라미터 포함
+      const url = `${apiConfig.baseURL}${endpoints.stores.search}?category=${encodeURIComponent(category)}`
       console.log('🔗 요청 URL:', url)
 
       // Authorization 헤더 추가
@@ -387,7 +387,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
       {/* 카테고리 탭들 */}
       <div className="mt-1 mb-6">
         <div className="relative">
-          <div className="scrollbar-hide flex justify-center gap-2 overflow-x-auto">
+          <div className="scrollbar-hide flex justify-start gap-2 overflow-x-auto px-4 md:justify-center md:px-0">
             {categories.map(category => (
               <div
                 key={category}

@@ -1,4 +1,5 @@
 'use client'
+import { useUser } from '@/contexts/UserContext'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
 import Image from 'next/image'
@@ -8,8 +9,26 @@ import { usePathname, useRouter } from 'next/navigation'
 export default function Header() {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoggedIn, user, logout } = useAuthStore()
+
+  // 점주용 인증 상태
+  const {
+    isLoggedIn: ownerLoggedIn,
+    user: ownerUser,
+    logout: ownerLogout,
+  } = useAuthStore()
+
+  // 고객용 인증 상태
+  const { user: customerUser, loading: customerLoading } = useUser()
+
   const { unreadCount } = useNotificationSystem()
+
+  // 현재 페이지가 고객 페이지인지 점주 페이지인지 확인
+  const isCustomerPage = pathname.startsWith('/customer')
+  const isOwnerPage = pathname.startsWith('/owner')
+
+  // 현재 페이지에 맞는 로그인 상태 결정
+  const isLoggedIn = isCustomerPage ? !!customerUser : ownerLoggedIn
+  const user = isCustomerPage ? customerUser : ownerUser
 
   // 홈페이지인지 확인
   const isHomePage = pathname === '/'
@@ -29,7 +48,7 @@ export default function Header() {
       }
 
       // 서버에 로그아웃 요청 (Cookie 제거를 위해)
-      await fetch('/auth/logout', {
+      await fetch('/api/auth/logout', {
         method: 'GET',
         headers,
         credentials: 'include',
@@ -38,8 +57,15 @@ export default function Header() {
       console.error('로그아웃 요청 실패:', error)
     } finally {
       // 로컬 상태 업데이트
-      logout()
-      router.push('/')
+      if (isCustomerPage) {
+        // 고객 로그아웃 처리
+        localStorage.removeItem('accessToken')
+        window.location.href = '/customer/login'
+      } else {
+        // 점주 로그아웃 처리
+        ownerLogout()
+        router.push('/')
+      }
     }
   }
 
@@ -49,7 +75,11 @@ export default function Header() {
 
   const handleLogoClick = () => {
     if (isLoggedIn) {
-      router.push('/owner/dashboard')
+      if (isCustomerPage) {
+        router.push('/customer/home')
+      } else {
+        router.push('/owner/dashboard')
+      }
     } else {
       router.push('/')
     }
@@ -129,7 +159,7 @@ export default function Header() {
                 </button>
               ) : (
                 <Link
-                  href="/owner/login"
+                  href={isCustomerPage ? '/customer/login' : '/owner/login'}
                   className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base"
                 >
                   로그인

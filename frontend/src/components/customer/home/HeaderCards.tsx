@@ -1,14 +1,8 @@
 'use client'
+import { buildURL } from '@/api/config'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import QRModal from './QRmodal'
-
-const dummyCards: Card[] = [
-  { id: 1, name: '카페리', type: 'group' },
-  { id: 2, name: '아쭈맛나', type: 'personal' },
-  { id: 3, name: '점심모임', type: 'group' },
-  { id: 4, name: '마트쇼핑', type: 'personal' },
-]
 
 // 카드 색상 배열
 const cardColors = [
@@ -20,11 +14,45 @@ const cardColors = [
   '#f0f9ff', // 연한 하늘
 ]
 
+// API 응답 타입 정의
+interface StoreBalance {
+  storeId: number
+  storeName: string
+  remainingPoints: number
+  lastUpdatedAt: string
+}
+
+interface WalletData {
+  groupId?: number
+  walletId: number
+  groupName?: string
+  storeBalances: {
+    content: StoreBalance[]
+    totalElements: number
+    empty: boolean
+  }
+}
+
+interface WalletBalanceResponse {
+  success: boolean
+  status: number
+  message: string
+  data: {
+    personalWallet: WalletData
+    groupWallets: WalletData[]
+  }
+  timestamp: string
+}
+
 // 카드 타입 정의
 interface Card {
   id: number
-  name: string
+  storeName: string
+  remainingPoints: number
   type: 'group' | 'personal'
+  walletId: number
+  groupId?: number
+  groupName?: string
 }
 
 export const HeaderCards = () => {
@@ -36,11 +64,80 @@ export const HeaderCards = () => {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const response = await fetch('/api/cards')
-        const data = await response.json()
-        setCards(data)
+        const url = buildURL('/wallets/both/balance')
+        console.log('지갑 잔액 조회 URL:', url)
+
+        // Authorization 헤더 추가
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`
+          }
+        }
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data: WalletBalanceResponse = await response.json()
+        console.log('지갑 잔액 응답 데이터:', data)
+
+        // API 응답을 카드 형태로 변환
+        const transformedCards: Card[] = []
+
+        // 개인 지갑의 각 가게별 카드 추가
+        if (
+          data.data.personalWallet &&
+          data.data.personalWallet.storeBalances.content.length > 0
+        ) {
+          data.data.personalWallet.storeBalances.content.forEach(
+            (store, index) => {
+              transformedCards.push({
+                id: data.data.personalWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
+                storeName: store.storeName,
+                remainingPoints: store.remainingPoints,
+                type: 'personal',
+                walletId: data.data.personalWallet.walletId,
+              })
+            }
+          )
+        }
+
+        // 그룹 지갑들의 각 가게별 카드 추가
+        if (data.data.groupWallets && data.data.groupWallets.length > 0) {
+          data.data.groupWallets.forEach(groupWallet => {
+            if (groupWallet.storeBalances.content.length > 0) {
+              groupWallet.storeBalances.content.forEach((store, index) => {
+                transformedCards.push({
+                  id: groupWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
+                  storeName: store.storeName,
+                  remainingPoints: store.remainingPoints,
+                  type: 'group',
+                  walletId: groupWallet.walletId,
+                  groupId: groupWallet.groupId,
+                  groupName: groupWallet.groupName,
+                })
+              })
+            }
+          })
+        }
+
+        console.log('변환된 카드 목록:', transformedCards)
+        setCards(transformedCards)
       } catch (error) {
         console.error('카드 목록 조회 실패:', error)
+        // 에러 발생 시 빈 배열로 설정
+        setCards([])
       } finally {
         setLoading(false)
       }
@@ -122,7 +219,7 @@ export const HeaderCards = () => {
           style={{ width: 'max-content' }}
         >
           {/* 카드가 없을 때 기본 카드 표시 */}
-          {dummyCards.length === 0 && (
+          {cards.length === 0 && (
             <div className="flex h-[129px] w-[108px] flex-shrink-0 items-center justify-center border border-solid border-black bg-white sm:w-[120px] lg:w-[140px]">
               <Image
                 src="/home/card/nocards.svg"
@@ -135,16 +232,26 @@ export const HeaderCards = () => {
           )}
 
           {/* 실제 카드들 */}
-          {dummyCards.map((card, index) => (
+          {cards.map((card, index) => (
             <div
               key={card.id}
               onClick={() => setSelectedCard(card)}
-              className="relative flex h-[129px] w-[108px] flex-shrink-0 cursor-pointer items-center justify-center border border-solid border-black transition-transform sm:w-[120px] lg:w-[140px]"
+              className="relative flex h-[129px] w-[108px] flex-shrink-0 cursor-pointer flex-col items-center justify-center border border-solid border-black transition-transform sm:w-[120px] lg:w-[140px]"
               style={{ backgroundColor: getCardColor(index) }}
             >
               {renderBadge(card.type)}
-              <div className="font-nanum text-xs leading-6 font-extrabold tracking-[0] text-black">
-                {card.name}
+              <div className="px-2 text-center">
+                <div className="font-nanum mb-1 text-xs leading-4 font-extrabold tracking-[0] text-black">
+                  {card.storeName}
+                </div>
+                <div className="font-nanum text-[10px] leading-3 font-bold tracking-[0] text-gray-600">
+                  {card.remainingPoints.toLocaleString()}P
+                </div>
+                {card.type === 'group' && card.groupName && (
+                  <div className="font-nanum mt-1 text-[8px] leading-3 font-medium tracking-[0] text-blue-600">
+                    {card.groupName}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -153,7 +260,7 @@ export const HeaderCards = () => {
 
       {/* QR 모달 */}
       <QRModal
-        cardName={selectedCard?.name}
+        cardName={selectedCard?.storeName}
         isOpen={!!selectedCard}
         onClose={() => setSelectedCard(null)}
       />
