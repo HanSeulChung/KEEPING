@@ -1,6 +1,7 @@
 package com.ssafy.keeping.domain.wallet.repository;
 
 import com.ssafy.keeping.domain.store.model.Store;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
 import com.ssafy.keeping.domain.wallet.model.WalletStoreBalance;
 import jakarta.persistence.LockModeType;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -74,38 +76,53 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
             @Param("store") Store store
     );
 
-
-
-
-    /**
-     * 개인지갑 - 고객의 모든 가게별 잔액 조회 (간단한 방식)
-     */
     @Query("""
-        SELECT wsb FROM WalletStoreBalance wsb
-        JOIN FETCH wsb.store s
-        JOIN FETCH wsb.wallet w
-        WHERE w.customer.customerId = :customerId
-        AND w.walletType = 'INDIVIDUAL'
-        AND wsb.balance > 0
-        ORDER BY wsb.updatedAt DESC
-        """)
-    Page<WalletStoreBalance> findPersonalWalletBalancesByCustomerIdSimple(
-            @Param("customerId") Long customerId,
-            Pageable pageable);
+    select coalesce(sum(b.balance),0)
+    from WalletStoreBalance b
+    where b.wallet.walletType = :walletType
+      and b.wallet.customer.customerId = :customerId
+""")
+    Optional<Long> sumBalanceByCustomerIdAndType(@Param("customerId") Long customerId,
+                                                 @Param("walletType") WalletType walletType);
 
-    /**
-     * 모임지갑 - 모임의 모든 가게별 잔액 조회 (간단한 방식)
-     */
+    // 개인지갑 잔액
     @Query("""
-        SELECT wsb FROM WalletStoreBalance wsb
-        JOIN FETCH wsb.store s
-        JOIN FETCH wsb.wallet w
-        WHERE w.group.groupId = :groupId
-        AND w.walletType = 'GROUP'
-        AND wsb.balance > 0
-        ORDER BY wsb.updatedAt DESC
-        """)
-    Page<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
-            @Param("groupId") Long groupId,
-            Pageable pageable);
+    SELECT DISTINCT wsb FROM WalletStoreBalance wsb
+    JOIN FETCH wsb.store s
+    JOIN FETCH wsb.wallet w
+    WHERE w.customer.customerId = :customerId
+      AND w.walletType = 'INDIVIDUAL'
+      AND wsb.balance > 0
+    ORDER BY wsb.updatedAt DESC
+    """)
+    List<WalletStoreBalance> findPersonalWalletBalancesByCustomerIdSimple(
+            @Param("customerId") Long customerId);
+
+    // 모임지갑 잔액
+    @Query("""
+    SELECT DISTINCT wsb FROM WalletStoreBalance wsb
+    JOIN FETCH wsb.store s
+    JOIN FETCH wsb.wallet w
+    WHERE w.group.groupId = :groupId
+      AND w.walletType = 'GROUP'
+      AND wsb.balance > 0
+    ORDER BY wsb.updatedAt DESC
+    """)
+    List<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
+            @Param("groupId") Long groupId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select coalesce(sum(b.balance),0)
+        from WalletStoreBalance b
+        where b.wallet.walletId = :walletId
+    """)
+    Optional<Long> sumByWalletIdForUpdate(@Param("walletId") Long walletId);
+
+    @Modifying
+    @Query("""
+        delete from WalletStoreBalance b
+        where b.wallet.walletId = :walletId
+    """)
+    void deleteByWalletId(@Param("walletId") Long walletId);
 }
