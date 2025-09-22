@@ -158,7 +158,7 @@ public class CancelService {
                 .customer(originalTransaction.getCustomer())
                 .store(originalTransaction.getStore())
                 .transactionType(TransactionType.CANCEL_CHARGE)
-                .amount(-originalTransaction.getAmount()) // 음수로 저장
+                .amount(originalTransaction.getAmount()) // 양수로 저장
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo()) // 동일한 거래번호
                 .build();
 
