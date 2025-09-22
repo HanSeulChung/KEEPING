@@ -105,4 +105,20 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
            """)
     long sumAvailablePoints(@Param("groupWalletId") Long groupWalletId,
                             @Param("memberWalletId") Long memberWalletId);
+
+    @Query("""
+        select case when count(l) > 0 then true else false end
+        from WalletStoreLot l
+        where l.wallet.walletId = :walletId
+          and l.lotStatus = 'ACTIVE'
+          and l.amountRemaining > 0
+    """)
+    boolean existsActiveLotByWalletId(@Param("walletId") Long walletId);
+
+    @Modifying
+    @Query("""
+        delete from WalletStoreLot l
+        where l.wallet.walletId = :walletId
+    """)
+    void deleteByWalletId(@Param("walletId") Long walletId);
 }

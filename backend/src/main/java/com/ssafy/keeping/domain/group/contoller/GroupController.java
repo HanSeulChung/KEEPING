@@ -124,4 +124,17 @@ public class GroupController {
         GroupLeaveResponseDto dto =groupService.leaveGroup(groupId, customerId);
         return ResponseEntity.ok(ApiResponse.success("모임을 탈퇴했습니다.", 200, dto));
     }
+
+    /**
+     * 모임 해체: 리더만
+     * 정책: 자동 환급 → 멤버 정리 → 지갑/그룹 삭제
+     */
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupDisbandResponseDto>> disbandGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long leaderId
+    ) {
+        GroupDisbandResponseDto dto = groupService.disbandGroup(groupId, leaderId);
+        return ResponseEntity.ok(ApiResponse.success("모임을 해체했습니다.", 200, dto));
+    }
 }

@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.group.repository;
 import com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto;
 import com.ssafy.keeping.domain.group.model.GroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -62,4 +63,11 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         and gm.leader = true
     """)
     Optional<Long> findLeaderId(@Param("groupId") Long groupId);
+
+    @Modifying
+    @Query("""
+        delete from GroupMember gm
+        where gm.group.groupId = :groupId
+    """)
+    void deleteByGroupId(@Param("groupId") Long groupId);
 }

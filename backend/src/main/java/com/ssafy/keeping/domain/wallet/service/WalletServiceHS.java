@@ -590,6 +590,16 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 .orElse(0L);
     }
 
+    @Transactional
+    public Map<Long, Long> settleAllMembersShare(Group group, List<Long> memberIds) {
+        Map<Long, Long> refunded = new LinkedHashMap<>();
+        for (Long memberId : memberIds) {
+            long amt = settleShareToIndividual(group, memberId); // 이미 구현됨
+            refunded.put(memberId, amt);
+        }
+        return refunded;
+    }
+
     @Transactional(readOnly = true)
     public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId) {
         Customer customer = validCustomer(customerId);

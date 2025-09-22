@@ -110,4 +110,19 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
     """)
     List<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
             @Param("groupId") Long groupId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select coalesce(sum(b.balance),0)
+        from WalletStoreBalance b
+        where b.wallet.walletId = :walletId
+    """)
+    Optional<Long> sumByWalletIdForUpdate(@Param("walletId") Long walletId);
+
+    @Modifying
+    @Query("""
+        delete from WalletStoreBalance b
+        where b.wallet.walletId = :walletId
+    """)
+    void deleteByWalletId(@Param("walletId") Long walletId);
 }
