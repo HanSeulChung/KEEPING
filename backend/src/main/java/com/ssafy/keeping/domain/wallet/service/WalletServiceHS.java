@@ -22,6 +22,7 @@ import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.dto.*;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
@@ -133,7 +134,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public IdempotentResult<PointShareResponseDto> sharePoints(
             Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
 
@@ -238,6 +239,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                     .expiredAt(src.getExpiredAt())
                                     .sourceType(LotSourceType.TRANSFER_IN)
                                     .contributorWallet(individual)
+                                    .lotStatus(LotStatus.ACTIVE)
                                     .originChargeTransaction(src.getOriginChargeTransaction())
                                     .build()
                     ));
@@ -290,7 +292,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public IdempotentResult<PointShareResponseDto> reclaimPoints(
             Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
 
@@ -392,6 +394,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                     .expiredAt(src.getExpiredAt())
                                     .sourceType(LotSourceType.TRANSFER_IN)
                                     .contributorWallet(group) // 출처 표기
+                                    .lotStatus(LotStatus.ACTIVE)
                                     .originChargeTransaction(src.getOriginChargeTransaction())
                                     .build()
                     ));
@@ -495,18 +498,16 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
 
     @Transactional
-    public void settleShareToIndividual(Group group, Long customerId) {
+    public long settleShareToIndividual(Group group, Long customerId) {
         Wallet groupWallet = validGroupWallet(group.getGroupId());
 
         if (!groupMemberRepository.existsMember(group.getGroupId(), customerId)) {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
         }
 
-        // 해당 모임원이 기여한 group LOT 스냅샷
         List<WalletStoreLot> srcLots = lotRepository
                 .findActiveByWalletIdAndContributorCustomerId(groupWallet.getWalletId(), customerId);
-
-        if (srcLots.isEmpty()) return;
+        if (srcLots.isEmpty()) return 0L;
 
         Wallet individual = srcLots.get(0).getContributorWallet();
         if (individual == null || individual.getCustomer() == null ||
@@ -514,7 +515,8 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
             throw new CustomException(ErrorCode.INCONSISTENT_STATE);
         }
 
-        // storeId 단위로 묶어서 balance 맞춰 회수
+        long totalRefunded = 0L;
+
         Map<Long, List<WalletStoreLot>> byStore =
                 srcLots.stream().collect(Collectors.groupingBy(l -> l.getStore().getStoreId()));
 
@@ -537,10 +539,8 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 long remain = src.getAmountRemaining();
                 if (remain <= 0) continue;
 
-                // 그룹 LOT 소진
                 src.usePoints(remain);
 
-                // 개인 LOT 증가 (originChargeTx 단위 합침)
                 WalletStoreLot dst = lotRepository
                         .findByWalletIdAndStoreIdAndOriginChargeTxIdAndSourceType(
                                 individual.getWalletId(),
@@ -556,12 +556,12 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                         .expiredAt(src.getExpiredAt())
                                         .sourceType(LotSourceType.TRANSFER_IN)
                                         .contributorWallet(groupWallet)
+                                        .lotStatus(LotStatus.ACTIVE)
                                         .originChargeTransaction(src.getOriginChargeTransaction())
                                         .build()
                         ));
                 dst.sharePoints(remain);
 
-                // 거래 기록
                 transactionRepository.save(Transaction.builder()
                         .wallet(individual).relatedWallet(groupWallet)
                         .customer(individual.getCustomer()).store(store)
@@ -581,31 +581,44 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 }
                 groupBal.subtractBalance(movedSum);
                 indivBal.addBalance(movedSum);
+                totalRefunded += movedSum;
             }
         }
+
+        return totalRefunded;
+    }
+
+    @Transactional(readOnly = true)
+    public long getTotalIndividualBalance(Long customerId) {
+        return balanceRepository.sumBalanceByCustomerIdAndType(customerId, WalletType.INDIVIDUAL)
+                .orElse(0L);
+    }
+
+    @Transactional
+    public Map<Long, Long> settleAllMembersShare(Group group, List<Long> memberIds) {
+        Map<Long, Long> refunded = new LinkedHashMap<>();
+        for (Long memberId : memberIds) {
+            long amt = settleShareToIndividual(group, memberId); // 이미 구현됨
+            refunded.put(memberId, amt);
+        }
+        return refunded;
     }
 
     @Transactional(readOnly = true)
     public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
-        // 1. 고객 및 지갑 검증
         Customer customer = validCustomer(customerId);
-
         Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
 
-        // 2. 간단한 방식으로 잔액 조회
-        Page<WalletStoreBalance> balances = balanceRepository
-                .findPersonalWalletBalancesByCustomerIdSimple(customerId, pageable);
+        Page<WalletStoreBalance> page = balanceRepository.findPersonalWalletBalancesByCustomerId(customerId, pageable);
 
-        // 3. Service에서 DTO 조합 (간소화)
-        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
-            return new WalletStoreBalanceDetailDto(
-                    balance.getStore().getStoreId(),
-                    balance.getStore().getStoreName(),
-                    balance.getBalance(),
-                    balance.getUpdatedAt()
-            );
-        });
+        List<WalletStoreBalanceDetailDto> storeBalances = page.getContent().stream()
+                .map(b -> new WalletStoreBalanceDetailDto(
+                        b.getStore().getStoreId(),
+                        b.getStore().getStoreName(),
+                        b.getBalance(),
+                        b.getUpdatedAt()))
+                .toList();
 
         return new PersonalWalletBalanceResponseDto(
                 customerId,
@@ -616,30 +629,22 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
     @Transactional(readOnly = true)
     public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
-        // 1. 고객, 모임, 멤버십 검증
-        Customer customer = validCustomer(customerId);
-
+        validCustomer(customerId);
         Group group = validGroup(groupId);
-
-        if (!groupMemberRepository.existsMember(groupId, customerId)) {
+        if (!groupMemberRepository.existsMember(groupId, customerId))
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
-        }
 
         Wallet groupWallet = validGroupWallet(groupId);
 
-        // 2. 간단한 방식으로 잔액 조회
-        Page<WalletStoreBalance> balances = balanceRepository
-                .findGroupWalletBalancesByGroupIdSimple(groupId, pageable);
+        Page<WalletStoreBalance> page = balanceRepository.findGroupWalletBalancesByGroupId(groupId, pageable);
 
-        // 3. Service에서 DTO 조합 (간소화)
-        Page<WalletStoreBalanceDetailDto> storeBalances = balances.map(balance -> {
-            return new WalletStoreBalanceDetailDto(
-                    balance.getStore().getStoreId(),
-                    balance.getStore().getStoreName(),
-                    balance.getBalance(),
-                    balance.getUpdatedAt()
-            );
-        });
+        List<WalletStoreBalanceDetailDto> storeBalances = page.getContent().stream()
+                .map(b -> new WalletStoreBalanceDetailDto(
+                        b.getStore().getStoreId(),
+                        b.getStore().getStoreName(),
+                        b.getBalance(),
+                        b.getUpdatedAt()))
+                .toList();
 
         return new GroupWalletBalanceResponseDto(
                 groupId,
@@ -750,7 +755,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 transactionDtos
         );
     }
-
 
     // ===== Validation Helpers =====
     private Customer validCustomer(Long customerId) {

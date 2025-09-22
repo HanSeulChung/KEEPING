@@ -96,28 +96,31 @@ export const HeaderCards = () => {
         const transformedCards: Card[] = []
 
         // 개인 지갑의 각 가게별 카드 추가
-        if (
-          data.data.personalWallet &&
-          data.data.personalWallet.storeBalances.content.length > 0
-        ) {
-          data.data.personalWallet.storeBalances.content.forEach(
-            (store, index) => {
-              transformedCards.push({
-                id: data.data.personalWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
-                storeName: store.storeName,
-                remainingPoints: store.remainingPoints,
-                type: 'personal',
-                walletId: data.data.personalWallet.walletId,
-              })
-            }
-          )
+        // 백엔드에서 페이징을 제거했으므로 직접 배열에 접근
+        const personalStoreBalances = data.data.personalWallet?.storeBalances || []
+        console.log('HeaderCards - 개인 지갑 storeBalances:', personalStoreBalances) // 디버깅용
+        
+        if (personalStoreBalances.length > 0) {
+          personalStoreBalances.forEach((store, index) => {
+            transformedCards.push({
+              id: data.data.personalWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
+              storeName: store.storeName,
+              remainingPoints: store.remainingPoints,
+              type: 'personal',
+              walletId: data.data.personalWallet.walletId,
+            })
+          })
         }
 
         // 그룹 지갑들의 각 가게별 카드 추가
+        // 백엔드에서 페이징을 제거했으므로 직접 배열에 접근
         if (data.data.groupWallets && data.data.groupWallets.length > 0) {
           data.data.groupWallets.forEach(groupWallet => {
-            if (groupWallet.storeBalances.content.length > 0) {
-              groupWallet.storeBalances.content.forEach((store, index) => {
+            const groupStoreBalances = groupWallet.storeBalances || []
+            console.log('HeaderCards - 그룹 지갑 storeBalances:', groupStoreBalances) // 디버깅용
+            
+            if (groupStoreBalances.length > 0) {
+              groupStoreBalances.forEach((store, index) => {
                 transformedCards.push({
                   id: groupWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
                   storeName: store.storeName,

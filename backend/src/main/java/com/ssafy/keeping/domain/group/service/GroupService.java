@@ -5,6 +5,10 @@ import com.ssafy.keeping.domain.notification.service.NotificationService;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.dto.WalletResponseDto;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
+import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.domain.wallet.service.WalletServiceHS;
 import com.ssafy.keeping.domain.group.constant.RequestStatus;
 import com.ssafy.keeping.domain.group.dto.*;
@@ -21,10 +25,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -41,6 +45,10 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final GroupAddRequestRepository groupAddRequestRepository;
     private final NotificationService notificationService;
+
+    private final WalletRepository walletRepository;
+    private final WalletStoreBalanceRepository balanceRepository;
+    private final WalletStoreLotRepository lotRepository;
 
     @Transactional
     public GroupResponseDto createGroup(Long groupLeaderId, GroupRequestDto requestDto) {
@@ -349,6 +357,66 @@ public class GroupService {
         });
     }
 
+    @Transactional
+    public GroupLeaveResponseDto leaveGroup(Long groupId, Long customerId) {
+        Group group = validGroup(groupId);
+        GroupMember me = validGroupMember(groupId, customerId);
+        if (me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        long refunded = walletService.settleShareToIndividual(group, customerId);
+        groupMemberRepository.delete(me);
+
+        long indivBalance = walletService.getTotalIndividualBalance(customerId);
+
+        List<Long> others = groupMemberRepository.findMemberIdsByGroupId(groupId);
+        afterCommit(() -> {
+            notificationService.sendToCustomer(
+                    customerId, NotificationType.GROUP_LEFT,
+                    String.format("모임 탈퇴, %dP 환급되었습니다. 잔액 %dP", refunded, indivBalance));
+            others.forEach(id -> notificationService.sendToCustomer(
+                    id, NotificationType.GROUP_LEFT, "모임원이 탈퇴했습니다."));
+        });
+
+        return new GroupLeaveResponseDto(groupId, customerId, refunded, indivBalance, LocalDateTime.now());
+    }
+
+    @Transactional
+    public GroupDisbandResponseDto disbandGroup(Long groupId, Long leaderId) {
+        Group group = validGroup(groupId);
+        GroupMember me = validGroupMember(groupId, leaderId);
+        if (!me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        Wallet gw = validGroupWallet(groupId);
+        List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
+
+        Map<Long, Long> refundedByMember = walletService.settleAllMembersShare(group, memberIds);
+        long totalRefunded = refundedByMember.values().stream().mapToLong(Long::longValue).sum();
+
+        long remain = balanceRepository.sumByWalletIdForUpdate(gw.getWalletId()).orElse(0L);
+        if (remain != 0L) throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+        if (lotRepository.existsActiveLotByWalletId(gw.getWalletId()))
+            throw new CustomException(ErrorCode.INCONSISTENT_STATE);
+
+        lotRepository.deleteByWalletId(gw.getWalletId());
+        balanceRepository.deleteByWalletId(gw.getWalletId());
+        groupMemberRepository.deleteByGroupId(groupId);
+        walletRepository.delete(gw);
+        groupRepository.delete(group);
+
+        afterCommit(() -> refundedByMember.forEach((cid, amt) ->
+                notificationService.sendToCustomer(
+                        cid, NotificationType.GROUP_DISBANDED,
+                        "모임 해체. 환급 " + amt + "P 완료.")));
+
+        return new GroupDisbandResponseDto(
+                groupId, memberIds.size(), totalRefunded, refundedByMember, LocalDateTime.now());
+    }
+
+
+    /**
+     * ===============validate method=============
+     *  Group, GroupMember, Customer, GroupWallet 검증
+     */
 
     public Group validGroup(Long groupId) {
         return groupRepository.findById(groupId).orElseThrow(
@@ -364,5 +432,10 @@ public class GroupService {
     public Customer validCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public Wallet validGroupWallet(Long groupId) {
+        return walletRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
     }
 }

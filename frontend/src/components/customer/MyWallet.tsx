@@ -231,7 +231,11 @@ const fetchWalletBalance = async (): Promise<WalletCard[]> => {
     console.log('지갑 잔액 API 응답:', result)
 
     // API 응답 데이터를 WalletCard 형식으로 변환
-    const walletCards: WalletCard[] = result.data.storeBalances.content.map(
+    // 백엔드에서 페이징을 제거했으므로 직접 배열에 접근
+    const storeBalances = result.data.storeBalances || []
+    console.log('MyWallet - 처리된 storeBalances:', storeBalances) // 디버깅용
+    
+    const walletCards: WalletCard[] = storeBalances.map(
       (storeBalance: StoreBalance, index: number) => ({
         id: index + 1,
         name: storeBalance.storeName,
