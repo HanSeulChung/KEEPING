@@ -16,7 +16,7 @@ export default function Home() {
         <div className="flex flex-row items-center justify-center space-x-4">
           <Link href="/owner/login" className="text-white transition-colors">
             <Image
-              src="icons/main_owner.svg"
+              src="/icons/main_owner.svg"
               alt="사장님 로그인"
               width={180}
               height={180}
@@ -25,7 +25,7 @@ export default function Home() {
 
           <Link href="/customer/login" className="text-white transition-colors">
             <Image
-              src="icons/main_customer.svg"
+              src="/icons/main_customer.svg"
               alt="고객 로그인"
               width={180}
               height={180}
