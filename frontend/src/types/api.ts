@@ -61,9 +61,15 @@ export namespace AuthAPI {
   export interface SignupOwnerResponse {
     accessToken: string
     user: {
-      id: number
+      ownerId: number
+      providerId: string
+      providerType: string
       name: string
       email: string
+      phoneNumber: string
+      birth: string
+      gender: string
+      imgUrl: string
       role: 'OWNER'
     }
   }

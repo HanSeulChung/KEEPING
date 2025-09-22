@@ -5,7 +5,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
 
 export const apiConfig = {
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:8080',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
