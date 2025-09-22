@@ -73,12 +73,16 @@ const StoreRegistration = () => {
     // 파일 타입 검증
     if (!file.type.startsWith('image/')) {
       alert('이미지 파일만 업로드 가능합니다.')
+      setUploadedFile(null)
+      setPreviewUrl(null)
       return
     }
 
-    // 파일 크기 검증 (5MB 제한)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('파일 크기는 5MB 이하여야 합니다.')
+    // 파일 크기 검증 (10MB 제한)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하여야 합니다. 다른 이미지를 선택해주세요.')
+      setUploadedFile(null)
+      setPreviewUrl(null)
       return
     }
 
