@@ -798,6 +798,9 @@ const ShareModal = ({
 
       // 성공 시 모달 닫기
       onClose()
+      
+      // 페이지 새로고침으로 카드 정보 업데이트
+      window.location.reload()
     } catch (error) {
       console.log('❌ 공유 실패 - 에러 상세 정보:')
       console.error('Error:', error)
@@ -1324,6 +1327,16 @@ export const GroupWallet = () => {
     }
   }, [user, groupMembers])
 
+  // 카드가 로드되면 첫 번째 카드 자동 선택
+  useEffect(() => {
+    if (groupWalletCards && groupWalletCards.length > 0) {
+      const firstCard = groupWalletCards[0]
+      if (firstCard && selectedCard !== firstCard.storeId) {
+        setSelectedCard(firstCard.storeId)
+      }
+    }
+  }, [groupWalletCards])
+
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
     // 카드 선택 시 해당 카드의 거래 내역 조회
@@ -1628,6 +1641,9 @@ export const GroupWallet = () => {
       // 그룹 목록 새로고침
       await loadUserGroups()
       
+      // 페이지 새로고침으로 UI 업데이트
+      window.location.reload()
+      
     } catch (error) {
       console.error('그룹 탈퇴 실패:', error)
       alert('그룹 탈퇴 중 오류가 발생했습니다.')
@@ -1668,14 +1684,14 @@ export const GroupWallet = () => {
 
       console.log('그룹 생성 성공:', result)
 
-      // 성공 시 그룹 목록 업데이트 또는 페이지 새로고침
-      // 실제로는 상태를 업데이트하거나 다시 fetch해야 함
-
       // 모달 닫기
       setIsGroupCreateModalOpen(false)
 
-      // 성공 알림 (선택사항)
+      // 성공 알림
       alert('그룹이 성공적으로 생성되었습니다!')
+      
+      // 페이지 새로고침으로 그룹 목록 업데이트
+      window.location.reload()
     } catch (error) {
       console.error('그룹 생성 에러:', error)
 
@@ -1817,7 +1833,9 @@ export const GroupWallet = () => {
             <div className="flex-1">
               <div className="mb-2 flex items-center gap-2">
                 <h2 className="text-xl font-bold text-black md:text-lg">
-                  {loading ? '로딩중...' : groupInfo?.groupName || 'A509'}
+                  {loading ? '로딩중...' : 
+                   userGroupIds.length === 0 ? '그룹이 없습니다' :
+                   groupInfo?.groupName || 'A509'}
                 </h2>
                 {/* 그룹원 목록 버튼 */}
                 <button
@@ -1926,6 +1944,8 @@ export const GroupWallet = () => {
                 <p className="text-center text-sm text-black md:text-xs">
                   {loading
                     ? '로딩중...'
+                    : userGroupIds.length === 0
+                    ? '+ 버튼을 눌러 그룹을 만들거나 돋보기 버튼을 눌러 그룹을 찾아보세요'
                     : groupInfo?.groupDescription ||
                       'SSAFY 특화 프로젝트 A509 입니다 ~'}
                 </p>
@@ -1962,67 +1982,96 @@ export const GroupWallet = () => {
           </div>
         </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="relative mb-4 h-12 w-full">
-          {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
-            <div key={tabKey} className="relative">
-              <button
-                onClick={() => {
-                  setActiveTab(tabKey as keyof typeof TAB_CONFIG)
-                  // 사용내역 탭으로 변경 시 거래 내역 조회
-                  if (
-                    tabKey === 'history' &&
-                    selectedCard &&
-                    selectedGroup !== null
-                  ) {
-                    fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
-                  }
-                }}
-                className={`absolute h-8 w-20 border border-black text-xs font-normal transition-colors ${
-                  activeTab === tabKey
-                    ? 'bg-[#efefef] text-black'
-                    : 'bg-white text-black hover:bg-[#efefef]'
-                }`}
-                style={{
-                  left: `${5 + index * 85}px`,
-                  top: '8px',
-                }}
-              >
-                <div className="flex h-full items-center justify-center">
-                  {tabLabel}
-                </div>
-              </button>
-            </div>
-          ))}
+        {/* 버튼 네비게이션 - 그룹이 있을 때만 표시 */}
+        {userGroupIds.length > 0 && (
+          <div className="relative mb-4 h-12 w-full">
+            {/* 카드가 있을 때: 사용내역, 회수, 공유 */}
+            {cardsWithSelection.length > 0 ? (
+              <>
+                {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
+                  <div key={tabKey} className="relative">
+                    <button
+                      onClick={() => {
+                        setActiveTab(tabKey as keyof typeof TAB_CONFIG)
+                        // 사용내역 탭으로 변경 시 거래 내역 조회
+                        if (
+                          tabKey === 'history' &&
+                          selectedCard &&
+                          selectedGroup !== null
+                        ) {
+                          fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
+                        }
+                      }}
+                      className={`absolute h-8 w-20 border border-black text-xs font-normal transition-colors ${
+                        activeTab === tabKey
+                          ? 'bg-[#efefef] text-black'
+                          : 'bg-white text-black hover:bg-[#efefef]'
+                      }`}
+                      style={{
+                        left: `${5 + index * 85}px`,
+                        top: '8px',
+                      }}
+                    >
+                      <div className="flex h-full items-center justify-center">
+                        {tabLabel}
+                      </div>
+                    </button>
+                  </div>
+                ))}
 
-          {/* 공유 버튼 (회수 버튼 옆) */}
-          <div className="relative">
-            <button
-              onClick={() =>
-                handleShareClick(
-                  cardsWithSelection.find(card => card.isSelected) ||
-                    cardsWithSelection[0] || {
+                {/* 공유 버튼 (회수 버튼 옆) */}
+                <div className="relative">
+                  <button
+                    onClick={() =>
+                      handleShareClick(
+                        cardsWithSelection.find(card => card.isSelected) ||
+                          cardsWithSelection[0] || {
+                            id: 0,
+                            name: '기본 카드',
+                            amount: 0,
+                          }
+                      )
+                    }
+                    className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
+                    style={{
+                      left: `${5 + Object.keys(TAB_CONFIG).length * 85}px`,
+                      top: '8px',
+                    }}
+                  >
+                    <div className="flex h-full items-center justify-center">
+                      공유
+                    </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* 카드가 없을 때: 공유 버튼만 사용내역 자리에 */
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    handleShareClick({
                       id: 0,
                       name: '기본 카드',
                       amount: 0,
-                    }
-                )
-              }
-              className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
-              style={{
-                left: `${5 + Object.keys(TAB_CONFIG).length * 85}px`,
-                top: '8px',
-              }}
-            >
-              <div className="flex h-full items-center justify-center">
-                공유
+                    })
+                  }
+                  className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
+                  style={{
+                    left: '5px',
+                    top: '8px',
+                  }}
+                >
+                  <div className="flex h-full items-center justify-center">
+                    공유
+                  </div>
+                </button>
               </div>
-            </button>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* 탭 내용 */}
-        {activeTab === 'history' && (
+        {/* 탭 내용 - 카드가 있을 때만 표시 */}
+        {cardsWithSelection.length > 0 && activeTab === 'history' && (
           <div className="mb-6">
             {transactionsLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -2060,8 +2109,18 @@ export const GroupWallet = () => {
           </div>
         )}
 
+        {/* 카드가 없을 때 메시지 */}
+        {cardsWithSelection.length === 0 && (
+          <div className="mb-6 flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="text-gray-500 mb-2">등록된 카드가 없습니다</div>
+              <div className="text-sm text-gray-400">그룹에 카드를 추가해주세요</div>
+            </div>
+          </div>
+        )}
+
         {/* 페이지네이션 - 사용내역 탭에서만 표시 */}
-        {activeTab === 'history' && (
+        {cardsWithSelection.length > 0 && activeTab === 'history' && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
