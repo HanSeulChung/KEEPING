@@ -14,37 +14,37 @@ import java.util.Optional;
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
 
     @Query("""
-    select count(gm) > 0
-    from GroupMember gm
-    where gm.group.groupId = :groupId
-      and gm.user.customerId  = :userId
+        select count(gm) > 0
+        from GroupMember gm
+        where gm.group.groupId = :groupId
+          and gm.user.customerId  = :userId
     """)
     boolean existsMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Query("""
-    select count(gm) > 0
-    from GroupMember gm
-    where gm.group.groupId = :groupId
-      and gm.user.customerId  = :userId
-      and gm.leader = true
+        select count(gm) > 0
+        from GroupMember gm
+        where gm.group.groupId = :groupId
+          and gm.user.customerId  = :userId
+          and gm.leader = true
     """)
     boolean existsLeader(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
     @Query("""
-    select new com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto(
-        :groupId, u.customerId, u.name, gm.leader, gm.groupMemberId
-    )
-    from GroupMember gm
-    join gm.user u
-    where gm.group.groupId = :groupId
+        select new com.ssafy.keeping.domain.group.dto.GroupMemberResponseDto(
+            :groupId, u.customerId, u.name, gm.leader, gm.groupMemberId
+        )
+        from GroupMember gm
+        join gm.user u
+        where gm.group.groupId = :groupId
     """)
     List<GroupMemberResponseDto> findAllGroupMembers(@Param("groupId") Long groupId);
 
     @Query("""
-    select gm
-    from GroupMember gm
-    where gm.group.groupId = :groupId
-      and gm.user.customerId  = :userId
+        select gm
+        from GroupMember gm
+        where gm.group.groupId = :groupId
+          and gm.user.customerId  = :userId
     """)
     Optional<GroupMember> findGroupMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
@@ -62,4 +62,21 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         and gm.leader = true
     """)
     Optional<Long> findLeaderId(@Param("groupId") Long groupId);
+
+    @Query("""
+       select gm.group.groupId
+       from GroupMember gm
+       where gm.user.customerId = :customerId
+    """)
+    List<Long> findGroupIdsByCustomerId(@Param("customerId") Long customerId);
+
+    @Query("""
+        select gm.group.groupId
+        from GroupMember gm
+        where gm.user.customerId = :customerId
+    """)
+    List<Long> findMemberGroupsByCustomerId(@Param("customerId") Long customerId);
+
+    List<GroupMember> findAllByGroup_GroupId(Long groupId);
+
 }

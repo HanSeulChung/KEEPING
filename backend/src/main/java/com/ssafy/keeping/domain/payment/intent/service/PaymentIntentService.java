@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keeping.domain.auth.pin.service.PinAuthService;
+import com.ssafy.keeping.domain.group.model.GroupMember;
+import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.idempotency.constant.IdemActorType;
 import com.ssafy.keeping.domain.idempotency.constant.IdemStatus;
 import com.ssafy.keeping.domain.idempotency.dto.IdemBegin;
@@ -33,6 +35,9 @@ import com.ssafy.keeping.domain.payment.qr.repository.QrTokenRepository;
 import com.ssafy.keeping.domain.store.model.Store;
 import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.store.service.StoreService;
+import com.ssafy.keeping.domain.wallet.constant.WalletType;
+import com.ssafy.keeping.domain.wallet.model.Wallet;
+import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +66,8 @@ public class PaymentIntentService {
     private final FundsService fundsService;
     private final NotificationService notificationService;
     private final StoreRepository storeRepository;
+    private final WalletRepository walletRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final IdempotencyService idempotencyService;
@@ -369,6 +376,84 @@ public class PaymentIntentService {
         }
 
         PaymentIntentDetailResponse res = PaymentIntentDetailResponse.from(intent, itemViews);
+
+        Store store = storeRepository.findById(intent.getStoreId()).orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        Wallet wallet = walletRepository.findById(intent.getWalletId()).orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
+
+        // 알림 전송
+        if (wallet.getWalletType() == WalletType.INDIVIDUAL) { // 개인 지갑
+            // 결제 완료된 가게에 알림 전송
+            try {
+                Long ownerId = store.getOwner().getOwnerId();
+                String customerName = wallet.getCustomer().getName();
+                String notificationContent = String.format("%s님이 %,d포인트를 결제 승인하였습니다.",
+                        customerName, intent.getAmount());
+
+                notificationService.sendToOwner(
+                        ownerId,
+                        NotificationType.PERSONAL_POINT_USE,
+                        notificationContent
+                );
+
+                log.info("점주 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+            } catch (Exception e) {
+                Long ownerId = store.getOwner().getOwnerId();
+                log.warn("점주 알림 전송 실패 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+            }
+            // 결제한 손님에게 알림 전송
+            try {
+                String notificationContent = String.format("%s에서 %,d포인트 사용이 완료되었습니다.",
+                        store.getStoreName(), intent.getAmount());
+
+                notificationService.sendToOwner(
+                        customerId,
+                        NotificationType.POINT_CHARGE,
+                        notificationContent
+                );
+
+                log.info("결제 수락 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+            } catch (Exception e) {
+                log.warn("결제 수락 알림 전송 실패 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, intent.getAmount(), intent.getStoreId());
+            }
+        } else { // 모임 지갑
+            // 결제 완료된 가게에 알림 전송
+            String groupName = wallet.getGroup().getGroupName();
+            try {
+                Long ownerId = store.getOwner().getOwnerId();
+                String notificationContent = String.format("%s모임에서 %,d포인트를 결제 승인하였습니다.",
+                        groupName, intent.getAmount());
+
+                notificationService.sendToOwner(
+                        ownerId,
+                        NotificationType.GROUP_POINT_USE,
+                        notificationContent
+                );
+
+                log.info("점주 알림 전송 완료 - 손님ID: {}, 그룹ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, wallet.getGroup().getGroupId(), intent.getAmount(), intent.getStoreId());
+            } catch (Exception e) {
+                log.warn("점주 알림 전송 완료 - 손님ID: {}, 그룹ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, wallet.getGroup().getGroupId(), intent.getAmount(), intent.getStoreId());
+            }
+
+            Long groupId = wallet.getGroup().getGroupId();
+            List<GroupMember> groupMembers = groupMemberRepository.findAllByGroup_GroupId(groupId);
+
+            for (GroupMember groupMember : groupMembers) {
+                try {
+                    String notificationContent = String.format("%s에서 %s지갑의 %,d포인트가 사용되었습니다.",
+                            store.getStoreName(), groupName, intent.getAmount());
+
+                    notificationService.sendToOwner(
+                            groupMember.getGroupMemberId(),
+                            NotificationType.GROUP_POINT_USE,
+                            notificationContent
+                    );
+
+                    log.info("결제 수락 알림 전송 완료 - 손님ID: {}, 그룹ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, wallet.getGroup().getGroupId(), intent.getAmount(), intent.getStoreId());
+                } catch (Exception e) {
+                    log.warn("결제 수락 알림 전송 실패 - 손님ID: {}, 그룹ID: {}, 결제 금액: {}, 사용 가게 ID: {}", customerId, wallet.getGroup().getGroupId(), intent.getAmount(), intent.getStoreId());
+                }
+            }
+        }
 
         try {
             idempotencyService.completeStrict(slot, HttpStatus.OK.value(), res, intent.getPublicId());
