@@ -259,7 +259,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .customer(actor)
                         .store(store)
                         .transactionType(TransactionType.USE)
-                        .amount(-shareAmount)
+                        .amount(shareAmount)
                         .build()
         );
         Transaction txIn = transactionRepository.save(
@@ -414,7 +414,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .customer(actor)
                         .store(store)
                         .transactionType(TransactionType.USE)           // 그룹에서 차감
-                        .amount(-amount)
+                        .amount(amount)
                         .build()
         );
         Transaction txIn = transactionRepository.save(
@@ -574,7 +574,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 transactionRepository.save(Transaction.builder()
                         .wallet(groupWallet).relatedWallet(individual)
                         .customer(individual.getCustomer()).store(store)
-                        .transactionType(TransactionType.USE).amount(-remain).build());
+                        .transactionType(TransactionType.USE).amount(remain).build());
 
                 movedSum += remain;
             }
