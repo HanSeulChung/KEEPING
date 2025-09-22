@@ -39,4 +39,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c.imgUrl FROM Customer c WHERE c.customerId = :customerId")
     Optional<String> findImageUrlByCustomerId(@Param("customerId") Long customerId);
+
+    @Modifying
+    @Query("UPDATE Customer c SET c.name = :name, c.phoneNumber = :phoneNumber WHERE c.customerId = :customerId")
+    int updateCustomerProfile(@Param("customerId") Long customerId, @Param("name") String name, @Param("phoneNumber") String phoneNumber);
 }
