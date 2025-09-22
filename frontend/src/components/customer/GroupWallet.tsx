@@ -1767,7 +1767,7 @@ export const GroupWallet = () => {
                 {/* 설정 버튼 (리더만 표시) */}
                 {isCurrentUserLeader && (
                   <button
-                    onClick={() => window.location.href = '/customer/groupSettings'}
+                    onClick={() => window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 transition-colors hover:bg-blue-200"
                     title="그룹 설정"
                   >

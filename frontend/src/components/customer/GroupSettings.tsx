@@ -1,38 +1,186 @@
 'use client'
-import { useState } from 'react'
+import { buildURL } from '@/api/config'
+import { useEffect, useState } from 'react'
 
 // 타입 정의
+interface GroupAddRequest {
+  groupAddRequestId: number
+  name: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+}
+
+interface GroupAddRequestsResponse {
+  success: boolean
+  status: number
+  message: string
+  data: GroupAddRequest[]
+  timestamp: string
+}
+
 interface GroupSettingsProps {
+  groupId: number
   groupName?: string
   groupDescription?: string
   members?: string[]
-  pendingRequests?: Array<{
-    id: string
-    name: string
-  }>
 }
 
 // 그룹 설정 컴포넌트
 export const GroupSettings = ({
+  groupId,
   groupName: initialGroupName = 'A509',
   groupDescription: initialGroupDescription = 'A509',
   members = ['혜은', '혜으니', '혜응응'],
-  pendingRequests = [{ id: '1', name: '혜은' }],
 }: GroupSettingsProps) => {
   const [selectedMember, setSelectedMember] = useState<string>('')
   const [groupName, setGroupName] = useState(initialGroupName)
   const [groupDescription, setGroupDescription] = useState(
     initialGroupDescription
   )
+  const [pendingRequests, setPendingRequests] = useState<GroupAddRequest[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleAcceptRequest = (requestId: string) => {
-    // 수락 로직
-    console.log('모임 추가 신청 수락:', requestId)
+  // 가입 요청 목록 조회
+  const fetchAddRequests = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const url = buildURL(`/groups/${groupId}/add-requests`)
+      console.log('가입 요청 목록 조회 URL:', url)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      console.log('가입 요청 목록 조회 헤더:', headers)
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+
+      console.log('가입 요청 목록 조회 응답 상태:', response.status, response.statusText)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: GroupAddRequestsResponse = await response.json()
+      console.log('가입 요청 목록 조회 응답 데이터:', data)
+      
+      if (data.success) {
+        // PENDING 상태의 요청만 필터링
+        const pendingOnly = data.data.filter(request => request.status === 'PENDING')
+        console.log('PENDING 상태 요청들:', pendingOnly)
+        setPendingRequests(pendingOnly)
+      } else {
+        setError(data.message || '가입 요청 목록 조회에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('가입 요청 목록 조회 실패:', error)
+      setError('가입 요청 목록 조회 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleRejectRequest = (requestId: string) => {
-    // 거절 로직
-    console.log('모임 추가 신청 거절:', requestId)
+  // 가입 요청 승인/거절
+  const handleRequestDecision = async (requestId: number, isAccept: boolean) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const url = buildURL(`/groups/${groupId}/add-requests`)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      const requestBody = {
+        groupAddRequestId: requestId,
+        isAccept: isAccept
+      }
+
+      console.log(`${isAccept ? '승인' : '거절'} 요청 시작:`, {
+        url,
+        method: 'PATCH',
+        headers,
+        requestBody,
+        groupId,
+        requestId
+      })
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log(`${isAccept ? '승인' : '거절'} 응답 상태:`, response.status, response.statusText)
+
+      if (!response.ok) {
+        let errorMessage = `${isAccept ? '승인' : '거절'} 처리에 실패했습니다. (${response.status})`
+        
+        try {
+          const errorData = await response.json()
+          console.log(`${isAccept ? '승인' : '거절'} 에러 응답:`, errorData)
+          if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          const errorText = await response.text()
+          console.log(`${isAccept ? '승인' : '거절'} 에러 텍스트:`, errorText)
+          if (errorText) {
+            errorMessage = errorText
+          }
+        }
+        
+        console.log(`${isAccept ? '승인' : '거절'} 실패 - 최종 에러 메시지:`, errorMessage)
+        alert(errorMessage)
+        return
+      }
+
+      const result = await response.json()
+      console.log(`${isAccept ? '승인' : '거절'} 성공 응답:`, result)
+      
+      if (result.success) {
+        alert(`${isAccept ? '승인' : '거절'} 처리되었습니다.`)
+        // 목록 새로고침
+        fetchAddRequests()
+      } else {
+        alert(result.message || `${isAccept ? '승인' : '거절'} 처리에 실패했습니다.`)
+      }
+    } catch (error) {
+      console.error('가입 요청 처리 실패:', error)
+      alert(`${isAccept ? '승인' : '거절'} 처리 중 오류가 발생했습니다.`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAcceptRequest = (requestId: number) => {
+    handleRequestDecision(requestId, true)
+  }
+
+  const handleRejectRequest = (requestId: number) => {
+    handleRequestDecision(requestId, false)
   }
 
   const handleRemoveMember = (memberName: string) => {
@@ -54,6 +202,13 @@ export const GroupSettings = ({
     // 모임 수정 로직
     console.log('모임 수정:', { groupName, groupDescription })
   }
+
+  // 컴포넌트 마운트 시 가입 요청 목록 조회
+  useEffect(() => {
+    if (groupId) {
+      fetchAddRequests()
+    }
+  }, [groupId])
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -78,9 +233,24 @@ export const GroupSettings = ({
               >
                 모임 추가 신청
               </div>
-              {pendingRequests.length > 0 ? (
+              {/* 로딩 상태 */}
+              {loading && (
+                <div className="p-3 text-center text-sm text-gray-500">
+                  로딩 중...
+                </div>
+              )}
+
+              {/* 에러 메시지 */}
+              {error && (
+                <div className="p-3 text-center text-sm text-red-500">
+                  {error}
+                </div>
+              )}
+
+              {/* 가입 요청 목록 */}
+              {!loading && !error && pendingRequests.length > 0 && (
                 pendingRequests.map(request => (
-                  <div key={request.id} className="flex items-center gap-3 p-3">
+                  <div key={request.groupAddRequestId} className="flex items-center gap-3 p-3">
                     <div className="h-10 w-10 rounded-full bg-gray-300"></div>
                     <div
                       className="flex-1 text-xs font-bold text-black"
@@ -89,22 +259,27 @@ export const GroupSettings = ({
                       {request.name}
                     </div>
                     <button
-                      onClick={() => handleAcceptRequest(request.id)}
-                      className="bg-blue-500 px-2 py-1 text-[10px] font-bold text-white"
+                      onClick={() => handleAcceptRequest(request.groupAddRequestId)}
+                      disabled={loading}
+                      className="bg-blue-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       style={{ fontFamily: 'NanumSquare Neo' }}
                     >
                       수락
                     </button>
                     <button
-                      onClick={() => handleRejectRequest(request.id)}
-                      className="bg-red-500 px-2 py-1 text-[10px] font-bold text-white"
+                      onClick={() => handleRejectRequest(request.groupAddRequestId)}
+                      disabled={loading}
+                      className="bg-red-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       style={{ fontFamily: 'NanumSquare Neo' }}
                     >
                       거절
                     </button>
                   </div>
                 ))
-              ) : (
+              )}
+
+              {/* 신청이 없는 경우 */}
+              {!loading && !error && pendingRequests.length === 0 && (
                 <div className="p-3 text-center text-sm text-gray-500">
                   신청이 없습니다
                 </div>
@@ -173,7 +348,8 @@ export const GroupSettings = ({
               </select>
               <button
                 onClick={handleTransferLeadership}
-                className="w-full bg-black py-2 text-[10px] font-bold text-white"
+                disabled={loading}
+                className="w-full bg-black py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'NanumSquare Neo' }}
               >
                 위임하기
@@ -226,7 +402,8 @@ export const GroupSettings = ({
 
               <button
                 onClick={handleUpdateGroup}
-                className="w-full bg-black py-2 text-[10px] font-bold text-white"
+                disabled={loading}
+                className="w-full bg-black py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'NanumSquare Neo' }}
               >
                 수정하기
@@ -245,7 +422,8 @@ export const GroupSettings = ({
               </div>
               <button
                 onClick={handleDisbandGroup}
-                className="bg-black px-4 py-2 text-[10px] font-bold text-white"
+                disabled={loading}
+                className="bg-black px-4 py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'NanumSquare Neo' }}
               >
                 모임 해체하기
