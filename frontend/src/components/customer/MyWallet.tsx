@@ -16,7 +16,7 @@ interface WalletCard {
 
 interface Transaction {
   id: number
-  type: 'charge' | 'usage'
+  type: 'charge' | 'use' | 'transfer-in' | 'transfer-out' | 'cancel-charge' | 'cancel-use' | 'unknown'
   amount: number
   date: string
   transactionId?: number
@@ -49,6 +49,50 @@ interface WalletBalanceResponse {
   }
 }
 
+// 결제 취소 관련 타입
+interface CancelTransaction {
+  transactionUniqueNo: string
+  storeName: string
+  paymentAmount: number
+  transactionTime: string
+  remainingBalance: number
+}
+
+interface CancelListResponse {
+  success: boolean
+  status: number
+  message: string
+  data: {
+    totalElements: number
+    totalPages: number
+    first: boolean
+    last: boolean
+    size: number
+    content: CancelTransaction[]
+    number: number
+    sort: {
+      empty: boolean
+      sorted: boolean
+      unsorted: boolean
+    }
+    numberOfElements: number
+    pageable: {
+      offset: number
+      sort: {
+        empty: boolean
+        sorted: boolean
+        unsorted: boolean
+      }
+      paged: boolean
+      pageSize: number
+      pageNumber: number
+      unpaged: boolean
+    }
+    empty: boolean
+  }
+  timestamp: string
+}
+
 // 거래 내역 API 응답 타입
 interface TransactionDetail {
   transactionId: number
@@ -76,30 +120,15 @@ interface WalletDetailResponse {
 }
 
 // 충전 옵션 API 호출 함수 (StoreDetail과 동일)
-const fetchChargeOptions = async (
-  storeId: number
-): Promise<ChargeOptionData[]> => {
+const fetchChargeOptions = async (storeId: number): Promise<ChargeOptionData[]> => {
   try {
-    // Authorization 헤더 추가
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (typeof window !== 'undefined') {
-      const accessToken = localStorage.getItem('accessToken')
-      if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`
-      }
-    }
-
-    const response = await fetch(
-      buildURL(`/api/v1/stores/${storeId}/charge-bonus`),
-      {
+    const response = await fetch(buildURL(`/api/v1/stores/${storeId}/charge-bonus`), {
         method: 'GET',
         credentials: 'include',
-        headers,
-      }
-    )
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -134,36 +163,120 @@ const fetchChargeOptions = async (
   }
 }
 
-// 거래 내역 API 응답 타입
-interface WalletTransactionResponse {
-  success: boolean
-  status: number
-  message: string
-  data: {
-    storeId: number
-    storeName: string
-    currentBalance: number
-    transactions: {
-      content: TransactionDetail[]
-      totalElements: number
-      totalPages: number
-      first: boolean
-      last: boolean
-      size: number
-      number: number
-      numberOfElements: number
-      empty: boolean
+// 결제 취소 목록 조회 API 함수
+const fetchCancelList = async (): Promise<CancelTransaction[]> => {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
     }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const url = buildURL('/api/v1/customers/cancel-list')
+    console.log('결제 취소 목록 조회 URL:', url)
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    })
+
+    console.log('결제 취소 목록 조회 응답 상태:', response.status, response.statusText)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data: CancelListResponse = await response.json()
+    console.log('결제 취소 목록 조회 응답 데이터:', data)
+
+    if (data.success) {
+      return data.data.content || []
+    } else {
+      throw new Error(data.message || '결제 취소 목록 조회에 실패했습니다.')
+    }
+  } catch (error) {
+    console.error('결제 취소 목록 조회 실패:', error)
+    throw error
   }
-  timestamp: string
+}
+
+// 결제 취소 API 함수
+const cancelPayment = async (transactionUniqueNo: string, cardNo: string, cvc: string): Promise<boolean> => {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const url = buildURL('/api/v1/customers/payments/cancel')
+    console.log('결제 취소 URL:', url)
+
+    const requestBody = {
+      transactionUniqueNo,
+      cardNo,
+      cvc
+    }
+
+    console.log('결제 취소 요청:', {
+      url,
+      method: 'POST',
+      headers,
+      requestBody
+    })
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify(requestBody),
+    })
+
+    console.log('결제 취소 응답 상태:', response.status, response.statusText)
+
+    if (!response.ok) {
+      let errorMessage = `결제 취소에 실패했습니다. (${response.status})`
+      
+      try {
+        const errorData = await response.json()
+        console.log('결제 취소 에러 응답:', errorData)
+        if (errorData.message) {
+          errorMessage = errorData.message
+        }
+      } catch {
+        const errorText = await response.text()
+        console.log('결제 취소 에러 텍스트:', errorText)
+        if (errorText) {
+          errorMessage = errorText
+        }
+      }
+      
+      throw new Error(errorMessage)
+    }
+
+    const result = await response.json()
+    console.log('결제 취소 성공 응답:', result)
+    
+    return true
+  } catch (error) {
+    console.error('결제 취소 실패:', error)
+    throw error
+  }
 }
 
 // 거래 내역 API 호출 함수
-const fetchWalletTransactions = async (
-  groupId: number,
-  storeId: number,
-  page: number = 0
-): Promise<WalletTransactionResponse> => {
+const fetchWalletTransactions = async (groupId: number, storeId: number): Promise<Transaction[]> => {
   try {
     // Authorization 헤더 추가
     const headers: Record<string, string> = {
@@ -177,16 +290,11 @@ const fetchWalletTransactions = async (
       }
     }
 
-    const response = await fetch(
-      buildURL(
-        `/wallets/individual/stores/${storeId}/detail?page=${page}&size=10`
-      ),
-      {
+    const response = await fetch(buildURL(`/wallets/individual/stores/${storeId}/detail`), {
         method: 'GET',
         credentials: 'include',
         headers,
-      }
-    )
+    })
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -195,10 +303,23 @@ const fetchWalletTransactions = async (
     const result = await response.json()
     console.log('거래 내역 API 응답:', result)
 
-    return result
+    // API 응답 데이터를 Transaction 형식으로 변환 (페이징 제거 대응)
+    const transactionsData = result.data.transactions?.content || result.data.transactions || []
+    const transactions: Transaction[] = transactionsData.map((transaction: TransactionDetail, index: number) => ({
+      id: index + 1,
+      type: getTransactionDisplayInfo(transaction.transactionType).type as Transaction['type'],
+      amount: transaction.amount,
+      date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
+      transactionId: transaction.transactionId,
+      transactionType: transaction.transactionType,
+      transactionUniqueNo: transaction.transactionUniqueNo,
+      createdAt: transaction.createdAt,
+    }))
+
+    return transactions
   } catch (error) {
     console.error('거래 내역 조회 실패:', error)
-    throw error
+    return []
   }
 }
 
@@ -230,40 +351,93 @@ const fetchWalletBalance = async (): Promise<WalletCard[]> => {
     const result = await response.json()
     console.log('지갑 잔액 API 응답:', result)
 
-    // API 응답 데이터를 WalletCard 형식으로 변환
-    const walletCards: WalletCard[] = result.data.storeBalances.content.map(
-      (storeBalance: StoreBalance, index: number) => ({
+    // API 응답 데이터를 WalletCard 형식으로 변환 (페이징 제거 대응)
+    const storeBalances = result.data.storeBalances?.content || result.data.storeBalances || []
+    const walletCards: WalletCard[] = storeBalances.map((storeBalance: StoreBalance, index: number) => ({
         id: index + 1,
         name: storeBalance.storeName,
         amount: storeBalance.remainingPoints,
         storeId: storeBalance.storeId,
         lastUpdatedAt: storeBalance.lastUpdatedAt,
         isSelected: index === 0, // 첫 번째 카드를 기본 선택으로 설정
-      })
-    )
+    }))
 
     return walletCards
   } catch (error) {
     console.error('지갑 잔액 조회 실패:', error)
     // 에러 발생 시 더미 데이터 반환
-    return [{ id: 1, name: '아쭈맛나', amount: 35000, isSelected: true }]
+    return [
+      { id: 1, name: '아쭈맛나', amount: 35000, isSelected: true },
+    ]
   }
 }
 
-const TRANSACTIONS: Transaction[] = [
-  { id: 1, type: 'charge', amount: 35000, date: '2025-09-01' },
-  { id: 2, type: 'usage', amount: 12000, date: '2025-09-07' },
-  { id: 3, type: 'charge', amount: 35000, date: '2025-09-01' },
-  { id: 4, type: 'usage', amount: 12000, date: '2025-09-07' },
-  { id: 5, type: 'charge', amount: 35000, date: '2025-09-01' },
-  { id: 6, type: 'usage', amount: 12000, date: '2025-09-07' },
-]
 
 const TAB_CONFIG = {
   history: '사용내역',
   charge: '충전',
-  refund: '환불',
+  cancel: '결제취소',
 } as const
+
+// 거래 타입별 색상 및 라벨 정의
+const getTransactionDisplayInfo = (transactionType: string) => {
+  switch (transactionType) {
+    case 'CHARGE':
+      return { type: 'charge', label: '충전', color: 'blue' }
+    case 'USE':
+      return { type: 'use', label: '사용', color: 'red' }
+    case 'TRANSFER_IN':
+      return { type: 'transfer-in', label: '회수', color: 'purple' }
+    case 'TRANSFER_OUT':
+      return { type: 'transfer-out', label: '공유', color: 'green' }
+    case 'CANCEL_CHARGE':
+      return { type: 'cancel-charge', label: '충전취소', color: 'orange' }
+    case 'CANCEL_USE':
+      return { type: 'cancel-use', label: '사용취소', color: 'yellow' }
+    default:
+      return { type: 'unknown', label: '알 수 없음', color: 'gray' }
+  }
+}
+
+// 거래 타입별 스타일 함수
+const getTransactionTypeStyle = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return 'border-blue-500 text-blue-500'
+    case 'use':
+      return 'border-red-500 text-red-500'
+    case 'transfer-in':
+      return 'border-purple-500 text-purple-500'
+    case 'transfer-out':
+      return 'border-green-500 text-green-500'
+    case 'cancel-charge':
+      return 'border-orange-500 text-orange-500'
+    case 'cancel-use':
+      return 'border-yellow-500 text-yellow-500'
+    default:
+      return 'border-gray-500 text-gray-500'
+  }
+}
+
+// 거래 타입별 라벨 함수
+const getTransactionTypeLabel = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return '충전'
+    case 'use':
+      return '사용'
+    case 'transfer-in':
+      return '회수'
+    case 'transfer-out':
+      return '공유'
+    case 'cancel-charge':
+      return '충전취소'
+    case 'cancel-use':
+      return '사용취소'
+    default:
+      return '알 수 없음'
+  }
+}
 
 // 지갑 카드 컴포넌트
 const WalletCard = ({
@@ -275,18 +449,18 @@ const WalletCard = ({
 }) => {
   return (
     <div
-      className={`relative h-44 w-44 cursor-pointer border border-black transition-colors md:h-40 md:w-40 ${
+      className={`relative h-44 w-44 md:h-40 md:w-40 cursor-pointer border border-black transition-colors ${
         card.isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-gray-50'
       }`}
       onClick={onClick}
     >
       {/* 아쭈맛나 텍스트 */}
-      <div className="absolute top-4 left-4 text-base font-normal text-black md:text-sm">
+      <div className="absolute top-4 left-4 text-base md:text-sm font-normal text-black">
         {card.name}
       </div>
 
       {/* 01 텍스트 */}
-      <div className="absolute top-4 right-4 text-sm font-normal text-black md:text-xs">
+      <div className="absolute top-4 right-4 text-sm md:text-xs font-normal text-black">
         {card.id.toString().padStart(2, '0')}
       </div>
 
@@ -294,16 +468,14 @@ const WalletCard = ({
       <div className="absolute top-12 right-4 left-4 h-px bg-black"></div>
 
       {/* 금액 */}
-      <div className="absolute top-18 left-1/2 -translate-x-1/2 text-base font-extrabold text-black md:text-sm">
+      <div className="absolute top-18 left-1/2 -translate-x-1/2 text-base md:text-sm font-extrabold text-black">
         {card.amount.toLocaleString()}원
       </div>
 
       {/* 결제하기 버튼 */}
-      <div className="absolute top-32 left-1/2 -translate-x-1/2 md:top-28">
-        <div className="flex h-6 w-16 items-center justify-center border-2 border-blue-500 bg-white md:h-5 md:w-15">
-          <span className="text-sm font-bold text-blue-500 md:text-xs">
-            결제하기
-          </span>
+      <div className="absolute top-32 md:top-28 left-1/2 -translate-x-1/2">
+        <div className="flex h-6 w-16 md:h-5 md:w-15 items-center justify-center border-2 border-blue-500 bg-white">
+          <span className="text-sm md:text-xs font-bold text-blue-500">결제하기</span>
         </div>
       </div>
     </div>
@@ -314,15 +486,11 @@ const WalletCard = ({
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
   return (
     <div className="relative h-16 w-full">
-      {/* 충전/사용 라벨 */}
+      {/* 거래 타입 라벨 */}
       <div
-        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${
-          transaction.type === 'charge'
-            ? 'border-blue-500 text-blue-500'
-            : 'border-red-500 text-red-500'
-        }`}
+        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${getTransactionTypeStyle(transaction.type)}`}
       >
-        {transaction.type === 'charge' ? '충전' : '사용'}
+        {getTransactionTypeLabel(transaction.type)}
       </div>
 
       {/* 금액 */}
@@ -363,17 +531,13 @@ const ChargeOption = ({
 }: ChargeOptionProps) => {
   return (
     <div
-      className={`flex h-16 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors md:h-14 ${
+      className={`flex h-16 md:h-14 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
       onClick={onClick}
     >
-      <span className="text-base font-bold text-red-500 md:text-sm">
-        {bonusPercentage}% 보너스
-      </span>
-      <span className="text-base font-bold text-black md:text-sm">
-        {chargeAmount.toLocaleString()}원
-      </span>
+      <span className="text-base md:text-sm font-bold text-red-500">{bonusPercentage}% 보너스</span>
+      <span className="text-base md:text-sm font-bold text-black">{chargeAmount.toLocaleString()}원</span>
     </div>
   )
 }
@@ -382,12 +546,12 @@ const ChargeOption = ({
 const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
   return (
     <div className="w-full">
-      <p className="mb-6 text-lg font-bold text-black md:text-[15px]">
+      <p className="mb-6 text-lg md:text-[15px] font-bold text-black">
         "{selectedCard.name}" 포인트 환불받기
       </p>
 
       <div className="mb-6 flex items-center gap-4">
-        <p className="text-base font-bold text-black md:text-sm">
+        <p className="text-base md:text-sm font-bold text-black">
           환불 가능 금액
         </p>
         <div className="relative">
@@ -396,18 +560,16 @@ const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
             alt="입력 박스"
             width={165}
             height={31}
-            className="h-[31px] w-[165px]"
+            className="w-[165px] h-[31px]"
           />
-          <p className="absolute top-[6px] left-[60px] text-sm font-bold text-black md:text-[11px]">
+          <p className="absolute left-[60px] top-[6px] text-sm md:text-[11px] font-bold text-black">
             {selectedCard.amount.toLocaleString()} 원
           </p>
         </div>
       </div>
 
-      <button className="flex h-14 w-full items-center justify-center border border-black bg-black md:h-12">
-        <span className="text-base font-bold text-white md:text-sm">
-          환불받기
-        </span>
+      <button className="flex h-14 md:h-12 w-full items-center justify-center border border-black bg-black">
+        <span className="text-base md:text-sm font-bold text-white">환불받기</span>
       </button>
     </div>
   )
@@ -521,6 +683,165 @@ const ChargeSection = ({
   )
 }
 
+// 결제 취소 섹션 컴포넌트
+const CancelSection = ({
+  cancelTransactions,
+  cancelLoading,
+  cancelError,
+  onCancelClick,
+}: {
+  cancelTransactions: CancelTransaction[]
+  cancelLoading: boolean
+  cancelError: string | null
+  onCancelClick: (transaction: CancelTransaction) => void
+}) => {
+  return (
+    <div className="mx-auto w-full max-w-md">
+      {cancelLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-gray-500">결제 취소 목록을 불러오는 중...</div>
+        </div>
+      ) : cancelError ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-red-500">{cancelError}</div>
+        </div>
+      ) : cancelTransactions.length === 0 ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-gray-500">취소 가능한 결제 내역이 없습니다.</div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cancelTransactions.map((transaction, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <div className="font-bold text-black">{transaction.storeName}</div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(transaction.transactionTime).toLocaleString('ko-KR')}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-black">
+                    {transaction.paymentAmount.toLocaleString()}원
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    잔액: {transaction.remainingBalance.toLocaleString()}원
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-400 mb-3">
+                거래번호: {transaction.transactionUniqueNo}
+              </div>
+              <button
+                onClick={() => onCancelClick(transaction)}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors"
+              >
+                결제 취소
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 결제 취소 모달 컴포넌트
+const CancelModal = ({
+  isOpen,
+  onClose,
+  transaction,
+  onConfirm,
+  loading,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  transaction: CancelTransaction | null
+  onConfirm: (cardNo: string, cvc: string) => void
+  loading: boolean
+}) => {
+  const [cardNo, setCardNo] = useState('')
+  const [cvc, setCvc] = useState('')
+
+  if (!isOpen || !transaction) return null
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (cardNo.trim() && cvc.trim()) {
+      onConfirm(cardNo.trim(), cvc.trim())
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-bold mb-4">결제 취소</h3>
+        
+        <div className="mb-4 p-3 bg-gray-50 rounded">
+          <div className="text-sm text-gray-600">취소할 결제 정보</div>
+          <div className="font-bold">{transaction.storeName}</div>
+          <div className="text-sm text-gray-500">
+            금액: {transaction.paymentAmount.toLocaleString()}원
+          </div>
+          <div className="text-sm text-gray-500">
+            결제일: {new Date(transaction.transactionTime).toLocaleString('ko-KR')}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              카드번호
+            </label>
+            <input
+              type="text"
+              value={cardNo}
+              onChange={(e) => setCardNo(e.target.value)}
+              placeholder="카드번호를 입력하세요"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              CVC
+            </label>
+            <input
+              type="text"
+              value={cvc}
+              onChange={(e) => setCvc(e.target.value)}
+              placeholder="CVC를 입력하세요"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div className="flex gap-3">
+        <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={loading}
+            >
+              취소
+        </button>
+      <button
+              type="submit"
+              className="flex-1 py-3 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors disabled:bg-gray-400"
+              disabled={loading || !cardNo.trim() || !cvc.trim()}
+            >
+              {loading ? '처리 중...' : '결제 취소'}
+      </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // 페이지네이션 컴포넌트
 const Pagination = ({
   currentPage,
@@ -531,62 +852,23 @@ const Pagination = ({
   totalPages: number
   onPageChange: (page: number) => void
 }) => {
-  if (totalPages <= 1) return null
-
-  const getPageNumbers = () => {
-    const pages = []
-    const maxVisiblePages = 5
-
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 0; i < totalPages; i++) {
-        pages.push(i)
-      }
-    } else {
-      const startPage = Math.max(0, currentPage - 2)
-      const endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1)
-
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i)
-      }
-    }
-
-    return pages
-  }
-
   return (
-    <div className="flex items-center justify-center gap-2 py-4">
-      {/* 이전 버튼 */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 0}
-        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
-      >
-        ←
-      </button>
-
-      {/* 페이지 번호들 */}
-      {getPageNumbers().map(page => (
-        <button
-          key={page}
-          onClick={() => onPageChange(page)}
-          className={`flex h-8 w-8 items-center justify-center rounded border text-sm ${
-            currentPage === page
-              ? 'border-black bg-black text-white'
-              : 'border-gray-300 bg-white text-black hover:bg-gray-50'
-          }`}
-        >
-          {page + 1}
-        </button>
-      ))}
-
-      {/* 다음 버튼 */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages - 1}
-        className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-400"
-      >
-        →
-      </button>
+    <div className="w-[382px] h-[55px] relative overflow-hidden">
+      <div className="w-[30px] h-[30px]">
+        <div className="w-[30px] h-[30px] absolute left-[141px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
+          <p className="text-[15px] font-bold text-black">1</p>
+        </div>
+      </div>
+      <div className="w-[65px] h-[30px]">
+        <div className="w-[30px] h-[30px] absolute left-[177px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
+          <p className="text-[15px] font-bold text-black">2</p>
+        </div>
+        <div className="w-[30px] h-[30px]">
+          <div className="w-[30px] h-[30px] absolute left-[212px] top-3 overflow-hidden rounded-[10px] border border-black flex items-center justify-center">
+            <p className="text-[15px] font-bold text-black">3</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -603,18 +885,24 @@ export const MyWallet = () => {
   // 거래 내역 관련 상태
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
-  const [transactionsError, setTransactionsError] = useState<string | null>(
-    null
-  )
-  const [currentTransactionPage, setCurrentTransactionPage] = useState(0)
-  const [totalTransactionPages, setTotalTransactionPages] = useState(0)
+  const [transactionsError, setTransactionsError] = useState<string | null>(null)
 
   // 충전 옵션 관련 상태
   const [chargeOptions, setChargeOptions] = useState<ChargeOptionData[]>([])
   const [chargeOptionsLoading, setChargeOptionsLoading] = useState(false)
-  const [chargeOptionsError, setChargeOptionsError] = useState<string | null>(
-    null
-  )
+  const [chargeOptionsError, setChargeOptionsError] = useState<string | null>(null)
+
+  // 결제 취소 관련 상태
+  const [cancelTransactions, setCancelTransactions] = useState<CancelTransaction[]>([])
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  
+  // 결제 취소 모달 관련 상태
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<CancelTransaction | null>(null)
+  const [cardNo, setCardNo] = useState('')
+  const [cvc, setCvc] = useState('')
+  const [cancelProcessing, setCancelProcessing] = useState(false)
 
   // API 호출하여 지갑 데이터 가져오기
   useEffect(() => {
@@ -641,14 +929,14 @@ export const MyWallet = () => {
   // 카드가 로드되고 선택된 카드가 있을 때 데이터 자동 로드
   useEffect(() => {
     if (walletCards.length > 0) {
-      const selectedCardData = walletCards.find(
-        card => card.id === selectedCard
-      )
+      const selectedCardData = walletCards.find(card => card.id === selectedCard)
       if (selectedCardData?.storeId) {
         if (activeTab === 'history') {
-          loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
+          loadTransactions(selectedCardData.storeId)
         } else if (activeTab === 'charge') {
           loadChargeOptions(selectedCardData.storeId)
+        } else if (activeTab === 'cancel') {
+          loadCancelList()
         }
       }
     }
@@ -658,47 +946,65 @@ export const MyWallet = () => {
     setSelectedCard(cardId)
   }
 
-  const handleTransactionPageChange = (page: number) => {
-    const selectedCardData = walletCards.find(card => card.id === selectedCard)
-    if (selectedCardData?.storeId) {
-      loadTransactions(selectedCardData.storeId, page)
+  // 결제 취소 목록 로드 함수
+  const loadCancelList = async () => {
+    try {
+      setCancelLoading(true)
+      setCancelError(null)
+      
+      const cancelData = await fetchCancelList()
+      setCancelTransactions(cancelData)
+    } catch (err) {
+      console.error('결제 취소 목록 로드 실패:', err)
+      setCancelError('결제 취소 목록을 불러오는데 실패했습니다.')
+    } finally {
+      setCancelLoading(false)
     }
   }
 
+  // 결제 취소 확인 함수
+  const handleCancelConfirm = async (cardNo: string, cvc: string) => {
+    if (!selectedTransaction) return
+
+    try {
+      setCancelProcessing(true)
+      
+      await cancelPayment(selectedTransaction.transactionUniqueNo, cardNo, cvc)
+      
+      alert('결제가 성공적으로 취소되었습니다.')
+      
+      // 모달 닫기 및 목록 새로고침
+      setIsCancelModalOpen(false)
+      setSelectedTransaction(null)
+      setCardNo('')
+      setCvc('')
+      
+      // 결제 취소 목록 새로고침
+      loadCancelList()
+      
+    } catch (error) {
+      console.error('결제 취소 실패:', error)
+      alert(error instanceof Error ? error.message : '결제 취소 중 오류가 발생했습니다.')
+    } finally {
+      setCancelProcessing(false)
+    }
+  }
+
+  // 탭 변경 함수
+  const handleTabChange = (tabKey: keyof typeof TAB_CONFIG) => {
+    setActiveTab(tabKey)
+  }
+
   // 거래 내역 로드 함수
-  const loadTransactions = async (storeId: number, page: number = 0) => {
+  const loadTransactions = async (storeId: number) => {
     try {
       setTransactionsLoading(true)
       setTransactionsError(null)
 
       // 임시로 groupId를 1로 설정 (실제로는 사용자의 그룹 ID를 가져와야 함)
       const groupId = 1
-      const result = await fetchWalletTransactions(groupId, storeId, page)
-
-      if (result.success && result.data) {
-        // API 응답 데이터를 Transaction 형식으로 변환
-        const transactions: Transaction[] =
-          result.data.transactions.content.map(
-            (transaction: TransactionDetail, index: number) => ({
-              id: index + 1,
-              type:
-                transaction.transactionType.includes('CHARGE') ||
-                transaction.transactionType.includes('충전')
-                  ? 'charge'
-                  : 'usage',
-              amount: transaction.amount,
-              date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
-              transactionId: transaction.transactionId,
-              transactionType: transaction.transactionType,
-              transactionUniqueNo: transaction.transactionUniqueNo,
-              createdAt: transaction.createdAt,
-            })
-          )
-
-        setTransactions(transactions)
-        setCurrentTransactionPage(result.data.transactions.number)
-        setTotalTransactionPages(result.data.transactions.totalPages)
-      }
+      const transactionData = await fetchWalletTransactions(groupId, storeId)
+      setTransactions(transactionData)
     } catch (err) {
       console.error('거래 내역 로드 실패:', err)
       setTransactionsError('거래 내역을 불러오는데 실패했습니다.')
@@ -723,19 +1029,6 @@ export const MyWallet = () => {
     }
   }
 
-  // 탭 클릭 시 데이터 로드
-  const handleTabChange = (tabKey: keyof typeof TAB_CONFIG) => {
-    setActiveTab(tabKey)
-
-    const selectedCardData = walletCards.find(card => card.id === selectedCard)
-    if (selectedCardData?.storeId) {
-      if (tabKey === 'history') {
-        loadTransactions(selectedCardData.storeId, 0) // 첫 페이지로 리셋
-      } else if (tabKey === 'charge') {
-        loadChargeOptions(selectedCardData.storeId)
-      }
-    }
-  }
 
   const cardsWithSelection = walletCards.map(card => ({
     ...card,
@@ -748,12 +1041,7 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1
-              className="text-2xl font-bold text-black md:text-xl"
-              style={{ fontFamily: 'Tenada' }}
-            >
-              내 지갑
-            </h1>
+            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
           </div>
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">지갑 정보를 불러오는 중...</div>
@@ -769,12 +1057,7 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1
-              className="text-2xl font-bold text-black md:text-xl"
-              style={{ fontFamily: 'Tenada' }}
-            >
-              내 지갑
-            </h1>
+            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
           </div>
           <div className="flex items-center justify-center py-8">
             <div className="text-red-500">{error}</div>
@@ -790,15 +1073,10 @@ export const MyWallet = () => {
       <div className="min-h-screen bg-white p-4">
         <div className="mx-auto max-w-md">
           <div className="mb-6">
-            <h1
-              className="text-2xl font-bold text-black md:text-xl"
-              style={{ fontFamily: 'Tenada' }}
-            >
-              내 지갑
-            </h1>
+            <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
           </div>
           <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500">등록된 지갑이 없습니다.</div>
+            <div className="text-gray-500"> 등록된 카드가 없습니다. 가게 목록에서 포인트를 충전해보세요!</div>
           </div>
         </div>
       </div>
@@ -810,12 +1088,7 @@ export const MyWallet = () => {
       <div className="mx-auto max-w-md">
         {/* 헤더 */}
         <div className="mb-6">
-          <h1
-            className="text-2xl font-bold text-black md:text-xl"
-            style={{ fontFamily: 'Tenada' }}
-          >
-            내 지갑
-          </h1>
+          <h1 className="text-2xl md:text-xl font-bold text-black" style={{ fontFamily: 'Tenada' }}>내 지갑</h1>
         </div>
 
         {/* 지갑 카드 캐러셀 */}
@@ -834,14 +1107,12 @@ export const MyWallet = () => {
         </div>
 
         {/* 탭 네비게이션 */}
-        <div className="relative mb-6 h-16 w-full md:h-13">
+        <div className="relative mb-6 h-16 md:h-13 w-full">
           {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
             <div key={tabKey} className="relative">
               <button
-                onClick={() =>
-                  handleTabChange(tabKey as keyof typeof TAB_CONFIG)
-                }
-                className={`absolute h-10 w-24 border border-black text-sm font-normal transition-colors md:h-8 md:w-22 md:text-xs ${
+                onClick={() => handleTabChange(tabKey as keyof typeof TAB_CONFIG)}
+                className={`absolute h-10 md:h-8 w-24 md:w-22 border border-black text-sm md:text-xs font-normal transition-colors ${
                   activeTab === tabKey
                     ? 'bg-[#efefef] text-black'
                     : 'bg-white text-black hover:bg-[#efefef]'
@@ -876,22 +1147,10 @@ export const MyWallet = () => {
               </div>
             ) : (
               transactions.map(transaction => (
-                <TransactionItem
-                  key={transaction.id}
-                  transaction={transaction}
-                />
+              <TransactionItem key={transaction.id} transaction={transaction} />
               ))
             )}
           </div>
-        )}
-
-        {/* 페이지네이션 - 사용내역 탭에서만 표시 */}
-        {activeTab === 'history' && (
-          <Pagination
-            currentPage={currentTransactionPage}
-            totalPages={totalTransactionPages}
-            onPageChange={handleTransactionPageChange}
-          />
         )}
 
         {activeTab === 'charge' && (
@@ -907,26 +1166,39 @@ export const MyWallet = () => {
             ) : (
               <ChargeSection
                 chargeOptions={chargeOptions}
-                storeId={
-                  cardsWithSelection
-                    .find(card => card.isSelected)
-                    ?.storeId?.toString() || '0'
-                }
+              storeId={cardsWithSelection.find(card => card.isSelected)?.storeId?.toString() || '0'} 
               />
             )}
           </div>
         )}
 
-        {activeTab === 'refund' && (
+        {activeTab === 'cancel' && (
           <div className="mb-6">
-            <RefundSection
-              selectedCard={
-                cardsWithSelection.find(card => card.isSelected) ||
-                cardsWithSelection[0]
-              }
+            <CancelSection 
+              cancelTransactions={cancelTransactions}
+              cancelLoading={cancelLoading}
+              cancelError={cancelError}
+              onCancelClick={(transaction) => {
+                setSelectedTransaction(transaction)
+                setIsCancelModalOpen(true)
+              }}
             />
           </div>
         )}
+
+        {/* 결제 취소 모달 */}
+        <CancelModal
+          isOpen={isCancelModalOpen}
+          onClose={() => {
+            setIsCancelModalOpen(false)
+            setSelectedTransaction(null)
+            setCardNo('')
+            setCvc('')
+          }}
+          transaction={selectedTransaction}
+          onConfirm={handleCancelConfirm}
+          loading={cancelProcessing}
+        />
       </div>
     </div>
   )

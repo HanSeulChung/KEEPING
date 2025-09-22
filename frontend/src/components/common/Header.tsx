@@ -1,4 +1,5 @@
 'use client'
+
 import { authApi } from '@/api/authApi'
 import { useUser } from '@/contexts/UserContext'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
@@ -124,7 +125,11 @@ export default function Header() {
 
   const handleLogoClick = () => {
     if (isLoggedIn) {
-      router.push('/owner/dashboard')
+      if (isCustomerPage) {
+        router.push('/customer/home')
+      } else {
+        router.push('/owner/dashboard')
+      }
     } else {
       router.push('/')
     }

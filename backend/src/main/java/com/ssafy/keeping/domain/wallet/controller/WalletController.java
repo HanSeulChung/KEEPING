@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 
@@ -96,9 +95,7 @@ public class WalletController {
                 .body(ApiResponse.success("모임 지갑에서 포인트를 회수했습니다.", status.value(), result.getBody()));
     }
 
-    /**
-     * 개인 지갑 잔액 조회
-     */
+    // 개인 지갑 잔액
     @GetMapping("/individual/balance")
     public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
             @AuthenticationPrincipal Long customerId,
@@ -110,9 +107,7 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success("개인 지갑 잔액 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
-    /**
-     * 모임 지갑 잔액 조회
-     */
+    // 모임 지갑 잔액
     @GetMapping("/groups/{groupId}/balance")
     public ResponseEntity<ApiResponse<GroupWalletBalanceResponseDto>> getGroupWalletBalance(
             @PathVariable Long groupId,

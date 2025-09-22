@@ -25,6 +25,7 @@ public class UserProfile {
     private LocalDate birth;
     private AuthProvider providerType;
     private LocalDateTime createdAt;
+    private String userKey;
 
     public static UserProfile fromCustomer(Customer customer) {
         return UserProfile.builder()
@@ -38,6 +39,7 @@ public class UserProfile {
                 .birth(customer.getBirth())
                 .providerType(customer.getProviderType())
                 .createdAt(customer.getCreatedAt())
+                .userKey(customer.getUserKey())
                 .build();
     }
 
