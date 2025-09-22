@@ -470,10 +470,10 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
 
     @Transactional(readOnly = true)
-    public AvailablePointResponseDto getReclaimablePoints(Long groupId, Long customerId) {
-        Group group = validGroup(groupId);
-        Wallet groupWallet = validGroupWallet(group.getGroupId());
-
+    public AvailablePointResponseDto getReclaimablePoints(Long walletId, Long customerId) {
+        Wallet groupWallet = validWallet(walletId);
+        Group group = groupWallet.getGroup();
+        Long groupId = group.getGroupId();
         if (!groupMemberRepository.existsMember(groupId, customerId)) {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
         }
