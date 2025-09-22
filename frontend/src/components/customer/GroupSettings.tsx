@@ -17,6 +17,13 @@ interface GroupAddRequestsResponse {
   timestamp: string
 }
 
+interface GroupInfo {
+  groupId: number
+  groupName: string
+  groupDescription: string
+  leaderName: string
+}
+
 interface GroupSettingsProps {
   groupId: number
   groupName?: string
@@ -39,6 +46,47 @@ export const GroupSettings = ({
   const [pendingRequests, setPendingRequests] = useState<GroupAddRequest[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null)
+
+  // 그룹 정보 조회
+  const fetchGroupInfo = async () => {
+    try {
+      const url = buildURL(`/groups/${groupId}`)
+      console.log('그룹 정보 조회 URL:', url)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('그룹 정보 조회 응답:', data)
+      
+      if (data.success) {
+        setGroupInfo(data.data)
+        setGroupName(data.data.groupName)
+        setGroupDescription(data.data.groupDescription)
+      }
+    } catch (error) {
+      console.error('그룹 정보 조회 실패:', error)
+    }
+  }
 
   // 가입 요청 목록 조회
   const fetchAddRequests = async () => {
@@ -203,9 +251,10 @@ export const GroupSettings = ({
     console.log('모임 수정:', { groupName, groupDescription })
   }
 
-  // 컴포넌트 마운트 시 가입 요청 목록 조회
+  // 컴포넌트 마운트 시 그룹 정보와 가입 요청 목록 조회
   useEffect(() => {
     if (groupId) {
+      fetchGroupInfo()
       fetchAddRequests()
     }
   }, [groupId])
