@@ -1557,6 +1557,83 @@ export const GroupWallet = () => {
     }
   }
 
+  // 그룹 탈퇴 함수
+  const handleLeaveGroup = async () => {
+    if (!selectedGroup) {
+      alert('그룹 정보가 없습니다.')
+      return
+    }
+
+    const confirmMessage = `정말로 이 그룹에서 탈퇴하시겠습니까?`
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      const url = buildURL(`/groups/${selectedGroup}/group-member`)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      console.log('그룹 탈퇴 요청:', {
+        url,
+        method: 'DELETE',
+        headers,
+        groupId: selectedGroup
+      })
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers,
+        credentials: 'include',
+      })
+
+      console.log('그룹 탈퇴 응답 상태:', response.status, response.statusText)
+
+      if (!response.ok) {
+        let errorMessage = `그룹 탈퇴에 실패했습니다. (${response.status})`
+        
+        try {
+          const errorData = await response.json()
+          console.log('그룹 탈퇴 에러 응답:', errorData)
+          if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          const errorText = await response.text()
+          console.log('그룹 탈퇴 에러 텍스트:', errorText)
+          if (errorText) {
+            errorMessage = errorText
+          }
+        }
+        
+        console.log('그룹 탈퇴 실패 - 최종 에러 메시지:', errorMessage)
+        alert(errorMessage)
+        return
+      }
+
+      const result = await response.json()
+      console.log('그룹 탈퇴 성공 응답:', result)
+      
+      alert('그룹에서 성공적으로 탈퇴했습니다.')
+      
+      // 그룹 목록 새로고침
+      await loadUserGroups()
+      
+    } catch (error) {
+      console.error('그룹 탈퇴 실패:', error)
+      alert('그룹 탈퇴 중 오류가 발생했습니다.')
+    }
+  }
+
   const handleGroupSelect = async (groupId: number) => {
     setSelectedGroup(groupId)
     setLoading(true)
@@ -1782,6 +1859,29 @@ export const GroupWallet = () => {
                     >
                       <circle cx="12" cy="12" r="3"></circle>
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </button>
+                )}
+
+                {/* 그룹 탈퇴 버튼 (리더가 아닌 사용자만 표시) */}
+                {!isCurrentUserLeader && (
+                  <button
+                    onClick={handleLeaveGroup}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 transition-colors hover:bg-red-200"
+                    title="그룹 탈퇴"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-red-600"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16,17 21,12 16,7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
                     </svg>
                   </button>
                 )}
