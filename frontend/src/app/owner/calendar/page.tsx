@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { endpoints } from '@/api/config'
 import Calendar from '@/components/owner/Calendar'
 import { useAuthStore } from '@/store/useAuthStore'
-import { endpoints } from '@/api/config'
+import { useEffect, useState } from 'react'
 
 interface Store {
   id: string
@@ -24,16 +24,23 @@ export default function Page() {
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        // 현재는 mock 데이터에서 ownerId='2'로 설정되어 있음
-        // 실제로는 user.id를 사용해야 함
-        const ownerId = user?.id || '2'
-        const endpoint = endpoints.stores.ownerStores.replace('{ownerId}', ownerId)
+        // 실제 사용자 ID 사용
+        const ownerId = user?.id
+        if (!ownerId) {
+          console.error('사용자 ID가 없습니다')
+          setLoading(false)
+          return
+        }
+        const endpoint = endpoints.stores.ownerStores.replace(
+          '{ownerId}',
+          ownerId
+        )
         const response = await fetch(`/api${endpoint}`)
-        
+
         if (response.ok) {
           const storeList = await response.json()
           setStores(storeList)
-          
+
           // 첫 번째 가게를 기본 선택
           if (storeList.length > 0) {
             setSelectedStoreId(storeList[0].id)
@@ -51,23 +58,31 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-keeping-beige flex items-center justify-center">
-        <div className="text-lg font-['nanumsquare']">가게 정보를 불러오는 중...</div>
+      <div className="bg-keeping-beige flex min-h-screen items-center justify-center">
+        <div className="font-['nanumsquare'] text-lg">
+          가게 정보를 불러오는 중...
+        </div>
       </div>
     )
   }
 
   if (stores.length === 0) {
     return (
-      <div className="min-h-screen bg-keeping-beige flex items-center justify-center">
-        <div className="text-lg font-['nanumsquare']">등록된 가게가 없습니다.</div>
+      <div className="bg-keeping-beige flex min-h-screen items-center justify-center">
+        <div className="font-['nanumsquare'] text-lg">
+          등록된 가게가 없습니다.
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-keeping-beige">
-      <Calendar storeId={selectedStoreId} stores={stores} onStoreChange={setSelectedStoreId} />
+    <div className="bg-keeping-beige min-h-screen">
+      <Calendar
+        storeId={selectedStoreId}
+        stores={stores}
+        onStoreChange={setSelectedStoreId}
+      />
     </div>
   )
 }

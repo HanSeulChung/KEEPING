@@ -15,12 +15,22 @@ const createGroup = async (groupData: {
   try {
     const url = buildURL('/groups')
 
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         groupName: groupData.groupName,
         groupDescription: groupData.groupDescription,
@@ -43,12 +53,22 @@ const fetchGroupInfo = async (groupId: number) => {
   try {
     const url = buildURL(`/groups/${groupId}`)
 
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -56,6 +76,7 @@ const fetchGroupInfo = async (groupId: number) => {
     }
 
     const result = await response.json()
+    console.log(`그룹 ${groupId} 정보 조회 응답:`, result)
     return result
   } catch (error) {
     console.error('그룹 정보 조회 실패:', error)
@@ -66,19 +87,29 @@ const fetchGroupInfo = async (groupId: number) => {
 const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
   try {
     const url = buildURL(`/groups/${groupId}/group-member`)
-    
+
     console.log('그룹 멤버 조회 요청:', {
       url,
       groupId,
-      targetCustomerId
+      targetCustomerId,
     })
+
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
 
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         targetCustomerId: targetCustomerId,
       }),
@@ -89,7 +120,9 @@ const fetchGroupMembers = async (groupId: number, targetCustomerId: number) => {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('그룹 멤버 조회 실패 응답:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorText}`
+      )
     }
 
     const result = await response.json()
@@ -105,12 +138,22 @@ const fetchGroupWalletBalance = async (groupId: number) => {
   try {
     const url = buildURL(`/wallets/groups/${groupId}/balance`)
 
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -125,20 +168,60 @@ const fetchGroupWalletBalance = async (groupId: number) => {
   }
 }
 
-const fetchGroupTransactionHistory = async (groupId: number, storeId: number, page: number = 0) => {
+const fetchGroupTransactionHistory = async (
+  groupId: number,
+  storeId: number,
+  page: number = 0
+) => {
   try {
-    const url = buildURL(`/wallets/groups/${groupId}/stores/${storeId}/detail?page=${page}&size=10`)
+    const url = buildURL(
+      `/wallets/groups/${groupId}/stores/${storeId}/detail?page=${page}&size=10`
+    )
+
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      } else {
+        console.warn('accessToken이 없습니다. localStorage 확인 필요')
+      }
+    }
+
+    console.log('그룹 거래 내역 조회 요청:', {
+      url,
+      groupId,
+      storeId,
+      page,
+      hasAuthHeader: !!headers.Authorization,
+    })
 
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+    })
+
+    console.log('그룹 거래 내역 조회 응답:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('그룹 거래 내역 조회 실패 상세:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+      })
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorText}`
+      )
     }
 
     const result = await response.json()
@@ -154,12 +237,22 @@ const fetchIndividualBalance = async () => {
   try {
     const url = buildURL('/wallets/individual/balance')
 
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -170,6 +263,42 @@ const fetchIndividualBalance = async () => {
     return result
   } catch (error) {
     console.error('개인 지갑 잔액 조회 실패:', error)
+    throw error
+  }
+}
+
+// 사용자가 속한 그룹 목록 조회 API 함수
+const fetchUserGroups = async () => {
+  try {
+    const url = buildURL('/customers/me/groups')
+
+    // Authorization 헤더 추가
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    console.log('사용자 그룹 목록 API 응답:', result)
+    return result
+  } catch (error) {
+    console.error('사용자 그룹 목록 조회 실패:', error)
     throw error
   }
 }
@@ -249,8 +378,6 @@ interface Transaction {
 
 // 더미 데이터
 
-
-
 const TAB_CONFIG = {
   history: '사용내역',
   withdrawal: '회수',
@@ -287,22 +414,20 @@ const WalletCard = ({
       <div className="absolute top-8 right-2 left-2 h-px bg-black"></div>
 
       {/* 금액 */}
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-xs font-extrabold text-black whitespace-nowrap">
+      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-xs font-extrabold whitespace-nowrap text-black">
         {card.amount.toLocaleString()}원
       </div>
 
       {/* 결제하기 버튼 */}
       <div className="absolute top-24 left-1/2 -translate-x-1/2">
-        <button 
+        <button
           className="flex h-5 w-12 items-center justify-center border border-blue-500 bg-white hover:bg-blue-50"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation()
             onPaymentClick?.()
           }}
         >
-          <span className="text-xs font-bold text-blue-500">
-            결제하기
-          </span>
+          <span className="text-xs font-bold text-blue-500">결제하기</span>
         </button>
       </div>
     </div>
@@ -379,25 +504,32 @@ const ChargeOption = ({
 }
 
 // 공유 모달 컴포넌트
-const ShareModal = ({ 
-  isOpen, 
-  onClose, 
-  selectedCard, 
+const ShareModal = ({
+  isOpen,
+  onClose,
+  selectedCard,
   individualBalance,
   selectedGroup,
   individualWalletId,
-  groupInfo
-}: { 
+  groupInfo,
+}: {
   isOpen: boolean
   onClose: () => void
   selectedCard: WalletCard | null
   individualBalance: any[]
   selectedGroup: number
   individualWalletId: number
-  groupInfo: { groupId: number; groupName: string; groupDescription: string; groupCode: string; walletId: number } | null
+  groupInfo: {
+    groupId: number
+    groupName: string
+    groupDescription: string
+    groupCode: string
+    walletId: number
+  } | null
 }) => {
   const [shareAmount, setShareAmount] = useState<string>('')
-  const [selectedIndividualCard, setSelectedIndividualCard] = useState<any>(null)
+  const [selectedIndividualCard, setSelectedIndividualCard] =
+    useState<any>(null)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
 
@@ -419,11 +551,14 @@ const ShareModal = ({
 
   // UUID v4 생성 함수
   const generateUUID = () => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0
-      const v = c === 'x' ? r : (r & 0x3 | 0x8)
-      return v.toString(16)
-    })
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0
+        const v = c === 'x' ? r : (r & 0x3) | 0x8
+        return v.toString(16)
+      }
+    )
   }
 
   // 공유 API 호출
@@ -436,47 +571,62 @@ const ShareModal = ({
       selectedIndividualCard: selectedIndividualCard,
       shareAmount,
       individualWalletId: individualWalletId,
-      groupWalletId: groupInfo?.walletId
+      groupWalletId: groupInfo?.walletId,
     })
 
     setIsSharing(true)
     try {
-      const url = buildURL(`/wallets/groups/${selectedGroup}/stores/${selectedIndividualCard.storeId}`)
+      const url = buildURL(
+        `/wallets/groups/${selectedGroup}/stores/${selectedIndividualCard.storeId}`
+      )
       const idempotencyKey = generateUUID()
-      
+
       const requestBody = {
         individualWalletId: individualWalletId, // 개인 지갑 ID
         groupWalletId: groupInfo?.walletId || 0, // 그룹 지갑 ID
-        shareAmount: parseInt(shareAmount)
+        shareAmount: parseInt(shareAmount),
       }
-      
+
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
       const requestOptions = {
         method: 'POST',
         credentials: 'include' as RequestCredentials,
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify(requestBody)
+        headers,
+        body: JSON.stringify(requestBody),
       }
-      
+
       console.log('=== 공유 API 요청 정보 ===')
       console.log('URL:', url)
       console.log('Method:', 'POST')
       console.log('Headers:', {
         'Content-Type': 'application/json',
-        'Idempotency-Key': idempotencyKey
+        'Idempotency-Key': idempotencyKey,
       })
       console.log('Credentials:', 'include')
       console.log('Request Body:', requestBody)
       console.log('Full Request Options:', requestOptions)
 
       const response = await fetch(url, requestOptions)
-      
+
       console.log('=== API 응답 정보 ===')
       console.log('Response Status:', response.status)
       console.log('Response OK:', response.ok)
-      console.log('Response Headers:', Object.fromEntries(response.headers.entries()))
+      console.log(
+        'Response Headers:',
+        Object.fromEntries(response.headers.entries())
+      )
 
       if (!response.ok) {
         console.log('❌ API 요청 실패')
@@ -485,15 +635,20 @@ const ShareModal = ({
 
       const result = await response.json()
       console.log('✅ 공유 성공 - 응답 데이터:', result)
-      
+
       // 성공 시 모달 닫기
       onClose()
-      
     } catch (error) {
       console.log('❌ 공유 실패 - 에러 상세 정보:')
       console.error('Error:', error)
-      console.error('Error message:', error instanceof Error ? error.message : String(error))
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+      console.error(
+        'Error message:',
+        error instanceof Error ? error.message : String(error)
+      )
+      console.error(
+        'Error stack:',
+        error instanceof Error ? error.stack : 'No stack trace'
+      )
       alert('공유에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsSharing(false)
@@ -501,7 +656,7 @@ const ShareModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="mx-auto w-full max-w-md rounded-lg bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-black">포인트 공유</h2>
@@ -514,27 +669,30 @@ const ShareModal = ({
         </div>
 
         <div className="mb-6">
-          <p className="mb-2 text-sm text-gray-600">그룹 카드: {selectedCard?.name || '기본 카드'}</p>
-          
+          <p className="mb-2 text-sm text-gray-600">
+            그룹 카드: {selectedCard?.name || '기본 카드'}
+          </p>
+
           {/* 개인 카드 선택 드롭다운 */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               공유할 개인 카드 선택
             </label>
             <select
               value={selectedIndividualCard?.storeId || ''}
-              onChange={(e) => {
+              onChange={e => {
                 const selected = individualBalance.find(
                   balance => balance.storeId === parseInt(e.target.value)
                 )
                 setSelectedIndividualCard(selected)
               }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">카드를 선택해주세요</option>
-              {individualBalance.map((balance) => (
+              {individualBalance.map(balance => (
                 <option key={balance.storeId} value={balance.storeId}>
-                  {balance.storeName} (잔액: {balance.remainingPoints.toLocaleString()}원)
+                  {balance.storeName} (잔액:{' '}
+                  {balance.remainingPoints.toLocaleString()}원)
                 </option>
               ))}
             </select>
@@ -585,22 +743,31 @@ const ShareModal = ({
 
         {/* 공유하기 버튼 */}
         <button
-           className="flex h-10 w-full cursor-pointer items-center justify-center border border-black bg-black transition-colors hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="flex h-10 w-full cursor-pointer items-center justify-center border border-black bg-black transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
           onClick={handleShare}
-          disabled={!shareAmount || parseInt(shareAmount) <= 0 || parseInt(shareAmount) > myPoints || !selectedIndividualCard || isSharing}
+          disabled={
+            !shareAmount ||
+            parseInt(shareAmount) <= 0 ||
+            parseInt(shareAmount) > myPoints ||
+            !selectedIndividualCard ||
+            isSharing
+          }
         >
-           <span className="text-sm font-bold text-white">
+          <span className="text-sm font-bold text-white">
             {isSharing ? '공유 중...' : '공유하기'}
           </span>
         </button>
-
       </div>
     </div>
   )
 }
 
 // 회수 섹션 컴포넌트 (환불 섹션과 유사)
-const WithdrawalSection = ({ selectedCard }: { selectedCard: WalletCard | undefined }) => {
+const WithdrawalSection = ({
+  selectedCard,
+}: {
+  selectedCard: WalletCard | undefined
+}) => {
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>('')
   const availableAmount = selectedCard?.amount || 0 // 회수 가능 금액
 
@@ -665,10 +832,8 @@ const WithdrawalSection = ({ selectedCard }: { selectedCard: WalletCard | undefi
         </div>
       </div>
 
-       <button className="flex h-10 w-full items-center justify-center border border-black bg-black">
-         <span className="text-sm font-bold text-white">
-          회수하기
-        </span>
+      <button className="flex h-10 w-full items-center justify-center border border-black bg-black">
+        <span className="text-sm font-bold text-white">회수하기</span>
       </button>
     </div>
   )
@@ -689,7 +854,7 @@ const Pagination = ({
   const getPageNumbers = () => {
     const pages = []
     const maxVisiblePages = 5
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 0; i < totalPages; i++) {
         pages.push(i)
@@ -697,12 +862,12 @@ const Pagination = ({
     } else {
       const startPage = Math.max(0, currentPage - 2)
       const endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1)
-      
+
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i)
       }
     }
-    
+
     return pages
   }
 
@@ -716,7 +881,7 @@ const Pagination = ({
       >
         ←
       </button>
-      
+
       {/* 페이지 번호들 */}
       {getPageNumbers().map(page => (
         <button
@@ -731,7 +896,7 @@ const Pagination = ({
           {page + 1}
         </button>
       ))}
-      
+
       {/* 다음 버튼 */}
       <button
         onClick={() => onPageChange(currentPage + 1)}
@@ -740,7 +905,7 @@ const Pagination = ({
       >
         →
       </button>
-        </div>
+    </div>
   )
 }
 
@@ -759,12 +924,12 @@ const MemberListModal = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="relative h-[500px] w-[400px] rounded-lg border border-black bg-white p-6">
         {/* 닫기 버튼 */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+          className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
         >
           <svg
             width="16"
@@ -783,14 +948,14 @@ const MemberListModal = ({
         {/* 제목 */}
         <div className="mb-6 text-center">
           <h2 className="text-lg font-bold text-black">그룹원 목록</h2>
-      </div>
+        </div>
 
         {/* 멤버 목록 */}
         <div className="max-h-[350px] overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-sm text-gray-500">멤버 로딩 중...</div>
-        </div>
+            </div>
           ) : members.length > 0 ? (
             <div className="space-y-3">
               {members.map(member => (
@@ -823,7 +988,7 @@ const MemberListModal = ({
                             strokeWidth="0.5"
                           />
                         </svg>
-          </div>
+                      </div>
                     )}
                   </div>
                   <div className="flex-1">
@@ -857,7 +1022,9 @@ export const GroupWallet = () => {
   const { user } = useUser()
   const [selectedCard, setSelectedCard] = useState<number>(2)
   const [activeTab, setActiveTab] = useState<keyof typeof TAB_CONFIG>('history')
-  const [selectedGroup, setSelectedGroup] = useState<number>(1)
+  const [selectedGroup, setSelectedGroup] = useState<number | null>(null)
+  const [userGroupIds, setUserGroupIds] = useState<number[]>([])
+  const [groupNames, setGroupNames] = useState<Record<number, string>>({})
   const [hoveredMember, setHoveredMember] = useState<number | null>(null)
   const [isGroupCreateModalOpen, setIsGroupCreateModalOpen] = useState(false)
   const [isFindGroupOpen, setIsFindGroupOpen] = useState(false)
@@ -866,8 +1033,11 @@ export const GroupWallet = () => {
   const [membersLoading, setMembersLoading] = useState(false)
   const [isMemberListModalOpen, setIsMemberListModalOpen] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [selectedCardForShare, setSelectedCardForShare] = useState<WalletCard | null>(null)
-  const [groupWalletCards, setGroupWalletCards] = useState<GroupWalletCard[]>([])
+  const [selectedCardForShare, setSelectedCardForShare] =
+    useState<WalletCard | null>(null)
+  const [groupWalletCards, setGroupWalletCards] = useState<GroupWalletCard[]>(
+    []
+  )
   const [walletLoading, setWalletLoading] = useState(false)
   const [transactions, setTransactions] = useState<GroupTransaction[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
@@ -884,15 +1054,63 @@ export const GroupWallet = () => {
   } | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // 컴포넌트 마운트 시 첫 번째 그룹 정보와 개인 지갑 잔액 로드
+  // 사용자 그룹 목록 로드 함수
+  const loadUserGroups = async () => {
+    try {
+      const result = await fetchUserGroups()
+      if (result.success && result.data && result.data.groupIds) {
+        setUserGroupIds(result.data.groupIds)
+
+        // 각 그룹의 상세 정보를 가져와서 이름 저장
+        const groupNamePromises = result.data.groupIds.map(
+          async (groupId: number) => {
+            try {
+              const groupInfo = await fetchGroupInfo(groupId)
+              if (groupInfo.success && groupInfo.data) {
+                // 다양한 필드명에서 그룹 이름 찾기
+                const groupName =
+                  groupInfo.data.groupName ||
+                  groupInfo.data.name ||
+                  groupInfo.data.title ||
+                  `그룹 ${groupId}`
+                console.log(`그룹 ${groupId} 이름:`, groupName)
+                return { id: groupId, name: groupName }
+              }
+            } catch (error) {
+              console.error(`그룹 ${groupId} 정보 조회 실패:`, error)
+            }
+            return { id: groupId, name: `그룹 ${groupId}` }
+          }
+        )
+
+        const groupNamesData = await Promise.all(groupNamePromises)
+        const namesMap: Record<number, string> = {}
+        groupNamesData.forEach(({ id, name }) => {
+          namesMap[id] = name
+        })
+        setGroupNames(namesMap)
+
+        // 첫 번째 그룹을 기본 선택으로 설정
+        if (result.data.groupIds.length > 0) {
+          const firstGroupId = result.data.groupIds[0]
+          setSelectedGroup(firstGroupId)
+          handleGroupSelect(firstGroupId)
+        }
+      }
+    } catch (error) {
+      console.error('사용자 그룹 목록 로드 실패:', error)
+    }
+  }
+
+  // 컴포넌트 마운트 시 사용자 그룹 목록과 개인 지갑 잔액 로드
   useEffect(() => {
-    handleGroupSelect(selectedGroup)
+    loadUserGroups()
     fetchIndividualBalanceData()
   }, [])
 
   // 카드나 탭이 변경될 때 거래 내역 조회
   useEffect(() => {
-    if (activeTab === 'history' && selectedCard && selectedGroup) {
+    if (activeTab === 'history' && selectedCard && selectedGroup !== null) {
       fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
     }
   }, [selectedCard, activeTab, selectedGroup])
@@ -900,13 +1118,13 @@ export const GroupWallet = () => {
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
     // 카드 선택 시 해당 카드의 거래 내역 조회
-    if (activeTab === 'history') {
+    if (activeTab === 'history' && selectedGroup !== null) {
       fetchTransactions(selectedGroup, cardId, 0) // 첫 페이지로 리셋
     }
   }
 
   const handlePageChange = (page: number) => {
-    if (activeTab === 'history' && selectedCard) {
+    if (activeTab === 'history' && selectedCard && selectedGroup !== null) {
       fetchTransactions(selectedGroup, selectedCard, page)
     }
   }
@@ -925,12 +1143,12 @@ export const GroupWallet = () => {
 
   const fetchMembers = async (groupId: number) => {
     console.log('fetchMembers 호출됨:', { groupId, user })
-    
+
     if (!user?.userId) {
       console.log('user.userId가 없어서 멤버 조회 건너뜀')
       return
     }
-    
+
     setMembersLoading(true)
     try {
       const result = await fetchGroupMembers(groupId, user.userId)
@@ -958,8 +1176,11 @@ export const GroupWallet = () => {
     }
   }
 
-
-  const fetchTransactions = async (groupId: number, storeId: number, page: number = 0) => {
+  const fetchTransactions = async (
+    groupId: number,
+    storeId: number,
+    page: number = 0
+  ) => {
     setTransactionsLoading(true)
     try {
       const result = await fetchGroupTransactionHistory(groupId, storeId, page)
@@ -991,17 +1212,14 @@ export const GroupWallet = () => {
   const handleGroupSelect = async (groupId: number) => {
     setSelectedGroup(groupId)
     setLoading(true)
-    
+
     try {
       const result = await fetchGroupInfo(groupId)
       if (result.success && result.data) {
         setGroupInfo(result.data)
       }
       // 그룹 멤버와 지갑 카드도 함께 조회
-      await Promise.all([
-        fetchMembers(groupId),
-        fetchWalletCards(groupId)
-      ])
+      await Promise.all([fetchMembers(groupId), fetchWalletCards(groupId)])
     } catch (error) {
       console.error('그룹 정보 조회 실패:', error)
     } finally {
@@ -1057,11 +1275,14 @@ export const GroupWallet = () => {
     isSelected: card.storeId === selectedCard,
   }))
 
-  // 그룹 데이터
+  // 그룹 데이터 (사용자가 속한 그룹 + 추가 버튼)
   const groups = [
-    { id: 1, name: 'A509', isSelected: true },
-    { id: 2, name: 'A509', isSelected: false },
-    { id: 3, name: '+', isAddButton: true },
+    ...userGroupIds.map(groupId => ({
+      id: groupId,
+      name: groupNames[groupId] || `그룹 ${groupId}`,
+      isSelected: selectedGroup === groupId,
+    })),
+    { id: -1, name: '+', isAddButton: true as const },
   ]
 
   // 모임원 데이터
@@ -1104,7 +1325,7 @@ export const GroupWallet = () => {
             <div className="flex gap-3 pb-2" style={{ width: 'max-content' }}>
               {groups.map(group => (
                 <div key={group.id} className="flex-shrink-0">
-                  {group.isAddButton ? (
+                  {'isAddButton' in group && group.isAddButton ? (
                     <div
                       className="flex h-[70px] w-[70px] cursor-pointer items-center justify-center rounded-full border border-black bg-[#D8D8D8] transition-colors hover:bg-[#C8C8C8] md:h-[60px] md:w-[60px]"
                       onClick={() => setIsGroupCreateModalOpen(true)}
@@ -1167,19 +1388,19 @@ export const GroupWallet = () => {
             <div className="flex-1">
               <div className="mb-2 flex items-center gap-2">
                 <h2 className="text-xl font-bold text-black md:text-lg">
-                  {loading ? '로딩중...' : (groupInfo?.groupName || 'A509')}
+                  {loading ? '로딩중...' : groupInfo?.groupName || 'A509'}
                 </h2>
                 {/* 그룹원 목록 버튼 */}
                 <button
                   onClick={() => setIsMemberListModalOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
                   title="그룹원 목록"
                 >
                   <svg
                     width="16"
                     height="16"
                     viewBox="0 0 24 24"
-                  fill="none"
+                    fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
                     className="text-gray-600"
@@ -1188,9 +1409,9 @@ export const GroupWallet = () => {
                     <circle cx="9" cy="7" r="4"></circle>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
+                  </svg>
                 </button>
-        </div>
+              </div>
 
               {/* 그룹 코드 */}
               {groupInfo?.groupCode && (
@@ -1207,28 +1428,37 @@ export const GroupWallet = () => {
                       width="10"
                       height="10"
                       viewBox="0 0 24 24"
-                        fill="none"
+                      fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                       className="text-gray-600"
                     >
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <rect
+                        x="9"
+                        y="9"
+                        width="13"
+                        height="13"
+                        rx="2"
+                        ry="2"
+                      ></rect>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
+                    </svg>
                   </button>
-                    </div>
-                  )}
-              
+                </div>
+              )}
+
               {/* 그룹 설명 */}
               <div className="flex h-[50px] w-full items-center justify-center rounded-[15px] bg-yellow-50 md:h-[40px]">
                 <p className="text-center text-sm text-black md:text-xs">
-                  {loading ? '로딩중...' : (groupInfo?.groupDescription || 'SSAFY 특화 프로젝트 A509 입니다 ~')}
+                  {loading
+                    ? '로딩중...'
+                    : groupInfo?.groupDescription ||
+                      'SSAFY 특화 프로젝트 A509 입니다 ~'}
                 </p>
-                    </div>
+              </div>
             </div>
           </div>
         </div>
-
 
         {/* 지갑 카드 캐러셀 */}
         <div className="mb-6 w-full">
@@ -1240,16 +1470,18 @@ export const GroupWallet = () => {
                 </div>
               ) : cardsWithSelection.length > 0 ? (
                 cardsWithSelection.map(card => (
-                <WalletCard
-                  key={card.id}
-                  card={card}
-                  onClick={() => handleCardSelect(card.id)}
+                  <WalletCard
+                    key={card.id}
+                    card={card}
+                    onClick={() => handleCardSelect(card.id)}
                     onPaymentClick={() => setIsQRModalOpen(true)}
                   />
                 ))
               ) : (
                 <div className="flex items-center justify-center py-4">
-                  <div className="text-sm text-gray-500">등록된 카드가 없습니다</div>
+                  <div className="text-sm text-gray-500">
+                    등록된 카드가 없습니다
+                  </div>
                 </div>
               )}
             </div>
@@ -1264,7 +1496,11 @@ export const GroupWallet = () => {
                 onClick={() => {
                   setActiveTab(tabKey as keyof typeof TAB_CONFIG)
                   // 사용내역 탭으로 변경 시 거래 내역 조회
-                  if (tabKey === 'history' && selectedCard) {
+                  if (
+                    tabKey === 'history' &&
+                    selectedCard &&
+                    selectedGroup !== null
+                  ) {
                     fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
                   }
                 }}
@@ -1284,16 +1520,21 @@ export const GroupWallet = () => {
               </button>
             </div>
           ))}
-          
+
           {/* 공유 버튼 (회수 버튼 옆) */}
           <div className="relative">
             <button
-              onClick={() => handleShareClick(
-                cardsWithSelection.find(card => card.isSelected) || 
-                cardsWithSelection[0] || 
-                { id: 0, name: '기본 카드', amount: 0 }
-              )}
-              className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-white text-xs font-normal hover:bg-blue-600 transition-colors"
+              onClick={() =>
+                handleShareClick(
+                  cardsWithSelection.find(card => card.isSelected) ||
+                    cardsWithSelection[0] || {
+                      id: 0,
+                      name: '기본 카드',
+                      amount: 0,
+                    }
+                )
+              }
+              className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
               style={{
                 left: `${5 + Object.keys(TAB_CONFIG).length * 85}px`,
                 top: '8px',
@@ -1311,21 +1552,28 @@ export const GroupWallet = () => {
           <div className="mb-6">
             {transactionsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">거래 내역 로딩 중...</div>
+                <div className="text-sm text-gray-500">
+                  거래 내역 로딩 중...
+                </div>
               </div>
             ) : transactions.length > 0 ? (
               transactions.map(transaction => (
-              <TransactionItem
+                <TransactionItem
                   key={transaction.transactionId}
                   transaction={{
                     id: transaction.transactionId,
-                    type: transaction.transactionType === 'CHARGE' ? 'charge' : 'usage',
+                    type:
+                      transaction.transactionType === 'CHARGE'
+                        ? 'charge'
+                        : 'usage',
                     amount: transaction.amount,
-                    date: new Date(transaction.createdAt).toLocaleDateString('ko-KR'),
-                    by: transaction.customer
+                    date: new Date(transaction.createdAt).toLocaleDateString(
+                      'ko-KR'
+                    ),
+                    by: transaction.customer,
                   }}
-                cardName={
-                  cardsWithSelection.find(card => card.isSelected)?.name ||
+                  cardName={
+                    cardsWithSelection.find(card => card.isSelected)?.name ||
                     cardsWithSelection[0]?.name ||
                     'QR'
                   }
@@ -1333,7 +1581,9 @@ export const GroupWallet = () => {
               ))
             ) : (
               <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">거래 내역이 없습니다</div>
+                <div className="text-sm text-gray-500">
+                  거래 내역이 없습니다
+                </div>
               </div>
             )}
           </div>
@@ -1365,7 +1615,6 @@ export const GroupWallet = () => {
           </div>
         )}
 
-
         {/* 그룹 생성 모달 */}
         <GroupCreateModal
           isOpen={isGroupCreateModalOpen}
@@ -1383,7 +1632,10 @@ export const GroupWallet = () => {
         <QRModal
           isOpen={isQRModalOpen}
           onClose={() => setIsQRModalOpen(false)}
-          cardName={groupWalletCards.find(card => card.storeId === selectedCard)?.storeName || 'QR'}
+          cardName={
+            groupWalletCards.find(card => card.storeId === selectedCard)
+              ?.storeName || 'QR'
+          }
           cardId={selectedCard}
         />
 
@@ -1393,7 +1645,7 @@ export const GroupWallet = () => {
           onClose={handleShareModalClose}
           selectedCard={selectedCardForShare}
           individualBalance={individualBalance}
-          selectedGroup={selectedGroup}
+          selectedGroup={selectedGroup || 0}
           individualWalletId={individualWalletId}
           groupInfo={groupInfo}
         />
