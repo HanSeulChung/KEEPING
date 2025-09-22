@@ -23,10 +23,11 @@ public class WalletController {
     public ResponseEntity<ApiResponse<WalletResponseDto>> getGroupWallets(
             @AuthenticationPrincipal Long customerId,
             @PathVariable Long groupId
-    ){
+    ) {
         WalletResponseDto dto = walletService.getGroupWallet(groupId, customerId);
         return ResponseEntity.ok(ApiResponse.success("모임 지갑 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
+
     // 모임 <-> 가게별 공유
     @PostMapping("/groups/{groupId}/stores/{storeId}")
     public ResponseEntity<ApiResponse<PointShareResponseDto>> createSharePoints(
@@ -35,7 +36,7 @@ public class WalletController {
             @PathVariable Long storeId,
             @RequestHeader("Idempotency-Key") String idemKey,
             @RequestBody @Valid PointShareRequestDto req
-    ){
+    ) {
         IdempotentResult<PointShareResponseDto> result =
                 walletService.sharePoints(groupId, customerId, storeId, idemKey, req);
 
@@ -63,7 +64,7 @@ public class WalletController {
     ) {
         AvailablePointResponseDto dto = walletService.getReclaimablePoints(walletId, customerId);
         return ResponseEntity.ok(
-                ApiResponse.success("회수 가능한 포인트를 조회했습니다.",  HttpStatus.OK.value(), dto)
+                ApiResponse.success("회수 가능한 포인트를 조회했습니다.", HttpStatus.OK.value(), dto)
         );
     }
 
@@ -93,6 +94,7 @@ public class WalletController {
         return ResponseEntity.status(status)
                 .body(ApiResponse.success("모임 지갑에서 포인트를 회수했습니다.", status.value(), result.getBody()));
     }
+    
     // 개인 지갑 잔액
     @GetMapping("/individual/balance")
     public ResponseEntity<ApiResponse<PersonalWalletBalanceResponseDto>> getPersonalWalletBalance(
@@ -143,4 +145,17 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success("모임 지갑 가게별 상세 정보 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
     }
 
+    /**
+     * 개인 지갑 + 모임 지갑 한번에 조회
+     */
+    @GetMapping("/both/balance")
+    public ResponseEntity<ApiResponse<BothWalletBalanceResponseDto>> getBothWalletBalance(
+            @AuthenticationPrincipal Long customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        BothWalletBalanceResponseDto dto = walletService.getBothWalletBalance(customerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("개인 지갑 및 모임 지갑 조회에 성공했습니다.", HttpStatus.OK.value(), dto));
+    }
 }

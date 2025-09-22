@@ -10,6 +10,7 @@ public enum NotificationType {
     POINT_CHARGE("포인트 충전"),
     PERSONAL_POINT_USE("개인 포인트 사용"),
     GROUP_POINT_USE("모임 포인트 사용"),
+    POINT_CANCELED("포인트 사용 취소"),
 
     PAYMENT_APPROVED("결제 수락"),
     PAYMENT_REQUEST("포인트 결제 요청"),

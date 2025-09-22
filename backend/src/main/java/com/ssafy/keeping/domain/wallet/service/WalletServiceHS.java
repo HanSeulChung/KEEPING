@@ -694,6 +694,24 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
 
     /**
+     * 개인 지갑 + 모임 지갑들 통합 조회
+     */
+    @Transactional(readOnly = true)
+    public BothWalletBalanceResponseDto getBothWalletBalance(Long customerId, Pageable pageable) {
+        // 1. 개인 지갑 조회
+        PersonalWalletBalanceResponseDto personalWallet = getPersonalWalletBalance(customerId, pageable);
+
+        // 2. 사용자가 속한 모든 그룹 조회
+        List<GroupWalletBalanceResponseDto> groupWallets = groupMemberRepository
+                .findMemberGroupsByCustomerId(customerId)
+                .stream()
+                .map(groupId -> getGroupWalletBalance(groupId, customerId, pageable))
+                .toList();
+
+        return new BothWalletBalanceResponseDto(personalWallet, groupWallets);
+    }
+
+    /**
      * 모임지갑 - 특정 가게의 상세 정보 조회
      */
     @Transactional(readOnly = true)
