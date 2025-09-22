@@ -5,6 +5,8 @@ import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileResponse;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileUpdateRequest;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
@@ -186,6 +188,37 @@ public class CustomerService {
                     .build();
 
         } catch (Exception e) {
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+    }
+
+    // 내 프로필 조회
+    public CustomerProfileResponse getMyProfile(Long customerId) {
+        Customer customer = validCustomer(customerId);
+
+        log.info("고객 프로필 조회 - 고객ID: {}", customerId);
+        return CustomerProfileResponse.from(customer);
+    }
+
+    // 내 프로필 수정
+    @Transactional
+    public CustomerProfileResponse updateMyProfile(Long customerId, CustomerProfileUpdateRequest request) {
+        Customer customer = validCustomer(customerId);
+
+        // 이름과 전화번호만 수정 가능
+        try {
+            customerRepository.updateCustomerProfile(customerId, request.getName(), request.getPhoneNumber());
+
+            // 업데이트된 정보 다시 조회
+            Customer updatedCustomer = validCustomer(customerId);
+
+            log.info("고객 프로필 수정 완료 - 고객ID: {}, 이름: {}, 전화번호: {}",
+                     customerId, request.getName(), request.getPhoneNumber());
+
+            return CustomerProfileResponse.from(updatedCustomer);
+
+        } catch (Exception e) {
+            log.error("고객 프로필 수정 실패 - 고객ID: {}", customerId, e);
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
     }
