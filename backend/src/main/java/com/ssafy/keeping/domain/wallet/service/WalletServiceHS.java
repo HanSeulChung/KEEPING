@@ -133,7 +133,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public IdempotentResult<PointShareResponseDto> sharePoints(
             Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
 
