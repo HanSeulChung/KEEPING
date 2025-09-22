@@ -85,31 +85,41 @@ public interface WalletStoreBalanceRepository extends JpaRepository<WalletStoreB
     Optional<Long> sumBalanceByCustomerIdAndType(@Param("customerId") Long customerId,
                                                  @Param("walletType") WalletType walletType);
 
-    // 개인지갑 잔액
-    @Query("""
-    SELECT DISTINCT wsb FROM WalletStoreBalance wsb
-    JOIN FETCH wsb.store s
-    JOIN FETCH wsb.wallet w
-    WHERE w.customer.customerId = :customerId
-      AND w.walletType = 'INDIVIDUAL'
-      AND wsb.balance > 0
-    ORDER BY wsb.updatedAt DESC
-    """)
-    List<WalletStoreBalance> findPersonalWalletBalancesByCustomerIdSimple(
-            @Param("customerId") Long customerId);
+    @Query(value = """
+            SELECT wsb FROM WalletStoreBalance wsb
+            JOIN FETCH wsb.store s
+            JOIN wsb.wallet w
+            WHERE w.customer.customerId = :customerId
+              AND w.walletType = 'INDIVIDUAL'
+              AND wsb.balance > 0
+            ORDER BY wsb.updatedAt DESC
+            """,
+            countQuery = """
+            SELECT COUNT(wsb) FROM WalletStoreBalance wsb
+            JOIN wsb.wallet w
+            WHERE w.customer.customerId = :customerId
+              AND w.walletType = 'INDIVIDUAL'
+              AND wsb.balance > 0
+            """)
+    Page<WalletStoreBalance> findPersonalWalletBalancesByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
-    // 모임지갑 잔액
-    @Query("""
-    SELECT DISTINCT wsb FROM WalletStoreBalance wsb
-    JOIN FETCH wsb.store s
-    JOIN FETCH wsb.wallet w
-    WHERE w.group.groupId = :groupId
-      AND w.walletType = 'GROUP'
-      AND wsb.balance > 0
-    ORDER BY wsb.updatedAt DESC
-    """)
-    List<WalletStoreBalance> findGroupWalletBalancesByGroupIdSimple(
-            @Param("groupId") Long groupId);
+    @Query(value = """
+            SELECT wsb FROM WalletStoreBalance wsb
+            JOIN FETCH wsb.store s
+            JOIN wsb.wallet w
+            WHERE w.group.groupId = :groupId
+              AND w.walletType = 'GROUP'
+              AND wsb.balance > 0
+            ORDER BY wsb.updatedAt DESC
+            """,
+            countQuery = """
+            SELECT COUNT(wsb) FROM WalletStoreBalance wsb
+            JOIN wsb.wallet w
+            WHERE w.group.groupId = :groupId
+              AND w.walletType = 'GROUP'
+              AND wsb.balance > 0
+            """)
+    Page<WalletStoreBalance> findGroupWalletBalancesByGroupId(@Param("groupId") Long groupId, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

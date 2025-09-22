@@ -605,16 +605,14 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
 
     @Transactional(readOnly = true)
-    public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId) {
+    public PersonalWalletBalanceResponseDto getPersonalWalletBalance(Long customerId, Pageable pageable) {
         Customer customer = validCustomer(customerId);
         Wallet personalWallet = walletRepository.findByCustomerAndWalletType(customer, WalletType.INDIVIDUAL)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
 
-        // 리포지토리: 리스트 반환 메서드 사용
-        List<WalletStoreBalance> balances =
-                balanceRepository.findPersonalWalletBalancesByCustomerIdSimple(customerId);
+        Page<WalletStoreBalance> page = balanceRepository.findPersonalWalletBalancesByCustomerId(customerId, pageable);
 
-        List<WalletStoreBalanceDetailDto> storeBalances = balances.stream()
+        List<WalletStoreBalanceDetailDto> storeBalances = page.getContent().stream()
                 .map(b -> new WalletStoreBalanceDetailDto(
                         b.getStore().getStoreId(),
                         b.getStore().getStoreName(),
@@ -630,7 +628,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
 
     @Transactional(readOnly = true)
-    public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId) {
+    public GroupWalletBalanceResponseDto getGroupWalletBalance(Long groupId, Long customerId, Pageable pageable) {
         validCustomer(customerId);
         Group group = validGroup(groupId);
         if (!groupMemberRepository.existsMember(groupId, customerId))
@@ -638,10 +636,9 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
         Wallet groupWallet = validGroupWallet(groupId);
 
-        List<WalletStoreBalance> balances =
-                balanceRepository.findGroupWalletBalancesByGroupIdSimple(groupId);
+        Page<WalletStoreBalance> page = balanceRepository.findGroupWalletBalancesByGroupId(groupId, pageable);
 
-        List<WalletStoreBalanceDetailDto> storeBalances = balances.stream()
+        List<WalletStoreBalanceDetailDto> storeBalances = page.getContent().stream()
                 .map(b -> new WalletStoreBalanceDetailDto(
                         b.getStore().getStoreId(),
                         b.getStore().getStoreName(),
@@ -656,7 +653,6 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 storeBalances
         );
     }
-
 
     /**
      * 개인지갑 - 특정 가게의 상세 정보 조회
