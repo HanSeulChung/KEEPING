@@ -325,7 +325,7 @@ const reclaimAmount = async (
     // Authorization 헤더 추가
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'IdempotencyKey': idempotencyKey,
+      'Idempotency-Key': idempotencyKey,
     }
 
     if (typeof window !== 'undefined') {
@@ -351,7 +351,15 @@ const reclaimAmount = async (
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      let errorMessage = `HTTP error! status: ${response.status}`
+      try {
+        const errorData = await response.json()
+        console.error('회수 API 에러 응답:', errorData)
+        errorMessage = errorData.message || errorMessage
+      } catch (e) {
+        console.error('에러 응답 파싱 실패:', e)
+      }
+      throw new Error(errorMessage)
     }
 
     const result = await response.json()
@@ -466,7 +474,7 @@ interface GroupTransactionResponse {
 
 interface Transaction {
   id: number
-  type: 'charge' | 'usage'
+  type: 'charge' | 'use' | 'transfer-in' | 'transfer-out' | 'cancel-charge' | 'cancel-use' | 'unknown'
   amount: number
   date: string
   by: string
@@ -478,6 +486,26 @@ const TAB_CONFIG = {
   history: '사용내역',
   withdrawal: '회수',
 } as const
+
+// 거래 타입별 색상 및 라벨 정의
+const getTransactionDisplayInfo = (transactionType: string) => {
+  switch (transactionType) {
+    case 'CHARGE':
+      return { type: 'charge', label: '충전', color: 'blue' }
+    case 'USE':
+      return { type: 'use', label: '사용', color: 'red' }
+    case 'TRANSFER_IN':
+      return { type: 'transfer-in', label: '공유', color: 'green' }
+    case 'TRANSFER_OUT':
+      return { type: 'transfer-out', label: '회수', color: 'purple' }
+    case 'CANCEL_CHARGE':
+      return { type: 'cancel-charge', label: '충전취소', color: 'orange' }
+    case 'CANCEL_USE':
+      return { type: 'cancel-use', label: '사용취소', color: 'yellow' }
+    default:
+      return { type: 'unknown', label: '알 수 없음', color: 'gray' }
+  }
+}
 
 // 지갑 카드 컴포넌트 (MyWallet에서 가져옴)
 const WalletCard = ({
@@ -530,6 +558,46 @@ const WalletCard = ({
   )
 }
 
+// 거래 타입별 스타일 함수
+const getTransactionTypeStyle = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return 'border-blue-500 text-blue-500'
+    case 'use':
+      return 'border-red-500 text-red-500'
+    case 'transfer-in':
+      return 'border-green-500 text-green-500'
+    case 'transfer-out':
+      return 'border-purple-500 text-purple-500'
+    case 'cancel-charge':
+      return 'border-orange-500 text-orange-500'
+    case 'cancel-use':
+      return 'border-yellow-500 text-yellow-500'
+    default:
+      return 'border-gray-500 text-gray-500'
+  }
+}
+
+// 거래 타입별 라벨 함수
+const getTransactionTypeLabel = (type: string) => {
+  switch (type) {
+    case 'charge':
+      return '충전'
+    case 'use':
+      return '사용'
+    case 'transfer-in':
+      return '공유'
+    case 'transfer-out':
+      return '회수'
+    case 'cancel-charge':
+      return '충전취소'
+    case 'cancel-use':
+      return '사용취소'
+    default:
+      return '알 수 없음'
+  }
+}
+
 // 거래 내역 아이템 컴포넌트 (MyWallet에서 가져와서 수정)
 const TransactionItem = ({
   transaction,
@@ -540,15 +608,11 @@ const TransactionItem = ({
 }) => {
   return (
     <div className="relative h-16 w-full">
-      {/* 충전/사용 라벨 */}
+      {/* 거래 타입 라벨 */}
       <div
-        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${
-          transaction.type === 'charge'
-            ? 'border-blue-500 text-blue-500'
-            : 'border-red-500 text-red-500'
-        }`}
+        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${getTransactionTypeStyle(transaction.type)}`}
       >
-        {transaction.type === 'charge' ? '충전' : '사용'}
+        {getTransactionTypeLabel(transaction.type)}
       </div>
 
       {/* 금액 */}
@@ -1172,6 +1236,9 @@ export const GroupWallet = () => {
   const [isReclaiming, setIsReclaiming] = useState(false)
   const [reclaimLoading, setReclaimLoading] = useState(false)
 
+  // 현재 사용자가 리더인지 확인하는 상태
+  const [isCurrentUserLeader, setIsCurrentUserLeader] = useState(false)
+
   // 사용자 그룹 목록 로드 함수
   const loadUserGroups = async () => {
     try {
@@ -1245,6 +1312,18 @@ export const GroupWallet = () => {
     }
   }, [selectedGroup])
 
+  // 사용자 정보가 로드되면 리더 여부 다시 확인
+  useEffect(() => {
+    if (user && groupMembers.length > 0) {
+      const currentUserMember = groupMembers.find((member: GroupMember) => 
+        member.customerId === user.userId || 
+        member.customerName === user.name
+      )
+      console.log('사용자 정보 로드 후 리더 확인:', currentUserMember?.isLeader)
+      setIsCurrentUserLeader(currentUserMember?.isLeader || false)
+    }
+  }, [user, groupMembers])
+
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
     // 카드 선택 시 해당 카드의 거래 내역 조회
@@ -1280,10 +1359,32 @@ export const GroupWallet = () => {
       console.log('그룹 멤버 API 응답:', result) // 디버깅용 로그
       
       if (result.success && result.data) {
-        setGroupMembers(Array.isArray(result.data) ? result.data : [])
+        const members = Array.isArray(result.data) ? result.data : []
+        setGroupMembers(members)
+        
+        // 현재 사용자가 리더인지 확인
+        const currentUser = user
+        console.log('현재 사용자 정보:', currentUser)
+        console.log('그룹 멤버 목록:', members)
+        
+        if (currentUser) {
+          const currentUserMember = members.find((member: GroupMember) => 
+            member.customerId === currentUser.userId || 
+            member.customerName === currentUser.name
+          )
+          
+          console.log('찾은 현재 사용자 멤버:', currentUserMember)
+          console.log('리더 여부:', currentUserMember?.isLeader)
+          
+          setIsCurrentUserLeader(currentUserMember?.isLeader || false)
+        } else {
+          console.log('사용자 정보가 아직 로드되지 않음')
+          setIsCurrentUserLeader(false)
+        }
       } else {
         console.warn('그룹 멤버 데이터가 없습니다:', result)
         setGroupMembers([])
+        setIsCurrentUserLeader(false)
       }
     } catch (error) {
       console.error('그룹 멤버 조회 실패:', error)
@@ -1414,7 +1515,19 @@ export const GroupWallet = () => {
     setIsReclaiming(true)
     setReclaimLoading(true)
 
+    // 요청 간격 추가 (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500))
+
     try {
+      console.log('회수 실행 - 파라미터 확인:', {
+        selectedGroup,
+        selectedCard,
+        individualWalletId,
+        groupWalletId: groupInfo.walletId,
+        amount,
+        groupInfo
+      })
+      
       const result = await reclaimAmount(
         selectedGroup,
         selectedCard,
@@ -1650,6 +1763,28 @@ export const GroupWallet = () => {
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                   </svg>
                 </button>
+
+                {/* 설정 버튼 (리더만 표시) */}
+                {isCurrentUserLeader && (
+                  <button
+                    onClick={() => window.location.href = '/customer/groupSettings'}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 transition-colors hover:bg-blue-200"
+                    title="그룹 설정"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-blue-600"
+                    >
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* 그룹 코드 */}
@@ -1801,11 +1936,7 @@ export const GroupWallet = () => {
                   key={transaction.transactionId}
                   transaction={{
                     id: transaction.transactionId,
-                    type:
-                      transaction.transactionType === 'CHARGE' || 
-                      transaction.transactionType === 'TRANSFER_IN'
-                        ? 'charge'
-                        : 'usage',
+                    type: getTransactionDisplayInfo(transaction.transactionType).type as Transaction['type'],
                     amount: transaction.amount,
                     date: new Date(transaction.createdAt).toLocaleDateString(
                       'ko-KR'
