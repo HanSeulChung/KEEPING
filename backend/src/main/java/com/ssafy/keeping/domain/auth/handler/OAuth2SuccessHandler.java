@@ -99,7 +99,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 프론트로 리다이렉트
             String redirectUrl = "";
-            redirectUrl = "OWNER".equals(role) ? "/owner/dashboard" : "/customer/home";
+            redirectUrl = UserRole.OWNER.equals(role) ? "/owner/dashboard" : "/customer/home";
+
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
             response.sendRedirect(redirectUrl);
 
