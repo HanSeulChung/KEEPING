@@ -1,7 +1,51 @@
 'use client'
 import { buildURL } from '@/api/config'
 import { useUser } from '@/contexts/UserContext'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+// 카드 정보 타입 정의
+interface CreditCard {
+  cardNo: string
+  cvc: string
+  cardUniqueNo: string
+  cardIssuerCode: string
+  cardIssuerName: string
+  cardName: string
+  baselinePerformance: string
+  maxBenefitLimit: string
+  cardDescription: string
+  cardExpiryDate: string
+  withdrawalAccountNo: string
+  withdrawalDate: string
+}
+
+interface CreditCardListResponse {
+  Header: {
+    responseCode: string
+    responseMessage: string
+    apiName: string
+    transmissionDate: string
+    transmissionTime: string
+    institutionCode: string
+    apiKey: string
+    apiServiceCode: string
+    institutionTransactionUniqueNo: string
+  }
+  REC: CreditCard[]
+}
+
+interface AuthMeResponse {
+  success: boolean
+  status: number
+  message: string
+  data: {
+    userId: number
+    userKey: string
+    role: string
+    email: string
+  }
+  timestamp: string
+}
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -18,25 +62,152 @@ export const PaymentModal = ({
   onPayment,
   storeId,
 }: PaymentModalProps) => {
-  const [cardNumber, setCardNumber] = useState(['', '', '', ''])
-  const [cvc, setCvc] = useState('')
-  const [showCvc, setShowCvc] = useState(false)
-  const [showCardNumber, setShowCardNumber] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null)
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([])
+  const [cardsLoading, setCardsLoading] = useState(false)
+  const [cardsError, setCardsError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const { user, loading, error } = useUser()
 
+  // userKey 조회 함수
+  const fetchUserKey = async (): Promise<string> => {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      const response = await fetch(buildURL('/auth/me'), {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: AuthMeResponse = await response.json()
+      console.log('userKey 조회 응답:', data)
+
+      if (data.success && data.data.userKey) {
+        return data.data.userKey
+      } else {
+        throw new Error('userKey를 찾을 수 없습니다.')
+      }
+    } catch (error) {
+      console.error('userKey 조회 실패:', error)
+      throw error
+    }
+  }
+
+  // 카드 목록 조회 함수
+  const fetchCreditCardList = async (userKey: string): Promise<CreditCard[]> => {
+    try {
+      // 현재 날짜와 시간 생성
+      const now = new Date()
+      // transmissionDate는 한국 시간 기준 (UTC+9)
+      const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+      const transmissionDate = koreanTime.toISOString().slice(0, 10).replace(/-/g, '') // YYYYMMDD
+      // transmissionTime은 UTC 기준으로 유지
+      const transmissionTime = now.toTimeString().slice(0, 8).replace(/:/g, '') // HHMMSS
+      
+      // institutionTransactionUniqueNo 생성 (YYYYMMDD + HHMMSS + 일련번호 6자리)
+      const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+      const institutionTransactionUniqueNo = transmissionDate + transmissionTime + randomNumber
+
+      const requestBody = {
+        Header: {
+          apiName: "inquireSignUpCreditCardList",
+          transmissionDate: transmissionDate,
+          transmissionTime: transmissionTime,
+          institutionCode: "00100",
+          fintechAppNo: "001",
+          apiServiceCode: "inquireSignUpCreditCardList",
+          institutionTransactionUniqueNo: institutionTransactionUniqueNo,
+          apiKey: "e17ca6be4bc44d4ead381bd9cbbd075a",
+          userKey: userKey
+        }
+      }
+
+      console.log('=== 카드 목록 조회 요청 ===')
+      console.log('요청 URL:', 'https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList')
+      console.log('요청 메서드:', 'POST')
+      console.log('요청 헤더:', {
+        'Content-Type': 'application/json',
+      })
+      console.log('요청 본문:', requestBody)
+      console.log('생성된 값들:', {
+        transmissionDate,
+        transmissionTime,
+        institutionTransactionUniqueNo,
+        userKey
+      })
+
+      const response = await fetch('https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log('카드 목록 조회 응답 상태:', response.status, response.statusText)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: CreditCardListResponse = await response.json()
+      console.log('카드 목록 조회 응답 데이터:', data)
+
+      if (data.Header.responseCode === 'H0000') {
+        return data.REC || []
+      } else {
+        throw new Error(data.Header.responseMessage || '카드 목록 조회에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('카드 목록 조회 실패:', error)
+      throw error
+    }
+  }
+
+  // 모달이 열릴 때 카드 목록 로드
+  useEffect(() => {
+    if (isOpen && creditCards.length === 0) {
+      const loadCards = async () => {
+        try {
+          setCardsLoading(true)
+          setCardsError(null)
+          
+          const userKey = await fetchUserKey()
+          const cards = await fetchCreditCardList(userKey)
+          setCreditCards(cards)
+          
+          // 첫 번째 카드를 기본 선택
+          if (cards.length > 0) {
+            setSelectedCard(cards[0])
+          }
+        } catch (error) {
+          console.error('카드 목록 로드 실패:', error)
+          setCardsError('카드 목록을 불러오는데 실패했습니다.')
+        } finally {
+          setCardsLoading(false)
+        }
+      }
+      
+      loadCards()
+    }
+  }, [isOpen, creditCards.length])
+
   if (!isOpen) return null
-
-  const handleCardNumberChange = (index: number, value: string) => {
-    const newCardNumber = [...cardNumber]
-    newCardNumber[index] = value.replace(/\D/g, '').slice(0, 4)
-    setCardNumber(newCardNumber)
-  }
-
-  const handleCvcChange = (value: string) => {
-    setCvc(value.replace(/\D/g, '').slice(0, 3))
-  }
 
   // UUID 생성 함수 (표준 UUID v4 형식)
   const generateUUID = () => {
@@ -54,14 +225,9 @@ export const PaymentModal = ({
   const handlePayment = async () => {
     if (isProcessing) return
 
-    // 입력 검증
-    const fullCardNumber = cardNumber.join('')
-    if (fullCardNumber.length !== 16) {
-      alert('카드번호를 16자리 모두 입력해주세요.')
-      return
-    }
-    if (cvc.length !== 3) {
-      alert('CVC를 3자리 입력해주세요.')
+    // 카드 선택 검증
+    if (!selectedCard) {
+      alert('카드를 선택해주세요.')
       return
     }
 
@@ -76,8 +242,8 @@ export const PaymentModal = ({
       }
 
       const requestBody = {
-        cardNo: fullCardNumber,
-        cvc: cvc,
+        cardNo: selectedCard.cardNo,
+        cvc: selectedCard.cvc,
         paymentBalance: amount,
       }
 
@@ -117,6 +283,9 @@ export const PaymentModal = ({
       const result = await response.json()
       console.log('결제 성공:', result)
 
+      // 성공 시 알림 표시
+      alert('충전되었습니다.')
+      
       // 성공 시 콜백 호출 및 모달 닫기
       onPayment()
       onClose()
@@ -171,139 +340,85 @@ export const PaymentModal = ({
         {/* 구분선 */}
         <div className="mx-4 h-px w-full bg-gray-300"></div>
 
-        {/* 카드 정보 입력 폼 */}
+        {/* 카드 선택 폼 */}
         <div className="space-y-6 p-4">
-          {/* 카드 번호 */}
+          {/* 카드 선택 */}
           <div className="space-y-2">
-            <p className="text-sm font-bold text-black">카드 번호</p>
-            <div className="relative">
-              <div className="flex gap-2 rounded-md border border-gray-300 bg-white p-3 pr-12">
-                {cardNumber.map((number, index) => (
-                  <input
-                    key={index}
-                    type={showCardNumber ? 'text' : 'password'}
-                    value={number}
-                    onChange={e =>
-                      handleCardNumberChange(index, e.target.value)
-                    }
-                    className="w-14 border-b border-black bg-transparent py-2 text-center text-base text-black outline-none"
-                    maxLength={4}
-                  />
-                ))}
+            <p className="text-sm font-bold text-black">결제 카드 선택</p>
+            {cardsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="text-gray-500">카드 목록을 불러오는 중...</div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCardNumber(!showCardNumber)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 transform text-gray-500 hover:text-gray-700"
+            ) : cardsError ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="text-red-500">{cardsError}</div>
+              </div>
+            ) : creditCards.length === 0 ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="text-gray-500">등록된 카드가 없습니다.</div>
+              </div>
+            ) : (
+              <select
+                value={selectedCard?.cardNo || ''}
+                onChange={(e) => {
+                  const card = creditCards.find(c => c.cardNo === e.target.value)
+                  setSelectedCard(card || null)
+                }}
+                className="h-12 w-full rounded-md border border-gray-300 bg-white p-3 text-base text-black outline-none"
               >
-                {showCardNumber ? (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
+                {creditCards.map((card, index) => (
+                  <option key={index} value={card.cardNo}>
+                    {card.cardName} ({card.cardNo.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-****-****-$4')})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* CVC */}
-          <div className="space-y-2">
-            <p className="text-sm font-bold text-black">CVC</p>
-            <div className="relative">
-              <input
-                type={showCvc ? 'text' : 'password'}
-                value={cvc}
-                onChange={e => handleCvcChange(e.target.value)}
-                placeholder="3자리를 입력해주세요."
-                className="h-12 w-full rounded-md border border-gray-300 bg-white p-3 pr-12 text-base text-black outline-none"
-                maxLength={3}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCvc(!showCvc)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 transform text-gray-500 hover:text-gray-700"
-              >
-                {showCvc ? (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
+          {/* 선택된 카드 정보 표시 */}
+          {selectedCard && (
+            <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">카드명:</span>
+                  <span className="text-sm font-medium text-black">{selectedCard.cardName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">발급사:</span>
+                  <span className="text-sm font-medium text-black">{selectedCard.cardIssuerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">카드번호:</span>
+                  <span className="text-sm font-medium text-black">
+                    {selectedCard.cardNo.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-****-****-$4')}
+                  </span>
+                </div>
+                {selectedCard.cardDescription && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">카드 혜택:</span>
+                    <span className="text-sm font-medium text-black">{selectedCard.cardDescription}</span>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 결제 버튼 */}
         <div className="p-4">
           <button
             onClick={handlePayment}
-            disabled={isProcessing}
+            disabled={isProcessing || !selectedCard || cardsLoading}
             className={`h-12 w-full rounded-md bg-black text-base font-bold text-white transition-colors ${
-              isProcessing
+              isProcessing || !selectedCard || cardsLoading
                 ? 'cursor-not-allowed bg-gray-400'
                 : 'hover:bg-gray-800'
             }`}
           >
-            {isProcessing ? '결제 처리 중...' : '결제하기'}
+            {isProcessing ? '결제 처리 중...' : 
+             cardsLoading ? '카드 목록 로딩 중...' :
+             !selectedCard ? '카드를 선택해주세요' :
+             '결제하기'}
           </button>
         </div>
       </div>
