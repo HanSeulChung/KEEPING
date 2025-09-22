@@ -9,6 +9,8 @@ import com.ssafy.keeping.domain.idempotency.model.IdempotencyKey;
 import com.ssafy.keeping.domain.idempotency.model.IdempotentResult;
 import com.ssafy.keeping.domain.idempotency.repository.IdempotencyKeyRepository;
 import com.ssafy.keeping.domain.idempotency.service.IdempotencyService;
+import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.notification.service.NotificationService;
 import com.ssafy.keeping.domain.payment.intent.dto.PaymentIntentDetailResponse;
 import com.ssafy.keeping.domain.payment.refund.dto.RefundResponse;
 import com.ssafy.keeping.domain.payment.transactions.constant.TransactionType;
@@ -27,6 +29,7 @@ import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -48,6 +51,7 @@ import java.util.UUID;
  *   IN_PROGRESS(선점 중)   → 202 Accepted (+ Retry-After)
  *   신규                   → 본 처리 수행 → DONE 기록 후 201 Created
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentRefundService {
@@ -57,6 +61,7 @@ public class PaymentRefundService {
     private final WalletLotMoveRepository walletLotMoveRepository;
     private final StoreRepository storeRepository;
     private final IdempotencyService idempotencyService;
+    private final NotificationService notificationService;
     @Qualifier("canonicalObjectMapper")
     private final ObjectMapper canonicalObjectMapper;
 
@@ -219,7 +224,23 @@ public class PaymentRefundService {
             throw new CustomException(ErrorCode.FUNDS_INVARIANT_VIOLATION);
         }
 
-        // 7) 멱등 complete
+        // 손님에게 알림 전송
+        try {
+            String notificationContent = String.format("%s에서 %,d포인트 사용이 취소되었습니다.",
+                    store.getStoreName(), original.getAmount());
+
+            notificationService.sendToOwner(
+                    original.getCustomer().getCustomerId(),
+                    NotificationType.POINT_CANCELED,
+                    notificationContent
+            );
+
+            log.info("결제 수락 알림 전송 완료 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", original.getCustomer().getCustomerId(), original.getAmount(), store.getStoreId());
+        } catch (Exception e) {
+            log.warn("결제 수락 알림 전송 실패 - 손님ID: {}, 결제 금액: {}, 사용 가게 ID: {}", original.getCustomer().getCustomerId(), original.getAmount(), store.getStoreId());
+        }
+
+        // 멱등 complete
         RefundResponse res = RefundResponse.builder()
                 .transactionId(original.getTransactionId())
                 .refundTransactionId(cancelTx.getTransactionId())

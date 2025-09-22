@@ -12,7 +12,6 @@ export default function OwnerLogin() {
   const { login } = useAuthStore()
   const [loading, setLoading] = useState<string | null>(null)
   const handleSocialLogin = async (provider: 'kakao') => {
-
     setLoading(provider)
 
     try {
@@ -92,7 +91,7 @@ export default function OwnerLogin() {
         href="/owner/login"
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
       >
-        <span className="font-medium text-blue-600">사장님님</span>
+        <span className="font-medium text-blue-600">사장님</span>
         <Image src="/owner.png" alt="사장님 아이콘" width={20} height={20} />
         <span>으로 로그인하기</span>
       </Link>

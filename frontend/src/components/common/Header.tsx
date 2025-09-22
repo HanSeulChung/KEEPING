@@ -16,9 +16,22 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
       // 서버에 로그아웃 요청 (Cookie 제거를 위해)
       await fetch('/auth/logout', {
         method: 'GET',
+        headers,
         credentials: 'include',
       })
     } catch (error) {
@@ -67,9 +80,9 @@ export default function Header() {
 
         {/* Center: Logo */}
         <div className="flex items-center">
-          <button 
+          <button
             onClick={handleLogoClick}
-            className="text-text font-display text-base font-extrabold sm:text-lg md:text-xl hover:text-gray-600 transition-colors cursor-pointer"
+            className="text-text font-display cursor-pointer text-base font-extrabold transition-colors hover:text-gray-600 sm:text-lg md:text-xl"
           >
             KEEPING
           </button>
@@ -84,9 +97,9 @@ export default function Header() {
             <>
               {/* 로그인 상태일 때만 알림 버튼 표시 */}
               {isLoggedIn && (
-                <button 
+                <button
                   onClick={handleNotificationClick}
-                  className="relative hover:bg-gray-100 sm:p-2 rounded-md transition-colors" 
+                  className="relative rounded-md transition-colors hover:bg-gray-100 sm:p-2"
                   aria-label="알림"
                 >
                   <div className="relative h-4 w-4 sm:h-5 sm:w-5 md:h-7 md:w-7">
@@ -98,7 +111,7 @@ export default function Header() {
                     />
                     {/* 읽지 않은 알림 개수 배지 */}
                     {unreadCount > 0 && (
-                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">
+                      <div className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </div>
                     )}

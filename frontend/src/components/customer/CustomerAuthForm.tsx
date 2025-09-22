@@ -14,7 +14,9 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
   const router = useRouter()
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
-  const [sessionRegSessionId, setSessionRegSessionId] = useState<string | null>(null)
+  const [sessionRegSessionId, setSessionRegSessionId] = useState<string | null>(
+    null
+  )
   const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
@@ -27,9 +29,21 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
     // 세션에서 regSessionId 가져오기
     const fetchSessionInfo = async () => {
       try {
+        // Authorization 헤더 추가
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`
+          }
+        }
+
         const response = await fetch(buildURL('/auth/session-info'), {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           credentials: 'include',
         })
         const data = await response.json()
@@ -124,7 +138,6 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
 
   return (
     <div className="space-y-6">
-
       {/* 입력 폼 */}
       <div className="space-y-4">
         <div>
@@ -206,9 +219,11 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={authForm.birthDate && authForm.birthDate.length === 6 
-          ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
-          : authForm.birthDate}
+        birth={
+          authForm.birthDate && authForm.birthDate.length === 6
+            ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
+            : authForm.birthDate
+        }
         genderDigit={authForm.genderCode}
         userRole="CUSTOMER"
         onSuccess={handleOtpSuccess}

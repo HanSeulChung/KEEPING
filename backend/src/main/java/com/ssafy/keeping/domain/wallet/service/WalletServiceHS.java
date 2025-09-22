@@ -22,6 +22,7 @@ import com.ssafy.keeping.domain.store.repository.StoreRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.wallet.constant.LotSourceType;
+import com.ssafy.keeping.domain.wallet.constant.LotStatus;
 import com.ssafy.keeping.domain.wallet.constant.WalletType;
 import com.ssafy.keeping.domain.wallet.dto.*;
 import com.ssafy.keeping.domain.wallet.model.Wallet;
@@ -133,7 +134,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public IdempotentResult<PointShareResponseDto> sharePoints(
             Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
 
@@ -238,6 +239,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                     .expiredAt(src.getExpiredAt())
                                     .sourceType(LotSourceType.TRANSFER_IN)
                                     .contributorWallet(individual)
+                                    .lotStatus(LotStatus.ACTIVE)
                                     .originChargeTransaction(src.getOriginChargeTransaction())
                                     .build()
                     ));
@@ -290,7 +292,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public IdempotentResult<PointShareResponseDto> reclaimPoints(
             Long groupId, Long userId, Long storeId, String idemKeyHeader, @Valid PointShareRequestDto req) {
 
@@ -392,6 +394,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                     .expiredAt(src.getExpiredAt())
                                     .sourceType(LotSourceType.TRANSFER_IN)
                                     .contributorWallet(group) // 출처 표기
+                                    .lotStatus(LotStatus.ACTIVE)
                                     .originChargeTransaction(src.getOriginChargeTransaction())
                                     .build()
                     ));
@@ -556,6 +559,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                                         .expiredAt(src.getExpiredAt())
                                         .sourceType(LotSourceType.TRANSFER_IN)
                                         .contributorWallet(groupWallet)
+                                        .lotStatus(LotStatus.ACTIVE)
                                         .originChargeTransaction(src.getOriginChargeTransaction())
                                         .build()
                         ));
@@ -686,6 +690,24 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 balance.getBalance(),
                 transactionDtos
         );
+    }
+
+    /**
+     * 개인 지갑 + 모임 지갑들 통합 조회
+     */
+    @Transactional(readOnly = true)
+    public BothWalletBalanceResponseDto getBothWalletBalance(Long customerId, Pageable pageable) {
+        // 1. 개인 지갑 조회
+        PersonalWalletBalanceResponseDto personalWallet = getPersonalWalletBalance(customerId, pageable);
+
+        // 2. 사용자가 속한 모든 그룹 조회
+        List<GroupWalletBalanceResponseDto> groupWallets = groupMemberRepository
+                .findMemberGroupsByCustomerId(customerId)
+                .stream()
+                .map(groupId -> getGroupWalletBalance(groupId, customerId, pageable))
+                .toList();
+
+        return new BothWalletBalanceResponseDto(personalWallet, groupWallets);
     }
 
     /**
