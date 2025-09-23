@@ -35,10 +35,10 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
         end
     )
     from Group g
-    join g.members gm
-    join gm.user c
+    join GroupMember gm on gm.group = g
+    join Customer c on gm.user = c
     where g.groupName = :name
-      and gm.leader = true
+    and gm.leader = true
     """)
     List<GroupMaskingResponseDto> findGroupsByName(@Param("name") String name);
 }
