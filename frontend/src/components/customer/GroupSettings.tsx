@@ -561,9 +561,82 @@ export const GroupSettings = ({
   }
 
 
-  const handleUpdateGroup = () => {
-    // 모임 수정 로직
-    console.log('모임 수정:', { groupName, groupDescription })
+  const handleUpdateGroup = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const url = buildURL(`/groups/${groupId}`)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
+      const requestBody = {
+        groupName: groupName,
+        groupDescription: groupDescription
+      }
+
+      console.log('모임 수정 요청:', {
+        url,
+        method: 'PATCH',
+        headers,
+        requestBody,
+        groupId
+      })
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log('모임 수정 응답 상태:', response.status, response.statusText)
+
+      if (!response.ok) {
+        let errorMessage = `모임 수정에 실패했습니다. (${response.status})`
+        
+        try {
+          const errorData = await response.json()
+          console.log('모임 수정 에러 응답:', errorData)
+          if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch {
+          const errorText = await response.text()
+          console.log('모임 수정 에러 텍스트:', errorText)
+          if (errorText) {
+            errorMessage = errorText
+          }
+        }
+        
+        console.log('모임 수정 실패 - 최종 에러 메시지:', errorMessage)
+        alert(errorMessage)
+        return
+      }
+
+      const result = await response.json()
+      console.log('모임 수정 성공 응답:', result)
+      
+      alert('모임 정보가 성공적으로 수정되었습니다.')
+      
+      // 그룹 정보 새로고침
+      fetchGroupInfo()
+      
+    } catch (error) {
+      console.error('모임 수정 실패:', error)
+      alert('모임 수정 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 컴포넌트 마운트 시 그룹 정보, 가입 요청 목록, 멤버 목록 조회
@@ -752,7 +825,7 @@ export const GroupSettings = ({
           </div>
 
           {/* 오른쪽 컬럼 - 중간: 모임 수정 */}
-          {/* <div className="lg:col-span-1">
+          <div className="lg:col-span-1">
             <div className="h-full border border-black bg-[#faf8f6] p-6">
               <div
                 className="mb-4 text-xl font-extrabold text-black"
@@ -762,7 +835,7 @@ export const GroupSettings = ({
               </div>
 
               {/* 모임명 */}
-              {/* <div className="mb-4">
+              <div className="mb-4">
                 <div
                   className="mb-2 text-[10px] font-bold text-black"
                   style={{ fontFamily: 'NanumSquare Neo' }}
@@ -776,10 +849,10 @@ export const GroupSettings = ({
                   className="h-8 w-full border border-black px-2 text-[11px] font-bold"
                   style={{ fontFamily: 'NanumSquare Neo' }}
                 />
-              </div> */}
+              </div>
 
               {/* 모임 설명 */}
-              {/* <div className="mb-4">
+              <div className="mb-4">
                 <div
                   className="mb-2 text-[10px] font-bold text-black"
                   style={{ fontFamily: 'NanumSquare Neo' }}
@@ -792,18 +865,18 @@ export const GroupSettings = ({
                   className="h-16 w-full resize-none border border-black px-2 py-1 text-[11px] font-bold"
                   style={{ fontFamily: 'NanumSquare Neo' }}
                 />
-              </div> */}
+              </div>
 
-              {/* <button
+              <button
                 onClick={handleUpdateGroup}
                 disabled={loading}
                 className="w-full bg-black py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'NanumSquare Neo' }}
               >
-                수정하기
+                {loading ? '수정 중...' : '수정하기'}
               </button>
             </div>
-          </div> */}
+          </div>
 
           {/* 오른쪽 컬럼 - 하단: 모임 해체 */}
           <div className="lg:col-span-1">

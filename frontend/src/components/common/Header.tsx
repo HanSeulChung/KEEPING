@@ -120,7 +120,11 @@ export default function Header() {
   }
 
   const handleNotificationClick = () => {
-    router.push('/owner/notification')
+    if (isCustomerPage) {
+      router.push('/customer/notification')
+    } else {
+      router.push('/owner/notification')
+    }
   }
 
   const handleLogoClick = () => {

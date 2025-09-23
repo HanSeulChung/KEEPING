@@ -264,9 +264,9 @@ const fetchIndividualBalance = async () => {
 }
 
 // 회수 가능 금액 조회 API 함수
-const fetchAvailableReclaimAmount = async (walletId: number) => {
+const fetchAvailableReclaimAmount = async (walletId: number, storeId: number) => {
   try {
-    const url = buildURL(`/wallets/${walletId}/points/available`)
+    const url = buildURL(`/wallets/${walletId}/stores/${storeId}/points/available`)
 
     // Authorization 헤더 추가
     const headers: Record<string, string> = {
@@ -287,7 +287,14 @@ const fetchAvailableReclaimAmount = async (walletId: number) => {
       }
     }
 
-    console.log('회수 가능 금액 조회 요청:', { url, headers })
+    console.log('회수 가능 금액 조회 요청:', { 
+      url, 
+      method: 'GET',
+      headers,
+      walletId,
+      storeId,
+      fullUrl: url
+    })
 
     const response = await fetch(url, {
       method: 'GET',
@@ -295,12 +302,21 @@ const fetchAvailableReclaimAmount = async (walletId: number) => {
       headers,
     })
 
+    console.log('회수 가능 금액 API 응답 상태:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url: response.url
+    })
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('회수 가능 금액 API 에러 응답:', errorText)
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
     }
 
     const result = await response.json()
-    console.log('회수 가능 금액 API 응답:', result)
+    console.log('회수 가능 금액 API 응답 데이터:', result)
     return result
   } catch (error) {
     console.error('회수 가능 금액 조회 실패:', error)
@@ -832,9 +848,6 @@ const ShareModal = ({
         </div>
 
         <div className="mb-6">
-          <p className="mb-2 text-sm text-gray-600">
-            그룹 카드: {selectedCard?.name || '기본 카드'}
-          </p>
 
           {/* 개인 카드 선택 드롭다운 */}
           <div className="mb-4">
@@ -1327,21 +1340,29 @@ export const GroupWallet = () => {
     }
   }, [user, groupMembers])
 
-  // 카드가 로드되면 첫 번째 카드 자동 선택
+  // 카드가 로드되면 첫 번째 카드 자동 선택 및 회수 가능 금액 조회
   useEffect(() => {
     if (groupWalletCards && groupWalletCards.length > 0) {
       const firstCard = groupWalletCards[0]
       if (firstCard && selectedCard !== firstCard.storeId) {
         setSelectedCard(firstCard.storeId)
+        // 첫 번째 카드 선택 시 회수 가능 금액 조회
+        if (groupInfo && groupInfo.walletId) {
+          fetchAvailableReclaimAmountData(groupInfo.walletId, firstCard.storeId)
+        }
       }
     }
-  }, [groupWalletCards])
+  }, [groupWalletCards, groupInfo])
 
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
     // 카드 선택 시 해당 카드의 거래 내역 조회
     if (activeTab === 'history' && selectedGroup !== null) {
       fetchTransactions(selectedGroup, cardId, 0) // 첫 페이지로 리셋
+    }
+    // 카드 선택 시 해당 카드의 회수 가능 금액 조회
+    if (groupInfo && groupInfo.walletId) {
+      fetchAvailableReclaimAmountData(groupInfo.walletId, cardId)
     }
   }
 
@@ -1462,9 +1483,9 @@ export const GroupWallet = () => {
   }
 
   // 회수 가능 금액 조회
-  const fetchAvailableReclaimAmountData = async (walletId: number) => {
+  const fetchAvailableReclaimAmountData = async (walletId: number, storeId: number) => {
     try {
-      const result = await fetchAvailableReclaimAmount(walletId)
+      const result = await fetchAvailableReclaimAmount(walletId, storeId)
       console.log('회수 가능 금액 조회 결과:', result)
       
       if (result.success && result.data) {
@@ -1556,7 +1577,7 @@ export const GroupWallet = () => {
         await Promise.all([
           fetchIndividualBalanceData(),
           fetchWalletCards(selectedGroup),
-          fetchAvailableReclaimAmountData(groupInfo.walletId)
+          fetchAvailableReclaimAmountData(groupInfo.walletId, selectedCard)
         ])
       } else {
         alert(`회수 실패: ${result.message || '알 수 없는 오류가 발생했습니다.'}`)
@@ -1659,11 +1680,10 @@ export const GroupWallet = () => {
       if (result.success && result.data) {
         setGroupInfo(result.data)
       }
-      // 그룹 멤버, 지갑 카드, 회수 가능 금액도 함께 조회
+      // 그룹 멤버, 지갑 카드 조회
       await Promise.all([
         fetchMembers(groupId), 
-        fetchWalletCards(groupId),
-        fetchAvailableReclaimAmountData(result.data.walletId)
+        fetchWalletCards(groupId)
       ])
     } catch (error) {
       console.error('그룹 정보 조회 실패:', error)
