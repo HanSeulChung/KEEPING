@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.charge.dto.ssafyapi.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 @Getter
@@ -8,11 +9,12 @@ import lombok.*;
 @Builder
 public class SsafyCardInquiryRequestDto {
 
-    private SsafyApiHeaderDto Header;
+    @JsonProperty("Header")
+    private SsafyApiHeaderDto header;
 
     public static SsafyCardInquiryRequestDto create(SsafyApiHeaderDto header) {
         return SsafyCardInquiryRequestDto.builder()
-                .Header(header)
+                .header(header)
                 .build();
     }
 }

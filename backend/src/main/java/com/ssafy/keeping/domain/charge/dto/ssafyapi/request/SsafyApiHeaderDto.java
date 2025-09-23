@@ -79,6 +79,26 @@ public class SsafyApiHeaderDto {
                 .build();
     }
 
+    public static SsafyApiHeaderDto createCardInquiryHeader(
+            String transmissionDate,
+            String transmissionTime,
+            String institutionTransactionUniqueNo,
+            String apiKey,
+            String userKey) {
+
+        return SsafyApiHeaderDto.builder()
+                .apiName("inquireSignUpCreditCardList")
+                .transmissionDate(transmissionDate)
+                .transmissionTime(transmissionTime)
+                .institutionCode("00100")
+                .fintechAppNo("001")
+                .apiServiceCode("inquireSignUpCreditCardList")
+                .institutionTransactionUniqueNo(institutionTransactionUniqueNo)
+                .apiKey(apiKey)
+                .userKey(userKey)
+                .build();
+    }
+
     public static SsafyApiHeaderDto createCommonHeaderWithoutUserKeyDto(
             String transmissionDate,
             String transmissionTime,
