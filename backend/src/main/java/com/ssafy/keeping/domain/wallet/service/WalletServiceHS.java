@@ -473,17 +473,21 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
 
     @Transactional(readOnly = true)
-    public AvailablePointResponseDto getReclaimablePoints(Long walletId, Long customerId) {
-        Wallet groupWallet = validWallet(walletId);
-        Group group = groupWallet.getGroup();
-        Long groupId = group.getGroupId();
-        if (!groupMemberRepository.existsMember(groupId, customerId)) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
-        }
+    public AvailablePointResponseDto getReclaimablePoints(Long groupId, Long storeId, Long customerId) {
+        Group group = validGroup(groupId);
+        if (!groupMemberRepository.existsMember(groupId, customerId)) throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
-        long available = getMemberSharedBalance(group, customerId);
+        Wallet groupWallet = validGroupWallet(group.getGroupId());
+        long available = getMemberSharedBalanceByStore(groupWallet.getWalletId(), storeId, customerId);
 
-        return new AvailablePointResponseDto(groupWallet.getWalletId(), customerId, available);
+        return new AvailablePointResponseDto(storeId, groupWallet.getWalletId(), customerId, available);
+    }
+
+    @Transactional(readOnly = true)
+    public long getMemberSharedBalanceByStore(Long groupWalletId, Long storeId, Long customerId) {
+        List<WalletStoreLot> lots = lotRepository.findReclaimableByStore(
+                groupWalletId, storeId, customerId, LocalDateTime.now());
+        return lots.stream().mapToLong(WalletStoreLot::getAmountRemaining).sum();
     }
 
     @Transactional(readOnly = true)
