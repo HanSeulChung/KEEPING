@@ -274,15 +274,10 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
         );
 
         afterCommit(() -> {
-            // 모임원 전원 조회 후 알림 전송
             List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
-            memberIds.stream()
-                    .distinct()
-                    .forEach(id -> notificationService.sendToCustomer(
-                            id,
-                            NotificationType.GROUP_POINT_SHARED,
-                            "모임에 포인트가 공유되었습니다."
-                    ));
+            notificationService.sendGroupSharedToMembers(
+                    memberIds, NotificationType.GROUP_POINT_SHARED, "모임에 포인트가 공유되었습니다."
+            );
         });
 
         return new PointShareResponseDto(
