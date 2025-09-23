@@ -115,13 +115,13 @@ public class NotificationService {
                     .content(content)
                     .notificationType(notificationType)
                     .build();
-            
-            notification = notificationRepository.save(notification);
-            log.info("고객 알림 DB 저장 완료 - 고객ID: {}, 알림ID: {}, 타입: {}", 
-                    customerId, notification.getNotificationId(), notificationType);
+
+            Notification saved = notificationRepository.saveAndFlush(notification);
+            log.info("고객 알림 DB 저장 완료 - 고객ID: {}, 알림ID: {}, 타입: {}",
+                    customerId, saved.getNotificationId(), notificationType);
 
             // 포그라운드/백그라운드 분기하여 알림 전송
-            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
+            sendNotificationWithStrategy(NotificationResponseDto.from(saved));
             
         } catch (Exception e) {
             log.error("고객 알림 전송 중 예상치 못한 오류 - 고객ID: {}, 타입: {}", customerId, notificationType, e);
@@ -155,13 +155,13 @@ public class NotificationService {
                     .content(content)
                     .notificationType(notificationType)
                     .build();
-            
-            notification = notificationRepository.save(notification);
+
+            Notification saved = notificationRepository.saveAndFlush(notification);
             log.info("점주 알림 DB 저장 완료 - 점주ID: {}, 알림ID: {}, 타입: {}", 
-                    ownerId, notification.getNotificationId(), notificationType);
+                    ownerId, saved.getNotificationId(), notificationType);
 
             // 포그라운드/백그라운드 분기하여 알림 전송
-            sendNotificationWithStrategy(NotificationResponseDto.from(notification));
+            sendNotificationWithStrategy(NotificationResponseDto.from(saved));
             
         } catch (Exception e) {
             log.error("점주 알림 전송 중 예상치 못한 오류 - 점주ID: {}, 타입: {}", ownerId, notificationType, e);
