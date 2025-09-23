@@ -570,7 +570,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 transactionRepository.save(Transaction.builder()
                         .wallet(groupWallet).relatedWallet(individual)
                         .customer(individual.getCustomer()).store(store)
-                        .transactionType(TransactionType.USE).amount(remain).build());
+                        .transactionType(TransactionType.TRANSFER_OUT).amount(remain).build());
 
                 movedSum += remain;
             }
