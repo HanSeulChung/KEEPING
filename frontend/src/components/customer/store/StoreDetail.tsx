@@ -41,7 +41,13 @@ interface MenuData {
 }
 
 // 가게 정보 컴포넌트
-const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggleLike: (storeId: number) => void }) => {
+const StoreInfo = ({
+  storeData,
+  onToggleLike,
+}: {
+  storeData: StoreData
+  onToggleLike: (storeId: number) => void
+}) => {
   return (
     <div className="mx-auto w-full max-w-4xl">
       {/* 가게 이름과 하트 버튼 */}
@@ -53,7 +59,7 @@ const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggle
           <Heart
             size={20}
             fill={storeData.isLiked ? 'currentColor' : 'none'}
-            className={`transition-colors cursor-pointer ${
+            className={`cursor-pointer transition-colors ${
               storeData.isLiked
                 ? 'fill-red-500 text-red-500'
                 : 'text-gray-400 hover:text-red-500'
@@ -66,11 +72,11 @@ const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggle
       {/* 가게 이미지들 - 좌우 스크롤 */}
       {storeData.imageUrl && (
         <div className="mb-8">
-          <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+          <div className="scrollbar-hide flex gap-4 overflow-x-auto pb-4">
             {Array.isArray(storeData.imageUrl) ? (
               storeData.imageUrl.map((image, index) => (
                 <div key={index} className="flex-shrink-0">
-                  <div className="relative h-48 w-64 rounded-lg overflow-hidden bg-gray-200">
+                  <div className="relative h-48 w-64 overflow-hidden rounded-lg bg-gray-200">
                     <Image
                       src={image}
                       alt={`${storeData.storeName} 이미지 ${index + 1}`}
@@ -83,7 +89,7 @@ const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggle
               ))
             ) : (
               <div className="flex-shrink-0">
-                <div className="relative h-48 w-64 rounded-lg overflow-hidden bg-gray-200">
+                <div className="relative h-48 w-64 overflow-hidden rounded-lg bg-gray-200">
                   <Image
                     src={storeData.imageUrl}
                     alt={`${storeData.storeName} 이미지`}
@@ -121,10 +127,14 @@ const StoreInfo = ({ storeData, onToggleLike }: { storeData: StoreData; onToggle
 export const StoreDetailPage = () => {
   const params = useParams()
   const storeId = params.id as string
-  
+
   const { user, loading: userLoading, error: userError } = useUser()
-  console.log('StoreDetail - useUser 상태:', { user, loading: userLoading, error: userError })
-  
+  console.log('StoreDetail - useUser 상태:', {
+    user,
+    loading: userLoading,
+    error: userError,
+  })
+
   const [storeData, setStoreData] = useState<StoreData | null>(null)
   const [chargeOptions, setChargeOptions] = useState<ChargeOptionData[]>([])
   const [loading, setLoading] = useState(true)
@@ -138,12 +148,22 @@ export const StoreDetailPage = () => {
       const url = buildURL(`/favorites/stores/${storeId}/check`)
       console.log('찜하기 상태 확인 URL:', url)
 
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
       const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers,
       })
 
       if (!response.ok) {
@@ -155,7 +175,7 @@ export const StoreDetailPage = () => {
 
       // 응답에서 isFavorited 상태 추출
       const isFavorited = responseData?.data?.isFavorited || false
-      
+
       // storeData 업데이트
       setStoreData(prev => {
         if (!prev) return prev
@@ -184,13 +204,23 @@ export const StoreDetailPage = () => {
     try {
       const url = buildURL(`/favorites/stores/${storeId}`)
       console.log('찜하기 토글 URL:', url)
-      
+
+      // Authorization 헤더 추가
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (typeof window !== 'undefined') {
+        const accessToken = localStorage.getItem('accessToken')
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`
+        }
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers,
       })
 
       if (!response.ok) {
@@ -209,7 +239,6 @@ export const StoreDetailPage = () => {
           likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1,
         }
       })
-      
     } catch (error) {
       console.error('찜하기 토글 실패:', error)
       // 에러 발생 시 사용자에게 알림
@@ -307,15 +336,15 @@ export const StoreDetailPage = () => {
           likes: data.likes || data.likeCount || 0,
           isLiked: data.isLiked || false,
         }
-        
+
         console.log('변환된 가게 데이터:', transformedStoreData) // 디버깅용
 
         setStoreData(transformedStoreData)
-        
+
         // 가게 정보 조회 성공 후 충전 옵션과 찜하기 상태도 조회
         await Promise.all([
           fetchChargeOptions(storeId),
-          checkFavoriteStatus(storeId)
+          checkFavoriteStatus(storeId),
         ])
       } catch (error) {
         console.error('가게 상세 조회 실패:', error)

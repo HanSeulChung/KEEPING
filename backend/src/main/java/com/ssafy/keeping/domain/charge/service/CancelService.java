@@ -160,6 +160,7 @@ public class CancelService {
                 .transactionType(TransactionType.CANCEL_CHARGE)
                 .amount(originalTransaction.getAmount()) // 양수로 저장
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo()) // 동일한 거래번호
+                .refTransaction(originalTransaction)
                 .build();
 
         cancelTransaction = transactionRepository.save(cancelTransaction);

@@ -43,8 +43,19 @@ public class GroupController {
     public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
             @AuthenticationPrincipal Long customerId,
             @PathVariable Long groupId
-    ) {GroupResponseDto dto = groupService.getGroup(groupId, customerId);
+    ) {
+        GroupResponseDto dto = groupService.getGroup(groupId, customerId);
         return ResponseEntity.ok(ApiResponse.success("해당 모임이 조회되었습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    @PatchMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupResponseDto>> editGroup(
+            @AuthenticationPrincipal Long customerId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupEditRequestDto requestDto
+    ) {
+        GroupResponseDto dto = groupService.editGroup(groupId, customerId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("해당 모임이 수정되었습니다.", HttpStatus.OK.value(), dto));
     }
 
     @GetMapping("/{groupId}/group-members")
@@ -116,4 +127,25 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success("모임원을 내보냈습니다.", 200, null));
     }
 
+    @DeleteMapping("/{groupId}/group-member")
+    public ResponseEntity<ApiResponse<GroupLeaveResponseDto>> leaveGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long customerId
+    ) {
+        GroupLeaveResponseDto dto =groupService.leaveGroup(groupId, customerId);
+        return ResponseEntity.ok(ApiResponse.success("모임을 탈퇴했습니다.", 200, dto));
+    }
+
+    /**
+     * 모임 해체: 리더만
+     * 정책: 자동 환급 → 멤버 정리 → 지갑/그룹 삭제
+     */
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupDisbandResponseDto>> disbandGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Long leaderId
+    ) {
+        GroupDisbandResponseDto dto = groupService.disbandGroup(groupId, leaderId);
+        return ResponseEntity.ok(ApiResponse.success("모임을 해체했습니다.", 200, dto));
+    }
 }

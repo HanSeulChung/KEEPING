@@ -1,11 +1,11 @@
 package com.ssafy.keeping.domain.wallet.dto;
 
-import org.springframework.data.domain.Page;
+
+import java.util.List;
 
 public record GroupWalletBalanceResponseDto(
         Long groupId,
         Long walletId,
         String groupName,
-        Page<WalletStoreBalanceDetailDto> storeBalances
-) {
-}
+        List<WalletStoreBalanceDetailDto> storeBalances
+) {}
