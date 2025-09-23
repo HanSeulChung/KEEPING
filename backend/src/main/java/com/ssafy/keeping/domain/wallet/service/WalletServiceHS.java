@@ -473,12 +473,13 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
 
     @Transactional(readOnly = true)
-    public AvailablePointResponseDto getReclaimablePoints(Long groupId, Long storeId, Long customerId) {
-        Group group = validGroup(groupId);
+    public AvailablePointResponseDto getReclaimablePoints(Long walletId, Long storeId, Long customerId) {
+        Wallet groupWallet = validWallet(walletId);
+        Long groupId = groupWallet.getGroup().getGroupId();
+
         if (!groupMemberRepository.existsMember(groupId, customerId)) throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
-        Wallet groupWallet = validGroupWallet(group.getGroupId());
-        long available = getMemberSharedBalanceByStore(groupWallet.getWalletId(), storeId, customerId);
+        long available = getMemberSharedBalanceByStore(walletId, storeId, customerId);
 
         return new AvailablePointResponseDto(storeId, groupWallet.getWalletId(), customerId, available);
     }
