@@ -31,11 +31,6 @@ export default function RootLayout({
           type="font/ttf"
           crossOrigin="anonymous"
         />
-        {/* 다음 우편번호 API */}
-        <script 
-          src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
-          async
-        ></script>
       </head>
       <body className="antialiased bg-white text-black">
         <UserProvider>

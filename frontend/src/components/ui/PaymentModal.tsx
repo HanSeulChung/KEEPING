@@ -7,43 +7,14 @@ import { useEffect, useState } from 'react'
 interface CreditCard {
   cardNo: string
   cvc: string
-  cardUniqueNo: string
-  cardIssuerCode: string
-  cardIssuerName: string
   cardName: string
-  baselinePerformance: string
-  maxBenefitLimit: string
-  cardDescription: string
-  cardExpiryDate: string
-  withdrawalAccountNo: string
-  withdrawalDate: string
 }
 
-interface CreditCardListResponse {
-  Header: {
-    responseCode: string
-    responseMessage: string
-    apiName: string
-    transmissionDate: string
-    transmissionTime: string
-    institutionCode: string
-    apiKey: string
-    apiServiceCode: string
-    institutionTransactionUniqueNo: string
-  }
-  REC: CreditCard[]
-}
-
-interface AuthMeResponse {
+interface CreditCardResponse {
   success: boolean
   status: number
   message: string
-  data: {
-    userId: number
-    userKey: string
-    role: string
-    email: string
-  }
+  data: CreditCard
   timestamp: string
 }
 
@@ -63,15 +34,15 @@ export const PaymentModal = ({
   storeId,
 }: PaymentModalProps) => {
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null)
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([])
+  const [creditCard, setCreditCard] = useState<CreditCard | null>(null)
   const [cardsLoading, setCardsLoading] = useState(false)
   const [cardsError, setCardsError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const { user, loading, error } = useUser()
 
-  // userKey 조회 함수
-  const fetchUserKey = async (): Promise<string> => {
+  // 카드 정보 조회 함수
+  const fetchCreditCard = async (): Promise<CreditCard> => {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -84,128 +55,63 @@ export const PaymentModal = ({
         }
       }
 
-      const response = await fetch(buildURL('/auth/me'), {
+      console.log('카드 정보 조회 요청:', {
+        url: buildURL('/customers/me/card'),
+        method: 'GET',
+        headers,
+        credentials: 'include'
+      })
+
+      const response = await fetch(buildURL('/customers/me/card'), {
         method: 'GET',
         headers,
         credentials: 'include',
       })
 
+      console.log('카드 정보 조회 응답 상태:', response.status, response.statusText)
+
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('카드 정보 조회 실패 - 응답 텍스트:', errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: AuthMeResponse = await response.json()
-      console.log('userKey 조회 응답:', data)
+      const data: CreditCardResponse = await response.json()
+      console.log('카드 정보 조회 응답 데이터:', data)
 
-      if (data.success && data.data.userKey) {
-        return data.data.userKey
+      if (data.success && data.data) {
+        return data.data
       } else {
-        throw new Error('userKey를 찾을 수 없습니다.')
+        throw new Error(data.message || '카드 정보를 찾을 수 없습니다.')
       }
     } catch (error) {
-      console.error('userKey 조회 실패:', error)
+      console.error('카드 정보 조회 실패:', error)
       throw error
     }
   }
 
-  // 카드 목록 조회 함수
-  const fetchCreditCardList = async (userKey: string): Promise<CreditCard[]> => {
-    try {
-      // 현재 날짜와 시간 생성
-      const now = new Date()
-      // transmissionDate는 한국 시간 기준 (UTC+9)
-      const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000))
-      const transmissionDate = koreanTime.toISOString().slice(0, 10).replace(/-/g, '') // YYYYMMDD
-      // transmissionTime은 UTC 기준으로 유지
-      const transmissionTime = now.toTimeString().slice(0, 8).replace(/:/g, '') // HHMMSS
-      
-      // institutionTransactionUniqueNo 생성 (YYYYMMDD + HHMMSS + 일련번호 6자리)
-      const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
-      const institutionTransactionUniqueNo = transmissionDate + transmissionTime + randomNumber
-
-      const requestBody = {
-        Header: {
-          apiName: "inquireSignUpCreditCardList",
-          transmissionDate: transmissionDate,
-          transmissionTime: transmissionTime,
-          institutionCode: "00100",
-          fintechAppNo: "001",
-          apiServiceCode: "inquireSignUpCreditCardList",
-          institutionTransactionUniqueNo: institutionTransactionUniqueNo,
-          apiKey: "e17ca6be4bc44d4ead381bd9cbbd075a",
-          userKey: userKey
-        }
-      }
-
-      console.log('=== 카드 목록 조회 요청 ===')
-      console.log('요청 URL:', 'https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList')
-      console.log('요청 메서드:', 'POST')
-      console.log('요청 헤더:', {
-        'Content-Type': 'application/json',
-      })
-      console.log('요청 본문:', requestBody)
-      console.log('생성된 값들:', {
-        transmissionDate,
-        transmissionTime,
-        institutionTransactionUniqueNo,
-        userKey
-      })
-
-      const response = await fetch('https://finopenapi.ssafy.io/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      console.log('카드 목록 조회 응답 상태:', response.status, response.statusText)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data: CreditCardListResponse = await response.json()
-      console.log('카드 목록 조회 응답 데이터:', data)
-
-      if (data.Header.responseCode === 'H0000') {
-        return data.REC || []
-      } else {
-        throw new Error(data.Header.responseMessage || '카드 목록 조회에 실패했습니다.')
-      }
-    } catch (error) {
-      console.error('카드 목록 조회 실패:', error)
-      throw error
-    }
-  }
-
-  // 모달이 열릴 때 카드 목록 로드
+  // 모달이 열릴 때 카드 정보 로드
   useEffect(() => {
-    if (isOpen && creditCards.length === 0) {
-      const loadCards = async () => {
+    if (isOpen && !creditCard) {
+      const loadCard = async () => {
         try {
           setCardsLoading(true)
           setCardsError(null)
           
-          const userKey = await fetchUserKey()
-          const cards = await fetchCreditCardList(userKey)
-          setCreditCards(cards)
-          
-          // 첫 번째 카드를 기본 선택
-          if (cards.length > 0) {
-            setSelectedCard(cards[0])
-          }
+          const card = await fetchCreditCard()
+          setCreditCard(card)
+          setSelectedCard(card)
         } catch (error) {
-          console.error('카드 목록 로드 실패:', error)
-          setCardsError('카드 목록을 불러오는데 실패했습니다.')
+          console.error('카드 정보 로드 실패:', error)
+          setCardsError('카드 정보를 불러오는데 실패했습니다.')
         } finally {
           setCardsLoading(false)
         }
       }
       
-      loadCards()
+      loadCard()
     }
-  }, [isOpen, creditCards.length])
+  }, [isOpen, creditCard])
 
   if (!isOpen) return null
 
@@ -285,7 +191,7 @@ export const PaymentModal = ({
 
       // 성공 시 알림 표시
       alert('충전되었습니다.')
-      
+
       // 성공 시 콜백 호출 및 모달 닫기
       onPayment()
       onClose()
@@ -340,52 +246,22 @@ export const PaymentModal = ({
         {/* 구분선 */}
         <div className="mx-4 h-px w-full bg-gray-300"></div>
 
-        {/* 카드 선택 폼 */}
+        {/* 카드 정보 표시 */}
         <div className="space-y-6 p-4">
-          {/* 카드 선택 */}
-          <div className="space-y-2">
-            <p className="text-sm font-bold text-black">결제 카드 선택</p>
-            {cardsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="text-gray-500">카드 목록을 불러오는 중...</div>
-              </div>
-            ) : cardsError ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="text-red-500">{cardsError}</div>
-              </div>
-            ) : creditCards.length === 0 ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="text-gray-500">등록된 카드가 없습니다.</div>
-              </div>
-            ) : (
-              <select
-                value={selectedCard?.cardNo || ''}
-                onChange={(e) => {
-                  const card = creditCards.find(c => c.cardNo === e.target.value)
-                  setSelectedCard(card || null)
-                }}
-                className="h-12 w-full rounded-md border border-gray-300 bg-white p-3 text-base text-black outline-none"
-              >
-                {creditCards.map((card, index) => (
-                  <option key={index} value={card.cardNo}>
-                    {card.cardName} ({card.cardNo.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-****-****-$4')})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* 선택된 카드 정보 표시 */}
-          {selectedCard && (
+          {cardsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">카드 정보를 불러오는 중...</div>
+            </div>
+          ) : cardsError ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-red-500">{cardsError}</div>
+            </div>
+          ) : selectedCard ? (
             <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-              <div className="space-y-2">
+          <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">카드명:</span>
                   <span className="text-sm font-medium text-black">{selectedCard.cardName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">발급사:</span>
-                  <span className="text-sm font-medium text-black">{selectedCard.cardIssuerName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">카드번호:</span>
@@ -393,13 +269,11 @@ export const PaymentModal = ({
                     {selectedCard.cardNo.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-****-****-$4')}
                   </span>
                 </div>
-                {selectedCard.cardDescription && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">카드 혜택:</span>
-                    <span className="text-sm font-medium text-black">{selectedCard.cardDescription}</span>
-                  </div>
-                )}
               </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">등록된 카드가 없습니다.</div>
             </div>
           )}
         </div>
@@ -416,8 +290,8 @@ export const PaymentModal = ({
             }`}
           >
             {isProcessing ? '결제 처리 중...' : 
-             cardsLoading ? '카드 목록 로딩 중...' :
-             !selectedCard ? '카드를 선택해주세요' :
+             cardsLoading ? '카드 정보 로딩 중...' :
+             !selectedCard ? '카드 정보를 불러올 수 없습니다' :
              '결제하기'}
           </button>
         </div>

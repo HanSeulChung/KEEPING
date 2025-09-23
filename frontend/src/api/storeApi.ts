@@ -1,16 +1,14 @@
-import { ApiResponse, StoreAPI } from '@/types/api'
-import apiClient from './axios'
+import { StoreAPI, ApiResponse } from '@/types/api'
 import { apiConfig } from './config'
+import apiClient from './axios'
 
 export interface StoreRequestDto {
-  storeName: string
+  name: string
   description: string
   address: string
-  phoneNumber: string
+  phone: string
   category: string
-  taxIdNumber: string
-  bankAccount: string
-  imgFile: File
+  images?: File[]
 }
 
 // 매장 관련 API 함수들
@@ -35,16 +33,18 @@ export const storeApi = {
       const formData = new FormData()
       
       // 기본 정보 추가
-      formData.append('storeName', storeData.storeName)
+      formData.append('name', storeData.name)
       formData.append('description', storeData.description)
       formData.append('address', storeData.address)
-      formData.append('phoneNumber', storeData.phoneNumber)
+      formData.append('phone', storeData.phone)
       formData.append('category', storeData.category)
-      formData.append('taxIdNumber', storeData.taxIdNumber)
-      formData.append('bankAccount', storeData.bankAccount)
 
-      // 이미지 파일 추가 (필수)
-      formData.append('imgFile', storeData.imgFile)
+      // 이미지 파일들 추가
+      if (storeData.images) {
+        storeData.images.forEach((image, index) => {
+          formData.append('images', image)
+        })
+      }
 
       const response = await apiClient.post<StoreAPI.StoreRegisterResponse>(
         '/owners/stores',
@@ -121,19 +121,19 @@ export interface StorePublicDto {
 export const createStore = async (storeData: StoreRequestDto): Promise<ApiResponse<StoreResponseDto>> => {
   try {
     const formData = new FormData()
-    formData.append('taxIdNumber', storeData.taxIdNumber)
-    formData.append('storeName', storeData.storeName)
+    formData.append('name', storeData.name)
     formData.append('description', storeData.description)
     formData.append('address', storeData.address)
-    formData.append('phoneNumber', storeData.phoneNumber)
+    formData.append('phone', storeData.phone)
     formData.append('category', storeData.category)
-    formData.append('bankAccount', storeData.bankAccount)
     
-    if (storeData.imgFile) {
-      formData.append('imgFile', storeData.imgFile)
+    if (storeData.images && storeData.images.length > 0) {
+      storeData.images.forEach((image, index) => {
+        formData.append('images', image)
+      })
     }
 
-    const response = await fetch(`${apiConfig.baseURL}/owners/stores`, {
+    const response = await fetch(`${apiConfig.baseURL}/stores`, {
       method: 'POST',
       body: formData,
       headers: {
