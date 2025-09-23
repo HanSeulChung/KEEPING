@@ -273,10 +273,18 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .build()
         );
 
+        String message = String.format(
+                "%s님이 %s 모임에 %s 가게 point %,d원 공유했습니다.",
+                actor.getName(),
+                group.getGroup().getGroupName(),
+                store.getStoreName(),
+                shareAmount
+        );
+
         afterCommit(() -> {
             List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
             notificationService.sendGroupSharedToMembers(
-                    memberIds, NotificationType.GROUP_POINT_SHARED, "모임에 포인트가 공유되었습니다."
+                    memberIds, NotificationType.GROUP_POINT_SHARED, message
             );
         });
 
