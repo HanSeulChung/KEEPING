@@ -21,24 +21,24 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     )
     String findGroupCodeById(@Param("groupId") Long groupId);
 
-    @Query(
-    """
+    @Query("""
     select new com.ssafy.keeping.domain.group.dto.GroupMaskingResponseDto(
-        g.groupId, g.groupName, g.groupDescription,
+        g.groupId,
+        g.groupName,
+        g.groupDescription,
         case
-            when length(c.name) = 1 then '*'
-            when length(c.name) = 2 then concat('*', substring(c.name, 2, 1))
-            else concat('*', substring(c.name, 2, 1), '*', substring(c.name, length(c.name), 1))
+        when length(c.name) = 1
+            then '*'
+        when length(c.name) = 2
+            then concat(substring(c.name, 1, 1), '*')
+        else concat(substring(c.name, 1, 1), repeat('*', length(c.name) - 2), substring(c.name, length(c.name), 1))
         end
     )
     from Group g
-    join GroupMember gm
-    on gm.group.groupId=g.groupId
-    join Customer c
-    on gm.user.customerId=c.customerId
-    where g.groupName=:name
-    and gm.leader=true
-    """
-    )
-    List<GroupMaskingResponseDto> findGroupsByName(String name);
+    join GroupMember gm on gm.group = g
+    join Customer c on gm.user = c
+    where g.groupName = :name
+    and gm.leader = true
+    """)
+    List<GroupMaskingResponseDto> findGroupsByName(@Param("name") String name);
 }

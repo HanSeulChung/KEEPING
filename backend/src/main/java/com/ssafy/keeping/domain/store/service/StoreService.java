@@ -205,4 +205,20 @@ public class StoreService {
                 .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.BAD_REQUEST));
     }
+
+    /**
+     * 점주의 모든 매장 조회
+     */
+    public List<StoreResponseDto> getMyStores(Long ownerId) {
+        // 점주 유효성 검증
+        validOwner(ownerId);
+
+        // 점주의 모든 매장 조회 (삭제되지 않은 매장만)
+        List<Store> stores = storeRepository.findByOwnerOwnerIdAndDeletedAtIsNull(ownerId);
+
+        // Store 엔터티를 StoreResponseDto로 변환
+        return stores.stream()
+                .map(StoreResponseDto::fromEntity)
+                .toList();
+    }
 }
