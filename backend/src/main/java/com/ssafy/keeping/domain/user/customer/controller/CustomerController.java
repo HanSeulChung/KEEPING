@@ -68,7 +68,7 @@ public class CustomerController {
     }
 
     // 내 카드 조회
-    @GetMapping("/me/card")
+    @PostMapping("/me/card")
     public ResponseEntity<ApiResponse<CustomerCardResponse>> getMyCard(@AuthenticationPrincipal Long customerId) {
         CustomerCardResponse response = customerService.getMyCard(customerId);
 

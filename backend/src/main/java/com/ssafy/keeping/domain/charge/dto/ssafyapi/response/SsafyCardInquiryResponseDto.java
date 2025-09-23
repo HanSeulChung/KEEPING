@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.charge.dto.ssafyapi.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import java.util.List;
 
@@ -9,10 +10,21 @@ import java.util.List;
 @Builder
 public class SsafyCardInquiryResponseDto {
 
-    private SsafyApiResponseHeaderDto Header;
-    private List<SsafyCardInquiryRecDto> REC;
+    @JsonProperty("Header")
+    private SsafyApiResponseHeaderDto header;
+
+    @JsonProperty("REC")
+    private List<SsafyCardInquiryRecDto> rec;
 
     public boolean isSuccess() {
-        return Header != null && "H0000".equals(Header.getResponseCode());
+        return header != null && "H0000".equals(header.getResponseCode());
+    }
+
+    public SsafyApiResponseHeaderDto getHeader() {
+        return header;
+    }
+
+    public List<SsafyCardInquiryRecDto> getREC() {
+        return rec;
     }
 }
