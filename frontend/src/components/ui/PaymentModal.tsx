@@ -57,18 +57,22 @@ export const PaymentModal = ({
 
       console.log('카드 정보 조회 요청:', {
         url: buildURL('/customers/me/card'),
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      })
-
-      const response = await fetch(buildURL('/customers/me/card'), {
-        method: 'GET',
+        method: 'POST',
         headers,
         credentials: 'include',
       })
 
-      console.log('카드 정보 조회 응답 상태:', response.status, response.statusText)
+      const response = await fetch(buildURL('/customers/me/card'), {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+      })
+
+      console.log(
+        '카드 정보 조회 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -97,7 +101,7 @@ export const PaymentModal = ({
         try {
           setCardsLoading(true)
           setCardsError(null)
-          
+
           const card = await fetchCreditCard()
           setCreditCard(card)
           setSelectedCard(card)
@@ -108,7 +112,7 @@ export const PaymentModal = ({
           setCardsLoading(false)
         }
       }
-      
+
       loadCard()
     }
   }, [isOpen, creditCard])
@@ -257,16 +261,21 @@ export const PaymentModal = ({
               <div className="text-red-500">{cardsError}</div>
             </div>
           ) : selectedCard ? (
-            <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-          <div className="space-y-2">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">카드명:</span>
-                  <span className="text-sm font-medium text-black">{selectedCard.cardName}</span>
+                  <span className="text-sm font-medium text-black">
+                    {selectedCard.cardName}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">카드번호:</span>
                   <span className="text-sm font-medium text-black">
-                    {selectedCard.cardNo.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-****-****-$4')}
+                    {selectedCard.cardNo.replace(
+                      /(\d{4})(\d{4})(\d{4})(\d{4})/,
+                      '$1-****-****-$4'
+                    )}
                   </span>
                 </div>
               </div>
@@ -289,10 +298,13 @@ export const PaymentModal = ({
                 : 'hover:bg-gray-800'
             }`}
           >
-            {isProcessing ? '결제 처리 중...' : 
-             cardsLoading ? '카드 정보 로딩 중...' :
-             !selectedCard ? '카드 정보를 불러올 수 없습니다' :
-             '결제하기'}
+            {isProcessing
+              ? '결제 처리 중...'
+              : cardsLoading
+                ? '카드 정보 로딩 중...'
+                : !selectedCard
+                  ? '카드 정보를 불러올 수 없습니다'
+                  : '결제하기'}
           </button>
         </div>
       </div>

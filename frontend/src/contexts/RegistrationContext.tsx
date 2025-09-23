@@ -42,19 +42,50 @@ const RegistrationContext = createContext<RegistrationContextType | undefined>(u
 
 // Provider 컴포넌트
 export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [registrationData, setRegistrationData] = useState<OwnerRegistrationData>({})
+  const [registrationData, setRegistrationData] = useState<OwnerRegistrationData>(() => {
+    // 초기화 시 localStorage에서 데이터 불러오기
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('registration-data')
+        return saved ? JSON.parse(saved) : {}
+      } catch (error) {
+        console.error('Failed to load registration data from localStorage:', error)
+        return {}
+      }
+    }
+    return {}
+  })
 
   // 사업자 정보 설정
   const setBusinessInfo = (businessInfo: BusinessInfo) => {
-    setRegistrationData(prev => ({
-      ...prev,
+    const newData = {
+      ...registrationData,
       businessInfo
-    }))
+    }
+    setRegistrationData(newData)
+    
+    // localStorage에 저장
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('registration-data', JSON.stringify(newData))
+      } catch (error) {
+        console.error('Failed to save registration data to localStorage:', error)
+      }
+    }
   }
 
   // 전체 데이터 초기화
   const resetRegistration = () => {
     setRegistrationData({})
+    
+    // localStorage에서도 제거
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('registration-data')
+      } catch (error) {
+        console.error('Failed to remove registration data from localStorage:', error)
+      }
+    }
   }
 
   // 특정 스텝 완료 여부 확인
