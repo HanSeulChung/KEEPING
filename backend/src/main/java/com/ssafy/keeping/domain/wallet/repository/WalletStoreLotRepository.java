@@ -107,18 +107,37 @@ public interface WalletStoreLotRepository extends JpaRepository<WalletStoreLot, 
                             @Param("memberWalletId") Long memberWalletId);
 
     @Query("""
-        select case when count(l) > 0 then true else false end
-        from WalletStoreLot l
-        where l.wallet.walletId = :walletId
-          and l.lotStatus = 'ACTIVE'
-          and l.amountRemaining > 0
+    select case when count(l) > 0 then true else false end
+    from WalletStoreLot l
+    where l.wallet.walletId = :walletId
+    and l.lotStatus = 'ACTIVE'
+    and l.amountRemaining > 0
     """)
     boolean existsActiveLotByWalletId(@Param("walletId") Long walletId);
 
     @Modifying
     @Query("""
-        delete from WalletStoreLot l
-        where l.wallet.walletId = :walletId
+    delete from WalletStoreLot l
+    where l.wallet.walletId = :walletId
     """)
     void deleteByWalletId(@Param("walletId") Long walletId);
+
+    @Query("""
+    select l from WalletStoreLot l
+    join l.wallet w
+    join l.store s
+    join l.contributorWallet cw
+    where w.walletId = :groupWalletId
+      and s.storeId = :storeId
+      and cw.customer.customerId = :customerId
+      and l.sourceType = 'TRANSFER_IN'
+      and l.lotStatus = 'ACTIVE'
+      and l.amountRemaining > 0
+      and (l.expiredAt is null or l.expiredAt > :now)
+    """)
+    List<WalletStoreLot> findReclaimableByStore(
+            @Param("groupWalletId") Long groupWalletId,
+            @Param("storeId") Long storeId,
+            @Param("customerId") Long customerId,
+            @Param("now") LocalDateTime now);
 }
