@@ -27,10 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
 
@@ -108,6 +105,28 @@ public class GroupService {
                 group.getGroupId(), group.getGroupName(),
                 group.getGroupDescription(), group.getGroupCode(),
                 groupWallet.walletId()
+        );
+    }
+
+    @Transactional
+    public GroupResponseDto editGroup(Long groupId, Long customerId, GroupEditRequestDto requestDto) {
+        Group group = validGroup(groupId);
+
+        boolean isGroupLeader = groupMemberRepository
+                .existsLeader(groupId, customerId);
+        if (!isGroupLeader)
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        // 방어 로직
+        group.editGroup(
+                Optional.ofNullable(requestDto.getGroupName()).orElse(group.getGroupName()),
+                Optional.ofNullable(requestDto.getGroupDescription()).orElse(group.getGroupDescription())
+        );
+
+        return new GroupResponseDto(
+                group.getGroupId(), group.getGroupName(),
+                group.getGroupDescription(), group.getGroupCode(),
+                null
         );
     }
 

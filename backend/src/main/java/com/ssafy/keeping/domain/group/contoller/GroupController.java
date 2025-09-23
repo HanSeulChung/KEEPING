@@ -43,8 +43,19 @@ public class GroupController {
     public ResponseEntity<ApiResponse<GroupResponseDto>> getGroup(
             @AuthenticationPrincipal Long customerId,
             @PathVariable Long groupId
-    ) {GroupResponseDto dto = groupService.getGroup(groupId, customerId);
+    ) {
+        GroupResponseDto dto = groupService.getGroup(groupId, customerId);
         return ResponseEntity.ok(ApiResponse.success("해당 모임이 조회되었습니다.", HttpStatus.OK.value(), dto));
+    }
+
+    @PatchMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupResponseDto>> editGroup(
+            @AuthenticationPrincipal Long customerId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupEditRequestDto requestDto
+    ) {
+        GroupResponseDto dto = groupService.editGroup(groupId, customerId, requestDto);
+        return ResponseEntity.ok(ApiResponse.success("해당 모임이 수정되었습니다.", HttpStatus.OK.value(), dto));
     }
 
     @GetMapping("/{groupId}/group-members")

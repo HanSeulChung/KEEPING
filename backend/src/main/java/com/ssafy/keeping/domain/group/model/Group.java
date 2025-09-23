@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -40,4 +41,12 @@ public class Group {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void editGroup(String groupName, String groupDescription) {
+        if (!Objects.equals(groupName, this.groupName))
+            this.groupName = groupName;
+
+        if (!Objects.equals(groupDescription, this.groupDescription))
+            this.groupDescription = groupDescription;
+    }
 }
