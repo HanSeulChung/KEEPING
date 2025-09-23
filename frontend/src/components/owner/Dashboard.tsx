@@ -1,13 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
 
 interface Store {
-  id: string
-  name: string
+  storeId: number
+  storeName: string
+  address: string
+  phoneNumber: string
+  merchantId: number
+  category: string
+  storeStatus: string
+  description: string
+  createdAt: string
+  imgUrl: string
 }
 
 interface OwnerHomeProps {
@@ -23,17 +31,65 @@ export default function OwnerHome({
 }: OwnerHomeProps) {
   const router = useRouter()
   const [selected, setSelected] = useState<Store | null>(null)
-  const [stores, setStores] = useState<Store[]>(
-    initialStores || [
-      { id: '1', name: '서울 초밥' },
-      { id: '2', name: '일식비\n마곡점' },
-    ]
-  )
+  const [stores, setStores] = useState<Store[]>(initialStores || [])
   const [unreadCount, setUnreadCount] = useState<number>(
     initialUnreadCount || 3
   )
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] = useState(false)
+
+  // 가게 목록 가져오기
+  const fetchStores = async () => {
+    try {
+      setLoading(true)
+      
+      console.log('가게 목록 API 호출 시작...')
+      
+      // 환경에 따른 baseURL 사용
+      const baseURL = 'http://localhost:8080'
+      const apiUrl = `${baseURL}/owners/stores`
+      
+      console.log('API URL:', apiUrl)
+      
+      // @AuthenticationPrincipal을 사용하므로 ownerId 파라미터 없이 호출
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        credentials: 'include'
+      })
+
+      console.log('API 응답 상태:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('API 오류 응답:', errorText)
+        throw new Error(`가게 목록을 가져오는데 실패했습니다: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('API 응답 데이터:', data)
+      
+      // 응답 데이터 구조에 따라 적절히 처리
+      const storesData = data.data || data || []
+      setStores(storesData)
+    } catch (error) {
+      console.error('가게 목록 조회 오류:', error)
+      // 에러 시 빈 배열로 설정
+      setStores([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 컴포넌트 마운트 시 가게 목록 가져오기 (클라이언트에서만)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !initialStores) {
+      fetchStores()
+    }
+  }, [])
 
   // currentStore가 있으면 그것을 선택, 없으면 첫 번째 매장 선택
   useEffect(() => {
@@ -49,17 +105,42 @@ export default function OwnerHome({
     setSelected(store)
     // URL에 가게 정보를 포함하여 각 페이지로 이동할 수 있도록 설정
     // accountName을 사용하여 URL 구성
-    const accountName = store.name.replace(/\s+/g, '').toLowerCase()
-    router.push(`/owner/dashboard?storeId=${store.id}&accountName=${accountName}`)
+    const accountName = store.storeName.replace(/\s+/g, '').toLowerCase()
+    router.push(`/owner/dashboard?storeId=${store.storeId}&accountName=${accountName}`)
   }
 
   if (loading) {
     return (
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
         <div className="flex h-64 items-center justify-center">
-          <div className="text-lg">로딩 중...</div>
+          <div className="text-lg">가게 목록을 불러오는 중...</div>
         </div>
       </main>
+    )
+  }
+
+  // 가게가 없는 경우
+  if (stores.length === 0) {
+    return (
+      <div className="min-h-screen bg-white">
+        <main className="mx-auto w-full max-w-[626px] px-4 py-8">
+          <div className="flex h-64 flex-col items-center justify-center">
+            <div className="mb-4 text-lg text-gray-600">등록된 가게가 없습니다</div>
+            <button 
+              onClick={() => setIsStoreRegisterModalOpen(true)}
+              className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 transition-colors"
+            >
+              첫 번째 가게 등록하기
+            </button>
+          </div>
+        </main>
+        
+        {/* 매장 등록 모달 */}
+        <StoreRegisterModal 
+          isOpen={isStoreRegisterModalOpen}
+          onClose={() => setIsStoreRegisterModalOpen(false)}
+        />
+      </div>
     )
   }
 
@@ -70,17 +151,17 @@ export default function OwnerHome({
           <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
             {stores.map((s, index) => (
               <button
-                key={s.id}
+                key={s.storeId}
                 onClick={() => handleStoreSelect(s)}
                 className={[
                   'flex h-24 w-24 flex-shrink-0 flex-col items-center justify-center rounded-full border border-black text-center cursor-pointer transition-colors',
-                  selected?.id === s.id
+                  selected?.storeId === s.storeId
                     ? 'bg-black text-white'
                     : 'bg-keeping-beige text-black hover:bg-gray-100',
                 ].join(' ')}
               >
                 <div className="px-2 text-[17px] leading-6 font-extrabold whitespace-pre-line">
-                  {s.name}
+                  {s.storeName}
                 </div>
               </button>
             ))}
@@ -121,7 +202,7 @@ export default function OwnerHome({
           <div className="h-[551px] self-stretch">
             {/* 페이지 타이틀 */}
             <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
-              {selected?.name?.replace('\\n', ' ') || '매장을 선택해주세요'}
+              {selected?.storeName?.replace('\\n', ' ') || '매장을 선택해주세요'}
             </div>
 
             {/* 두 열 레이아웃 */}
@@ -130,7 +211,7 @@ export default function OwnerHome({
               <div className="flex h-full flex-col gap-6">
                 {/* 매출 캘린더 */}
                 <Link 
-                  href={`/owner/calendar?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  href={`/owner/calendar?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
                   className="bg-keeping-beige flex flex-1 flex-col items-start border border-black p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
@@ -147,7 +228,7 @@ export default function OwnerHome({
 
                 {/* QR 인식하기 */}
                 <Link 
-                  href={`/owner/scan?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  href={`/owner/scan?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
                   className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
@@ -160,7 +241,7 @@ export default function OwnerHome({
               <div className="flex h-full flex-col gap-6">
                 {/* 매장 관리 */}
                 <Link 
-                  href={`/owner/manage?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  href={`/owner/manage?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
                   className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
@@ -177,7 +258,7 @@ export default function OwnerHome({
 
                 {/* 알림 */}
                 <Link 
-                  href={`/owner/notification?storeId=${selected?.id}&accountName=${selected?.name?.replace(/\s+/g, '').toLowerCase()}`}
+                  href={`/owner/notification?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
                   className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="flex w-full items-start justify-between">
