@@ -2,7 +2,7 @@
 
 import { apiConfig } from '@/api/config'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 interface Menu {
   menuId: number
@@ -24,7 +24,7 @@ interface SelectedMenu {
   price: number
 }
 
-export default function QRIntentPage() {
+function QRIntentPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [menus, setMenus] = useState<Menu[]>([])
@@ -422,5 +422,13 @@ export default function QRIntentPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function QRIntentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <QRIntentPageContent />
+    </Suspense>
   )
 }
