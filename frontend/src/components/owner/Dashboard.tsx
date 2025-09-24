@@ -1,8 +1,9 @@
 'use client'
 
 import { apiConfig } from '@/api/config'
+import { useAuthStore } from '@/store/useAuthStore'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
 
@@ -31,6 +32,8 @@ export default function OwnerHome({
   unreadCount: initialUnreadCount,
 }: OwnerHomeProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user } = useAuthStore()
   const [selected, setSelected] = useState<Store | null>(null)
   const [stores, setStores] = useState<Store[]>(initialStores || [])
   const [unreadCount, setUnreadCount] = useState<number>(
@@ -46,13 +49,8 @@ export default function OwnerHome({
       
       console.log('가게 목록 API 호출 시작...')
       
-      // 환경에 따른 baseURL 사용
-      const apiUrl = `${apiConfig.baseURL}/owners/stores`
-      
-      console.log('API URL:', apiUrl)
-      
       // @AuthenticationPrincipal을 사용하므로 ownerId 파라미터 없이 호출
-      const response = await fetch(apiUrl, {
+      const response = await fetch(`${apiConfig.baseURL}/owners/stores`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -88,17 +86,36 @@ export default function OwnerHome({
   useEffect(() => {
     if (typeof window !== 'undefined' && !initialStores) {
       fetchStores()
+    } else if (initialStores && initialStores.length > 0) {
+      // initialStores가 있으면 로딩 완료로 설정
+      setLoading(false)
     }
-  }, [])
+  }, [initialStores])
 
-  // currentStore가 있으면 그것을 선택, 없으면 첫 번째 매장 선택
+  // 가게가 없을 때 자동으로 등록 모달 띄우기 (제거 - 사용자가 직접 버튼을 눌러야 함)
+  // useEffect(() => {
+  //   if (!loading && stores.length === 0) {
+  //     setIsStoreRegisterModalOpen(true)
+  //   }
+  // }, [loading, stores.length])
+
+  // URL 파라미터에서 storeId 가져와서 자동 선택
   useEffect(() => {
-    if (currentStore) {
-      setSelected(currentStore)
-    } else if (stores.length > 0 && !selected) {
-      setSelected(stores[0])
+    const urlStoreId = searchParams.get('storeId')
+    const urlAccountName = searchParams.get('accountName')
+    
+    // URL에 storeId와 accountName이 모두 있는 경우에만 가게 선택
+    if (urlStoreId && urlAccountName && stores.length > 0) {
+      const foundStore = stores.find(store => store.storeId.toString() === urlStoreId)
+      if (foundStore) {
+        setSelected(foundStore)
+        return
+      }
     }
-  }, [currentStore, stores, selected])
+    
+    // URL에 파라미터가 없는 경우 selected를 null로 설정 (카드 그리드 숨김)
+    setSelected(null)
+  }, [stores, searchParams])
 
   // 가게 선택 시 해당 가게의 대시보드로 이동
   const handleStoreSelect = (store: Store) => {
@@ -119,13 +136,16 @@ export default function OwnerHome({
     )
   }
 
-  // 가게가 없는 경우
-  if (stores.length === 0) {
+  // 가게가 없는 경우 (로딩이 완료되고 가게가 정말 없는 경우만)
+  if (!loading && stores.length === 0) {
     return (
       <div className="min-h-screen bg-white">
         <main className="mx-auto w-full max-w-[626px] px-4 py-8">
           <div className="flex h-64 flex-col items-center justify-center">
             <div className="mb-4 text-lg text-gray-600">등록된 가게가 없습니다</div>
+            <div className="mb-4 text-sm text-gray-500 text-center">
+              가게를 등록해야 QR 인식하기 기능을 사용할 수 있습니다.
+            </div>
             <button 
               onClick={() => setIsStoreRegisterModalOpen(true)}
               className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 transition-colors"
@@ -200,13 +220,17 @@ export default function OwnerHome({
         {/* 메인 컨텐츠 */}
         <div className="flex w-full flex-col items-center justify-between">
           <div className="h-[551px] self-stretch">
-            {/* 페이지 타이틀 */}
-            <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
-              {selected?.storeName?.replace('\\n', ' ') || '매장을 선택해주세요'}
-            </div>
+            {/* 페이지 타이틀 - 매장이 선택되었을 때만 표시 */}
+            {selected && (
+              <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
+                {selected.storeName?.replace('\\n', ' ')}
+              </div>
+            )}
 
-            {/* 두 열 레이아웃 */}
-            <div className="grid w-full max-w-[620px] grid-cols-2 gap-6">
+            {/* URL 파라미터가 있을 때만 카드 그리드 표시 */}
+            {searchParams.get('storeId') && searchParams.get('accountName') ? (
+              /* 두 열 레이아웃 */
+              <div className="grid w-full max-w-[620px] grid-cols-2 gap-6">
               {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
               <div className="flex h-full flex-col gap-6">
                 {/* 매출 캘린더 */}
@@ -227,14 +251,25 @@ export default function OwnerHome({
                 </Link>
 
                 {/* QR 인식하기 */}
-                <Link 
-                  href={`/owner/scan?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    QR 인식하기
+                {!loading && selected ? (
+                  <Link 
+                    href={`/owner/scan?storeId=${selected.storeId}&accountName=${selected.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                    className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
+                      QR 인식하기
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex flex-1 flex-col items-start border border-gray-300 bg-gray-100 p-4 cursor-not-allowed opacity-50">
+                    <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-gray-500">
+                      QR 인식하기
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {loading ? '가게 정보를 불러오는 중...' : '가게를 먼저 등록해주세요'}
+                    </div>
                   </div>
-                </Link>
+                )}
               </div>
 
               {/* 2열: 나머지 3개 (세로 스택) */}
@@ -296,6 +331,16 @@ export default function OwnerHome({
                 </Link>
               </div>
             </div>
+            ) : (
+              /* 매장이 선택되지 않았을 때 표시할 메시지 */
+              <div className="flex h-64 w-full items-center justify-center">
+                <div className="text-center">
+                  <div className="text-lg text-gray-600">
+                    매장을 선택해주세요
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

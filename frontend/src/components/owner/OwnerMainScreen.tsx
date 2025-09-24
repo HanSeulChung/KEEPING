@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useAuthStore } from '@/store/useAuthStore'
-import Header from '@/components/common/Header'
 import { notificationApi } from '@/api/notificationApi'
 import { storeApi } from '@/api/storeApi'
+import Header from '@/components/common/Header'
+import { useAuthStore } from '@/store/useAuthStore'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 type Store = {
   id: string
@@ -143,8 +143,18 @@ const OwnerMainScreen = () => {
 
           {/* QR 인식하기 */}
           <Link
-            href="/owner/scan"
-            className="group p-6 border border-black bg-white hover:bg-gray-50 transition-colors"
+            href={selectedStore ? `/owner/scan?storeId=${selectedStore.id}&accountName=${selectedStore.name}` : '#'}
+            className={`group p-6 border border-black transition-colors ${
+              selectedStore 
+                ? 'bg-white hover:bg-gray-50 cursor-pointer' 
+                : 'bg-gray-100 cursor-not-allowed opacity-50'
+            }`}
+            onClick={(e) => {
+              if (!selectedStore) {
+                e.preventDefault()
+                alert('가게를 먼저 선택해주세요.')
+              }
+            }}
           >
             <h2 className="text-xl sm:text-2xl font-['nanumsquare'] font-extrabold text-black mb-4">
               QR 인식하기
