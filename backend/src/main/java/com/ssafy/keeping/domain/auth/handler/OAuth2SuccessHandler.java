@@ -101,7 +101,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             String redirectUrl = "";
             redirectUrl = UserRole.OWNER.equals(role) ? "/owner/dashboard" : "/customer/home";
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.sendRedirect(redirectUrl);
+            response.sendRedirect(feBaseUrl + redirectUrl);
 
             return;
 

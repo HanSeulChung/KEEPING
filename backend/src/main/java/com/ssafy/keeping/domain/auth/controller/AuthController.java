@@ -4,6 +4,7 @@ import com.ssafy.keeping.domain.auth.Util.CookieUtil;
 import com.ssafy.keeping.domain.auth.enums.UserRole;
 import com.ssafy.keeping.domain.auth.security.JwtProvider;
 import com.ssafy.keeping.domain.auth.service.AuthService;
+import com.ssafy.keeping.domain.auth.service.KakaoService;
 import com.ssafy.keeping.domain.auth.service.TokenResponse;
 import com.ssafy.keeping.domain.auth.service.TokenService;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
@@ -23,6 +24,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 
@@ -42,6 +44,7 @@ public class AuthController {
     private final CookieUtil cookieUtil;
     private final JwtProvider jwtProvider;
     private final TokenService tokenService;
+    private final KakaoService kakaoService;
 
     @GetMapping("/kakao/customer")
     public void kakaoLoginAsCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -49,7 +52,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
 
-        response.sendRedirect("/api/oauth2/authorization/kakao");
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
@@ -58,7 +61,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "OWNER");
 
-        response.sendRedirect("/api/oauth2/authorization/kakao");
+        response.sendRedirect("/oauth2/authorization/kakao");
     }
 
 
@@ -122,7 +125,8 @@ public class AuthController {
     }
 
     @GetMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response,
+                                                    Authentication authentication) {
         try {
             String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
 
@@ -131,6 +135,15 @@ public class AuthController {
                 UserRole role = jwtProvider.getUserRole(refreshToken);
                 String key = "auth:rt:" + role + ":" + userId;
                 redis.delete(key);
+
+                // 카카오계정 로그아웃 (일시적으로 비활성화 - URI 등록 필요)
+                System.out.println("카카오 로그아웃 시도");
+                try {
+                    kakaoService.kakaoLogout();
+                } catch (Exception e) {
+                    System.out.println("카카오 로그아웃 실패, 우리 서비스만 로그아웃 진행: " + e.getMessage());
+                    // 카카오 로그아웃 실패해도 우리 서비스 로그아웃은 계속 진행
+                }
             }
             cookieUtil.removeRefreshTokenFromCookie(response);
 
