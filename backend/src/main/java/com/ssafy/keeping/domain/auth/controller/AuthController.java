@@ -31,6 +31,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -52,7 +54,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "CUSTOMER");
 
-        response.sendRedirect("/oauth2/authorization/kakao");
+        response.sendRedirect("/api/oauth2/authorization/kakao");
     }
 
     @GetMapping("/kakao/owner")
@@ -61,7 +63,7 @@ public class AuthController {
         System.out.println("[AUTH CONTROLLER] Saved role=CUSTOMER to session: " + request.getSession().getId());
         redis.opsForValue().set("oauth:role:" + request.getSession().getId(), "OWNER");
 
-        response.sendRedirect("/oauth2/authorization/kakao");
+        response.sendRedirect("/api/oauth2/authorization/kakao");
     }
 
 
@@ -123,40 +125,80 @@ public class AuthController {
                     .body(ApiResponse.error("토큰 갱신 실패 ", HttpStatus.UNAUTHORIZED.value()));
         }
     }
-
     @GetMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response,
-                                                    Authentication authentication) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> logout(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication) {
         try {
             String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
 
+            // 1. 우리 서비스 로그아웃 처리
             if(refreshToken != null && jwtProvider.validateToken(refreshToken)) {
                 Long userId = jwtProvider.getUserIdFromRefresh(refreshToken);
                 UserRole role = jwtProvider.getUserRole(refreshToken);
                 String key = "auth:rt:" + role + ":" + userId;
                 redis.delete(key);
-
-                // 카카오계정 로그아웃 (일시적으로 비활성화 - URI 등록 필요)
-                System.out.println("카카오 로그아웃 시도");
-                try {
-                    kakaoService.kakaoLogout();
-                } catch (Exception e) {
-                    System.out.println("카카오 로그아웃 실패, 우리 서비스만 로그아웃 진행: " + e.getMessage());
-                    // 카카오 로그아웃 실패해도 우리 서비스 로그아웃은 계속 진행
-                }
             }
             cookieUtil.removeRefreshTokenFromCookie(response);
 
+            // 2. 카카오 로그아웃 URL을 프론트엔드에 전달
+            String kakaoLogoutUrl = kakaoService.buildKakaoLogoutUrl();
+
+            Map<String, String> result = new HashMap<>();
+            result.put("kakaoLogoutUrl", kakaoLogoutUrl);
+            result.put("message", "로그아웃 성공");
+
             return ResponseEntity.ok()
-                    .body(ApiResponse.success("로그아웃 성공", HttpStatus.OK.value(), null));
+                    .body(ApiResponse.success("로그아웃 성공", HttpStatus.OK.value(), result));
 
         } catch (Exception e) {
             cookieUtil.removeRefreshTokenFromCookie(response);
 
+            // 에러 시에도 카카오 로그아웃 URL은 제공
+            String kakaoLogoutUrl = kakaoService.buildKakaoLogoutUrl();
+            Map<String, String> result = new HashMap<>();
+            result.put("kakaoLogoutUrl", kakaoLogoutUrl);
+            result.put("message", "로그아웃 완료");
+
             return ResponseEntity.ok()
-                    .body(ApiResponse.success("로그아웃 완료", HttpStatus.OK.value(), null));
+                    .body(ApiResponse.success("로그아웃 완료", HttpStatus.OK.value(), result));
         }
     }
+
+//    @GetMapping("/logout")
+//    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response,
+//                                                    Authentication authentication) {
+//        try {
+//            String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
+//
+//            if(refreshToken != null && jwtProvider.validateToken(refreshToken)) {
+//                Long userId = jwtProvider.getUserIdFromRefresh(refreshToken);
+//                UserRole role = jwtProvider.getUserRole(refreshToken);
+//                String key = "auth:rt:" + role + ":" + userId;
+//                redis.delete(key);
+//
+//                // 카카오계정 로그아웃 (일시적으로 비활성화 - URI 등록 필요)
+//                System.out.println("카카오 로그아웃 시도");
+//                try {
+//                    kakaoService.kakaoLogout();
+//                } catch (Exception e) {
+//                    System.out.println("카카오 로그아웃 실패, 우리 서비스만 로그아웃 진행: " + e.getMessage());
+//                    // 카카오 로그아웃 실패해도 우리 서비스 로그아웃은 계속 진행
+//                }
+//            }
+//            cookieUtil.removeRefreshTokenFromCookie(response);
+//
+//            return ResponseEntity.ok()
+//                    .body(ApiResponse.success("로그아웃 성공", HttpStatus.OK.value(), null));
+//
+//        } catch (Exception e) {
+//            cookieUtil.removeRefreshTokenFromCookie(response);
+//
+//            return ResponseEntity.ok()
+//                    .body(ApiResponse.success("로그아웃 완료", HttpStatus.OK.value(), null));
+//        }
+//    }
 
     // 현재 사용자 검색
     @GetMapping("/me")

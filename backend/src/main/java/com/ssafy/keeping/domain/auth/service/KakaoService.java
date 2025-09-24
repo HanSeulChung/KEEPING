@@ -58,6 +58,6 @@ public class KakaoService {
     public String buildKakaoLogoutUrl() {
         return "https://kauth.kakao.com/oauth/logout"
                 + "?client_id=" + authUtil.getKakaoClient()
-                + "&logout_redirect_uri=" + authUtil.getLogout();
+                + "&logout_redirect_uri=" + authUtil.getLogoutRedirect();
     }
 }
