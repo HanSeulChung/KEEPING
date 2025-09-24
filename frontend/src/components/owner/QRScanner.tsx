@@ -401,44 +401,6 @@ export default function QRScanner() {
                   </div>
                 </div>
               )}
-
-              <div className="flex gap-4">
-                {isScanning && (
-                  <button
-                    onClick={stopCamera}
-                    className="flex-1 rounded-lg bg-red-600 px-6 py-3 font-medium text-white hover:bg-red-700"
-                  >
-                    스캔 중지
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowManualInput(true)}
-                  className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-700"
-                >
-                  수동 입력
-                </button>
-
-                <button
-                  onClick={() => {
-                    // 테스트용 QR 코드 데이터
-                    const testData = 'https://example.com/store/123'
-                    setScannedData(testData)
-                    handleQRResult(testData)
-                  }}
-                  className="flex-1 rounded-lg bg-yellow-600 px-6 py-3 font-medium text-white hover:bg-yellow-700"
-                >
-                  테스트 QR
-                </button>
-
-                <button
-                  onClick={() => router.push('/owner/dashboard')}
-                  className="flex-1 rounded-lg bg-gray-600 px-6 py-3 font-medium text-white hover:bg-gray-700"
-                >
-                  대시보드로
-                </button>
-              </div>
-
             </div>
           </div>
         </div>
