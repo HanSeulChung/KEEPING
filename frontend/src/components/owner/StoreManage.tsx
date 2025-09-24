@@ -22,7 +22,7 @@ const StoreManage = () => {
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenuAddModal, setShowMenuAddModal] = useState(false)
-  const { menus, loading, error, fetchMenus, removeMenu, clearError } =
+  const { menus, loading, error, fetchMenus, addMenu, removeMenu, clearError } =
     useMenuManagement()
 
   // 컴포넌트 마운트 시 메뉴 목록 조회
@@ -93,7 +93,7 @@ const StoreManage = () => {
         <div className="mb-6 flex justify-center">
           <div className="flex h-48 w-full max-w-md items-center justify-center overflow-hidden border border-black bg-gray-100">
             <img
-              src={selectedStore?.imgUrl || '/default-store-image.jpg'}
+              src={selectedStore?.imgUrl || '/owner.png'}
               alt={selectedStore?.storeName || '가게 이미지'}
               className="h-full w-full object-cover"
               onError={e => {
@@ -317,6 +317,7 @@ const StoreManage = () => {
           <MenuAddModal
             onClose={() => setShowMenuAddModal(false)}
             storeId={storeId}
+            addMenu={addMenu}
           />
         )}
 
@@ -380,12 +381,16 @@ const StoreManage = () => {
 type MenuAddModalProps = {
   onClose: () => void
   storeId: string | null
+  addMenu: (storeId: number, menuData: MenuData) => Promise<boolean>
 }
 
 type Category = {
-  id: number
-  name: string
+  categoryId: number
+  categoryName: string
   storeId: number
+  parentId?: number
+  displayOrder?: number
+  createdAt?: string
 }
 
 type MenuData = {
@@ -396,7 +401,7 @@ type MenuData = {
   categoryName?: string
 }
 
-const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
+const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
   const [addMethod, setAddMethod] = useState<
     'ocr' | 'manual' | 'category' | null
   >(null)
@@ -422,7 +427,7 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
   const fetchCategories = async () => {
     try {
       const response = await apiClient.get(
-        `/owners/stores/${storeId}/menus/categories`
+        `/stores/${storeId}/menus/categories`
       )
       if (response.data.success) {
         setCategories(response.data.data || [])
@@ -452,8 +457,8 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
 
       if (response.data.success) {
         const newCategory: Category = {
-          id: response.data.data.categoryId,
-          name: response.data.data.categoryName,
+          categoryId: response.data.data.categoryId,
+          categoryName: response.data.data.categoryName,
           storeId: response.data.data.storeId,
         }
         setCategories([...categories, newCategory])
@@ -525,33 +530,104 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
   }
 
   const handleManualSubmit = async () => {
-    if (!manualMenu.name || !manualMenu.price || !manualMenu.categoryId) {
-      alert('메뉴명, 가격, 카테고리는 필수입니다.')
+    if (!manualMenu.name || !manualMenu.name.trim() || !manualMenu.categoryId) {
+      alert('메뉴명과 카테고리는 필수입니다. (메뉴명은 공백일 수 없습니다)')
       return
     }
 
     try {
-      // 메뉴 추가 API 호출
-      const response = await fetch(`/api/stores/${storeId}/menus`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: manualMenu.name,
-          description: manualMenu.description,
-          price: manualMenu.price,
-          categoryId: manualMenu.categoryId,
-        }),
+      // 인증 및 기본 정보 확인
+      const accessToken = localStorage.getItem('accessToken')
+      console.log('현재 토큰 존재 여부:', !!accessToken)
+      console.log('storeId:', storeId, 'type:', typeof storeId)
+      console.log(
+        'categoryId:',
+        manualMenu.categoryId,
+        'type:',
+        typeof manualMenu.categoryId
+      )
+
+      console.log('메뉴 추가 요청:', {
+        menuName: manualMenu.name,
+        categoryId: manualMenu.categoryId,
+        price: manualMenu.price,
+        description: manualMenu.description,
+        storeId,
       })
 
-      if (response.ok) {
+      // 카테고리 이름 찾기
+      const selectedCategory = categories.find(
+        cat => cat.categoryId === manualMenu.categoryId
+      )
+
+      if (!selectedCategory) {
+        alert('선택된 카테고리를 찾을 수 없습니다.')
+        return
+      }
+
+      console.log('메뉴 추가 요청 상세 정보:', {
+        storeId: parseInt(storeId),
+        manualMenu,
+        selectedCategory,
+        전송할데이터: {
+          name: manualMenu.name.trim(),
+          category: selectedCategory.categoryName,
+          categoryId: manualMenu.categoryId,
+          price: manualMenu.price || 0,
+          description: manualMenu.description || '',
+        }
+      })
+
+      // categoryId 검증
+      if (!manualMenu.categoryId || manualMenu.categoryId <= 0) {
+        alert('카테고리를 선택해주세요.')
+        return
+      }
+
+      // useMenuManagement hook의 addMenu 함수 사용
+      const success = await addMenu(parseInt(storeId), {
+        name: manualMenu.name.trim(),
+        category: selectedCategory.categoryName,
+        categoryId: manualMenu.categoryId,
+        price: manualMenu.price || 0,
+        description: manualMenu.description || '',
+      })
+
+      console.log('성공 여부:', success)
+
+      if (success) {
         alert('메뉴가 추가되었습니다.')
         onClose()
       } else {
-        throw new Error('메뉴 추가 실패')
+        alert('메뉴 추가에 실패했습니다.')
       }
     } catch (error) {
       console.error('메뉴 추가 실패:', error)
-      alert('메뉴 추가에 실패했습니다.')
+
+      const axiosError = error as any
+      console.error('에러 상태:', axiosError.response?.status)
+      console.error('에러 헤더:', axiosError.response?.headers)
+      console.error('에러 응답:', axiosError.response?.data)
+      console.error('에러 설정:', axiosError.config)
+
+      // 더 자세한 에러 정보 수집
+      const errorDetails = {
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+        url: axiosError.config?.url,
+        method: axiosError.config?.method,
+        headers: axiosError.config?.headers,
+      }
+      console.error('전체 에러 정보:', errorDetails)
+
+      const errorMessage =
+        axiosError.response?.data?.message ||
+        axiosError.message ||
+        '알 수 없는 오류가 발생했습니다.'
+      alert(
+        `메뉴 추가에 실패했습니다: ${errorMessage}\n상태코드: ${axiosError.response?.status}`
+      )
     }
   }
 
@@ -564,25 +640,65 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
     }
 
     try {
-      // 메뉴 일괄 추가 API 호출
-      const response = await fetch(`/api/stores/${storeId}/menus/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          menus: ocrResults.map(menu => ({
-            name: menu.name,
-            description: menu.description,
-            price: menu.price,
-            categoryId: menu.categoryId,
-          })),
-        }),
-      })
+      let successCount = 0
+      let failCount = 0
 
-      if (response.ok) {
-        alert(`${ocrResults.length}개의 메뉴가 추가되었습니다.`)
+      // 메뉴들을 하나씩 순차적으로 추가
+      for (const menu of ocrResults) {
+        try {
+          // 메뉴명이 공백인지 확인
+          if (!menu.name || !menu.name.trim()) {
+            console.error(`메뉴 "${menu.name}" 이름이 공백입니다.`)
+            failCount++
+            continue
+          }
+
+          const formData = new FormData()
+          formData.append('name', menu.name.trim())
+          formData.append('categoryId', menu.categoryId.toString())
+
+          // 선택적 필드들
+          if (menu.price) {
+            formData.append('price', menu.price.toString())
+          }
+          if (menu.description) {
+            formData.append('description', menu.description)
+          }
+
+          const response = await apiClient.post(
+            `/owners/stores/${storeId}/menus`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          )
+
+          if (response.data.success) {
+            successCount++
+          } else {
+            console.error(
+              `메뉴 "${menu.name}" 추가 실패:`,
+              response.data.message
+            )
+            failCount++
+          }
+        } catch (error) {
+          const axiosError = error as any
+          console.error(`메뉴 "${menu.name}" 추가 실패:`, axiosError)
+          console.error('에러 응답:', axiosError.response?.data)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        alert(
+          `${successCount}개의 메뉴가 추가되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`
+        )
         onClose()
       } else {
-        throw new Error('메뉴 일괄 추가 실패')
+        alert('모든 메뉴 추가에 실패했습니다.')
       }
     } catch (error) {
       console.error('메뉴 추가 실패:', error)
@@ -762,22 +878,24 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
                   <div className="max-h-48 space-y-2 overflow-y-auto">
                     {categories.map(category => (
                       <div
-                        key={category.id}
+                        key={category.categoryId}
                         className="flex items-center justify-between rounded border border-gray-200 p-2"
                       >
                         <span className="font-['nanumsquare'] text-sm">
-                          {category.name}
+                          {category.categoryName}
                         </span>
                         <button
                           onClick={() => {
                             // TODO: 카테고리 삭제 API
                             if (
                               confirm(
-                                `'${category.name}' 카테고리를 삭제하시겠습니까?`
+                                `'${category.categoryName}' 카테고리를 삭제하시겠습니까?`
                               )
                             ) {
                               setCategories(
-                                categories.filter(c => c.id !== category.id)
+                                categories.filter(
+                                  c => c.categoryId !== category.categoryId
+                                )
                               )
                             }
                           }}
@@ -905,8 +1023,11 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
                           >
                             <option value="">카테고리 선택</option>
                             {categories.map(cat => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.name}
+                              <option
+                                key={cat.categoryId}
+                                value={cat.categoryId}
+                              >
+                                {cat.categoryName}
                               </option>
                             ))}
                           </select>
@@ -987,7 +1108,7 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
 
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  가격 *
+                  가격
                 </label>
                 <input
                   type="number"
@@ -1019,8 +1140,8 @@ const MenuAddModal = ({ onClose, storeId }: MenuAddModalProps) => {
                 >
                   <option value="">카테고리를 선택하세요</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                    <option key={cat.categoryId} value={cat.categoryId}>
+                      {cat.categoryName}
                     </option>
                   ))}
                 </select>

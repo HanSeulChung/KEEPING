@@ -66,9 +66,10 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
         setError(response.message || '메뉴 생성에 실패했습니다.')
         return false
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('메뉴 생성 오류:', err)
-      setError('메뉴 생성 중 오류가 발생했습니다.')
+      const errorMessage = err.message || '메뉴 생성 중 오류가 발생했습니다.'
+      setError(errorMessage)
       return false
     } finally {
       setLoading(false)

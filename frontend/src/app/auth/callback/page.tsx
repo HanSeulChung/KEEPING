@@ -34,7 +34,10 @@ function AuthCallbackContent() {
         })
 
         if (!refreshResponse.ok) {
-          throw new Error('인증 정보를 가져올 수 없습니다.')
+          console.error('Refresh 요청 실패:', refreshResponse.status, refreshResponse.statusText)
+          const errorText = await refreshResponse.text()
+          console.error('응답 내용:', errorText)
+          throw new Error(`인증 정보를 가져올 수 없습니다. (${refreshResponse.status})`)
         }
 
         const refreshData = await refreshResponse.json()

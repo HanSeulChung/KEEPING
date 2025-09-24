@@ -73,6 +73,16 @@ export const useAuthStore = create<AuthState>()(
             }
           } catch {}
         }
+
+        // 사용자 정보도 localStorage에 저장
+        try {
+          if (typeof window !== 'undefined' && user) {
+            localStorage.setItem('user', JSON.stringify(user))
+          }
+        } catch (e) {
+          console.warn('Failed to save user data:', e)
+        }
+
         set({ isLoggedIn: true, user })
       },
       logout: () => {
@@ -130,44 +140,65 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initializeAuth: () => {
-        // 페이지 로드 시 Cookie/LocalStorage에서 토큰 확인하여 로그인 상태 초기화
-        const possibleTokenNames = [
-          'accessToken',
-          'access_token',
-          'token',
-          'authToken',
-          'jwt',
-        ]
-        let token: string | null = null
-
-        for (const name of possibleTokenNames) {
-          token = getCookie(name)
-          if (token) break
-        }
-
-        if (!token) {
-          try {
-            if (typeof window !== 'undefined') {
-              token = localStorage.getItem('accessToken')
+        try {
+          // 저장된 사용자 정보 복원
+          let savedUser: AuthUser | null = null
+          if (typeof window !== 'undefined') {
+            const savedUserData = localStorage.getItem('user')
+            if (savedUserData) {
+              try {
+                savedUser = JSON.parse(savedUserData)
+              } catch (e) {
+                console.warn('Failed to parse saved user data:', e)
+                localStorage.removeItem('user')
+              }
             }
-          } catch {}
-        }
+          }
 
-        if (token) {
-          memoryAccessToken = token
-          set({ isLoggedIn: true })
-          // 토큰 최신화 후 사용자 정보 동기화 (비차단)
-          get()
-            .refreshAccessToken()
-            .catch(() => {
-              console.warn('Token refresh failed during initialization')
-            })
-          get()
-            .fetchCurrentUser()
-            .catch(() => {
-              console.warn('User fetch failed during initialization')
-            })
-        } else {
+          // 페이지 로드 시 Cookie/LocalStorage에서 토큰 확인하여 로그인 상태 초기화
+          const possibleTokenNames = [
+            'accessToken',
+            'access_token',
+            'token',
+            'authToken',
+            'jwt',
+          ]
+          let token: string | null = null
+
+          for (const name of possibleTokenNames) {
+            token = getCookie(name)
+            if (token) break
+          }
+
+          if (!token) {
+            try {
+              if (typeof window !== 'undefined') {
+                token = localStorage.getItem('accessToken')
+              }
+            } catch {}
+          }
+
+          if (token) {
+            memoryAccessToken = token
+            set({ isLoggedIn: true, user: savedUser })
+
+            // 토큰 유효성 검증 및 사용자 정보 동기화 (비차단)
+            get()
+              .refreshAccessToken()
+              .then(() => {
+                // 토큰 갱신 후 사용자 정보도 갱신
+                return get().fetchCurrentUser()
+              })
+              .catch(() => {
+                console.warn('Token validation failed during initialization')
+                // 토큰이 유효하지 않으면 로그아웃 처리
+                get().logout()
+              })
+          } else {
+            set({ isLoggedIn: false, user: null })
+          }
+        } catch (error) {
+          console.error('Auth initialization failed:', error)
           set({ isLoggedIn: false, user: null })
         }
       },

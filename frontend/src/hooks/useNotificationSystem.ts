@@ -473,22 +473,37 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // 기존 알림 로드
   const fetchNotifications = async () => {
-    if (!user?.id) {
+    if (!user) {
       console.log('사용자 정보가 없습니다.')
       return
     }
 
     try {
-      const notifications = await notificationApi.getNotificationList(
-        parseInt(String(user.id)),
-        0,
-        50
-      ) // 최근 50개 알림
+      // 사용자 ID 추출 및 검증
+      let ownerId: number | null = null
 
+      if (user.ownerId) {
+        ownerId = Number(user.ownerId)
+      } else if (user.userId) {
+        ownerId = Number(user.userId)
+      } else if (user.id) {
+        ownerId = Number(user.id)
+      }
+
+      if (!ownerId || isNaN(ownerId) || ownerId <= 0) {
+        console.error('유효하지 않은 사용자 ID:', user)
+        return
+      }
+
+      console.log('알림 목록 조회 - 사용자 ID:', ownerId, '사용자 정보:', user)
+
+      const notifications = await notificationApi.getNotificationList(ownerId)
       const convertedNotifications = notifications.map(convertNotificationData)
       setNotifications(convertedNotifications)
     } catch (error) {
       console.error('알림 로드 오류:', error)
+      // 에러 발생 시 빈 배열로 설정
+      setNotifications([])
     }
   }
 

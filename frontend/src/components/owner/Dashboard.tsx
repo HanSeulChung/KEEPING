@@ -1,6 +1,8 @@
 'use client'
 
 import { useStoreStore } from '@/store/useStoreStore'
+import { useAuthStore } from '@/store/useAuthStore'
+import { notificationApi } from '@/api/notificationApi'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -10,9 +12,45 @@ export default function OwnerHome() {
   const router = useRouter()
   const { stores, selectedStore, loading, fetchStores, setSelectedStore } =
     useStoreStore()
-  const [unreadCount, setUnreadCount] = useState<number>(3)
+  const { user } = useAuthStore()
+  const [unreadCount, setUnreadCount] = useState<number>(0)
   const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] =
     useState(false)
+
+  // 읽지 않은 알림 개수 가져오기
+  const fetchUnreadCount = async () => {
+    console.log('현재 사용자 정보:', user)
+
+    if (!user?.ownerId && !user?.userId && !user?.id) {
+      console.warn('사용자 ID를 찾을 수 없습니다:', user)
+      return
+    }
+
+    try {
+      // OWNER 역할인 경우 ownerId 사용, 그 외는 userId 또는 id 사용
+      let ownerId: number
+      if (user.role === 'OWNER' && user.ownerId) {
+        ownerId = Number(user.ownerId)
+      } else if (user.userId) {
+        ownerId = Number(user.userId)
+      } else {
+        ownerId = Number(user.id)
+      }
+
+      console.log('알림 조회할 ownerId:', ownerId)
+
+      if (isNaN(ownerId) || ownerId <= 0) {
+        console.error('유효하지 않은 ownerId:', ownerId)
+        return
+      }
+
+      const count = await notificationApi.getUnreadCount(ownerId)
+      setUnreadCount(count)
+    } catch (error) {
+      console.error('읽지 않은 알림 개수 조회 실패:', error)
+      setUnreadCount(0)
+    }
+  }
 
   // 컴포넌트 마운트 시 가게 목록 가져오기
   useEffect(() => {
@@ -22,6 +60,13 @@ export default function OwnerHome() {
       fetchStores()
     }
   }, [stores.length, fetchStores, loading])
+
+  // 사용자 정보가 있을 때 알림 개수 가져오기
+  useEffect(() => {
+    if (user && (user.ownerId || user.id)) {
+      fetchUnreadCount()
+    }
+  }, [user])
 
   // 가게 선택 시 전역 상태 업데이트
   const handleStoreSelect = (store: any) => {
@@ -68,6 +113,14 @@ export default function OwnerHome() {
   return (
     <div className="min-h-screen bg-white">
       <main className="mx-auto w-full max-w-[626px] px-4 py-8">
+        {/* 임시 사용자 정보 디스플레이 (디버깅용) */}
+        {user && (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 p-2 text-xs">
+            <strong>사용자 정보 (디버깅):</strong>
+            <div>role: {user.role}, id: {user.id}, ownerId: {user.ownerId}, userId: {user.userId}, name: {user.name}</div>
+          </div>
+        )}
+
         <div className="top-8 mb-6 flex justify-center sm:mb-8">
           <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
             {stores.map((s, index) => (
