@@ -47,4 +47,6 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
                 "id"
         );
     }
+
+
 }

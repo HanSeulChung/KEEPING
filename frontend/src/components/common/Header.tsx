@@ -4,6 +4,7 @@ import { authApi } from '@/api/authApi'
 import { useUser } from '@/contexts/UserContext'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
+import LogoutButton from '@/components/auth/LogoutButton'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -93,31 +94,7 @@ export default function Header() {
   // 홈페이지인지 확인
   const isHomePage = pathname === '/'
 
-  const handleLogout = async () => {
-    try {
-      // 백엔드에 로그아웃 요청
-      await authApi.logout()
-    } catch (error) {
-      console.error('로그아웃 요청 실패:', error)
-    } finally {
-      // localStorage 정리
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-      }
-      
-      // 상태 업데이트
-      if (isCustomerPage) {
-        // 고객 로그아웃 처리
-        window.location.href = '/customer/login'
-      } else {
-        // 점주 로그아웃 처리
-        ownerLogout()
-        router.push('/')
-      }
-    }
-  }
+
 
   const handleNotificationClick = () => {
     if (isCustomerPage) {
@@ -205,12 +182,7 @@ export default function Header() {
 
               {/* 로그인 상태에 따른 버튼 */}
               {isLoggedIn ? (
-                <button
-                  onClick={handleLogout}
-                  className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base"
-                >
-                  로그아웃
-                </button>
+                <LogoutButton className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base" />
               ) : (
                 <Link
                   href={isCustomerPage ? '/customer/login' : '/owner/login'}
