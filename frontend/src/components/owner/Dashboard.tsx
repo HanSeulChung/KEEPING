@@ -1,112 +1,31 @@
 'use client'
 
-import { apiConfig } from '@/api/config'
+import { useStoreStore } from '@/store/useStoreStore'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
 
-interface Store {
-  storeId: number
-  storeName: string
-  address: string
-  phoneNumber: string
-  merchantId: number
-  category: string
-  storeStatus: string
-  description: string
-  createdAt: string
-  imgUrl: string
-}
-
-interface OwnerHomeProps {
-  currentStore?: Store
-  stores?: Store[]
-  unreadCount?: number
-}
-
-export default function OwnerHome({
-  currentStore,
-  stores: initialStores,
-  unreadCount: initialUnreadCount,
-}: OwnerHomeProps) {
+export default function OwnerHome() {
   const router = useRouter()
-  const [selected, setSelected] = useState<Store | null>(null)
-  const [stores, setStores] = useState<Store[]>(initialStores || [])
-  const [unreadCount, setUnreadCount] = useState<number>(
-    initialUnreadCount || 3
-  )
-  const [loading, setLoading] = useState(true)
-  const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] = useState(false)
+  const { stores, selectedStore, loading, fetchStores, setSelectedStore } =
+    useStoreStore()
+  const [unreadCount, setUnreadCount] = useState<number>(3)
+  const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] =
+    useState(false)
 
-  // 가게 목록 가져오기
-  const fetchStores = async () => {
-    try {
-      setLoading(true)
-      
-      console.log('가게 목록 API 호출 시작...')
-      
-      // 환경에 따른 baseURL 사용
-      const apiUrl = `${apiConfig.baseURL}/owners/stores`
-      
-      console.log('API URL:', apiUrl)
-      
-      // @AuthenticationPrincipal을 사용하므로 ownerId 파라미터 없이 호출
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        credentials: 'include'
-      })
-
-      console.log('API 응답 상태:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API 오류 응답:', errorText)
-        throw new Error(`가게 목록을 가져오는데 실패했습니다: ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('API 응답 데이터:', data)
-      
-      // 응답 데이터 구조에 따라 적절히 처리
-      const storesData = data.data || data || []
-      setStores(storesData)
-    } catch (error) {
-      console.error('가게 목록 조회 오류:', error)
-      // 에러 시 빈 배열로 설정
-      setStores([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 컴포넌트 마운트 시 가게 목록 가져오기 (클라이언트에서만)
+  // 컴포넌트 마운트 시 가게 목록 가져오기
   useEffect(() => {
-    if (typeof window !== 'undefined' && !initialStores) {
+    // 가게 목록이 없고, 로딩 중이 아닐 때만 fetch
+    if (stores.length === 0 && !loading) {
+      console.log('가게 목록을 가져오는 중...')
       fetchStores()
     }
-  }, [])
+  }, [stores.length, fetchStores, loading])
 
-  // currentStore가 있으면 그것을 선택, 없으면 첫 번째 매장 선택
-  useEffect(() => {
-    if (currentStore) {
-      setSelected(currentStore)
-    } else if (stores.length > 0 && !selected) {
-      setSelected(stores[0])
-    }
-  }, [currentStore, stores, selected])
-
-  // 가게 선택 시 해당 가게의 대시보드로 이동
-  const handleStoreSelect = (store: Store) => {
-    setSelected(store)
-    // URL에 가게 정보를 포함하여 각 페이지로 이동할 수 있도록 설정
-    // accountName을 사용하여 URL 구성
-    const accountName = store.storeName.replace(/\s+/g, '').toLowerCase()
-    router.push(`/owner/dashboard?storeId=${store.storeId}&accountName=${accountName}`)
+  // 가게 선택 시 전역 상태 업데이트
+  const handleStoreSelect = (store: any) => {
+    setSelectedStore(store)
   }
 
   if (loading) {
@@ -125,18 +44,20 @@ export default function OwnerHome({
       <div className="min-h-screen bg-white">
         <main className="mx-auto w-full max-w-[626px] px-4 py-8">
           <div className="flex h-64 flex-col items-center justify-center">
-            <div className="mb-4 text-lg text-gray-600">등록된 가게가 없습니다</div>
-            <button 
+            <div className="mb-4 text-lg text-gray-600">
+              등록된 가게가 없습니다
+            </div>
+            <button
               onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 transition-colors"
+              className="rounded-lg bg-black px-6 py-3 text-white transition-colors hover:bg-gray-800"
             >
               첫 번째 가게 등록하기
             </button>
           </div>
         </main>
-        
+
         {/* 매장 등록 모달 */}
-        <StoreRegisterModal 
+        <StoreRegisterModal
           isOpen={isStoreRegisterModalOpen}
           onClose={() => setIsStoreRegisterModalOpen(false)}
         />
@@ -154,8 +75,8 @@ export default function OwnerHome({
                 key={s.storeId}
                 onClick={() => handleStoreSelect(s)}
                 className={[
-                  'flex h-24 w-24 flex-shrink-0 flex-col items-center justify-center rounded-full border border-black text-center cursor-pointer transition-colors',
-                  selected?.storeId === s.storeId
+                  'flex h-24 w-24 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-full border border-black text-center transition-colors',
+                  selectedStore?.storeId === s.storeId
                     ? 'bg-black text-white'
                     : 'bg-keeping-beige text-black hover:bg-gray-100',
                 ].join(' ')}
@@ -167,9 +88,9 @@ export default function OwnerHome({
             ))}
 
             {/* 매장 추가 버튼 */}
-            <button 
+            <button
               onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border border-black bg-keeping-beige hover:bg-gray-100 transition-colors cursor-pointer"
+              className="bg-keeping-beige flex h-24 w-24 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-black transition-colors hover:bg-gray-100"
             >
               <svg
                 width={21}
@@ -202,7 +123,8 @@ export default function OwnerHome({
           <div className="h-[551px] self-stretch">
             {/* 페이지 타이틀 */}
             <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
-              {selected?.storeName?.replace('\\n', ' ') || '매장을 선택해주세요'}
+              {selectedStore?.storeName?.replace('\\n', ' ') ||
+                '매장을 선택해주세요'}
             </div>
 
             {/* 두 열 레이아웃 */}
@@ -210,9 +132,9 @@ export default function OwnerHome({
               {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
               <div className="flex h-full flex-col gap-6">
                 {/* 매출 캘린더 */}
-                <Link 
-                  href={`/owner/calendar?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="bg-keeping-beige flex flex-1 flex-col items-start border border-black p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                <Link
+                  href={`/owner/calendar?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="bg-keeping-beige flex flex-1 cursor-pointer flex-col items-start border border-black p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     매출
@@ -227,9 +149,9 @@ export default function OwnerHome({
                 </Link>
 
                 {/* QR 인식하기 */}
-                <Link 
-                  href={`/owner/scan?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                <Link
+                  href={`/owner/scan?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     QR 인식하기
@@ -240,9 +162,9 @@ export default function OwnerHome({
               {/* 2열: 나머지 3개 (세로 스택) */}
               <div className="flex h-full flex-col gap-6">
                 {/* 매장 관리 */}
-                <Link 
-                  href={`/owner/manage?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                <Link
+                  href={`/owner/manage?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="relative flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     매장 관리
@@ -257,9 +179,9 @@ export default function OwnerHome({
                 </div>
 
                 {/* 알림 */}
-                <Link 
-                  href={`/owner/notification?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                <Link
+                  href={`/owner/notification?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                  className="relative flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="flex w-full items-start justify-between">
                     <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
@@ -299,9 +221,9 @@ export default function OwnerHome({
           </div>
         </div>
       </main>
-      
+
       {/* 매장 등록 모달 */}
-      <StoreRegisterModal 
+      <StoreRegisterModal
         isOpen={isStoreRegisterModalOpen}
         onClose={() => setIsStoreRegisterModalOpen(false)}
       />

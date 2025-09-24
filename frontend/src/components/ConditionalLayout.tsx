@@ -7,7 +7,6 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePathname } from 'next/navigation'
 import React from 'react'
 import PwaProvider from '../providers/PwaProvider'
-import { UserProvider } from '../contexts/UserContext'
 
 interface ConditionalLayoutProps {
   children: React.ReactNode
@@ -32,25 +31,23 @@ export default function ConditionalLayout({
     !pathname.startsWith('/customer/register')
 
   return (
-    <UserProvider>
-      <PwaProvider>
-        {/* Calendar 페이지가 아닐 때만 헤더 표시 */}
-        {!isCalendarPage && <Header />}
+    <PwaProvider>
+      {/* Calendar 페이지가 아닐 때만 헤더 표시 */}
+      {!isCalendarPage && <Header />}
 
-        {/* 로그인 후 페이지에서만 네비게이션 표시 */}
-        {shouldShowNavigation && <Navigation />}
+      {/* 로그인 후 페이지에서만 네비게이션 표시 */}
+      {shouldShowNavigation && <Navigation />}
 
-        {/* 페이지별 컨텐츠 */}
-        <main
-          className={`min-h-screen ${shouldShowNavigation ? `pb-16 md:pb-0 ${isOpen ? 'md:ml-64' : 'md:ml-16'}` : ''}`}
-        >
-          {children}
-        </main>
-        <SWRegister />
+      {/* 페이지별 컨텐츠 */}
+      <main
+        className={`min-h-screen ${shouldShowNavigation ? `pb-16 md:pb-0 ${isOpen ? 'md:ml-64' : 'md:ml-16'}` : ''}`}
+      >
+        {children}
+      </main>
+      <SWRegister />
 
-        {/* 개발용 테스트 버튼 */}
-        {/* <NotificationTestButton /> */}
-      </PwaProvider>
-    </UserProvider>
+      {/* 개발용 테스트 버튼 */}
+      {/* <NotificationTestButton /> */}
+    </PwaProvider>
   )
 }

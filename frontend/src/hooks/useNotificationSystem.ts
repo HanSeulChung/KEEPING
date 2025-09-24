@@ -304,7 +304,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
       // 서버에 토큰 등록
       await registerFCMToken({
-        userId: user.id,
+        userId: String(user.id),
         token: token,
         deviceInfo: {
           userAgent: navigator.userAgent,
@@ -324,7 +324,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const unregisterFCM = async (): Promise<void> => {
     try {
       if (user?.id && fcmToken) {
-        await unregisterFCMToken(user.id, fcmToken)
+        await unregisterFCMToken(String(user.id), fcmToken)
         setFcmToken(null)
         console.log('FCM 토큰 해제 완료')
       }
@@ -378,7 +378,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
       try {
         // 서버에 읽음 상태 전송
-        await notificationApi.markAsRead(parseInt(user.id), id)
+        await notificationApi.markAsRead(parseInt(String(user.id)), id)
 
         // 로컬 상태 업데이트
         setNotifications(prev =>
@@ -480,7 +480,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     try {
       const notifications = await notificationApi.getNotificationList(
-        parseInt(user.id),
+        parseInt(String(user.id)),
         0,
         50
       ) // 최근 50개 알림
