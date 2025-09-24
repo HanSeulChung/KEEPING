@@ -160,6 +160,7 @@ public class CancelService {
                 .transactionType(TransactionType.CANCEL_CHARGE)
                 .amount(originalTransaction.getAmount()) // 양수로 저장
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo()) // 동일한 거래번호
+                .refTransaction(originalTransaction)
                 .build();
 
         cancelTransaction = transactionRepository.save(cancelTransaction);
@@ -169,8 +170,11 @@ public class CancelService {
         WalletStoreLot lot = walletStoreLotRepository
                 .findByOriginChargeTransaction(originalTransaction)
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
-        
-        lot.markAsCanceled(); // sourceType을 CANCELED로 변경
+
+        lot.setAmountRemaining(0L);
+        lot.setCancelTransaction(cancelTransaction); // cancel_tx_id 설정
+        lot.setCanceledAt(LocalDateTime.now()); // canceled_at 설정
+        lot.markAsCanceled(); // lot_status를 CANCELED로 변경
         log.info("WalletStoreLot 상태 CANCELED로 변경 완료 - Lot ID: {}", lot.getLotId());
 
         // 4. wallet_store_balance 금액 차감
