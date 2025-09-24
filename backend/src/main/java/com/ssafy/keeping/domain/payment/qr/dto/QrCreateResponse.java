@@ -17,7 +17,7 @@ public class QrCreateResponse {
         String expiresIsoKst = t.getExpiresAt()
                 .atOffset(java.time.ZoneOffset.ofHours(9))
                 .toString();
-        String qrUri = String.format("payapp://q?v=%d&t=%s&m=%s",
+        String qrUri = String.format("https://j13a509.p.ssafy.io/owners/qr/intent?v=%d&t=%s&m=%s",
                 1, t.getQrTokenId(), t.getMode().name());
 
         return QrCreateResponse.builder()
