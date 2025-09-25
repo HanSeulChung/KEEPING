@@ -96,4 +96,11 @@ public class JwtProvider {
             return true;
         }
     }
+
+    // 생성시간 추출 메서드 추가
+    public Date getIssuedAt(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
+                .parseClaimsJws(token).getBody();
+        return claims.getIssuedAt();
+    }
 }
