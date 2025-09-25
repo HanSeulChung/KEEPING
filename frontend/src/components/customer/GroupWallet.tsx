@@ -1435,6 +1435,12 @@ export const GroupWallet = () => {
       console.log('그룹 지갑 카드 API 응답:', result) // 디버깅용 로그
       
       if (result.success && result.data) {
+        // walletId 추출하여 groupInfo 업데이트
+        if (result.data.walletId && groupInfo) {
+          setGroupInfo(prev => prev ? { ...prev, walletId: result.data.walletId } : null)
+          console.log('그룹 walletId 업데이트:', result.data.walletId)
+        }
+        
         // 백엔드에서 페이징을 제거했다면 직접 배열을 반환할 것
         const storeBalances = result.data.storeBalances?.content || result.data.storeBalances || []
         console.log('처리된 그룹 지갑 storeBalances:', storeBalances) // 디버깅용
@@ -2193,6 +2199,8 @@ export const GroupWallet = () => {
               ?.storeName || 'QR'
           }
           cardId={selectedCard}
+          walletId={groupInfo?.walletId}
+          storeId={selectedCard}
         />
 
         {/* 공유 모달 */}
