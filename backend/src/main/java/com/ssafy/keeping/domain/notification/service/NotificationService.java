@@ -93,11 +93,7 @@ public class NotificationService {
                 sendLostDataWithTokenFilter(accessToken, receiverType, receiverId, emitterId, sseEmitter);
             } else {
                 // AccessToken이 없는 경우 - 로그아웃 상태로 간주하여 재전송 차단
-                if (hasLostData(lastEventId)) {
-                    log.info("AccessToken 없음 + lastEventId 있음 - 로그아웃 상태로 간주하여 재전송 차단 - {}:{}", receiverType, receiverId);
-                } else {
-                    log.info("재전송할 데이터 없음 (로그아웃 후 재로그인) - {}:{}", receiverType, receiverId);
-                }
+                log.info("AccessToken 없음 - 로그아웃 상태로 간주하여 재전송 차단 - {}:{}", receiverType, receiverId);
             }
 
         } catch (Exception e) {
@@ -395,41 +391,6 @@ public class NotificationService {
         return receiverType + "-" + receiverId + "_" + System.currentTimeMillis();
     }
 
-    /**
-     * 유실된 데이터가 있는지 확인
-     */
-    private boolean hasLostData(String lastEventId) {
-        return lastEventId != null && !lastEventId.isEmpty();
-    }
-
-    /**
-     * 유실된 데이터 전송
-     */
-    private void sendLostData(String lastEventId, String receiverType, Long receiverId, 
-                             String emitterId, SseEmitter emitter) {
-        Map<String, Object> eventCaches = emitterRepository.findAllEventCacheStartWithByReceiver(receiverType, receiverId);
-        
-        eventCaches.entrySet().stream()
-                .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-                .forEach(entry -> sendNotification(emitter, entry.getKey(), emitterId, entry.getValue()));
-
-        log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
-    }
-
-    /**
-     * Authorization 헤더에서 AccessToken 추출
-     */
-    private String extractTokenFromAuthHeader(String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isEmpty()) {
-            return null;
-        }
-
-        if (authorizationHeader.startsWith("Bearer ")) {
-            return authorizationHeader.substring(7);
-        }
-
-        return null;
-    }
 
     /**
      * AccessToken에서 발급시간 추출
