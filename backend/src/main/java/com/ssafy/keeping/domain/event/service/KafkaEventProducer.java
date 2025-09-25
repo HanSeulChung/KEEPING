@@ -26,6 +26,7 @@ public class KafkaEventProducer {
      */
     public void publishPaymentEvent(PaymentEvent event) {
         try {
+            event.setEventType("PAYMENT");
             log.info("카드 결제 이벤트 발행 시작 - 고객ID: {}, 거래ID: {}, 결제금액: {}",
                     event.getCustomerId(), event.getTransactionId(), event.getPaymentAmount());
 
@@ -69,6 +70,7 @@ public class KafkaEventProducer {
      */
     public void publishCancelEvent(CancelEvent event) {
         try {
+            event.setEventType("CANCEL");
             log.info("카드 취소 이벤트 발행 시작 - 고객ID: {}, 거래번호: {}, 취소금액: {}",
                     event.getCustomerId(), event.getTransactionUniqueNo(), event.getCancelAmount());
 
