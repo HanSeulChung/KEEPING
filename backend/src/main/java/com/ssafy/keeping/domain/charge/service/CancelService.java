@@ -15,6 +15,8 @@ import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
 import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
+import com.ssafy.keeping.domain.event.service.KafkaEventProducer;
+import com.ssafy.keeping.domain.event.dto.CancelEvent;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class CancelService {
     private final WalletStoreLotRepository walletStoreLotRepository;
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SsafyFinanceApiService ssafyFinanceApiService;
+    private final KafkaEventProducer kafkaEventProducer;
 
     /**
      * 취소 가능한 거래 목록 조회 (페이지네이션)
@@ -179,10 +182,34 @@ public class CancelService {
                 .orElseThrow(() -> new CustomException(ErrorCode.WALLET_NOT_FOUND));
         
         balance.subtractBalance(originalTransaction.getAmount());
-        log.info("WalletStoreBalance 차감 완료 - 차감 금액: {}, 잔여 잔액: {}", 
+        log.info("WalletStoreBalance 차감 완료 - 차감 금액: {}, 잔여 잔액: {}",
                 originalTransaction.getAmount(), balance.getBalance());
 
-        // 5. 응답 생성 (실제 결제금액과 포인트 구분)
+        // 5. 카드 결제 취소 완료 이벤트 발행
+        try {
+            CancelEvent cancelEvent = CancelEvent.builder()
+                    .customerId(originalTransaction.getCustomer().getCustomerId())
+                    .customerName(originalTransaction.getCustomer().getName())
+                    .storeId(originalTransaction.getStore().getStoreId())
+                    .storeName(originalTransaction.getStore().getStoreName())
+                    .ownerId(originalTransaction.getStore().getOwner().getOwnerId())
+                    .cancelTransactionId(cancelTransaction.getTransactionId())
+                    .transactionUniqueNo(originalTransaction.getTransactionUniqueNo())
+                    .cancelAmount(settlementTask.getActualPaymentAmount())
+                    .cancelTime(LocalDateTime.now())
+                    .build();
+
+            kafkaEventProducer.publishCancelEvent(cancelEvent);
+
+            log.info("카드 취소 이벤트 발행 완료 - 고객ID: {}, 취소금액: {}",
+                    originalTransaction.getCustomer().getCustomerId(), settlementTask.getActualPaymentAmount());
+        } catch (Exception e) {
+            log.warn("카드 취소 이벤트 발행 실패 - 고객ID: {}, 오류: {}",
+                    originalTransaction.getCustomer().getCustomerId(), e.getMessage());
+            // 이벤트 발행 실패는 비즈니스 로직에 영향을 주지 않음
+        }
+
+        // 6. 응답 생성 (실제 결제금액과 포인트 구분)
         return CancelResponseDto.builder()
                 .cancelTransactionId(cancelTransaction.getTransactionId())
                 .transactionUniqueNo(originalTransaction.getTransactionUniqueNo())
