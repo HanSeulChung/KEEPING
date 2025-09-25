@@ -96,8 +96,8 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.LINGER_MS_CONFIG, 5);
         configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
 
-        // 멱등성 보장
-        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+//        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, false);
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }
