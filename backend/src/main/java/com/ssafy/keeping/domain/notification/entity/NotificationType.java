@@ -30,7 +30,7 @@ public enum NotificationType {
     GROUP_DISBANDED("모임 해체"),
     // 시스템 관련
     SYSTEM_NOTICE("시스템 공지"),
-    SYSTEM_MAINTENANCE("시스템 점검");
+    ANOMALY_DETECTED("이상거래 탐지");
 
     private final String displayName;
 
