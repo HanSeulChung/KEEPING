@@ -35,6 +35,7 @@ public class JwtProvider {
     public String generateAccessToken(Long userId, UserRole role) {
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .setIssuedAt(new Date())
                 .claim("role", role.name())
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS384)
