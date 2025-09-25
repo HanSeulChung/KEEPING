@@ -68,7 +68,7 @@ public class OwnerService {
         // userKey 생성
         try {
             int prefix = 100;
-            String email = prefix++ + "@keeping509.com";
+            String email = prefix++ + "@keeping509owner.com";
             log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
 
             InsertMemberResponseDto member = apiClient.insertMember(email);
