@@ -29,7 +29,7 @@ public enum NotificationType {
     GROUP_LEFT("모임 나가기"),
     GROUP_DISBANDED("모임 해체"),
     // 시스템 관련
-    SYSTEM_NOTICE("시스템 공지"),
+    DLQ_NOTICE("DLQ 생성"),
     ANOMALY_DETECTED("이상거래 탐지");
 
     private final String displayName;

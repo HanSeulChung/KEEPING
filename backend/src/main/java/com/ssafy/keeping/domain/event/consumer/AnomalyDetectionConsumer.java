@@ -33,11 +33,9 @@ public class AnomalyDetectionConsumer {
     private final ObjectMapper objectMapper;
     private final FcmService fcmService;
 
-    @Value("${anomaly.detection.daily-payment-threshold}")
-    private int dailyPaymentThreshold;
+    private int dailyPaymentThreshold = 20;
 
-    @Value("${anomaly.detection.daily-cancel-threshold}")
-    private int dailyCancelThreshold;
+    private int dailyCancelThreshold = 30;
 
     private static final String PAYMENT_KEY_PREFIX = "anomaly:payment:";
     private static final String CANCEL_KEY_PREFIX = "anomaly:cancel:";
@@ -185,7 +183,7 @@ public class AnomalyDetectionConsumer {
                 "date", LocalDate.now().format(DATE_FORMATTER)
             );
 
-            fcmService.sendToCustomer(customerId, NotificationType.ANOMALY_DETECTED, title, body, fcmData);
+            fcmService.sendToCustomer(1L, NotificationType.ANOMALY_DETECTED, title, body, fcmData);
 
             log.warn("이상거래 FCM 알림 전송 완료 - customerId: {}, anomalyType: {}", customerId, anomalyType);
 

@@ -165,8 +165,7 @@ public class NotificationEventConsumer {
                 "topic", topic
             );
 
-            // TODO: 실제 관리자 ID로 변경 필요
-//             fcmService.sendToCustomer(ADMIN_CUSTOME_RID, NotificationType.SYSTEM_ALERT, title, body, fcmData);
+             fcmService.sendToCustomer(1L, NotificationType.DLQ_NOTICE, title, body, fcmData);
 
             log.warn("DLQ 이벤트 처리 완료 - 관리자 알림 전송");
             acknowledgment.acknowledge();
