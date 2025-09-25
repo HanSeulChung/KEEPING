@@ -100,8 +100,12 @@ public class AnomalyDetectionConsumer {
             String today = LocalDate.now().format(DATE_FORMATTER);
             String redisKey = PAYMENT_KEY_PREFIX + event.getCustomerId() + ":" + today;
 
+            log.info("Redis 키 생성: {}", redisKey);
+
             // Redis에서 오늘 결제 횟수 증가
             Long currentCount = redisTemplate.opsForValue().increment(redisKey);
+
+            log.info("Redis INCR 실행 완료: {} = {}", redisKey, currentCount);
 
             // 첫 번째 증가인 경우 TTL 설정 (24시간)
             if (currentCount == 1) {
