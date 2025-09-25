@@ -22,6 +22,8 @@ const StoreManage = () => {
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenuAddModal, setShowMenuAddModal] = useState(false)
+  const [showMenuEditModal, setShowMenuEditModal] = useState(false)
+  const [editingMenu, setEditingMenu] = useState<any>(null)
   const { menus, loading, error, fetchMenus, addMenu, removeMenu, clearError } =
     useMenuManagement()
 
@@ -41,8 +43,11 @@ const StoreManage = () => {
   ])
 
   const handleEditMenu = (id: number) => {
-    console.log('메뉴 수정:', id)
-    // TODO: 메뉴 수정 모달 구현
+    const menuToEdit = menus.find(menu => menu.id === id)
+    if (menuToEdit) {
+      setEditingMenu(menuToEdit)
+      setShowMenuEditModal(true)
+    }
   }
 
   const handleDeleteMenu = async (id: number) => {
@@ -321,6 +326,23 @@ const StoreManage = () => {
           />
         )}
 
+        {/* 메뉴 수정 모달 */}
+        {showMenuEditModal && editingMenu && (
+          <MenuEditModal
+            onClose={() => {
+              setShowMenuEditModal(false)
+              setEditingMenu(null)
+            }}
+            storeId={storeId}
+            menu={editingMenu}
+            onUpdate={() => {
+              if (storeId) {
+                fetchMenus(parseInt(storeId))
+              }
+            }}
+          />
+        )}
+
         {/* 이미지 변경 모달 */}
         {showImageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -381,7 +403,7 @@ const StoreManage = () => {
 type MenuAddModalProps = {
   onClose: () => void
   storeId: string | null
-  addMenu: (storeId: number, menuData: MenuData) => Promise<boolean>
+  addMenu: (storeId: number, menuData: any) => Promise<boolean>
 }
 
 type Category = {
@@ -397,8 +419,237 @@ type MenuData = {
   name: string
   description: string
   price: number
-  categoryId: number
+  categoryId?: number
+  category?: string
   categoryName?: string
+}
+
+// 메뉴 수정 모달 Props 타입
+type MenuEditModalProps = {
+  onClose: () => void
+  storeId: string | null
+  menu: any
+  onUpdate: () => void
+}
+
+const MenuEditModal = ({ onClose, storeId, menu, onUpdate }: MenuEditModalProps) => {
+  const [categories, setCategories] = useState<Category[]>([])
+  const [editedMenu, setEditedMenu] = useState({
+    menuName: menu.name || '',
+    categoryId: 0,
+    price: menu.price || 0,
+    description: menu.description || '',
+    imgFile: null as File | null
+  })
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  // 카테고리 목록 로드
+  useEffect(() => {
+    if (storeId) {
+      fetchCategories()
+    }
+  }, [storeId])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await apiClient.get(`/stores/${storeId}/menus/categories`)
+      if (response.data.success) {
+        setCategories(response.data.data || [])
+
+        // 현재 메뉴의 카테고리 ID 찾기
+        const currentCategory = response.data.data.find(
+          (cat: Category) => cat.categoryName === menu.category
+        )
+        if (currentCategory) {
+          setEditedMenu(prev => ({
+            ...prev,
+            categoryId: currentCategory.categoryId
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('카테고리 조회 실패:', error)
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!editedMenu.menuName.trim() || !editedMenu.categoryId) {
+      alert('메뉴명과 카테고리는 필수입니다.')
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const formData = new FormData()
+      formData.append('menuName', editedMenu.menuName.trim())
+      formData.append('categoryId', editedMenu.categoryId.toString())
+
+      if (editedMenu.price) {
+        formData.append('price', editedMenu.price.toString())
+      }
+      if (editedMenu.description) {
+        formData.append('description', editedMenu.description)
+      }
+      if (editedMenu.imgFile) {
+        formData.append('imgFile', editedMenu.imgFile)
+      }
+      if (storeId) {
+        formData.append('storeId', storeId)
+      }
+
+      const response = await apiClient.put(
+        `/owners/stores/${storeId}/menus/${menu.id}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      if (response.data.success) {
+        alert('메뉴가 수정되었습니다.')
+        onUpdate()
+        onClose()
+      } else {
+        throw new Error(response.data.message || '메뉴 수정 실패')
+      }
+    } catch (error) {
+      console.error('메뉴 수정 실패:', error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : (error as any)?.response?.data?.message || '메뉴 수정에 실패했습니다.'
+      alert(errorMessage)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-['Tenada'] text-lg font-extrabold text-black">
+            메뉴 수정
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+              메뉴명 *
+            </label>
+            <input
+              type="text"
+              value={editedMenu.menuName}
+              onChange={e =>
+                setEditedMenu({ ...editedMenu, menuName: e.target.value })
+              }
+              className="w-full rounded border border-gray-300 px-3 py-2"
+              placeholder="메뉴명을 입력하세요"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+              가격
+            </label>
+            <input
+              type="number"
+              value={editedMenu.price || ''}
+              onChange={e =>
+                setEditedMenu({
+                  ...editedMenu,
+                  price: parseInt(e.target.value) || 0,
+                })
+              }
+              className="w-full rounded border border-gray-300 px-3 py-2"
+              placeholder="가격을 입력하세요"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+              카테고리 *
+            </label>
+            <select
+              value={editedMenu.categoryId || ''}
+              onChange={e =>
+                setEditedMenu({
+                  ...editedMenu,
+                  categoryId: parseInt(e.target.value),
+                })
+              }
+              className="w-full rounded border border-gray-300 px-3 py-2"
+            >
+              <option value="">카테고리를 선택하세요</option>
+              {categories.map(cat => (
+                <option key={cat.categoryId} value={cat.categoryId}>
+                  {cat.categoryName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+              설명
+            </label>
+            <textarea
+              value={editedMenu.description}
+              onChange={e =>
+                setEditedMenu({
+                  ...editedMenu,
+                  description: e.target.value,
+                })
+              }
+              className="h-20 w-full resize-none rounded border border-gray-300 px-3 py-2"
+              placeholder="메뉴 설명을 입력하세요"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+              이미지
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                setEditedMenu({ ...editedMenu, imgFile: file || null })
+              }}
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-6">
+          <button
+            onClick={onClose}
+            className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
+            disabled={isUpdating}
+          >
+            취소
+          </button>
+          <button
+            onClick={handleUpdate}
+            className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+            disabled={isUpdating}
+          >
+            {isUpdating ? '수정 중...' : '수정하기'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
@@ -566,7 +817,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
       }
 
       console.log('메뉴 추가 요청 상세 정보:', {
-        storeId: parseInt(storeId),
+        storeId: parseInt(storeId || '0'),
         manualMenu,
         selectedCategory,
         전송할데이터: {
@@ -575,7 +826,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
           categoryId: manualMenu.categoryId,
           price: manualMenu.price || 0,
           description: manualMenu.description || '',
-        }
+        },
       })
 
       // categoryId 검증
@@ -585,7 +836,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
       }
 
       // useMenuManagement hook의 addMenu 함수 사용
-      const success = await addMenu(parseInt(storeId), {
+      const success = await addMenu(parseInt(storeId || '0'), {
         name: manualMenu.name.trim(),
         category: selectedCategory.categoryName,
         categoryId: manualMenu.categoryId,
@@ -655,7 +906,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
 
           const formData = new FormData()
           formData.append('name', menu.name.trim())
-          formData.append('categoryId', menu.categoryId.toString())
+          formData.append('categoryId', (menu.categoryId || 0).toString())
 
           // 선택적 필드들
           if (menu.price) {
