@@ -1,12 +1,51 @@
 'use client'
 
-import { useStoreStore } from '@/store/useStoreStore'
-import { useAuthStore } from '@/store/useAuthStore'
+import apiClient from '@/api/axios'
 import { notificationApi } from '@/api/notificationApi'
+import { useAuthStore } from '@/store/useAuthStore'
+import { useStoreStore } from '@/store/useStoreStore'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
+
+// 통계 API 타입 정의
+interface StatisticsRequestDto {
+  date?: string
+  startDate?: string
+  endDate?: string
+}
+
+interface StoreOverallStatisticsResponseDto {
+  totalSales: number
+  totalOrders: number
+  averageOrderValue: number
+  totalCustomers: number
+}
+
+interface DailyStatisticsResponseDto {
+  date: string
+  sales: number
+  orders: number
+  customers: number
+}
+
+interface PeriodStatisticsResponseDto {
+  startDate: string
+  endDate: string
+  totalSales: number
+  totalOrders: number
+  averageOrderValue: number
+  dailyStatistics: DailyStatisticsResponseDto[]
+}
+
+interface MonthlyStatisticsResponseDto {
+  month: string
+  sales: number
+  orders: number
+  customers: number
+  dailyStatistics: DailyStatisticsResponseDto[]
+}
 
 export default function OwnerHome() {
   const router = useRouter()
@@ -16,6 +55,73 @@ export default function OwnerHome() {
   const [unreadCount, setUnreadCount] = useState<number>(0)
   const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] =
     useState(false)
+
+  // 통계 데이터 상태
+  const [overallStats, setOverallStats] =
+    useState<StoreOverallStatisticsResponseDto | null>(null)
+  const [monthlyStats, setMonthlyStats] =
+    useState<MonthlyStatisticsResponseDto | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  // 통계 API 함수들
+  const fetchOverallStatistics = async (storeId: number) => {
+    try {
+      setStatsLoading(true)
+      console.log('전체 통계 조회 시작:', storeId)
+
+      const requestData: StatisticsRequestDto = {}
+      const response = await apiClient.post(
+        `/stores/${storeId}/statistics/overall`,
+        requestData
+      )
+
+      console.log('전체 통계 응답:', response.data)
+      if (response.data.success) {
+        setOverallStats(response.data.data)
+      }
+    } catch (error: any) {
+      console.error('전체 통계 조회 실패:', error)
+      console.error('에러 상태:', error.response?.status)
+      console.error('에러 응답:', error.response?.data)
+
+      // 임시 더미 데이터 설정 (백엔드 오류 시)
+      setOverallStats({
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        totalCustomers: 0,
+      })
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  const fetchMonthlyStatistics = async (storeId: number) => {
+    try {
+      const today = new Date()
+      const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+
+      console.log('월별 통계 조회 시작:', storeId, month)
+
+      const requestData: StatisticsRequestDto = {
+        date: month,
+      }
+
+      const response = await apiClient.post(
+        `/stores/${storeId}/statistics/monthly`,
+        requestData
+      )
+
+      console.log('월별 통계 응답:', response.data)
+      if (response.data.success) {
+        setMonthlyStats(response.data.data)
+      }
+    } catch (error: any) {
+      console.error('월별 통계 조회 실패:', error)
+      console.error('에러 상태:', error.response?.status)
+      console.error('에러 응답:', error.response?.data)
+    }
+  }
 
   // 읽지 않은 알림 개수 가져오기
   const fetchUnreadCount = async () => {
@@ -68,6 +174,14 @@ export default function OwnerHome() {
     }
   }, [user])
 
+  // 선택된 가게가 변경될 때 통계 데이터 가져오기
+  useEffect(() => {
+    if (selectedStore?.storeId) {
+      fetchOverallStatistics(selectedStore.storeId)
+      fetchMonthlyStatistics(selectedStore.storeId)
+    }
+  }, [selectedStore])
+
   // 가게 선택 시 전역 상태 업데이트
   const handleStoreSelect = (store: any) => {
     setSelectedStore(store)
@@ -113,14 +227,6 @@ export default function OwnerHome() {
   return (
     <div className="min-h-screen bg-white">
       <main className="mx-auto w-full max-w-[626px] px-4 py-8">
-        {/* 임시 사용자 정보 디스플레이 (디버깅용) */}
-        {user && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 p-2 text-xs">
-            <strong>사용자 정보 (디버깅):</strong>
-            <div>role: {user.role}, id: {user.id}, ownerId: {user.ownerId}, userId: {user.userId}, name: {user.name}</div>
-          </div>
-        )}
-
         <div className="top-8 mb-6 flex justify-center sm:mb-8">
           <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
             {stores.map((s, index) => (
@@ -195,9 +301,47 @@ export default function OwnerHome() {
                     캘린더 &gt;
                   </div>
                   <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                    전체 선결제 금액
-                    <br />
-                    이번 달 선결제 금액
+                    {statsLoading ? (
+                      '통계 로딩 중...'
+                    ) : (
+                      <>
+                        <div className="mb-4">
+                          <div className="mb-1 text-sm text-gray-600">
+                            전체 선결제 금액
+                          </div>
+                          <div className="text-xl font-bold">
+                            {(overallStats?.totalSales || 0).toLocaleString()}원
+                          </div>
+                          {/* 진행률 바 */}
+                          <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
+                            <div
+                              className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                              style={{
+                                width: `${Math.min(100, ((overallStats?.totalSales || 0) / 10000000) * 100)}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-1 text-sm text-gray-600">
+                            이번 달 선결제 금액
+                          </div>
+                          <div className="text-xl font-bold">
+                            {(monthlyStats?.sales || 0).toLocaleString()}원
+                          </div>
+                          {/* 월별 진행률 바 */}
+                          <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
+                            <div
+                              className="h-2 rounded-full bg-green-600 transition-all duration-300"
+                              style={{
+                                width: `${Math.min(100, ((monthlyStats?.sales || 0) / 5000000) * 100)}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </Link>
 
@@ -222,12 +366,96 @@ export default function OwnerHome() {
                   <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                     매장 관리
                   </div>
+                  <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
+                    {statsLoading ? (
+                      '통계 로딩 중...'
+                    ) : (
+                      <>
+                        <div className="mb-2">
+                          <div className="text-sm text-gray-600">총 주문수</div>
+                          <div className="text-lg font-bold">
+                            {(overallStats?.totalOrders || 0).toLocaleString()}
+                            건
+                          </div>
+                        </div>
+
+                        <div className="mb-2">
+                          <div className="text-sm text-gray-600">
+                            평균 주문금액
+                          </div>
+                          <div className="text-lg font-bold">
+                            {(
+                              overallStats?.averageOrderValue || 0
+                            ).toLocaleString()}
+                            원
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-gray-600">총 고객수</div>
+                          <div className="text-lg font-bold">
+                            {(
+                              overallStats?.totalCustomers || 0
+                            ).toLocaleString()}
+                            명
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </Link>
 
-                {/* 설정 */}
+                {/* 월별 통계 차트 */}
                 <div className="bg-keeping-beige relative flex flex-1 flex-col items-start border border-black p-4">
                   <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    설정
+                    월별 통계
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
+                    {statsLoading ? (
+                      '통계 로딩 중...'
+                    ) : monthlyStats?.dailyStatistics &&
+                      monthlyStats.dailyStatistics.length > 0 ? (
+                      <div className="w-full">
+                        {/* 미니 막대 차트 */}
+                        <div className="mb-2 flex h-16 items-end justify-between">
+                          {monthlyStats.dailyStatistics
+                            .slice(-7)
+                            .map((day, index) => {
+                              const maxSales = Math.max(
+                                ...monthlyStats.dailyStatistics.map(
+                                  d => d.sales
+                                )
+                              )
+                              const height =
+                                maxSales > 0 ? (day.sales / maxSales) * 100 : 0
+                              return (
+                                <div
+                                  key={index}
+                                  className="flex flex-col items-center"
+                                >
+                                  <div
+                                    className="w-3 rounded-t bg-blue-500 transition-all duration-300"
+                                    style={{
+                                      height: `${height}%`,
+                                      minHeight: '4px',
+                                    }}
+                                  ></div>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    {new Date(day.date).getDate()}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                        </div>
+                        <div className="text-center text-sm text-gray-600">
+                          최근 7일 매출 추이
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        데이터가 없습니다
+                      </div>
+                    )}
                   </div>
                 </div>
 

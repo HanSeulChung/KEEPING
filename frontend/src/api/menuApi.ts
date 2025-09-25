@@ -2,11 +2,11 @@ import apiClient from './axios'
 import { apiConfig } from './config'
 
 export interface MenuRequestDto {
-  name: string
+  menuName: string
   description: string
   price: number
-  category: string
-  categoryId?: number
+  categoryId: number
+  storeId: number
   image?: File
 }
 
@@ -45,7 +45,7 @@ export const createMenu = async (
     console.log('메뉴 생성 시작:', { storeId, menuData })
 
     const formData = new FormData()
-    formData.append('name', menuData.name) // 백엔드가 기대하는 필드명
+    formData.append('menuName', menuData.menuName) // 백엔드가 기대하는 필드명
 
     // categoryId는 필수값이므로 검증
     if (!menuData.categoryId || menuData.categoryId <= 0) {
@@ -63,6 +63,9 @@ export const createMenu = async (
 
     if (menuData.image) {
       formData.append('imgFile', menuData.image) // API 명세에 따라 'imgFile' 사용
+
+      // storeId 추가
+      formData.append('storeId', menuData.storeId.toString())
     }
 
     // FormData 내용 로깅
@@ -71,15 +74,15 @@ export const createMenu = async (
       console.log(`${key}:`, value)
     }
 
-    const response = await apiClient.post(
-      `/stores/${storeId}/menus`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    )
+    const url = `/owners/stores/${storeId}/menus`
+    console.log('메뉴 생성 API URL:', url)
+    console.log('전체 URL:', apiClient.defaults.baseURL + url)
+
+    const response = await apiClient.post(url, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
 
     console.log('메뉴 생성 성공:', response.data)
 
@@ -87,6 +90,7 @@ export const createMenu = async (
       success: true,
       data: response.data.data || response.data,
       message: response.data.message || '메뉴가 생성되었습니다.',
+      statusCode: response.status,
     }
   } catch (error: any) {
     console.error('메뉴 생성 실패:', {
@@ -140,7 +144,7 @@ export const editMenu = async (
     if (menuData.image) formData.append('image', menuData.image)
 
     const response = await fetch(
-      `${apiConfig.baseURL}/stores/${storeId}/menus/${menuId}`,
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus/${menuId}`,
       {
         method: 'PATCH',
         body: formData,
@@ -168,7 +172,7 @@ export const getAllMenus = async (
 ): Promise<ApiResponse<MenuResponseDto[]>> => {
   try {
     const response = await fetch(
-      `${apiConfig.baseURL}/stores/${storeId}/menus`,
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus`,
       {
         method: 'GET',
         headers: {
@@ -197,7 +201,7 @@ export const deleteMenu = async (
 ): Promise<ApiResponse<void>> => {
   try {
     const response = await fetch(
-      `${apiConfig.baseURL}/stores/${storeId}/menus/${menuId}`,
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus/${menuId}`,
       {
         method: 'DELETE',
         headers: {
@@ -225,7 +229,7 @@ export const deleteAllMenus = async (
 ): Promise<ApiResponse<void>> => {
   try {
     const response = await fetch(
-      `${apiConfig.baseURL}/stores/${storeId}/menus`,
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus`,
       {
         method: 'DELETE',
         headers: {

@@ -2,7 +2,10 @@
 //브라우저에서 서버로 API 요청할 때 사용
 
 const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8080'
+    : 'https://j13a509.p.ssafy.io/api')
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
@@ -26,6 +29,7 @@ export const endpoints = {
     // 사용자 정보 조회
     me: '/auth/me',
     // 소셜 로그인 (카카오)
+
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',
 
