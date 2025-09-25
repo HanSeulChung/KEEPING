@@ -4,7 +4,6 @@ import com.ssafy.keeping.domain.event.dto.CancelEvent;
 import com.ssafy.keeping.domain.event.dto.PaymentEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
