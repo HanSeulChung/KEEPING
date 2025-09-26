@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 
@@ -33,6 +34,7 @@ public class OwnerService {
     private final RegSessionStore sessionStore;
     private final ImageService imageService;
     private final FinOpenApiClient apiClient;
+    private final SecureRandom secureRandom;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -67,8 +69,8 @@ public class OwnerService {
 //        } catch (Exception e) {
         // userKey 생성
         try {
-            int prefix = 100;
-            String email = prefix++ + "@keeping509owner.com";
+            String prefix = createEmailId();
+            String email = prefix + "@keeping509owner.com";
             log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
 
             InsertMemberResponseDto member = apiClient.insertMember(email);
@@ -163,5 +165,14 @@ public class OwnerService {
             log.debug("가맹점 등록 실패");
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
+    }
+
+    private String createEmailId() {
+        log.debug("createEmailId > ... ");
+
+        long number = 100000000000000000L + secureRandom.nextLong(900000000000000000L);
+        log.debug("createEmailId: {}", number);
+
+        return String.valueOf(number);
     }
 }
