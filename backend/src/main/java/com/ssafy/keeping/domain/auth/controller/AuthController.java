@@ -25,12 +25,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -125,6 +127,7 @@ public class AuthController {
                     .body(ApiResponse.error("토큰 갱신 실패 ", HttpStatus.UNAUTHORIZED.value()));
         }
     }
+
     @GetMapping("/logout")
     public ResponseEntity<ApiResponse<Map<String, String>>> logout(
             HttpServletRequest request,
@@ -132,6 +135,7 @@ public class AuthController {
             Authentication authentication) {
         try {
             String refreshToken = cookieUtil.getRefreshTokenFromCookie(request);
+            String accessToken = getJwtFromRequest(request);
 
             // 1. 우리 서비스 로그아웃 처리
             if(refreshToken != null && jwtProvider.validateToken(refreshToken)) {
@@ -139,6 +143,20 @@ public class AuthController {
                 UserRole role = jwtProvider.getUserRole(refreshToken);
                 String key = "auth:rt:" + role + ":" + userId;
                 redis.delete(key);
+
+                // 액세스 토큰도 블랙리스트에 추가 (토큰 만료까지)
+                if(accessToken != null && jwtProvider.validateToken(accessToken)) {
+                    String atKey = "auth:blacklist:" + accessToken;
+                    Date expiration = jwtProvider.getExpirationDate(accessToken);
+
+                    // 현재 시간부터 토큰 만료까지의 남은 시간 계산
+                    long ttlSeconds = (expiration.getTime() - System.currentTimeMillis()) / 1000;
+
+                    if(ttlSeconds > 0) {
+                        // TTL과 함께 저장
+                        redis.opsForValue().set(atKey, "blacklisted", Duration.ofSeconds(ttlSeconds));
+                    }
+                }
             }
             cookieUtil.removeRefreshTokenFromCookie(response);
 
@@ -366,5 +384,28 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(ApiResponse.success("세션 정보 조회 성공", 200, regSessionId));
+    }
+
+    private final static String AUTHORIZATION_HEADER = "Authorization";
+    private final static String BEARER_PREFIX = "Bearer";
+
+    private String getJwtFromRequest(HttpServletRequest request) {
+        // 1. Authorization 헤더에서 확인
+        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+        if(StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(7);
+        }
+
+        // 2. 쿠키에서 확인
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName()) || "newAccessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }

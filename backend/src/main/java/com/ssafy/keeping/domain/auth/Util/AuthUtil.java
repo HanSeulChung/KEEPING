@@ -8,9 +8,6 @@ import org.springframework.stereotype.Component;
 @Getter
 public class AuthUtil {
 
-    @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
-    private String kakaoClient;
-
     @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
     private String redirect;
 
@@ -19,4 +16,7 @@ public class AuthUtil {
 
     @Value("${spring.security.oauth2.client.registration.kakao.logout-redirect-uri}")
     private String logoutRedirect;
+
+    @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
+    private String restApiKey;
 }
