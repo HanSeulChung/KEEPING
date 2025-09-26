@@ -19,14 +19,16 @@ export interface MenuEditRequestDto {
 }
 
 export interface MenuResponseDto {
-  id: number
-  name: string
+  menuId: number
+  storeId: number
+  menuName: string
+  categoryId: number
+  categoryName: string
+  displayOrder: number
+  soldOut: boolean
+  imgUrl: string
   description: string
   price: number
-  category: string
-  imageUrl?: string
-  createdAt: string
-  updatedAt: string
 }
 
 export interface ApiResponse<T> {
