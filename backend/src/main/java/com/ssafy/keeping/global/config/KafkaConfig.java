@@ -24,7 +24,8 @@ import java.util.Map;
 @EnableKafka
 public class KafkaConfig {
 
-    private String bootstrapServers = "localhost:9092";
+//    private String bootstrapServers = "localhost:9092";
+    private String bootstrapServers = "kafka:9092";
 
     private String groupId = "keeping-service-group";
 
