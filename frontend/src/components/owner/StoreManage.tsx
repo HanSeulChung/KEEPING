@@ -1,6 +1,7 @@
 'use client'
 
 import apiClient from '@/api/axios'
+import { MenuResponseDto } from '@/api/menuApi'
 import { useMenuManagement } from '@/hooks/useMenuManagement'
 import { useStoreStore } from '@/store/useStoreStore'
 import { useSearchParams } from 'next/navigation'
@@ -90,7 +91,7 @@ const StoreManage = () => {
   ])
 
   const handleEditMenu = (id: number) => {
-    const menuToEdit = menus.find(menu => menu.id === id)
+    const menuToEdit = menus.find(menu => menu.menuId === id)
     if (menuToEdit) {
       setEditingMenu(menuToEdit)
       setShowMenuEditModal(true)
@@ -356,35 +357,45 @@ const StoreManage = () => {
               </div>
             ) : (
               menus.map(item => (
-                <div key={item.id} className="border border-black p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="mb-2 font-['nanumsquare'] text-lg text-black">
-                        {item.name}
-                      </h3>
-                      <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center gap-4">
-                        <span className="font-['nanumsquare'] text-lg font-bold text-black">
-                          {(item.price || 0).toLocaleString()}원
-                        </span>
-                        <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
-                          {item.category}
-                        </span>
-                        <button
-                          onClick={() => handleEditMenu(item.id)}
-                          className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
-                        >
-                          수정
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMenu(item.id, item.name)}
-                          className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
-                        >
-                          삭제
-                        </button>
+                <div key={item.menuId} className="border border-black p-4">
+                  <div className="flex items-center gap-4">
+                    {/* 이미지 */}
+                    {item.imgUrl ? (
+                      <img 
+                        src={item.imgUrl} 
+                        alt={item.menuName}
+                        className="h-20 w-20 object-cover rounded border border-gray-300 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 bg-gray-100 rounded border border-gray-300 flex items-center justify-center flex-shrink-0">
+                        <span className="text-gray-400 text-xs">이미지 없음</span>
                       </div>
+                    )}
+                    
+                    {/* 메뉴명과 카테고리 */}
+                    <div className="flex-1">
+                      <h3 className="font-['nanumsquare'] text-lg text-black mb-1">
+                        {item.menuName}
+                      </h3>
+                      <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
+                        {item.categoryName}
+                      </span>
+                    </div>
+                    
+                    {/* 버튼들 */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditMenu(item.menuId)}
+                        className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMenu(item.menuId, item.menuName)}
+                        className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
+                      >
+                        삭제
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -608,18 +619,19 @@ const MenuAddModal = ({
     if (
       !manualMenu.name ||
       !manualMenu.name.trim() ||
-      !manualMenu.categoryId ||
-      !manualMenu.imgFile
+      !manualMenu.categoryId
     ) {
-      alert('메뉴명, 카테고리, 이미지는 필수입니다.')
+      alert('메뉴명과 카테고리는 필수입니다.')
       return
     }
 
     try {
       const formData = new FormData()
-      formData.append('name', manualMenu.name.trim())
+      formData.append('menuName', manualMenu.name.trim())
       formData.append('categoryId', manualMenu.categoryId.toString())
-      formData.append('imgFile', manualMenu.imgFile)
+      if (manualMenu.imgFile) {
+        formData.append('imgFile', manualMenu.imgFile)
+      }
       if (manualMenu.price)
         formData.append('price', manualMenu.price.toString())
       if (manualMenu.description)
@@ -640,7 +652,7 @@ const MenuAddModal = ({
       } else {
         alert('메뉴 추가에 실패했습니다.')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('메뉴 추가 실패:', error)
       alert('메뉴 추가에 실패했습니다.')
     }
@@ -1183,7 +1195,7 @@ const MenuAddModal = ({
 type MenuEditModalProps = {
   onClose: () => void
   storeId: string | null
-  menu: any
+  menu: MenuResponseDto
   onUpdate: () => void
 }
 
@@ -1195,9 +1207,9 @@ const MenuEditModal = ({
 }: MenuEditModalProps) => {
   const [categories, setCategories] = useState<Category[]>([])
   const [editedMenu, setEditedMenu] = useState({
-    menuName: menu.name || '',
-    categoryId: 0,
-    price: menu.price || 0,
+    menuName: menu.menuName || '',
+    categoryId: menu.categoryId || 0,
+    price: 0, // 백엔드에서 price 필드가 없으므로 기본값 사용
     description: menu.description || '',
     imgFile: null as File | null,
   })
@@ -1217,7 +1229,7 @@ const MenuEditModal = ({
       if (response.data.success) {
         setCategories(response.data.data || [])
         const currentCategory = response.data.data.find(
-          (cat: Category) => cat.categoryName === menu.category
+          (cat: Category) => cat.categoryName === menu.categoryName
         )
         if (currentCategory) {
           setEditedMenu(prev => ({
@@ -1249,8 +1261,8 @@ const MenuEditModal = ({
       if (editedMenu.imgFile) formData.append('imgFile', editedMenu.imgFile)
       if (storeId) formData.append('storeId', storeId)
 
-      const response = await apiClient.put(
-        `/owners/stores/${storeId}/menus/${menu.id}`,
+      const response = await apiClient.patch(
+        `/owners/stores/${storeId}/menus/${menu.menuId}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       )
