@@ -258,7 +258,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(group)
                         .customer(actor)
                         .store(store)
-                        .transactionType(TransactionType.USE)
+                        .transactionType(TransactionType.TRANSFER_IN) // 공유로 수정
                         .amount(shareAmount)
                         .build()
         );

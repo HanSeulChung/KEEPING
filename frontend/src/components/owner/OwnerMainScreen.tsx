@@ -162,8 +162,22 @@ const OwnerMainScreen = () => {
 
           {/* QR 인식하기 */}
           <Link
-            href="/owner/scan"
-            className="group border border-black bg-white p-6 transition-colors hover:bg-gray-50"
+            href={
+              selectedStore
+                ? `/owner/scan?storeId=${selectedStore.id}&accountName=${selectedStore.name}`
+                : '#'
+            }
+            className={`group border border-black p-6 transition-colors ${
+              selectedStore
+                ? 'cursor-pointer bg-white hover:bg-gray-50'
+                : 'cursor-not-allowed bg-gray-100 opacity-50'
+            }`}
+            onClick={e => {
+              if (!selectedStore) {
+                e.preventDefault()
+                alert('가게를 먼저 선택해주세요.')
+              }
+            }}
           >
             <h2 className="mb-4 font-['nanumsquare'] text-xl font-extrabold text-black sm:text-2xl">
               QR 인식하기

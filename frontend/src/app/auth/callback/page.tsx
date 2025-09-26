@@ -73,16 +73,8 @@ function AuthCallbackContent() {
             console.warn('refresh 응답에 accessToken이 없습니다')
           }
 
-          // Zustand 스토어 업데이트
+          // Zustand 스토어 업데이트 (refreshToken은 쿠키로만 관리)
           login(userInfo, accessToken)
-
-          // refreshToken 쿠키 즉시 제거 (보안을 위해)
-          document.cookie =
-            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-          document.cookie =
-            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.p.ssafy.io;'
-          document.cookie =
-            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;'
 
           console.log('로그인 성공:', userInfo)
           console.log('저장된 토큰 여부:', !!accessToken)

@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 
 @Service
@@ -59,28 +60,31 @@ public class CustomerService {
         // userKey 생성
         String userKey;
 
-        try {
-            SearchUserKeyResponseDto searchUserKeyResponse = apiClient.searchUserKey(session.getEmail());
-
-            // userKey 있으면
-            if(searchUserKeyResponse != null
-                    && searchUserKeyResponse.getUserKey() != null
-                    && !searchUserKeyResponse.getUserKey().isEmpty()) {
-
-                userKey = searchUserKeyResponse.getUserKey();
-                log.debug("기존 userKey 사용");
-
-            } else {
-                // userKey 생성 (catch 문으로 이동)
-                log.debug("새로운 userKey 생성");
-                throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
-            }
-
-        } catch (Exception e) {
+//        try {
+//            SearchUserKeyResponseDto searchUserKeyResponse = apiClient.searchUserKey(session.getEmail());
+//
+//            // userKey 있으면
+//            if(searchUserKeyResponse != null
+//                    && searchUserKeyResponse.getUserKey() != null
+//                    && !searchUserKeyResponse.getUserKey().isEmpty()) {
+//
+//                userKey = searchUserKeyResponse.getUserKey();
+//                log.debug("기존 userKey 사용");
+//
+//            } else {
+//                // userKey 생성 (catch 문으로 이동)
+//                log.debug("새로운 userKey 생성");
+//                throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
+//            }
+//
+//        } catch (Exception e) {
             // userKey 생성
             try {
-                log.debug("FinOpenApi userkey 생성 : {}", session.getEmail());
-                InsertMemberResponseDto member = apiClient.insertMember(session.getEmail());
+                int prefix = 100;
+                String email = prefix++ + "@keeping509customer.com";
+                log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
+
+                InsertMemberResponseDto member = apiClient.insertMember(email);
                 userKey = member.getUserKey();
                 log.debug("userKey 생성 완료");
 
@@ -89,7 +93,7 @@ public class CustomerService {
                 log.warn("FinOpenApi Member 생성 실패 : {}", session.getEmail());
                 throw new CustomException(ErrorCode.BAD_REQUEST);
             }
-        }
+//        }
 
         // userKey 가 null 이거나 empty
         if(userKey == null || userKey.isEmpty()) {

@@ -60,19 +60,26 @@ export const authApi = {
     return response.data.data
   },
 
-  // 사용자 정보 조회
-  getMe: async (): Promise<AuthAPI.SessionInfoResponse> => {
-    const response = await apiClient.get(API_ENDPOINTS.auth.me, {
-      withCredentials: true,
+  // 로그아웃 - 카카오 로그아웃 URL 받기
+  logout: async (): Promise<AuthAPI.LogoutResponse> => {
+    // Next.js API route를 통해 백엔드 호출
+    const response = await fetch('/api/auth/logout', {
+      method: 'GET',
+      credentials: 'include',
     })
-    return response.data
-  },
 
-  // 로그아웃
-  logout: async (): Promise<void> => {
-    await apiClient.get(API_ENDPOINTS.auth.logout, {
-      withCredentials: true,
-    })
+    const result = await response.json()
+
+    // localStorage 정리
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('user')
+      localStorage.removeItem('userInfo')
+    }
+
+    return {
+      kakaoLogoutUrl: result.data?.kakaoLogoutUrl,
+    }
   },
 }
 

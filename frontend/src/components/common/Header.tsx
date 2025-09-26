@@ -2,6 +2,7 @@
 
 import { authApi } from '@/api/authApi'
 // UserContext 제거: 고객/점주 모두 useAuthStore 사용
+import LogoutButton from '@/components/auth/LogoutButton'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
 import Link from 'next/link'
@@ -122,7 +123,6 @@ export default function Header({ title }: HeaderProps = {}) {
       // localStorage 정리
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
       }
 
@@ -235,131 +235,9 @@ export default function Header({ title }: HeaderProps = {}) {
             <>
               <div className="border-border mx-3 self-stretch border-l"></div>
 
-              {mounted ? (
-                <>
-                  {/* 로그인 상태일 때만 알림 버튼 표시 */}
-                  {isLoggedIn && (
-                    <button
-                      onClick={handleNotificationClick}
-                      className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-200 active:scale-95 sm:h-10 sm:w-10"
-                      aria-label="알림"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="text-gray-700"
-                      >
-                        <path
-                          d="M18 8A6 6 0 0 0 6 8C6 7.46957 6.21071 6.96086 6.58579 6.58579C6.96086 6.21071 7.46957 6 8 6H16C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8Z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M18 8V13C18 13.5304 18.2107 14.0391 18.5858 14.4142C18.9609 14.7893 19.4696 15 20 15H4C4.53043 15 5.03914 14.7893 5.41421 14.4142C5.78929 14.0391 6 13.5304 6 13V8"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {/* 읽지 않은 알림 개수 배지 */}
-                      {unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-sm">
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </div>
-                      )}
-                    </button>
-                  )}
-
-                  {/* 로그인 상태에 따른 버튼 */}
-                  {isLoggedIn ? (
-                    <button
-                      onClick={handleLogout}
-                      className="flex h-8 items-center rounded-full bg-gray-100 px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:scale-105 hover:bg-gray-200 active:scale-95 sm:h-10 sm:px-6 sm:text-base"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-2"
-                      >
-                        <path
-                          d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M16 17L21 12L16 7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M21 12H9"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      로그아웃
-                    </button>
-                  ) : (
-                    <Link
-                      href={isCustomerPage ? '/customer/login' : '/owner/login'}
-                      className="flex h-8 items-center rounded-full bg-blue-500 px-4 text-sm font-medium text-white transition-all duration-200 hover:scale-105 hover:bg-blue-600 active:scale-95 sm:h-10 sm:px-6 sm:text-base"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-2"
-                      >
-                        <path
-                          d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M10 17L15 12L10 7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M15 12H3"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      로그인
-                    </Link>
-                  )}
-                </>
+              {/* 로그인 상태에 따른 버튼 */}
+              {isLoggedIn ? (
+                <LogoutButton className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base" />
               ) : (
                 /* 마운트되지 않았을 때 기본 로그인 버튼 표시 (hydration 방지) */
                 <Link

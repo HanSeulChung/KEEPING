@@ -260,6 +260,8 @@ export const HeaderCards = () => {
       {/* QR 모달 */}
       <QRModal
         cardName={selectedCard?.storeName}
+        walletId={selectedCard?.walletId}
+        storeId={selectedCard?.id ? selectedCard.id % 1000 : undefined} // storeId 추출
         isOpen={!!selectedCard}
         onClose={() => setSelectedCard(null)}
       />

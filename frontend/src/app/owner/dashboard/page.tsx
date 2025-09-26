@@ -3,7 +3,7 @@
 import Dashboard from '@/components/owner/Dashboard'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 export default function OwnerPage() {
   const router = useRouter()
@@ -24,7 +24,9 @@ export default function OwnerPage() {
         console.log('localStorage user:', storedUser ? '있음' : '없음')
 
         if (!accessToken || !storedUser) {
-          console.log('토큰 또는 사용자 정보가 없습니다. 로그인 페이지로 이동합니다.')
+          console.log(
+            '토큰 또는 사용자 정보가 없습니다. 로그인 페이지로 이동합니다.'
+          )
           router.push('/owner/login')
           return
         }
@@ -62,8 +64,8 @@ export default function OwnerPage() {
   }
 
   return (
-    <>
+    <Suspense fallback={<div>Loading...</div>}>
       <Dashboard />
-    </>
+    </Suspense>
   )
 }

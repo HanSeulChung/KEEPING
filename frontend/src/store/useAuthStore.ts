@@ -2,31 +2,33 @@ import { buildURL } from '@/api/config'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
-// Cookie 읽기 유틸리티 함수
+// ------------------------------------------------------------
+// In-memory access token to avoid frequent localStorage reads
+// ------------------------------------------------------------
+let memoryAccessToken: string | null = null
+
+// ------------------------------------------------------------
+// Cookie helpers
+// ------------------------------------------------------------
 const getCookie = (name: string): string | null => {
   if (typeof document === 'undefined') return null
-
   const value = `; ${document.cookie}`
   const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null
-  }
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null
   return null
 }
 
-// Cookie 삭제 유틸리티 함수
 const deleteCookie = (name: string) => {
   if (typeof document === 'undefined') return
-
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.p.ssafy.io;`
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;`
 }
 
-// localStorage만 사용 (메모리 저장소 제거)
-
-type AuthUser = {
-  // 공통 필드 (OWNER/CUSTOMER 혼용 지원)
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
+export type AuthUser = {
   id?: number | string
   userId?: number
   ownerId?: number
@@ -37,67 +39,124 @@ type AuthUser = {
 }
 
 interface AuthState {
+  // state
   isLoggedIn: boolean
   user: AuthUser | null
+  isLoggingOut: boolean
   loading: boolean
   error: string | null
 
+  // actions
   login: (user: AuthUser, accessToken?: string) => void
-  logout: () => void
+  logout: () => Promise<void>
   logoutAll: () => Promise<void>
   initializeAuth: () => void
   checkAuthStatus: () => boolean
   fetchCurrentUser: () => Promise<void>
   refreshAccessToken: () => Promise<void>
+  clearAuth: () => void
 
+  // token helpers
   getAccessToken: () => string | null
   setAccessToken: (token: string) => void
   clearAccessToken: () => void
 }
 
+// ------------------------------------------------------------
+// Store
+// ------------------------------------------------------------
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       isLoggedIn: false,
       user: null,
+      isLoggingOut: false,
       loading: false,
       error: null,
 
-      login: (user, accessToken) => {
-        if (accessToken) {
-          try {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('accessToken', accessToken)
-            }
-          } catch {}
-        }
-
-        // 사용자 정보도 localStorage에 저장
+      // --------------------------------------------------------
+      // Token helpers
+      // --------------------------------------------------------
+      getAccessToken: () => {
+        if (memoryAccessToken) return memoryAccessToken
         try {
-          if (typeof window !== 'undefined' && user) {
-            localStorage.setItem('user', JSON.stringify(user))
+          if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('accessToken')
+            if (token) memoryAccessToken = token
+            return token
           }
-        } catch (e) {
-          console.warn('Failed to save user data:', e)
-        }
-
-        set({ isLoggedIn: true, user })
+        } catch {}
+        return null
       },
-      logout: () => {
+
+      setAccessToken: (token: string) => {
+        memoryAccessToken = token
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', token)
+          }
+        } catch {}
+      },
+
+      clearAccessToken: () => {
+        memoryAccessToken = null
         try {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('accessToken')
-            localStorage.removeItem('refreshToken')
-            localStorage.removeItem('user')
-            localStorage.removeItem('fcmToken') // FCM 토큰도 제거
+          }
+        } catch {}
+      },
 
-            // 쿠키에서 refreshToken 완전 제거
+      clearAuth: () => {
+        memoryAccessToken = null
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('user')
+            localStorage.removeItem('userInfo')
             deleteCookie('refreshToken')
             deleteCookie('refresh_token')
             deleteCookie('REFRESH_TOKEN')
           }
         } catch {}
-        set({ isLoggedIn: false, user: null, loading: false, error: null })
+        set({ isLoggedIn: false, user: null })
+      },
+
+      // --------------------------------------------------------
+      // Auth flows
+      // --------------------------------------------------------
+      login: (user: AuthUser, accessToken?: string) => {
+        if (accessToken) {
+          get().setAccessToken(accessToken)
+        }
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(user))
+          }
+        } catch {}
+        set({ isLoggedIn: true, user })
+      },
+
+      logout: async () => {
+        set({ isLoggingOut: true })
+        try {
+          const { authApi } = await import('@/api/authApi')
+          const result = await authApi.logout()
+
+          get().clearAuth()
+          set({ isLoggingOut: false })
+
+          if (result?.kakaoLogoutUrl) {
+            window.location.href = result.kakaoLogoutUrl
+          } else {
+            window.location.href = '/'
+          }
+        } catch (error) {
+          console.error('로그아웃 에러:', error)
+          get().clearAuth()
+          set({ isLoggingOut: false })
+          window.location.href = '/'
+        }
       },
 
       logoutAll: async () => {
@@ -107,51 +166,26 @@ export const useAuthStore = create<AuthState>()(
             credentials: 'include',
           })
         } catch {}
-        get().logout()
-      },
-
-      getAccessToken: () => {
-        try {
-          if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('accessToken')
-            return token
-          }
-        } catch {}
-        return null
-      },
-      setAccessToken: (token: string) => {
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('accessToken', token)
-          }
-        } catch {}
-      },
-      clearAccessToken: () => {
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('accessToken')
-          }
-        } catch {}
+        await get().logout()
       },
 
       initializeAuth: () => {
         try {
-          // 저장된 사용자 정보 복원
+          // Restore user
           let savedUser: AuthUser | null = null
           if (typeof window !== 'undefined') {
-            const savedUserData = localStorage.getItem('user')
-            if (savedUserData) {
+            const saved = localStorage.getItem('user')
+            if (saved) {
               try {
-                savedUser = JSON.parse(savedUserData)
-              } catch (e) {
-                console.warn('Failed to parse saved user data:', e)
+                savedUser = JSON.parse(saved)
+              } catch {
                 localStorage.removeItem('user')
               }
             }
           }
 
-          // 페이지 로드 시 Cookie/LocalStorage에서 토큰 확인하여 로그인 상태 초기화
-          const possibleTokenNames = [
+          // Find token from cookies first
+          const candidates = [
             'accessToken',
             'access_token',
             'token',
@@ -159,33 +193,25 @@ export const useAuthStore = create<AuthState>()(
             'jwt',
           ]
           let token: string | null = null
-
-          for (const name of possibleTokenNames) {
+          for (const name of candidates) {
             token = getCookie(name)
             if (token) break
           }
-
-          if (!token) {
+          if (!token && typeof window !== 'undefined') {
             try {
-              if (typeof window !== 'undefined') {
-                token = localStorage.getItem('accessToken')
-              }
+              token = localStorage.getItem('accessToken')
             } catch {}
           }
 
           if (token) {
+            memoryAccessToken = token
             set({ isLoggedIn: true, user: savedUser })
-
-            // 토큰 유효성 검증 및 사용자 정보 동기화 (비차단)
+            // non-blocking validation and user sync
             get()
               .refreshAccessToken()
-              .then(() => {
-                // 토큰 갱신 후 사용자 정보도 갱신
-                return get().fetchCurrentUser()
-              })
+              .then(() => get().fetchCurrentUser())
               .catch(() => {
                 console.warn('Token validation failed during initialization')
-                // 토큰이 유효하지 않으면 로그아웃 처리
                 get().logout()
               })
           } else {
@@ -196,9 +222,9 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoggedIn: false, user: null })
         }
       },
+
       checkAuthStatus: () => {
-        // 현재 로그인 상태 확인 (Cookie/LocalStorage 토큰 존재 여부 기준)
-        const possibleTokenNames = [
+        const candidates = [
           'accessToken',
           'access_token',
           'token',
@@ -206,25 +232,21 @@ export const useAuthStore = create<AuthState>()(
           'jwt',
         ]
         let token: string | null = null
-
-        for (const name of possibleTokenNames) {
+        for (const name of candidates) {
           token = getCookie(name)
           if (token) break
         }
-        if (!token) {
+        if (!token && typeof window !== 'undefined') {
           try {
-            if (typeof window !== 'undefined')
-              token = localStorage.getItem('accessToken')
+            token = localStorage.getItem('accessToken')
           } catch {}
         }
-
         if (token) {
           set({ isLoggedIn: true })
           return true
-        } else {
-          set({ isLoggedIn: false, user: null })
-          return false
         }
+        set({ isLoggedIn: false, user: null })
+        return false
       },
 
       fetchCurrentUser: async () => {
@@ -243,7 +265,6 @@ export const useAuthStore = create<AuthState>()(
           })
           if (!res.ok) {
             if (res.status === 401) {
-              // 토큰이 만료된 경우 로그아웃 처리하지 않고 그냥 에러만 기록
               console.warn('Token expired, but keeping login state')
               set({ loading: false, error: 'Token expired' })
               return
@@ -275,15 +296,10 @@ export const useAuthStore = create<AuthState>()(
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           const json = await res.json()
           const newToken = json?.data?.accessToken
-          if (newToken) {
-            get().setAccessToken(newToken)
-          }
-        } catch (error: any) {
+          if (newToken) get().setAccessToken(newToken)
+        } catch (error) {
           if (process.env.NODE_ENV === 'development') {
-            console.log(
-              '개발 환경: 토큰 갱신 실패 (백엔드 서버 확인 필요):',
-              error.message
-            )
+            console.log('개발 환경: 토큰 갱신 실패 (백엔드 서버 확인 필요)')
           } else {
             console.error('Token refresh failed:', error)
           }
@@ -295,7 +311,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       storage: createJSONStorage(() => {
         if (typeof window === 'undefined') {
-          // SSR 안전 스토리지 (no-op)
           return {
             getItem: () => null,
             setItem: () => {},

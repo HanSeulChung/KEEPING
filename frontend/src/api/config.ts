@@ -20,6 +20,20 @@ export const buildURL = (path: string): string => {
   return `${base}${path}`
 }
 
+// QR URI의 도메인을 현재 환경의 baseURL로 교체하는 함수
+export const replaceQRDomain = (qrUri: string): string => {
+  try {
+    const url = new URL(qrUri)
+    const currentBaseURL = apiConfig.baseURL.replace(/\/$/, '')
+
+    // 기존 도메인을 현재 환경의 baseURL로 교체
+    return qrUri.replace(url.origin, currentBaseURL)
+  } catch (error) {
+    console.error('QR URI 파싱 오류:', error)
+    return qrUri // 파싱 실패 시 원본 반환
+  }
+}
+
 export const endpoints = {
   auth: {
     // 로그아웃
