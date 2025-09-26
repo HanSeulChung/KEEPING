@@ -36,6 +36,34 @@ export default function RootLayout({
           src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
           async
         ></script>
+
+        {/* Service Worker 등록 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('Service Worker 등록 성공:', registration.scope);
+                    })
+                    .catch(function(error) {
+                      console.log('Service Worker 등록 실패:', error);
+                    });
+
+                  // Firebase Messaging Service Worker 등록
+                  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                    .then(function(registration) {
+                      console.log('FCM Service Worker 등록 성공:', registration.scope);
+                    })
+                    .catch(function(error) {
+                      console.log('FCM Service Worker 등록 실패:', error);
+                    });
+                });
+              }
+            `
+          }}
+        />
       </head>
       <body className="bg-white text-black antialiased">
         <AuthProvider>

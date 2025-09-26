@@ -311,12 +311,12 @@ export default function OwnerHome() {
                   {/* 매장 관리 */}
                   <Link
                     href={`/owner/manage?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="relative flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
+                    className="relative flex min-w-0 flex-1 cursor-pointer flex-col items-start overflow-hidden border border-black bg-white p-4 transition-colors hover:bg-gray-50"
                   >
-                    <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
+                    <div className="flex h-[68px] w-full flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                       매장 관리
                     </div>
-                    <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center text-[17px] leading-7 break-words whitespace-normal text-black">
                       {statsLoading ? (
                         '통계 로딩 중...'
                       ) : (

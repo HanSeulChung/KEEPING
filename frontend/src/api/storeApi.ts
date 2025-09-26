@@ -72,7 +72,7 @@ export const storeApi = {
   ): Promise<StoreAPI.SalesData[]> => {
     try {
       const response = await apiClient.get<StoreAPI.SalesCalendarResponse>(
-        `/owners/stores/${storeId}/sales/calendar?year=${year}&month=${month}`
+        `/api/owners/stores/${storeId}/sales/calendar?year=${year}&month=${month}`
       )
 
       return response.data.data
@@ -94,7 +94,7 @@ export const storeApi = {
       }
 
       const response = await apiClient.post(
-        `/stores/${storeId}/statistics/monthly`,
+        `/api/stores/${storeId}/statistics/monthly`,
         requestBody
       )
 

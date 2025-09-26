@@ -35,15 +35,20 @@ public class NotificationController {
      * @param customerId 고객 ID
      * @param lastEventId 마지막으로 받은 이벤트 ID (재연결용)
      * @return SseEmitter
-     * 이거는 사용하지 않고, 로그인 시에 notificationService.subscribe를 해서 사용하도록 할 예정
+     * 로그인 시에 이걸 불러서 구독하도록 할 것임
      */
     @GetMapping(value = "/subscribe/customer/{customerId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeCustomer(@PathVariable Long customerId,
-                                       @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "") String lastEventId) {
-        
-        log.info("고객 SSE 구독 요청 - 고객ID: {}, Last-Event-ID: {}", customerId, lastEventId);
-        
-        return notificationService.subscribe("customer", customerId, lastEventId);
+                                       @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "") String lastEventId,
+                                       @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+
+        log.info("고객 SSE 구독 요청 - 고객ID: {}, Last-Event-ID: {}, Authorization: {}",
+                customerId, lastEventId, authorizationHeader != null ? "있음" : "없음");
+
+        // Authorization 헤더에서 AccessToken 추출
+        String accessToken = extractAccessToken(authorizationHeader);
+
+        return notificationService.subscribe("customer", customerId, lastEventId, accessToken);
     }
 
     /**
@@ -52,15 +57,20 @@ public class NotificationController {
      * @param ownerId 점주 ID
      * @param lastEventId 마지막으로 받은 이벤트 ID (재연결용)
      * @return SseEmitter
-     * 이거는 사용하지 않고, 로그인 시에 notificationService.subscribe를 해서 사용하도록 할 예정
+     * 로그인 시에 이걸 불러서 구독하도록 할 것임
      */
     @GetMapping(value = "/subscribe/owner/{ownerId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeOwner(@PathVariable Long ownerId,
-                                    @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "") String lastEventId) {
-        
-        log.info("점주 SSE 구독 요청 - 점주ID: {}, Last-Event-ID: {}", ownerId, lastEventId);
-        
-        return notificationService.subscribe("owner", ownerId, lastEventId);
+                                    @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "") String lastEventId,
+                                    @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+
+        log.info("점주 SSE 구독 요청 - 점주ID: {}, Last-Event-ID: {}, Authorization: {}",
+                ownerId, lastEventId, authorizationHeader != null ? "있음" : "없음");
+
+        // Authorization 헤더에서 AccessToken 추출
+        String accessToken = extractAccessToken(authorizationHeader);
+
+        return notificationService.subscribe("owner", ownerId, lastEventId, accessToken);
     }
 
     /**
@@ -279,5 +289,17 @@ public class NotificationController {
                 notifications
             )
         );
+    }
+
+    /**
+     * Authorization 헤더에서 AccessToken 추출
+     * @param authorizationHeader Authorization 헤더 값
+     * @return AccessToken 또는 null
+     */
+    private String extractAccessToken(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7);
+        }
+        return null;
     }
 }

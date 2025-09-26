@@ -33,11 +33,8 @@ const NotificationPage = () => {
   } = useNotificationSystem()
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
-    { id: 'PAYMENT', name: '결제 알림', enabled: true },
-    { id: 'CHARGE', name: '충전 알림', enabled: true },
-    { id: 'STORE_PROMOTION', name: '매장 프로모션 알림', enabled: true },
-    { id: 'PREPAYMENT_PURCHASE', name: '선결제 구매 알림', enabled: true },
-    { id: 'SYSTEM', name: '시스템 알림', enabled: false },
+    { id: 'PAYMENT_CATEGORY', name: '결제/정산 알림', enabled: true },
+    { id: 'GROUP_CATEGORY', name: '모임 관련 알림', enabled: true },
   ])
   const [loading, setLoading] = useState(true)
   const [notificationPermission, setNotificationPermission] =
@@ -155,18 +152,38 @@ const NotificationPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 메인 컨텐츠 */}
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* 가게 정보 표시 */}
-        <div className="mb-8 flex flex-col items-center">
-          <div className="w-full max-w-4xl rounded-lg border border-black bg-white p-8">
-            <h1 className="mb-4 text-center font-['Tenada'] text-2xl font-extrabold text-black sm:text-3xl lg:text-4xl">
-              {accountName ? `${accountName} 알림` : '알림'}
+    <div className="min-h-screen bg-gray-50">
+      {/* 모바일 네이티브 헤더 */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm safe-area-top">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-center h-11">
+            <h1 className="text-lg font-['nanumsquare'] font-bold text-black">
+              알림 설정
             </h1>
-            <p className="text-center font-['nanumsquare'] text-base text-gray-600 sm:text-lg">
-              이 가게와 관련된 알림만 표시됩니다
-            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 메인 컨텐츠 */}
+      <div className="pb-safe">
+        {/* 연결 상태 카드 */}
+        <div className="mx-4 mb-4">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-['nanumsquare'] font-bold text-black">
+                {accountName ? `${accountName} 알림` : '알림 시스템'}
+              </h2>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            </div>
+            <div className="text-sm text-gray-600 font-['nanumsquare'] space-y-1">
+              <p>상태: <span className={isConnected ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                {isConnected ? '연결됨' : '연결 안됨'}
+              </span></p>
+              <p>읽지 않은 알림: <span className="font-medium text-blue-600">{unreadCount}개</span></p>
+              {fcmToken && (
+                <p>푸시 알림: <span className="text-green-600 font-medium">활성화</span></p>
+              )}
+            </div>
           </div>
         </div>
 

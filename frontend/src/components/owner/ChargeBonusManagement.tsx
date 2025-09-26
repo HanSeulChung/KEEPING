@@ -2,8 +2,8 @@
 
 import apiClient from '@/api/axios'
 import { deleteChargeBonus, updateChargeBonus } from '@/api/storeApi'
+import ChargeBonusModal from '@/components/owner/ChargeBonusModal'
 import { useEffect, useState } from 'react'
-import ChargeBonusModal from './ChargeBonusModal'
 
 interface ChargeBonusData {
   id?: number | string

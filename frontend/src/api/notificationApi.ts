@@ -1,5 +1,13 @@
 import { NotificationAPI } from '@/types/api'
 import apiClient from './axios'
+import { apiConfig } from './config'
+
+// Base에 /api 존재 여부에 따라 경로에 /api를 한 번만 붙여주는 유틸
+const apiPath = (path: string) => {
+  const base = apiConfig.baseURL.replace(/\/$/, '')
+  const hasApi = /\/api$/.test(base)
+  return `${hasApi ? '' : '/api'}${path}`
+}
 
 // 알림 관련 API 함수들
 export const notificationApi = {
@@ -156,7 +164,7 @@ export const notificationApi = {
           message: string
           status: number
           data: number
-        }>(`/notifications/owner/${ownerId}/unread-count`)
+        }>(apiPath(`/notifications/owner/${ownerId}/unread-count`))
 
         console.log('점주 읽지 않은 알림 개수 조회 성공:', response.data)
         return response.data.data || 0
@@ -205,7 +213,7 @@ export const notificationApi = {
             number: number
             size: number
           }
-        }>(`/notifications/owner/${ownerId}?page=${page}&size=${size}`)
+        }>(apiPath(`/notifications/owner/${ownerId}?page=${page}&size=${size}`))
 
         console.log('점주 알림 목록 조회 성공:', response.data)
         return response.data.data?.content || []
@@ -240,7 +248,11 @@ export const notificationApi = {
             number: number
             size: number
           }
-        }>(`/notifications/owner/${ownerId}/unread?page=${page}&size=${size}`)
+        }>(
+          apiPath(
+            `/notifications/owner/${ownerId}/unread?page=${page}&size=${size}`
+          )
+        )
 
         return response.data.data?.content || []
       } catch (error) {
@@ -256,7 +268,7 @@ export const notificationApi = {
     ): Promise<boolean> => {
       try {
         await apiClient.put(
-          `/notifications/owner/${ownerId}/${notificationId}/read`
+          apiPath(`/notifications/owner/${ownerId}/${notificationId}/read`)
         )
         return true
       } catch (error) {

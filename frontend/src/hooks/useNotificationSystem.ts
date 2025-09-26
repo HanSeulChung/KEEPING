@@ -1,7 +1,11 @@
 'use client'
 
 import { buildURL } from '@/api/config'
-import { registerFCMToken, unregisterFCMToken } from '@/api/fcmApi'
+import {
+  registerOwnerFCMToken,
+  registerCustomerFCMToken,
+  deleteFCMToken,
+} from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 import {
   getFcmToken,
@@ -11,16 +15,14 @@ import {
 import { useAuthStore } from '@/store/useAuthStore'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-interface NotificationData {
-  id: number
-  type: 'payment' | 'order' | 'review' | 'system'
-  title: string
-  message: string
-  timestamp: string
-  isRead: boolean
-  data?: any
-}
+import {
+  NotificationType,
+  NotificationData,
+  NotificationCategory,
+  getNotificationCategory,
+  getNotificationIcon,
+  getNotificationTitle
+} from '@/types/notification'
 
 interface UseNotificationSystemReturn {
   notifications: NotificationData[]
@@ -36,6 +38,8 @@ interface UseNotificationSystemReturn {
   ) => void
   registerFCM: () => Promise<boolean>
   unregisterFCM: () => Promise<void>
+  getNotificationCategory: (type: NotificationType) => NotificationCategory
+  getNotificationIcon: (type: NotificationType) => string
 }
 
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
@@ -268,7 +272,21 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             const data = JSON.parse(event.data)
             // 연결 확인 메시지는 무시
             if (data.type === 'connection') return
-            const notification: NotificationData = data
+
+            // SSE 메시지 구조에 맞게 NotificationData로 변환
+            const notification: NotificationData = {
+              id: data.notificationId,
+              type: data.notificationType,
+              title: getNotificationTitle(data.notificationType),
+              message: data.content,
+              timestamp: data.createdAt,
+              isRead: data.isRead,
+              data: {
+                receiverType: data.receiverType,
+                receiverId: data.receiverId,
+                receiverName: data.receiverName
+              }
+            }
             setNotifications(prev => [notification, ...prev])
             if (
               isVisibleRef.current &&
@@ -412,15 +430,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         localStorage.setItem('fcmToken', token)
       }
 
-      // 서버에 토큰 등록
-      await registerFCMToken({
-        userId: String(user.id),
-        token: token,
-        deviceInfo: {
-          userAgent: navigator.userAgent,
-          platform: navigator.platform,
-        },
-      })
+      // 서버에 토큰 등록 (역할별 엔드포인트)
+      const isOwner = (user.role || 'OWNER') === 'OWNER'
+      const ownerId = user.ownerId || user.id
+      const customerId = user.userId || user.id
+      if (isOwner && ownerId) {
+        await registerOwnerFCMToken(Number(ownerId), token)
+      } else if (!isOwner && customerId) {
+        await registerCustomerFCMToken(Number(customerId), token)
+      }
 
       console.log('FCM 토큰 등록 완료')
       return true
@@ -441,7 +459,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const unregisterFCM = async (): Promise<void> => {
     try {
       if (user?.id && fcmToken) {
-        await unregisterFCMToken(String(user.id), fcmToken)
+        await deleteFCMToken(fcmToken)
         setFcmToken(null)
         // localStorage에서도 FCM 토큰 제거
         if (typeof window !== 'undefined') {
@@ -675,5 +693,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     addNotificationWithSettings,
     registerFCM,
     unregisterFCM,
+    getNotificationCategory,
+    getNotificationIcon,
   }
 }

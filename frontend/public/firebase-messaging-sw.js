@@ -43,12 +43,18 @@ if (messaging) {
       payload.data?.body ||
       '새로운 알림이 있습니다'
 
+    // FCM에서는 data.type 필드로 알림 타입을 받음
+    const notificationType = payload.data?.type
+    console.log('FCM 백그라운드 알림 타입:', notificationType)
+
     // 알림 타입에 따른 아이콘 선택
     let icon = '/icons/bell.svg'
-    if (payload.data?.type === 'PAYMENT') {
-      icon = '/icons/bell.svg' // 결제 아이콘
-    } else if (payload.data?.type === 'CHARGE') {
-      icon = '/icons/bell.svg' // 충전 아이콘
+    if (['PAYMENT_APPROVED', 'PAYMENT_REQUEST', 'PAYMENT_CANCELED', 'SETTLEMENT_COMPLETED'].includes(notificationType)) {
+      icon = '/icons/bell.svg' // 결제 관련 아이콘
+    } else if (['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(notificationType)) {
+      icon = '/icons/bell.svg' // 포인트 관련 아이콘
+    } else if (notificationType?.includes('GROUP_')) {
+      icon = '/icons/bell.svg' // 그룹 관련 아이콘
     }
 
     // 알림 타입에 따른 URL 설정
