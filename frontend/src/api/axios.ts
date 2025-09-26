@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/store/useAuthStore'
 import axios from 'axios'
 
 import { apiConfig, buildURL } from './config'
@@ -6,7 +7,7 @@ import { apiConfig, buildURL } from './config'
 const apiClient = axios.create({
   baseURL: apiConfig.baseURL,
   timeout: apiConfig.timeout,
-  withCredentials: true, 
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +17,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   config => {
     if (typeof window !== 'undefined') {
-      const accessToken = localStorage.getItem('accessToken')
+      const tokenFromStore = useAuthStore.getState().getAccessToken()
+      const tokenFromLocal = localStorage.getItem('accessToken')
+      const accessToken = tokenFromStore || tokenFromLocal
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`
       }
@@ -28,7 +31,7 @@ apiClient.interceptors.request.use(
   }
 )
 
-// 응답 인터셉터 - 토큰 만료 시 자동 갱신 (클로드 방식)
+// 응답 인터셉터 - 토큰 만료 시 자동 갱신
 apiClient.interceptors.response.use(
   response => {
     return response
@@ -41,19 +44,27 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-
+        // 백엔드의 /auth/refresh는 HttpOnly 쿠키 기반으로 처리되고,
+        // 프론트는 refreshToken을 저장/조작하지 않습니다.
         const refreshResponse = await fetch(buildURL('/auth/refresh'), {
           method: 'POST',
-          credentials: 'include'
+          credentials: 'include',
         })
 
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json()
-          const newAccessToken = refreshData.data.accessToken
-          
-          // 새로운 accessToken을 localStorage에 저장
-          localStorage.setItem('accessToken', newAccessToken)
-          
+          const newAccessToken = refreshData.data?.accessToken
+
+          if (!newAccessToken) throw new Error('Token refresh failed')
+
+          // 새로운 accessToken 저장 (store + localStorage)
+          try {
+            useAuthStore.getState().setAccessToken(newAccessToken)
+          } catch {}
+          try {
+            localStorage.setItem('accessToken', newAccessToken)
+          } catch {}
+
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
           return apiClient(originalRequest)
         }
@@ -62,9 +73,23 @@ apiClient.interceptors.response.use(
         throw new Error('Token refresh failed')
       } catch (refreshError) {
         // 토큰 갱신 실패 시 로그아웃 처리
+        try {
+          useAuthStore.getState().logout()
+        } catch {}
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken')
-          window.location.href = '/customer/login'
+          try {
+            localStorage.removeItem('accessToken')
+          } catch {}
+
+          // 현재 페이지가 점주 페이지인지 고객 페이지인지 확인
+          const currentPath = window.location.pathname
+          const isOwnerPage = currentPath.startsWith('/owner')
+
+          if (isOwnerPage) {
+            window.location.href = '/' // 점주는 홈페이지로
+          } else {
+            window.location.href = '/customer/login' // 고객은 고객 로그인으로
+          }
         }
         return Promise.reject(refreshError)
       }

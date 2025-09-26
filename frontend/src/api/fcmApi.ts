@@ -1,61 +1,93 @@
-import { apiConfig } from './config'
+import apiClient from './axios'
 
 export interface FCMTokenRequest {
-  userId: string
   token: string
-  deviceInfo?: {
-    userAgent: string
-    platform: string
-  }
 }
 
 export interface FCMTokenResponse {
   success: boolean
   message: string
+  status: number
+  data: string
 }
 
-// FCM 토큰을 서버에 등록
-export const registerFCMToken = async (data: FCMTokenRequest): Promise<FCMTokenResponse> => {
+// 고객용 FCM 토큰 등록
+export const registerCustomerFCMToken = async (
+  customerId: number,
+  token: string
+): Promise<FCMTokenResponse> => {
   try {
-    const response = await fetch(`${apiConfig.baseURL}/fcm/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    })
+    console.log('고객 FCM 토큰 등록 시작 - customerId:', customerId)
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
+    const response = await apiClient.post<FCMTokenResponse>(
+      `/fcm/customer/${customerId}/token`,
+      { token }
+    )
 
-    const result = await response.json()
-    return result
+    console.log('고객 FCM 토큰 등록 성공:', response.data)
+    return response.data
   } catch (error) {
-    console.error('FCM 토큰 등록 실패:', error)
+    console.error('고객 FCM 토큰 등록 실패:', error)
     throw error
   }
 }
 
-// FCM 토큰을 서버에서 삭제 (로그아웃 시)
-export const unregisterFCMToken = async (userId: string, token: string): Promise<FCMTokenResponse> => {
+// 점주용 FCM 토큰 등록
+export const registerOwnerFCMToken = async (
+  ownerId: number,
+  token: string
+): Promise<FCMTokenResponse> => {
   try {
-    const response = await fetch(`${apiConfig.baseURL}/fcm/unregister`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId, token })
+    console.log('점주 FCM 토큰 등록 시작 - ownerId:', ownerId)
+
+    const response = await apiClient.post<FCMTokenResponse>(
+      `/fcm/owner/${ownerId}/token`,
+      { token }
+    )
+
+    console.log('점주 FCM 토큰 등록 성공:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('점주 FCM 토큰 등록 실패:', error)
+    throw error
+  }
+}
+
+// FCM 토큰 삭제
+export const deleteFCMToken = async (token: string): Promise<FCMTokenResponse> => {
+  try {
+    console.log('FCM 토큰 삭제 시작')
+
+    const response = await apiClient.delete<FCMTokenResponse>('/fcm/token', {
+      data: { token }
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const result = await response.json()
-    return result
+    console.log('FCM 토큰 삭제 성공:', response.data)
+    return response.data
   } catch (error) {
     console.error('FCM 토큰 삭제 실패:', error)
     throw error
   }
+}
+
+// 호환성을 위한 기존 함수들
+export const registerFCMToken = async (data: {
+  userId: string
+  token: string
+  deviceInfo?: any
+}): Promise<FCMTokenResponse> => {
+  const userId = parseInt(data.userId)
+  if (isNaN(userId)) {
+    throw new Error('유효하지 않은 사용자 ID')
+  }
+  
+  // 기본적으로 점주로 처리 (기존 동작 유지)
+  return registerOwnerFCMToken(userId, data.token)
+}
+
+export const unregisterFCMToken = async (
+  userId: string,
+  token: string
+): Promise<FCMTokenResponse> => {
+  return deleteFCMToken(token)
 }

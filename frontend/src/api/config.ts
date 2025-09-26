@@ -1,8 +1,12 @@
 //API 호출을 위한 클라이언트 사이드 설정
 //브라우저에서 서버로 API 요청할 때 사용
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+// 환경변수 값을 그대로 신뢰하며, 운영 기본값만 "/api" 포함
+const API_BASE_URL: string =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8080'
+    : 'https://j13a509.p.ssafy.io/api')
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
@@ -12,7 +16,6 @@ export const apiConfig = {
   },
 }
 
-// 중앙 URL 빌더 (index.ts 제거 후 대체)
 export const buildURL = (path: string): string => {
   const base = apiConfig.baseURL.replace(/\/$/, '')
   return `${base}${path}`
@@ -23,7 +26,7 @@ export const replaceQRDomain = (qrUri: string): string => {
   try {
     const url = new URL(qrUri)
     const currentBaseURL = apiConfig.baseURL.replace(/\/$/, '')
-    
+
     // 기존 도메인을 현재 환경의 baseURL로 교체
     return qrUri.replace(url.origin, currentBaseURL)
   } catch (error) {
@@ -38,15 +41,13 @@ export const endpoints = {
     logout: '/auth/logout',
     // 토큰 갱신
     refresh: '/auth/refresh',
-    // 세션 정보 조회
-    sessionInfo: '/auth/session-info',
+    // 사용자 정보 조회
+    me: '/auth/me',
     // 소셜 로그인 (카카오)
+
     kakaoOwner: '/auth/kakao/owner',
     kakaoCustomer: '/auth/kakao/customer',
-    // 소셜 로그인 (구글) - 향후 구현
-    // googleOwner: '/auth/google/owner',
-    // googleCustomer: '/auth/google/customer',
-    // 회원가입 완료
+
     signupCustomer: '/auth/signup/customer',
     signupOwner: '/auth/signup/owner',
     // OTP 인증
@@ -83,7 +84,7 @@ export const endpoints = {
     register: '/owners/stores',
     updateStore: '/owners/stores/{storeId}',
     deleteStore: '/owners/stores/{storeId}',
-    ownerStores: '/owners/stores?ownerId={ownerId}',
+    ownerStores: '/owners/stores',
     ownerStoreDetail: '/owners/stores/{storeId}',
     // 매장 이미지 관리
     uploadImage: '/stores/{storeId}/images',
@@ -98,6 +99,11 @@ export const endpoints = {
     salesCalendar: '/owners/stores/{storeId}/sales/calendar',
     salesStats: '/owners/stores/{storeId}/sales/stats',
     salesReport: '/owners/stores/{storeId}/sales/report',
+    // 통계 관리
+    statisticsOverall: '/stores/{storeId}/statistics/overall',
+    statisticsDaily: '/stores/{storeId}/statistics/daily',
+    statisticsPeriod: '/stores/{storeId}/statistics/period',
+    statisticsMonthly: '/stores/{storeId}/statistics/monthly',
   },
   menu: {
     list: '/stores/{storeId}/menus',

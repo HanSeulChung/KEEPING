@@ -13,36 +13,36 @@ export const authApi = {
     window.location.href = buildURL(API_ENDPOINTS.auth.kakaoCustomer)
   },
 
-  // googleOwnerLogin: () => {
-  //   window.location.href = buildURL(API_ENDPOINTS.auth.googleOwner)
-  // },
-
-  // googleCustomerLogin: () => {
-  //   window.location.href = buildURL(API_ENDPOINTS.auth.googleCustomer)
-  // },
-
   // 회원가입 완료
   completeOwnerSignup: async (
     data: AuthAPI.OwnerSignupRequest
   ): Promise<AuthAPI.SignupOwnerResponse> => {
-    const response = await apiClient.post(API_ENDPOINTS.auth.signupOwner, data, {
-      withCredentials: true,
-    })
+    const response = await apiClient.post(
+      API_ENDPOINTS.auth.signupOwner,
+      data,
+      {
+        withCredentials: true,
+      }
+    )
     return response.data.data
   },
 
   completeCustomerSignup: async (
     data: AuthAPI.CustomerSignupRequest
   ): Promise<AuthAPI.SignupCustomerResponse> => {
-    const response = await apiClient.post(API_ENDPOINTS.auth.signupCustomer, data, {
-      withCredentials: true,
-    })
+    const response = await apiClient.post(
+      API_ENDPOINTS.auth.signupCustomer,
+      data,
+      {
+        withCredentials: true,
+      }
+    )
     return response.data.data
   },
 
   // 세션 정보 조회
   getSessionInfo: async (): Promise<AuthAPI.SessionInfoResponse> => {
-    const response = await apiClient.get(API_ENDPOINTS.auth.sessionInfo, {
+    const response = await apiClient.get(API_ENDPOINTS.auth.me, {
       withCredentials: true,
     })
     return response.data
@@ -50,9 +50,13 @@ export const authApi = {
 
   // 토큰 갱신
   refreshToken: async (): Promise<AuthAPI.TokenResponse> => {
-    const response = await apiClient.post(API_ENDPOINTS.auth.refresh, {}, {
-      withCredentials: true, // RefreshToken 쿠키 포함
-    })
+    const response = await apiClient.post(
+      API_ENDPOINTS.auth.refresh,
+      {},
+      {
+        withCredentials: true,
+      }
+    )
     return response.data.data
   },
 
@@ -63,18 +67,18 @@ export const authApi = {
       method: 'GET',
       credentials: 'include',
     })
-    
+
     const result = await response.json()
-    
+
     // localStorage 정리
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('user')
       localStorage.removeItem('userInfo')
     }
-    
+
     return {
-      kakaoLogoutUrl: result.data?.kakaoLogoutUrl
+      kakaoLogoutUrl: result.data?.kakaoLogoutUrl,
     }
   },
 }
@@ -92,7 +96,13 @@ export const isAuthenticated = (): boolean => {
     return null
   }
 
-  const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
+  const possibleTokenNames = [
+    'accessToken',
+    'access_token',
+    'token',
+    'authToken',
+    'jwt',
+  ]
   for (const name of possibleTokenNames) {
     const token = getCookie(name)
     if (token) return true

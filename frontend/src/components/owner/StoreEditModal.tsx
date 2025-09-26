@@ -1,5 +1,8 @@
 'use client'
 
+import AddressInput from '@/components/common/AddressInput'
+import { formatAddress } from '@/lib/addressUtils'
+import type { AddressData } from '@/types/address'
 import { useRef, useState } from 'react'
 
 interface StoreEditModalProps {
@@ -35,9 +38,12 @@ export default function StoreEditModal({
 }: StoreEditModalProps) {
   const [storeName, setStoreName] = useState(initial.storeName ?? '')
   const [category, setCategory] = useState(initial.category ?? '')
-  const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
-  const [baseAddress, setBaseAddress] = useState(initial.baseAddress ?? '')
   const [description, setDescription] = useState(initial.description ?? '')
+  const [addressData, setAddressData] = useState<AddressData>({
+    zipCode: initial.postalCode ?? '',
+    address: initial.baseAddress ?? '',
+    detailAddress: '',
+  })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     initial.imageUrl ?? null
@@ -60,11 +66,15 @@ export default function StoreEditModal({
     onSave({
       storeName,
       category,
-      postalCode,
-      baseAddress,
+      postalCode: addressData.zipCode,
+      baseAddress: formatAddress(addressData, { includeZipCode: false }),
       description,
       imageFile,
     })
+  }
+
+  const handleAddressChange = (newAddress: AddressData) => {
+    setAddressData(newAddress)
   }
 
   return (
@@ -144,33 +154,28 @@ export default function StoreEditModal({
                     주 소
                   </div>
                 </div>
-                {/* 우편번호 + 검색 */}
-                <div className="relative h-10 w-full">
-                  <div className="absolute top-1 left-0 inline-flex h-10 w-[304px] items-center justify-start rounded-l-md bg-white p-2 outline outline-offset-[-1px] outline-gray-300">
-                    <input
-                      value={postalCode}
-                      onChange={e =>
-                        setPostalCode(e.target.value.replace(/[^\d-]/g, ''))
-                      }
-                      placeholder="우편번호"
-                      className="w-full text-base text-gray-800 placeholder:text-stone-300 focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onSearchAddress}
-                    className="absolute top-1 right-0 h-10 w-14 rounded-r-md bg-gray-800 text-sm text-white"
-                  >
-                    검색
-                  </button>
-                </div>
-                {/* 기본 주소 */}
-                <div className="inline-flex h-10 w-96 items-center justify-start rounded-md bg-white p-2 outline outline-offset-[-1px] outline-gray-300">
-                  <input
-                    value={baseAddress}
-                    onChange={e => setBaseAddress(e.target.value)}
-                    placeholder="기본 주소"
-                    className="w-full text-base text-gray-800 placeholder:text-stone-300 focus:outline-none"
+
+                <div className="w-full">
+                  <AddressInput
+                    value={addressData}
+                    onChange={handleAddressChange}
+                    placeholder={{
+                      zipCode: '우편번호',
+                      address: '기본 주소',
+                      detailAddress: '상세 주소',
+                    }}
+                    className={{
+                      container: 'gap-2.5',
+                      zipCodeContainer: 'relative h-10',
+                      zipCodeInput:
+                        'absolute top-1 left-0 h-10 w-[304px] rounded-l-md border-0 bg-white p-2 text-base text-gray-800 outline outline-offset-[-1px] outline-gray-300 placeholder:text-stone-300 focus:outline-none',
+                      searchButton:
+                        'absolute top-1 right-0 h-10 w-14 rounded-r-md border-0 bg-gray-800 text-sm text-white',
+                      addressInput:
+                        'h-10 w-full rounded-md border-0 bg-white p-2 text-base text-gray-800 outline outline-offset-[-1px] outline-gray-300 placeholder:text-stone-300 focus:outline-none',
+                      detailAddressInput:
+                        'h-10 w-full rounded-md border-0 bg-white p-2 text-base text-gray-800 outline outline-offset-[-1px] outline-gray-300 placeholder:text-stone-300 focus:outline-none',
+                    }}
                   />
                 </div>
               </div>

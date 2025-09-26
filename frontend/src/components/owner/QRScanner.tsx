@@ -93,12 +93,26 @@ export default function QRScanner() {
   }, [router])
 
   // QR 코드 스캔 시작
-  const startQRScanning = () => {
-    if (!videoRef.current) return
+  const startQRScanning = async () => {
+    if (!videoRef.current) {
+      setError('비디오 요소가 준비되지 않았습니다.')
+      return
+    }
 
     try {
+      console.log('카메라 사용 가능 여부 확인 중...')
+
+      // 카메라 사용 가능 여부 미리 확인
+      const hasCamera = await QrScanner.hasCamera()
+      console.log('카메라 사용 가능:', hasCamera)
+
+      if (!hasCamera) {
+        setError('카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.')
+        return
+      }
+
       console.log('QrScanner 인스턴스 생성 시작')
-      
+
       // QrScanner 인스턴스 생성
       const qrScanner = new QrScanner(
         videoRef.current,
@@ -113,24 +127,44 @@ export default function QRScanner() {
           highlightCodeOutline: true,
           preferredCamera: 'environment', // 후면 카메라 우선
           maxScansPerSecond: 5, // 스캔 빈도 제한
+          returnDetailedScanResult: true, // 상세한 스캔 결과 반환
         }
       )
 
       qrScannerRef.current = qrScanner
-      
+
       console.log('QrScanner 인스턴스 생성 완료, 스캔 시작')
-      
+
       // 스캔 시작
-      qrScanner.start().then(() => {
-        console.log('QR 스캔 시작됨')
-        setIsScanning(true)
-      }).catch((err: any) => {
-        console.error('QR 스캔 시작 실패:', err)
-        setError('QR 스캔을 시작할 수 없습니다: ' + err.message)
-      })
+      await qrScanner.start()
+      console.log('QR 스캔 시작됨')
+      setIsScanning(true)
+      setError(null) // 성공 시 에러 메시지 클리어
+
     } catch (err: any) {
-      console.error('QrScanner 생성 실패:', err)
-      setError('QR 스캐너를 초기화할 수 없습니다: ' + err.message)
+      console.error('QR 스캔 실패:', err)
+      console.error('에러 타입:', typeof err)
+      console.error('에러 메시지:', err.message)
+      console.error('에러 이름:', err.name)
+
+      let errorMessage = 'QR 스캐너를 시작할 수 없습니다.'
+
+      // 에러 타입별 메시지 처리
+      if (err.message && err.message.includes('Camera not found')) {
+        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.'
+      } else if (err.name === 'NotAllowedError' || err.message?.includes('permission')) {
+        errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.'
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
+      } else if (err.message) {
+        errorMessage = `QR 스캐너 오류: ${err.message}`
+      }
+
+      setError(errorMessage)
     }
   }
 
@@ -237,15 +271,15 @@ export default function QRScanner() {
     try {
       console.log('QRScanner - 카메라 시작 시도')
       setError(null)
-      
+
       // QrScanner가 자체적으로 카메라를 관리
-      startQRScanning()
-      
+      await startQRScanning()
+
     } catch (err: any) {
       console.error('카메라 접근 오류:', err)
-      
+
       let errorMessage = '카메라에 접근할 수 없습니다.'
-      
+
       if (err.name === 'NotAllowedError') {
         errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
       } else if (err.name === 'NotFoundError') {
@@ -255,7 +289,7 @@ export default function QRScanner() {
       } else if (err.name === 'NotReadableError') {
         errorMessage = '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
       }
-      
+
       setError(errorMessage)
     }
   }
@@ -366,30 +400,59 @@ export default function QRScanner() {
             <div className="bg-opacity-50 bg-black p-6">
               {error && (
                 <div className="mb-4 rounded-lg bg-red-900/50 p-4 text-center text-red-300">
-                  <div className="mb-2 font-bold">{error}</div>
-                  <div className="text-sm text-red-200">
+                  <div className="mb-3 text-lg font-bold">📷 카메라 오류</div>
+                  <div className="mb-3 text-red-200">{error}</div>
+                  <div className="mb-4 text-sm text-red-200">
                     {error.includes('카메라를 찾을 수 없습니다') && (
                       <>
-                        데스크톱 환경에서는 카메라가 없을 수 있습니다.<br />
-                        모바일 기기에서 접속하거나 외부 카메라를 연결해주세요.
+                        💡 해결 방법:<br />
+                        • 모바일 기기에서 접속해보세요<br />
+                        • 외부 카메라가 연결되어 있는지 확인하세요<br />
+                        • 다른 탭에서 카메라를 사용 중인지 확인하세요
                       </>
                     )}
                     {error.includes('권한이 거부되었습니다') && (
                       <>
-                        브라우저 주소창 옆의 카메라 아이콘을 클릭하여<br />
-                        카메라 권한을 허용해주세요.
+                        💡 해결 방법:<br />
+                        • 브라우저 주소창 옆의 카메라 아이콘을 클릭하세요<br />
+                        • "허용" 또는 "Allow" 버튼을 눌러주세요<br />
+                        • 페이지를 새로고침 후 다시 시도하세요
+                      </>
+                    )}
+                    {error.includes('다른 애플리케이션에서 사용 중') && (
+                      <>
+                        💡 해결 방법:<br />
+                        • 다른 화상회의 앱을 종료해주세요<br />
+                        • 다른 브라우저 탭을 닫아주세요<br />
+                        • 페이지를 새로고침 후 다시 시도하세요
+                      </>
+                    )}
+                    {error.includes('브라우저는 카메라를 지원하지 않습니다') && (
+                      <>
+                        💡 해결 방법:<br />
+                        • Chrome, Firefox, Safari 브라우저를 사용하세요<br />
+                        • 브라우저를 최신 버전으로 업데이트하세요<br />
+                        • 모바일 기기에서 접속해보세요
                       </>
                     )}
                   </div>
-                  <button
-                    onClick={() => {
-                      setError(null)
-                      startCamera()
-                    }}
-                    className="mt-2 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
-                  >
-                    다시 시도
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        setError(null)
+                        startCamera()
+                      }}
+                      className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                    >
+                      🔄 다시 시도
+                    </button>
+                    <button
+                      onClick={() => setShowManualInput(true)}
+                      className="rounded bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
+                    >
+                      ✏️ QR 코드 직접 입력
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -400,6 +463,34 @@ export default function QRScanner() {
                     {scannedData}
                   </div>
                 </div>
+              )}
+
+              {/* 카메라 시작/수동 입력 버튼 */}
+              {!isScanning && !error && !scannedData && (
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={startCamera}
+                    className="w-full rounded-lg bg-blue-600 px-6 py-3 text-lg font-bold text-white hover:bg-blue-700"
+                  >
+                    📷 카메라로 QR 스캔하기
+                  </button>
+                  <button
+                    onClick={() => setShowManualInput(true)}
+                    className="w-full rounded-lg bg-gray-600 px-6 py-3 text-lg font-bold text-white hover:bg-gray-700"
+                  >
+                    ✏️ QR 코드 직접 입력
+                  </button>
+                </div>
+              )}
+
+              {/* 스캔 중일 때 정지 버튼 */}
+              {isScanning && (
+                <button
+                  onClick={stopCamera}
+                  className="w-full rounded-lg bg-red-600 px-6 py-3 text-lg font-bold text-white hover:bg-red-700"
+                >
+                  ⏹️ 스캔 정지
+                </button>
               )}
             </div>
           </div>
