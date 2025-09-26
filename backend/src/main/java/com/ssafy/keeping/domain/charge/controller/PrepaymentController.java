@@ -33,11 +33,10 @@ public class PrepaymentController {
      * @param requestDto 선결제 요청 정보
      * @return 선결제 처리 결과
      */
-    @PostMapping("/{storeId}/prepayment/{customerId}")
+    @PostMapping("/{storeId}/prepayment")
     public ResponseEntity<ApiResponse<PrepaymentResponseDto>> processPrePayment(
             @PathVariable @Positive(message = "가게 ID는 양수여야 합니다.") Long storeId,
-//            @AuthenticationPrincipal Long customerId,
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody @Valid PrepaymentRequestDto requestDto) {
 
