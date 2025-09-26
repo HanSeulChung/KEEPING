@@ -729,24 +729,32 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     try {
       // 사용자 ID 추출 및 검증
-      let ownerId: number | null = null
+      let userId: number | null = null
 
       if (user.ownerId) {
-        ownerId = Number(user.ownerId)
+        userId = Number(user.ownerId)
       } else if (user.userId) {
-        ownerId = Number(user.userId)
+        userId = Number(user.userId)
       } else if (user.id) {
-        ownerId = Number(user.id)
+        userId = Number(user.id)
       }
 
-      if (!ownerId || isNaN(ownerId) || ownerId <= 0) {
+      if (!userId || isNaN(userId) || userId <= 0) {
         console.error('유효하지 않은 사용자 ID:', user)
         return
       }
 
-      console.log('알림 목록 조회 - 사용자 ID:', ownerId, '사용자 정보:', user)
+      // 사용자 역할 확인
+      const userRole = user.role || 'OWNER'
+      const isOwner = userRole === 'OWNER'
 
-      const notifications = await notificationApi.getNotificationList(ownerId)
+      console.log('알림 목록 조회 - 사용자 ID:', userId, '사용자 역할:', userRole, '사용자 정보:', user)
+
+      // 역할에 따라 적절한 API 호출
+      const notifications = isOwner 
+        ? await notificationApi.owner.getNotificationList(userId)
+        : await notificationApi.customer.getNotificationList(userId)
+      
       const convertedNotifications = notifications.map(convertNotificationData)
       setNotifications(convertedNotifications)
     } catch (error) {

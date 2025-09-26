@@ -118,19 +118,19 @@ export const endpoints = {
   },
   notifications: {
     // 점주 알림
-    ownerList: '/notifications/owner/{ownerId}',
-    ownerUnreadCount: '/notifications/owner/{ownerId}/unread-count',
-    ownerUnreadList: '/notifications/owner/{ownerId}/unread',
+    ownerList: '/api/notifications/owner/{ownerId}',
+    ownerUnreadCount: '/api/notifications/owner/{ownerId}/unread-count',
+    ownerUnreadList: '/api/notifications/owner/{ownerId}/unread',
     ownerMarkAsRead:
-      '/notifications/owner/{ownerId}/mark-read/{notificationId}',
-    ownerMarkAllAsRead: '/notifications/owner/{ownerId}/mark-all-read',
+      '/api/notifications/owner/{ownerId}/mark-read/{notificationId}',
+    ownerMarkAllAsRead: '/api/notifications/owner/{ownerId}/mark-all-read',
     // 고객 알림
-    customerList: '/notifications/customer/{customerId}',
-    customerUnreadCount: '/notifications/customer/{customerId}/unread-count',
+    customerList: '/api/notifications/customer/{customerId}',
+    customerUnreadCount: '/api/notifications/customer/{customerId}/unread-count',
     customerMarkAsRead:
-      '/notifications/customer/{customerId}/mark-read/{notificationId}',
+      '/api/notifications/customer/{customerId}/mark-read/{notificationId}',
     // 알림 설정
-    updateSettings: '/notifications/settings',
+    updateSettings: '/api/notifications/settings',
     // FCM 토큰 등록
     registerFcmToken: '/notifications/fcm/register',
   },
