@@ -251,8 +251,8 @@ export default function OwnerHome() {
                 '매장을 선택해주세요'}
             </div>
 
-            {/* URL 파라미터가 있을 때만 카드 그리드 표시 */}
-            {searchParams.get('storeId') && searchParams.get('accountName') ? (
+            {/* 선택된 매장이 있으면 카드 그리드 표시 */}
+            {selectedStore ? (
               /* 두 열 레이아웃 */
               <div className="grid w-full max-w-[620px] grid-cols-2 gap-6">
                 {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}

@@ -198,8 +198,8 @@ const StoreManage = () => {
           </button>
         </div>
 
-        {/* 매장 정보 & 오늘의 현황 */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* 매장 정보 */}
+        <div className="mb-6 flex justify-center">
           {/* 매장 기본 정보 */}
           <div className="border border-black bg-white p-4">
             <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
@@ -247,41 +247,6 @@ const StoreManage = () => {
                 <span className="font-['nanumsquare'] text-sm font-medium text-green-600">
                   운영중
                 </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 매장 운영 현황 안내 */}
-          <div className="border border-black bg-white p-4">
-            <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
-              매장 운영 현황
-            </h3>
-            <div className="space-y-2">
-              <div className="rounded-lg bg-blue-50 p-3">
-                <div className="flex items-center">
-                  <div className="mr-2 text-blue-500">📅</div>
-                  <div>
-                    <div className="font-['nanumsquare'] text-sm font-medium text-blue-800">
-                      일별 상세 현황 확인
-                    </div>
-                    <div className="font-['nanumsquare'] text-xs text-blue-600">
-                      매출 캘린더에서 각 날짜에 마우스를 올려보세요
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg bg-green-50 p-3">
-                <div className="flex items-center">
-                  <div className="mr-2 text-green-500">💡</div>
-                  <div>
-                    <div className="font-['nanumsquare'] text-sm font-medium text-green-800">
-                      실시간 데이터
-                    </div>
-                    <div className="font-['nanumsquare'] text-xs text-green-600">
-                      포인트 사용량, 충전량, 거래건수 등 상세 정보 제공
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

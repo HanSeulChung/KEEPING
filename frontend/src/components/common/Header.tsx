@@ -2,10 +2,16 @@
 
 import { authApi } from '@/api/authApi'
 // UserContext 제거: 고객/점주 모두 useAuthStore 사용
-import LogoutButton from '@/components/auth/LogoutButton'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
-import Link from 'next/link'
+import * as AlertDialog from '@radix-ui/react-alert-dialog'
+import {
+  ArrowLeftIcon,
+  BellIcon,
+  EnterIcon,
+  ExitIcon,
+} from '@radix-ui/react-icons'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -138,6 +144,14 @@ export default function Header({ title }: HeaderProps = {}) {
     }
   }
 
+  const handleLogin = () => {
+    if (isCustomerPage) {
+      router.push('/customer/login')
+    } else {
+      router.push('/owner/login')
+    }
+  }
+
   const handleNotificationClick = () => {
     if (isCustomerPage) {
       router.push('/customer/notification')
@@ -185,28 +199,25 @@ export default function Header({ title }: HeaderProps = {}) {
         <div className="flex items-center">
           {!isFirstScreenAfterLogin && (
             <>
-              <button
-                onClick={handleBackClick}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-200 active:scale-95 sm:h-10 sm:w-10"
-                aria-label="뒤로가기"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-gray-700"
-                >
-                  <path
-                    d="M15 18L9 12L15 6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+              <Tooltip.Provider delayDuration={200}>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <button
+                      onClick={handleBackClick}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-200 active:scale-95 sm:h-10 sm:w-10"
+                      aria-label="뒤로가기"
+                    >
+                      <ArrowLeftIcon className="h-5 w-5 text-gray-700" />
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content
+                    sideOffset={6}
+                    className="rounded bg-black px-2 py-1 text-xs font-medium text-white shadow select-none"
+                  >
+                    뒤로가기
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
               {/* 세로 구분선 */}
               <div className="border-border mx-3 self-stretch border-l"></div>
             </>
@@ -235,47 +246,88 @@ export default function Header({ title }: HeaderProps = {}) {
             <>
               <div className="border-border mx-3 self-stretch border-l"></div>
 
-              {/* 로그인 상태에 따른 버튼 */}
-              {isLoggedIn ? (
-                <LogoutButton className="rounded-lg border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-base" />
-              ) : (
-                /* 마운트되지 않았을 때 기본 로그인 버튼 표시 (hydration 방지) */
-                <Link
-                  href={isCustomerPage ? '/customer/login' : '/owner/login'}
-                  className="flex h-8 items-center rounded-full bg-blue-500 px-4 text-sm font-medium text-white transition-all duration-200 hover:scale-105 hover:bg-blue-600 active:scale-95 sm:h-10 sm:px-6 sm:text-base"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="mr-2"
+              {/* 알림 버튼 */}
+              <Tooltip.Provider delayDuration={200}>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <button
+                      onClick={handleNotificationClick}
+                      className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-200 active:scale-95 sm:h-10 sm:w-10"
+                      aria-label="알림"
+                    >
+                      <BellIcon className="h-5 w-5 text-gray-700" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content
+                    sideOffset={6}
+                    className="rounded bg-black px-2 py-1 text-xs font-medium text-white shadow select-none"
                   >
-                    <path
-                      d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M10 17L15 12L10 7"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M15 12H3"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  로그인
-                </Link>
+                    알림
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+
+              {/* 로그인/로그아웃 */}
+              {isLoggedIn ? (
+                <AlertDialog.Root>
+                  <AlertDialog.Trigger asChild>
+                    <button
+                      className="flex h-8 items-center gap-1 rounded-full border border-gray-300 bg-white px-3 text-sm text-gray-800 transition-colors hover:bg-gray-50 active:scale-95 sm:h-10 sm:px-4 sm:text-base"
+                      aria-label="로그아웃"
+                    >
+                      <ExitIcon />
+                      <span className="hidden sm:inline">로그아웃</span>
+                    </button>
+                  </AlertDialog.Trigger>
+                  <AlertDialog.Portal>
+                    <AlertDialog.Overlay className="fixed inset-0 bg-black/40" />
+                    <AlertDialog.Content className="fixed top-1/2 left-1/2 w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-4 shadow">
+                      <AlertDialog.Title className="mb-2 text-base font-bold">
+                        로그아웃하시겠어요?
+                      </AlertDialog.Title>
+                      <AlertDialog.Description className="mb-4 text-sm text-gray-600">
+                        현재 계정에서 로그아웃합니다.
+                      </AlertDialog.Description>
+                      <div className="flex justify-end gap-2">
+                        <AlertDialog.Cancel className="rounded-md border px-3 py-1 text-sm">
+                          취소
+                        </AlertDialog.Cancel>
+                        <AlertDialog.Action
+                          onClick={handleLogout}
+                          className="rounded-md bg-black px-3 py-1 text-sm font-semibold text-white"
+                        >
+                          로그아웃
+                        </AlertDialog.Action>
+                      </div>
+                    </AlertDialog.Content>
+                  </AlertDialog.Portal>
+                </AlertDialog.Root>
+              ) : (
+                <Tooltip.Provider delayDuration={200}>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <button
+                        onClick={handleLogin}
+                        className="flex h-8 items-center gap-1 rounded-full bg-blue-500 px-4 text-sm font-medium text-white transition-all duration-200 hover:scale-105 hover:bg-blue-600 active:scale-95 sm:h-10 sm:px-6 sm:text-base"
+                        aria-label="로그인"
+                      >
+                        <EnterIcon />
+                        <span className="hidden sm:inline">로그인</span>
+                      </button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content
+                      sideOffset={6}
+                      className="rounded bg-black px-2 py-1 text-xs font-medium text-white shadow select-none"
+                    >
+                      로그인
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
               )}
             </>
           )}

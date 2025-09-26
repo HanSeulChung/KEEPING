@@ -21,13 +21,8 @@ const OwnerMainScreen = () => {
 
   // API 호출 함수들
   const fetchOwnerStores = async () => {
-    if (!user?.id) {
-      console.log('사용자 정보가 없습니다.')
-      return
-    }
-
     try {
-      const storeList = await storeApi.getOwnerStores(parseInt(String(user.id)))
+      const storeList = await storeApi.getOwnerStores()
 
       const formattedStores = storeList.map(store => ({
         id: store.id.toString(),
@@ -46,15 +41,10 @@ const OwnerMainScreen = () => {
   }
 
   const fetchUnreadNotifications = async () => {
-    if (!user?.id) {
-      console.log('사용자 정보가 없습니다.')
-      return
-    }
-
     try {
       // API 함수 사용
       const count = await notificationApi.getUnreadCount(
-        parseInt(String(user.id))
+        user?.id ? parseInt(String(user.id)) : 0
       )
       setUnreadCount(count)
     } catch (error) {

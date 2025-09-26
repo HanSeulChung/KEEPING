@@ -28,8 +28,6 @@ const NotificationPage = () => {
     markAsRead,
     markAllAsRead,
     unreadCount,
-    addNotification,
-    addNotificationWithSettings,
     fcmToken,
     isConnected,
   } = useNotificationSystem()
@@ -99,70 +97,7 @@ const NotificationPage = () => {
     )
   }
 
-  // 테스트 알림 전송 함수들
-  const sendTestNotification = (
-    type:
-      | 'PAYMENT'
-      | 'CHARGE'
-      | 'STORE_PROMOTION'
-      | 'PREPAYMENT_PURCHASE'
-      | 'SYSTEM'
-  ) => {
-    // 해당 타입의 알림이 비활성화되어 있으면 알림 목록에만 추가하고 브라우저 알림은 표시하지 않음
-    const setting = settings.find(s => s.id === type)
-    const isEnabled = setting?.enabled ?? true
-
-    const testMessages = {
-      PAYMENT: {
-        title: '새로운 결제가 완료되었습니다',
-        message: '김철수님이 15,000원을 결제했습니다',
-      },
-      CHARGE: {
-        title: '충전이 완료되었습니다',
-        message: '50,000원이 충전되었습니다',
-      },
-      STORE_PROMOTION: {
-        title: '매장 프로모션이 시작되었습니다',
-        message: '20% 할인 이벤트가 시작되었습니다',
-      },
-      PREPAYMENT_PURCHASE: {
-        title: '선결제 구매가 완료되었습니다',
-        message: '이영희님이 선결제 상품을 구매했습니다',
-      },
-      SYSTEM: {
-        title: '시스템 알림',
-        message: '시스템 점검이 완료되었습니다',
-      },
-    }
-
-    const message = testMessages[type]
-
-    // 알림 목록에는 항상 추가하되, 설정에 따라 브라우저 알림 제어
-    addNotificationWithSettings(
-      {
-        type,
-        title: message.title,
-        message: message.message,
-        data: { storeId: accountName || 'test-store' },
-      },
-      isEnabled && notificationPermission === 'granted' // 설정 활성화 + 권한 허용 시에만 브라우저 알림
-    )
-
-    // 로그 출력
-    if (isEnabled) {
-      if (notificationPermission === 'granted') {
-        console.log(`${type} 테스트 알림 전송 완료 (목록 + 브라우저 알림)`)
-      } else if (notificationPermission === 'denied') {
-        console.log(`${type} 알림 목록에 추가됨 (브라우저 알림 권한 거부됨)`)
-      } else {
-        console.log(`${type} 알림 목록에 추가됨 (브라우저 알림 권한 필요)`)
-      }
-    } else {
-      console.log(
-        `${type} 알림이 목록에 추가됨 (브라우저 알림은 설정에 의해 비활성화)`
-      )
-    }
-  }
+  // 테스트 알림 전송 로직 제거
 
   // 알림 타입별 아이콘
   const getNotificationIcon = (type: string) => {
@@ -227,7 +162,7 @@ const NotificationPage = () => {
         <div className="mb-8 flex flex-col items-center">
           <div className="w-full max-w-4xl rounded-lg border border-black bg-white p-8">
             <h1 className="mb-4 text-center font-['Tenada'] text-2xl font-extrabold text-black sm:text-3xl lg:text-4xl">
-              {accountName ? `${accountName} 알림` : '정동수 부동산 알림'}
+              {accountName ? `${accountName} 알림` : '알림'}
             </h1>
             <p className="text-center font-['nanumsquare'] text-base text-gray-600 sm:text-lg">
               이 가게와 관련된 알림만 표시됩니다
@@ -237,120 +172,6 @@ const NotificationPage = () => {
 
         {/* 알림 권한 상태 */}
         <div className="mb-8">
-          {/* 디버그 정보 */}
-          <div className="mb-4 rounded-lg border border-gray-300 bg-gray-50 p-4">
-            <h4 className="mb-2 font-['nanumsquare'] text-sm font-bold text-gray-700">
-              연동 상태 (디버그)
-            </h4>
-            <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-              <p className="font-['nanumsquare'] text-gray-600">
-                알림 권한:{' '}
-                <span className="font-bold">{notificationPermission}</span>
-              </p>
-              <p className="font-['nanumsquare'] text-gray-600">
-                브라우저 지원:{' '}
-                <span className="font-bold">
-                  {typeof window !== 'undefined' && 'Notification' in window
-                    ? '지원함'
-                    : '지원안함'}
-                </span>
-              </p>
-              <p className="font-['nanumsquare'] text-gray-600">
-                백엔드 API:{' '}
-                <span className="font-bold">
-                  {process.env.NODE_ENV === 'development'
-                    ? 'localhost:8080'
-                    : 'j13a509.p.ssafy.io'}
-                </span>
-              </p>
-              <p className="font-['nanumsquare'] text-gray-600">
-                사용자 ID:{' '}
-                <span className="font-bold">{user?.id || '없음'}</span>
-              </p>
-              <p className="font-['nanumsquare'] text-gray-600">
-                SSE 연결:{' '}
-                <span
-                  className={`font-bold ${isConnected ? 'text-green-600' : 'text-red-600'}`}
-                >
-                  {isConnected ? '연결됨' : '연결안됨'}
-                </span>
-              </p>
-              <p className="font-['nanumsquare'] text-gray-600">
-                FCM 토큰:{' '}
-                <span
-                  className={`font-bold ${fcmToken ? 'text-green-600' : 'text-red-600'}`}
-                >
-                  {fcmToken ? '있음' : '없음'}
-                </span>
-              </p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={async () => {
-                  try {
-                    // 백엔드 서버 연결 테스트 (단순 연결 확인)
-                    const apiUrl =
-                      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-
-                    // 루트 경로로 직접 연결 테스트 (인증 포함)
-                    const headers: Record<string, string> = {}
-                    if (typeof window !== 'undefined') {
-                      const accessToken = localStorage.getItem('accessToken')
-                      if (accessToken)
-                        headers.Authorization = `Bearer ${accessToken}`
-                    }
-
-                    const response = await fetch(`${apiUrl}`, {
-                      method: 'GET',
-                      mode: 'cors',
-                      credentials: 'include',
-                      headers,
-                    })
-                    console.log('백엔드 연결 테스트:', response.status)
-                    alert(
-                      `백엔드 연결: ${response.ok ? '성공' : '실패'} (${response.status})`
-                    )
-                  } catch (error) {
-                    console.error('백엔드 연결 실패:', error)
-                    alert(
-                      '백엔드 연결 실패 - 백엔드 서버가 실행 중인지 확인하세요'
-                    )
-                  }
-                }}
-                className="rounded bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700"
-              >
-                백엔드 연결 테스트
-              </button>
-              <button
-                onClick={() => {
-                  console.log('현재 알림 목록:', notifications)
-                  console.log('알림 설정:', settings)
-                  console.log('SSE 연결 상태:', isConnected)
-                  console.log('FCM 토큰:', fcmToken)
-                  alert('콘솔을 확인하세요')
-                }}
-                className="rounded bg-gray-600 px-3 py-1 text-xs font-bold text-white hover:bg-gray-700"
-              >
-                상태 로그
-              </button>
-              <button
-                onClick={() => {
-                  if (fcmToken) {
-                    navigator.clipboard.writeText(fcmToken).then(() => {
-                      alert('FCM 토큰이 클립보드에 복사되었습니다!')
-                    })
-                  } else {
-                    alert('FCM 토큰이 없습니다.')
-                  }
-                }}
-                className="rounded bg-purple-600 px-3 py-1 text-xs font-bold text-white hover:bg-purple-700"
-                disabled={!fcmToken}
-              >
-                FCM 토큰 복사
-              </button>
-            </div>
-          </div>
-
           {notificationPermission !== 'granted' && (
             <div className="rounded-lg border border-orange-300 bg-orange-50 p-6">
               <div className="flex items-center justify-between">
@@ -432,50 +253,6 @@ const NotificationPage = () => {
             <div className="font-['nanumsquare'] text-sm text-gray-600">
               오늘 알림
             </div>
-          </div>
-        </div>
-
-        {/* 알림 테스트 버튼 */}
-        <div className="bg-keeping-beige mb-8 rounded-lg border border-black p-6">
-          <h3 className="mb-4 font-['Tenada'] text-xl font-extrabold text-black">
-            알림 테스트
-          </h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => sendTestNotification('PAYMENT')}
-              className="flex items-center gap-2 rounded-lg border border-black bg-white p-4 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-50"
-            >
-              <IoCard className="text-green-600" />
-              결제 완료 알림
-            </button>
-            <button
-              onClick={() => sendTestNotification('CHARGE')}
-              className="flex items-center gap-2 rounded-lg border border-black bg-white p-4 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-50"
-            >
-              <IoBatteryCharging className="text-blue-600" />
-              충전 완료 알림
-            </button>
-            <button
-              onClick={() => sendTestNotification('STORE_PROMOTION')}
-              className="flex items-center gap-2 rounded-lg border border-black bg-white p-4 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-50"
-            >
-              <IoMegaphone className="text-purple-600" />
-              매장 프로모션 알림
-            </button>
-            <button
-              onClick={() => sendTestNotification('PREPAYMENT_PURCHASE')}
-              className="flex items-center gap-2 rounded-lg border border-black bg-white p-4 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-50"
-            >
-              <IoWallet className="text-orange-600" />
-              선결제 구매 알림
-            </button>
-            <button
-              onClick={() => sendTestNotification('SYSTEM')}
-              className="flex items-center gap-2 rounded-lg border border-black bg-white p-4 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-50 sm:col-span-2"
-            >
-              <IoSettings className="text-gray-600" />
-              시스템 알림
-            </button>
           </div>
         </div>
 

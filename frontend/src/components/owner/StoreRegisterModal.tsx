@@ -23,9 +23,9 @@ const StoreRegisterModal = ({
     address: '',
     phoneNumber: '',
     category: '',
-    taxIdNumber: '109-81-72945',
+    taxIdNumber: '',
     bankAccount: '',
-    imgFile: new File([''], 'placeholder.txt', { type: 'text/plain' }), // 임시 파일
+    imgFile: undefined as unknown as File,
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isClient, setIsClient] = useState(false)
@@ -47,9 +47,9 @@ const StoreRegisterModal = ({
       address: '',
       phoneNumber: '',
       category: '',
-      taxIdNumber: '109-81-72945',
+      taxIdNumber: '',
       bankAccount: '',
-      imgFile: new File([''], 'placeholder.txt', { type: 'text/plain' }),
+      imgFile: undefined as unknown as File,
     })
     setSelectedImage(null)
     setAddressData({
@@ -91,7 +91,7 @@ const StoreRegisterModal = ({
     setSelectedImage(null)
     setFormData(prev => ({
       ...prev,
-      imgFile: new File([''], 'placeholder.txt', { type: 'text/plain' }),
+      imgFile: undefined as unknown as File,
     }))
   }
 

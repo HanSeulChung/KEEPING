@@ -1,6 +1,7 @@
 //API 호출을 위한 클라이언트 사이드 설정
 //브라우저에서 서버로 API 요청할 때 사용
 
+// 환경변수 값을 그대로 신뢰하며, 운영 기본값만 "/api" 포함
 const API_BASE_URL: string =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === 'development'
@@ -83,7 +84,7 @@ export const endpoints = {
     register: '/owners/stores',
     updateStore: '/owners/stores/{storeId}',
     deleteStore: '/owners/stores/{storeId}',
-    ownerStores: '/owners/stores?ownerId={ownerId}',
+    ownerStores: '/owners/stores',
     ownerStoreDetail: '/owners/stores/{storeId}',
     // 매장 이미지 관리
     uploadImage: '/stores/{storeId}/images',

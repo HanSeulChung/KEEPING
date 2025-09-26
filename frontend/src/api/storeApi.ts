@@ -16,13 +16,10 @@ export interface StoreRequestDto {
 // 매장 관련 API 함수들
 export const storeApi = {
   // 점주의 매장 목록 조회
-  getOwnerStores: async (
-    ownerId: number
-  ): Promise<StoreAPI.StoreResponseDto[]> => {
+  getOwnerStores: async (): Promise<StoreAPI.StoreResponseDto[]> => {
     try {
-      const response = await apiClient.get<StoreAPI.OwnerStoresResponse>(
-        `/owners/stores?ownerId=${ownerId}`
-      )
+      const response =
+        await apiClient.get<StoreAPI.OwnerStoresResponse>(`/owners/stores`)
 
       return response.data.data
     } catch (error) {
