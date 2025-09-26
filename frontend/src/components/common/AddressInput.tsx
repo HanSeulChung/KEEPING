@@ -80,15 +80,28 @@ export default function AddressInput({
       return rules.message
     }
 
-    if (rules.pattern && fieldValue && !rules.pattern.test(fieldValue)) {
+    if (
+      'pattern' in rules &&
+      rules.pattern &&
+      fieldValue &&
+      !rules.pattern.test(fieldValue)
+    ) {
       return rules.message
     }
 
-    if (rules.minLength && fieldValue.length < rules.minLength) {
+    if (
+      'minLength' in rules &&
+      rules.minLength &&
+      fieldValue.length < rules.minLength
+    ) {
       return rules.message
     }
 
-    if (rules.maxLength && fieldValue.length > rules.maxLength) {
+    if (
+      'maxLength' in rules &&
+      rules.maxLength &&
+      fieldValue.length > rules.maxLength
+    ) {
       return rules.message
     }
 
