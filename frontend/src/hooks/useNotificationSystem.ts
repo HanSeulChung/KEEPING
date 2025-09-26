@@ -2,9 +2,9 @@
 
 import { buildURL } from '@/api/config'
 import {
-  registerOwnerFCMToken,
-  registerCustomerFCMToken,
   deleteFCMToken,
+  registerCustomerFCMToken,
+  registerOwnerFCMToken,
 } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 import {
@@ -13,16 +13,16 @@ import {
   setupForegroundMessageListener,
 } from '@/lib/firebase'
 import { useAuthStore } from '@/store/useAuthStore'
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  NotificationType,
-  NotificationData,
   NotificationCategory,
+  NotificationData,
+  NotificationType,
   getNotificationCategory,
   getNotificationIcon,
-  getNotificationTitle
+  getNotificationTitle,
 } from '@/types/notification'
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseNotificationSystemReturn {
   notifications: NotificationData[]
@@ -284,8 +284,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
               data: {
                 receiverType: data.receiverType,
                 receiverId: data.receiverId,
-                receiverName: data.receiverName
-              }
+                receiverName: data.receiverName,
+              },
             }
             setNotifications(prev => [notification, ...prev])
             if (
@@ -690,7 +690,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     markAsRead,
     markAllAsRead,
     addNotification,
-    addNotificationWithSettings,
     registerFCM,
     unregisterFCM,
     getNotificationCategory,
