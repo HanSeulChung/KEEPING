@@ -43,4 +43,5 @@ next-env.d.ts
 # PWA files
 /public/sw.js
 /public/workbox-*.js
-/public/*.workbox.js
+/public/*.workbox.js../backend/src/main/resources/application.yml
+../backend/src/main/resources/keeping-firebase-adminsdk.json
