@@ -7,13 +7,13 @@ import { useEffect } from 'react'
 
 export default function Page() {
   const { user, isLoggedIn, initializeAuth, fetchCurrentUser } = useAuthStore()
-  const {
-    stores,
-    selectedStore,
-    selectedStoreId,
-    loading,
-    fetchStores,
-    setSelectedStoreById,
+  const { 
+    stores, 
+    selectedStore, 
+    selectedStoreId, 
+    loading, 
+    fetchStores, 
+    setSelectedStoreById 
   } = useStoreStore()
 
   // 인증 상태 초기화
@@ -53,7 +53,11 @@ export default function Page() {
 
   return (
     <div className="bg-keeping-beige min-h-screen">
-      <Calendar />
+      <Calendar
+        storeId={selectedStoreId || ''}
+        stores={stores}
+        onStoreChange={setSelectedStoreById}
+      />
     </div>
   )
 }

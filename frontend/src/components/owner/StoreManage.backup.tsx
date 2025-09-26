@@ -1,10 +1,11 @@
 'use client'
 
+import apiClient from '@/api/axios'
+import { deleteChargeBonus } from '@/api/storeApi'
+import { useMenuManagement } from '@/hooks/useMenuManagement'
 import { useStoreStore } from '@/store/useStoreStore'
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
-import MenuManagement from './MenuManagement'
-import ChargeBonusManagement from './ChargeBonusManagement'
+import { useEffect, useState } from 'react'
 
 const StoreManage = () => {
   const searchParams = useSearchParams()
@@ -12,10 +13,15 @@ const StoreManage = () => {
   const accountName = searchParams.get('accountName')
 
   const { selectedStore } = useStoreStore()
+  const { fetchMenus, updateMenu, removeMenu, loading, error, clearError, menus, addMenu } = useMenuManagement()
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('charge')
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isImageUploading, setIsImageUploading] = useState(false)
+  const [chargeBonusLoading, setChargeBonusLoading] = useState(false)
+  const [chargeBonusData, setChargeBonusData] = useState<any[]>([])
+  const [showMenuAddModal, setShowMenuAddModal] = useState(false)
+  const [showChargeBonusModal, setShowChargeBonusModal] = useState(false)
 
   // 컴포넌트 마운트 시 메뉴 목록 조회
   useEffect(() => {
@@ -762,7 +768,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
       }
 
       console.log('메뉴 추가 요청 FormData:')
-      for (let [key, value] of formData.entries()) {
+      for (const [key, value] of formData.entries()) {
         console.log(`${key}:`, value)
       }
 

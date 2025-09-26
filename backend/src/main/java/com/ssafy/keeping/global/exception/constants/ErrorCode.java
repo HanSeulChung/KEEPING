@@ -95,6 +95,7 @@ public enum ErrorCode {
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
     TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "토큰을 찾을 수 없습니다."),
+    BLACKLIST_TOKEN(HttpStatus.UNAUTHORIZED, "로그아웃된 토큰입니다."),
 
     // 권한 관련
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),

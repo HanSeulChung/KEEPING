@@ -1,6 +1,8 @@
 package com.ssafy.keeping.domain.auth.security;
 
 import com.ssafy.keeping.domain.auth.enums.UserRole;
+import com.ssafy.keeping.global.exception.CustomException;
+import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +28,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
+    private final StringRedisTemplate redis;
 
     private final static String AUTHORIZATION_HEADER = "Authorization";
     private final static String BEARER_PREFIX = "Bearer";
@@ -35,6 +39,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if(StringUtils.hasText(jwt) && jwtProvider.validateToken(jwt)) {
+                // 블랙리스트 검증
+                if(redis.hasKey("auth:blacklist:" + jwt)) {
+                    throw new CustomException(ErrorCode.BLACKLIST_TOKEN);
+                }
+
                 Long userId = jwtProvider.getUserId(jwt);
                 UserRole userRole = jwtProvider.getUserRole(jwt);
 

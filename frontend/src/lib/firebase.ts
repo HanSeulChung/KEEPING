@@ -101,7 +101,7 @@ export const getFcmToken = async (): Promise<string | null> => {
     }
   } catch (err) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('개발 환경: FCM 토큰 가져오기 실패 (무시됨):', err.message)
+      console.log('개발 환경: FCM 토큰 가져오기 실패 (무시됨):', err instanceof Error ? err.message : String(err))
     } else {
       console.error('토큰 가져오기 실패:', err)
     }

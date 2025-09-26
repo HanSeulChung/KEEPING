@@ -8,16 +8,15 @@
  * - UI 상태 관리 (버튼 비활성화 등)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  generateIdempotencyKey,
-  executeIdempotentRequest,
-  requestStateManager,
-  initializeIdempotency,
-  type RequestStatus,
-  type IdempotencyOptions,
-  type IdempotentRequestOptions
+    executeIdempotentRequest,
+    generateIdempotencyKey,
+    initializeIdempotency,
+    requestStateManager,
+    type IdempotentRequestOptions,
+    type RequestStatus
 } from '@/utils/idempotency'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface UseIdempotentRequestOptions {
   // 멱등키 생성 옵션
@@ -25,6 +24,9 @@ export interface UseIdempotentRequestOptions {
   storeId?: string | number
   action: string
   expiryMinutes?: number
+
+  // 요청 데이터
+  data?: any
 
   // 요청 동작 옵션
   skipIfPending?: boolean
