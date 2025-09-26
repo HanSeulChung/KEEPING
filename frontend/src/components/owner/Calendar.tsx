@@ -76,7 +76,13 @@ function buildMonthMatrix(year: number, month: number) {
   return weeks
 }
 
-const OwnerSalesCalendar = () => {
+interface CalendarProps {
+  storeId?: string
+  stores?: any[]
+  onStoreChange?: (storeId: string) => void
+}
+
+const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = {}) => {
   const { selectedStore } = useStoreStore()
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)

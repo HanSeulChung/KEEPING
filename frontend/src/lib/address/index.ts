@@ -1,24 +1,29 @@
 // 주소 관련 라이브러리 통합 export
 
 // 타입 정의
+import type {
+  AddressData,
+  AddressValidation
+} from '@/types/address'
+
 export type {
   AddressData,
   AddressFormProps,
   AddressSearchOptions,
   AddressValidation,
-  DaumPostcodeData,
+  DaumPostcodeData
 } from '@/types/address'
 
 // 훅
 export {
   useAddressSearch,
-  useEmbeddedAddressSearch,
+  useEmbeddedAddressSearch
 } from '@/hooks/useAddressSearch'
 
 // 컴포넌트
 export {
   AddressDisplay,
-  default as AddressInput,
+  default as AddressInput
 } from '@/components/common/AddressInput'
 
 // 유틸리티 함수들
@@ -30,7 +35,7 @@ export {
   formatAddress,
   normalizeAddress,
   parseAddressString,
-  validateAddress,
+  validateAddress
 } from '@/lib/addressUtils'
 
 // 기본 주소 데이터 생성자

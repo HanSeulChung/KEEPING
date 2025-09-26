@@ -201,7 +201,6 @@ const CustomerNotificationPage = () => {
             ))}
           </div>
         )}
-        </div>
       </div>
     </div>
   )

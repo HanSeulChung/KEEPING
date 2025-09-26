@@ -254,11 +254,11 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
       }
 
       const success = await addMenu(parseInt(storeId), {
-        name: manualMenu.name.trim(),
-        category: selectedCategory.categoryName,
+        menuName: manualMenu.name.trim(),
         categoryId: manualMenu.categoryId,
         price: manualMenu.price || 0,
         description: manualMenu.description || '',
+        storeId: parseInt(storeId),
       })
 
       if (success) {
@@ -336,7 +336,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
     }
   }
 
-  const handleDeleteMenu = async (id: number) => {
+  const handleRemoveMenu = async (id: number) => {
     if (!storeId) {
       alert('매장 정보가 없습니다.')
       return
@@ -427,7 +427,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
                     수정
                   </button>
                   <button
-                    onClick={() => handleDeleteMenu(item.id, item.name)}
+                    onClick={() => handleRemoveMenu(item.id)}
                     className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                   >
                     삭제
