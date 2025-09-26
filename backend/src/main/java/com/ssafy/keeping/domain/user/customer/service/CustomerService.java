@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 
@@ -46,6 +47,7 @@ public class CustomerService {
     private final WalletRepository walletRepository;
     private final ImageService imageService;
     private final SsafyFinanceApiService ssafyFinanceApiService;
+    private final SecureRandom secureRandom;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -80,8 +82,8 @@ public class CustomerService {
 //        } catch (Exception e) {
             // userKey 생성
             try {
-                int prefix = 100;
-                String email = prefix++ + "@keeping509customer.com";
+                String prefix = createEmailId();
+                String email = prefix + "@keeping509customer.com";
                 log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
 
                 InsertMemberResponseDto member = apiClient.insertMember(email);
@@ -257,6 +259,15 @@ public class CustomerService {
             log.error("고객 카드 조회 실패 - 고객ID: {}", customerId, e);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
+    }
+
+    private String createEmailId() {
+        log.debug("createEmailId > ... ");
+
+        long number = 100000000000000000L + secureRandom.nextLong(900000000000000000L);
+        log.debug("createEmailId: {}", number);
+
+        return String.valueOf(number);
     }
 
 }
