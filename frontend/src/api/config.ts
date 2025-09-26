@@ -84,6 +84,11 @@ export const endpoints = {
     salesCalendar: '/owners/stores/{storeId}/sales/calendar',
     salesStats: '/owners/stores/{storeId}/sales/stats',
     salesReport: '/owners/stores/{storeId}/sales/report',
+    // 통계 관리
+    statisticsOverall: '/stores/{storeId}/statistics/overall',
+    statisticsDaily: '/stores/{storeId}/statistics/daily',
+    statisticsPeriod: '/stores/{storeId}/statistics/period',
+    statisticsMonthly: '/stores/{storeId}/statistics/monthly',
   },
   menu: {
     list: '/stores/{storeId}/menus',

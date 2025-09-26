@@ -39,14 +39,6 @@ interface PeriodStatisticsResponseDto {
   dailyStatistics: DailyStatisticsResponseDto[]
 }
 
-interface MonthlyStatisticsResponseDto {
-  month: string
-  sales: number
-  orders: number
-  customers: number
-  dailyStatistics: DailyStatisticsResponseDto[]
-}
-
 export default function OwnerHome() {
   const router = useRouter()
   const { stores, selectedStore, loading, fetchStores, setSelectedStore } =
@@ -59,8 +51,6 @@ export default function OwnerHome() {
   // 통계 데이터 상태
   const [overallStats, setOverallStats] =
     useState<StoreOverallStatisticsResponseDto | null>(null)
-  const [monthlyStats, setMonthlyStats] =
-    useState<MonthlyStatisticsResponseDto | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
   // 통계 API 함수들
@@ -93,33 +83,6 @@ export default function OwnerHome() {
       })
     } finally {
       setStatsLoading(false)
-    }
-  }
-
-  const fetchMonthlyStatistics = async (storeId: number) => {
-    try {
-      const today = new Date()
-      const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
-
-      console.log('월별 통계 조회 시작:', storeId, month)
-
-      const requestData: StatisticsRequestDto = {
-        date: month,
-      }
-
-      const response = await apiClient.post(
-        `/stores/${storeId}/statistics/monthly`,
-        requestData
-      )
-
-      console.log('월별 통계 응답:', response.data)
-      if (response.data.success) {
-        setMonthlyStats(response.data.data)
-      }
-    } catch (error: any) {
-      console.error('월별 통계 조회 실패:', error)
-      console.error('에러 상태:', error.response?.status)
-      console.error('에러 응답:', error.response?.data)
     }
   }
 
@@ -178,7 +141,6 @@ export default function OwnerHome() {
   useEffect(() => {
     if (selectedStore?.storeId) {
       fetchOverallStatistics(selectedStore.storeId)
-      fetchMonthlyStatistics(selectedStore.storeId)
     }
   }, [selectedStore])
 
@@ -322,24 +284,6 @@ export default function OwnerHome() {
                             ></div>
                           </div>
                         </div>
-
-                        <div>
-                          <div className="mb-1 text-sm text-gray-600">
-                            이번 달 선결제 금액
-                          </div>
-                          <div className="text-xl font-bold">
-                            {(monthlyStats?.sales || 0).toLocaleString()}원
-                          </div>
-                          {/* 월별 진행률 바 */}
-                          <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-                            <div
-                              className="h-2 rounded-full bg-green-600 transition-all duration-300"
-                              style={{
-                                width: `${Math.min(100, ((monthlyStats?.sales || 0) / 5000000) * 100)}%`,
-                              }}
-                            ></div>
-                          </div>
-                        </div>
                       </>
                     )}
                   </div>
@@ -404,60 +348,6 @@ export default function OwnerHome() {
                     )}
                   </div>
                 </Link>
-
-                {/* 월별 통계 차트 */}
-                <div className="bg-keeping-beige relative flex flex-1 flex-col items-start border border-black p-4">
-                  <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    월별 통계
-                  </div>
-                  <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                    {statsLoading ? (
-                      '통계 로딩 중...'
-                    ) : monthlyStats?.dailyStatistics &&
-                      monthlyStats.dailyStatistics.length > 0 ? (
-                      <div className="w-full">
-                        {/* 미니 막대 차트 */}
-                        <div className="mb-2 flex h-16 items-end justify-between">
-                          {monthlyStats.dailyStatistics
-                            .slice(-7)
-                            .map((day, index) => {
-                              const maxSales = Math.max(
-                                ...monthlyStats.dailyStatistics.map(
-                                  d => d.sales
-                                )
-                              )
-                              const height =
-                                maxSales > 0 ? (day.sales / maxSales) * 100 : 0
-                              return (
-                                <div
-                                  key={index}
-                                  className="flex flex-col items-center"
-                                >
-                                  <div
-                                    className="w-3 rounded-t bg-blue-500 transition-all duration-300"
-                                    style={{
-                                      height: `${height}%`,
-                                      minHeight: '4px',
-                                    }}
-                                  ></div>
-                                  <div className="mt-1 text-xs text-gray-500">
-                                    {new Date(day.date).getDate()}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                        </div>
-                        <div className="text-center text-sm text-gray-600">
-                          최근 7일 매출 추이
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500">
-                        데이터가 없습니다
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {/* 알림 */}
                 <Link

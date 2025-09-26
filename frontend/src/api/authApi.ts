@@ -54,7 +54,7 @@ export const authApi = {
       API_ENDPOINTS.auth.refresh,
       {},
       {
-        withCredentials: true, // RefreshToken 쿠키 포함
+        withCredentials: true,
       }
     )
     return response.data.data
@@ -73,7 +73,6 @@ export const authApi = {
     await apiClient.get(API_ENDPOINTS.auth.logout, {
       withCredentials: true,
     })
-    // 메모리와 쿠키 정리는 store에서 처리
   },
 }
 

@@ -86,6 +86,8 @@ const OwnerMainScreen = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <Header />
+
       {/* 메인 컨텐츠 */}
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         {/* 매장 선택 섹션 */}
@@ -169,7 +171,6 @@ const OwnerMainScreen = () => {
             <div className="font-['nanumsquare'] text-sm leading-relaxed text-black sm:text-base">
               손님의 QR을 인식합니다.
               <br />
-              (해당 기기의 카메라로 인식 → URL로 넘어감)
             </div>
           </Link>
 
@@ -195,7 +196,7 @@ const OwnerMainScreen = () => {
 
           {/* 알림 */}
           <Link
-            href="/owner/notifications"
+            href="/owner/notification"
             className="group border border-black bg-white p-6 transition-colors hover:bg-gray-50 sm:col-span-2"
           >
             <div className="mb-4 flex items-center justify-between">
@@ -233,7 +234,7 @@ const OwnerMainScreen = () => {
             <div className="font-['nanumsquare'] text-sm text-black sm:text-base">
               읽지 않은 알림
               <br />
-              3건
+              {unreadCount}건
             </div>
           </Link>
         </div>

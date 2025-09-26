@@ -157,8 +157,14 @@ export const PaymentModal = ({
         paymentBalance: amount,
       }
 
-      // 헤더 정보 생성 및 로그 출력
-      const idempotencyKey = generateUUID()
+      // 세션 기반 멱등성 키 생성 (뒤로가기 시에도 동일한 키 유지)
+      const sessionKey = `payment_${storeId}_${amount}_${selectedCard.cardNo}`
+      let idempotencyKey = sessionStorage.getItem(sessionKey)
+      if (!idempotencyKey) {
+        idempotencyKey = generateUUID()
+        sessionStorage.setItem(sessionKey, idempotencyKey)
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
@@ -192,6 +198,9 @@ export const PaymentModal = ({
 
       const result = await response.json()
       console.log('결제 성공:', result)
+
+      // 성공 시 세션 키 제거 (재사용 방지)
+      sessionStorage.removeItem(sessionKey)
 
       // 성공 시 알림 표시
       alert('충전되었습니다.')

@@ -8,7 +8,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-export default function Header() {
+interface HeaderProps {
+  title?: string
+}
+
+export default function Header({ title }: HeaderProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const [forceUpdate, setForceUpdate] = useState(0)
@@ -129,7 +133,7 @@ export default function Header() {
       } else {
         // 점주 로그아웃 처리
         ownerLogout()
-        router.push('/')
+        window.location.href = '/'
       }
     }
   }
@@ -210,17 +214,22 @@ export default function Header() {
         </div>
 
         {/* Center: Logo - 절대 중앙 배치 */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <button
             onClick={handleLogoClick}
             className="text-text font-display cursor-pointer text-base font-extrabold transition-colors hover:text-gray-600 sm:text-lg md:text-xl"
           >
-            KEEPING
+            {title ||
+              (pathname === '/owner/manage'
+                ? '매장 관리'
+                : pathname === '/owner/calendar'
+                  ? 'CALENDAR'
+                  : 'KEEPING')}
           </button>
         </div>
 
         {/* Right: 구분선 + 알림 버튼 + 로그인/로그아웃 */}
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {/* 홈페이지가 아닐 때만 구분선과 버튼들 표시 */}
           {!isHomePage && (
             <>

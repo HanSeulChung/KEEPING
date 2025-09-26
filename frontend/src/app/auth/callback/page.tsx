@@ -23,7 +23,8 @@ function AuthCallbackContent() {
         }
 
         // /auth/refresh로 accessToken 발급 및 사용자 정보 가져오기
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
         console.log('accessToken 발급 및 사용자 정보 요청...')
         const refreshResponse = await fetch(`${apiUrl}/auth/refresh`, {
           method: 'POST',
@@ -34,10 +35,16 @@ function AuthCallbackContent() {
         })
 
         if (!refreshResponse.ok) {
-          console.error('Refresh 요청 실패:', refreshResponse.status, refreshResponse.statusText)
+          console.error(
+            'Refresh 요청 실패:',
+            refreshResponse.status,
+            refreshResponse.statusText
+          )
           const errorText = await refreshResponse.text()
           console.error('응답 내용:', errorText)
-          throw new Error(`인증 정보를 가져올 수 없습니다. (${refreshResponse.status})`)
+          throw new Error(
+            `인증 정보를 가져올 수 없습니다. (${refreshResponse.status})`
+          )
         }
 
         const refreshData = await refreshResponse.json()
@@ -47,7 +54,7 @@ function AuthCallbackContent() {
         if (refreshData.success && refreshData.data) {
           // accessToken만 사용 (refreshToken은 무시)
           const accessToken = refreshData.data.accessToken
-          
+
           // 사용자 정보를 localStorage에 저장
           const userInfo = {
             id: refreshData.data.userId || 'unknown',
@@ -58,7 +65,7 @@ function AuthCallbackContent() {
           }
 
           localStorage.setItem('user', JSON.stringify(userInfo))
-          
+
           if (accessToken) {
             localStorage.setItem('accessToken', accessToken)
             console.log('accessToken 저장 완료')
@@ -70,9 +77,12 @@ function AuthCallbackContent() {
           login(userInfo, accessToken)
 
           // refreshToken 쿠키 즉시 제거 (보안을 위해)
-          document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-          document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.p.ssafy.io;'
-          document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;'
+          document.cookie =
+            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+          document.cookie =
+            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.p.ssafy.io;'
+          document.cookie =
+            'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;'
 
           console.log('로그인 성공:', userInfo)
           console.log('저장된 토큰 여부:', !!accessToken)

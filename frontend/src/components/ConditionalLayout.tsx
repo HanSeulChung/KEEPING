@@ -18,9 +18,6 @@ export default function ConditionalLayout({
   const pathname = usePathname()
   const { isOpen } = useSidebarStore()
 
-  // Calendar 페이지에서는 헤더를 숨김
-  const isCalendarPage = pathname === '/owner/calendar'
-
   // 네비게이션을 숨겨야 하는 페이지들 (로그인 전 페이지들)
   const hideNavigationPages = ['/', '/owner/login', '/customer/login']
 
@@ -32,8 +29,8 @@ export default function ConditionalLayout({
 
   return (
     <PwaProvider>
-      {/* Calendar 페이지가 아닐 때만 헤더 표시 */}
-      {!isCalendarPage && <Header />}
+      {/* 헤더를 항상 표시 */}
+      <Header />
 
       {/* 로그인 후 페이지에서만 네비게이션 표시 */}
       {shouldShowNavigation && <Navigation />}

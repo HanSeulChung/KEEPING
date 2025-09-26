@@ -84,6 +84,29 @@ export const storeApi = {
       return []
     }
   },
+
+  // 월별 통계 조회
+  getMonthlyStatistics: async (
+    storeId: number,
+    year: number,
+    month: number
+  ): Promise<any> => {
+    try {
+      const requestBody = {
+        date: `${year}-${month.toString().padStart(2, '0')}-01`,
+      }
+
+      const response = await apiClient.post(
+        `/stores/${storeId}/statistics/monthly`,
+        requestBody
+      )
+
+      return response.data.data
+    } catch (error) {
+      console.error('월별 통계 조회 실패:', error)
+      return null
+    }
+  },
 }
 
 export interface StoreEditRequestDto {
@@ -221,6 +244,49 @@ export const deleteStore = async (
   } catch (error) {
     console.error('가게 삭제 실패:', error)
     throw error
+  }
+}
+
+// 충전 보너스 수정
+export const updateChargeBonus = async (
+  storeId: number,
+  chargeBonusId: number,
+  data: { chargeAmount: number; bonusPercentage: number }
+): Promise<ApiResponse<any>> => {
+  try {
+    const response = await fetch(
+      `${apiConfig.baseURL}/owners/stores/${storeId}/charge-bonus/${chargeBonusId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify(data),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || '충전 보너스가 수정되었습니다.',
+      statusCode: response.status,
+      timestamp: new Date().toISOString(),
+    }
+  } catch (error: any) {
+    console.error('충전 보너스 수정 실패:', error)
+    return {
+      success: false,
+      data: null,
+      message: error.message || '충전 보너스 수정에 실패했습니다.',
+      statusCode: error.status || 500,
+      timestamp: new Date().toISOString(),
+    }
   }
 }
 

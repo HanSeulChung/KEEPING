@@ -1,5 +1,8 @@
 import { StoreRequestDto } from '@/api/storeApi'
+import AddressInput from '@/components/common/AddressInput'
 import { useStoreManagement } from '@/hooks/useStoreManagement'
+import { formatAddress } from '@/lib/addressUtils'
+import type { AddressData } from '@/types/address'
 import React, { useCallback, useEffect, useState } from 'react'
 
 interface StoreRegisterModalProps {
@@ -26,7 +29,7 @@ const StoreRegisterModal = ({
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isClient, setIsClient] = useState(false)
-  const [addressData, setAddressData] = useState({
+  const [addressData, setAddressData] = useState<AddressData>({
     zipCode: '',
     address: '',
     detailAddress: '',
@@ -72,43 +75,14 @@ const StoreRegisterModal = ({
     }))
   }
 
-  // 주소 검색 함수
-  const handleAddressSearch = () => {
-    if (typeof window !== 'undefined' && (window as any).daum) {
-      new (window as any).daum.Postcode({
-        oncomplete: function (data: any) {
-          // 우편번호와 주소 정보를 해당 필드에 넣는다.
-          setAddressData(prev => ({
-            ...prev,
-            zipCode: data.zonecode,
-            address: data.address,
-          }))
+  // 주소 변경 핸들러
+  const handleAddressChange = (newAddress: AddressData) => {
+    setAddressData(newAddress)
 
-          // formData의 address도 업데이트
-          setFormData(prev => ({
-            ...prev,
-            address:
-              `${data.address} ${prev.address.split(' ').slice(1).join(' ')}`.trim(),
-          }))
-        },
-      }).open()
-    }
-  }
-
-  // 상세주소 변경 핸들러
-  const handleDetailAddressChange = (value: string) => {
-    setAddressData(prev => ({
-      ...prev,
-      detailAddress: value,
-    }))
-
-    // 전체 주소를 formData에 업데이트
-    const fullAddress = addressData.address
-      ? `${addressData.address} ${value}`.trim()
-      : value
+    // formData의 address 필드를 전체 주소로 업데이트
     setFormData(prev => ({
       ...prev,
-      address: fullAddress,
+      address: formatAddress(newAddress, { includeZipCode: false }),
     }))
   }
 
@@ -347,33 +321,23 @@ const StoreRegisterModal = ({
             </span>
           </div>
 
-          {/* 우편번호 */}
-          <div className="mb-2 flex">
-            <input
-              type="text"
-              className="h-10 flex-1 rounded-l-md border border-gray-300 bg-white p-2 font-['Inter'] text-gray-400"
-              placeholder="우편번호"
-              value={addressData.zipCode}
-              readOnly
-            />
-            <button
-              type="button"
-              onClick={handleAddressSearch}
-              className="h-10 rounded-r-md bg-gray-800 px-3 py-2 font-['Inter'] text-xs text-white transition-colors hover:bg-gray-700"
-            >
-              검색
-            </button>
-          </div>
-
-          {/* 기본 주소 */}
-
-          {/* 상세 주소 */}
-          <input
-            type="text"
-            className="h-10 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
-            placeholder="기본 주소"
-            value={addressData.detailAddress}
-            onChange={e => handleDetailAddressChange(e.target.value)}
+          <AddressInput
+            value={addressData}
+            onChange={handleAddressChange}
+            placeholder={{
+              zipCode: '우편번호',
+              address: '기본 주소',
+              detailAddress: '상세 주소 (선택)',
+            }}
+            className={{
+              zipCodeInput: 'h-10 font-["Inter"] text-gray-800',
+              searchButton: 'h-10 font-["Inter"] text-xs',
+              addressInput: 'h-10 font-["Inter"] text-gray-800',
+              detailAddressInput: 'h-10 font-["Inter"] text-black',
+            }}
+            validation={{
+              address: { required: true, message: '기본주소를 입력해주세요.' },
+            }}
           />
         </div>
 

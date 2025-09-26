@@ -1,38 +1,10 @@
 'use client'
 
-import apiClient from '@/api/axios'
-import { useMenuManagement } from '@/hooks/useMenuManagement'
 import { useStoreStore } from '@/store/useStoreStore'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import MenuManagement from './MenuManagement'
 import ChargeBonusManagement from './ChargeBonusManagement'
-import ImageUploadModal from './ImageUploadModal'
-
-type DiscountTier = {
-  id: string
-  discount: string
-  points: string
-  isActive: boolean
-}
-
-type Category = {
-  categoryId: number
-  categoryName: string
-  storeId: number
-  parentId?: number
-  displayOrder?: number
-  createdAt?: string
-}
-
-type MenuData = {
-  name: string
-  description: string
-  price: number
-  categoryId?: number
-  category?: string
-  categoryName?: string
-  imgFile?: File | null
-}
 
 const StoreManage = () => {
   const searchParams = useSearchParams()
@@ -40,70 +12,190 @@ const StoreManage = () => {
   const accountName = searchParams.get('accountName')
 
   const { selectedStore } = useStoreStore()
-  const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
+  const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('charge')
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isImageUploading, setIsImageUploading] = useState(false)
-  const [showMenuAddModal, setShowMenuAddModal] = useState(false)
-  const [showMenuEditModal, setShowMenuEditModal] = useState(false)
-  const [editingMenu, setEditingMenu] = useState<any>(null)
-  const { menus, loading, error, fetchMenus, addMenu, removeMenu, clearError } =
-    useMenuManagement()
 
-  // 찜 개수 상태
-  const [favoriteCount, setFavoriteCount] = useState<number>(0)
-  const [favoriteLoading, setFavoriteLoading] = useState(false)
-
-  // 찜 개수 조회 함수
-  const fetchFavoriteCount = async (storeId: number) => {
-    try {
-      setFavoriteLoading(true)
-      const response = await apiClient.get(
-        `/favorites/owner/stores/${storeId}/count`
-      )
-
-      if (response.data.success) {
-        setFavoriteCount(response.data.data.favoriteCount || 0)
-      }
-    } catch (error: any) {
-      console.error('찜 개수 조회 실패:', error)
-      setFavoriteCount(0)
-    } finally {
-      setFavoriteLoading(false)
-    }
-  }
-
-  // 컴포넌트 마운트 시 메뉴 목록, 찜 개수 조회
+  // 컴포넌트 마운트 시 메뉴 목록 조회
   useEffect(() => {
     if (storeId) {
       fetchMenus(parseInt(storeId))
-      fetchFavoriteCount(parseInt(storeId))
+      fetchChargeBonusData()
     }
   }, [storeId, fetchMenus])
 
-  const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([
-    { id: '1', discount: '5% 할인', points: '50,000 포인트', isActive: true },
-    { id: '2', discount: '5% 할인', points: '100,000 포인트', isActive: false },
-    { id: '3', discount: '5% 할인', points: '150,000 포인트', isActive: false },
-    { id: '4', discount: '5% 할인', points: '200,000 포인트', isActive: false },
-    { id: '5', discount: '5% 할인', points: '250,000 포인트', isActive: false },
-  ])
+  // 충전 보너스 데이터 조회
+  const fetchChargeBonusData = async () => {
+    if (!storeId) return
 
-  const handleEditMenu = (id: number) => {
-    const menuToEdit = menus.find(menu => menu.id === id)
-    if (menuToEdit) {
-      setEditingMenu(menuToEdit)
-      setShowMenuEditModal(true)
+    setChargeBonusLoading(true)
+    try {
+      console.log('충전 보너스 조회 시작 - storeId:', storeId)
+      const response = await apiClient.get(
+        `/owners/stores/${storeId}/charge-bonus`
+      )
+      console.log('충전 보너스 조회 응답:', response.data)
+
+      if (response.data.success) {
+        const data = response.data.data || []
+        // 배열이 아니거나 유효하지 않은 데이터 필터링
+        const validData = Array.isArray(data)
+          ? data.filter(
+              item =>
+                item &&
+                typeof item === 'object' &&
+                (typeof item.chargeAmount === 'number' ||
+                  typeof item.chargeAmount === 'string')
+            )
+          : []
+        setChargeBonusData(validData)
+      } else {
+        console.error('충전 보너스 조회 실패:', response.data.message)
+        setChargeBonusData([])
+      }
+    } catch (error: any) {
+      console.error('충전 보너스 데이터 조회 실패:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        },
+      })
+    } finally {
+      setChargeBonusLoading(false)
     }
   }
-
-  const handleDeleteMenu = async (id: number, menuName: string) => {
+  const handleEditMenu = async (id: number) => {
     if (!storeId) {
       alert('매장 정보가 없습니다.')
       return
     }
 
-    if (confirm(`'${menuName}' 메뉴를 삭제하시겠습니까?`)) {
+    try {
+      const success = await updateMenu(parseInt(storeId), id, {
+        name: '수정된 메뉴명',
+        description: '수정된 메뉴 설명',
+        price: 1000,
+      })
+
+      if (success) {
+        alert('메뉴가 수정되었습니다.')
+      } else {
+        alert('메뉴 수정에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('메뉴 수정 오류:', error)
+      alert('메뉴 수정 중 오류가 발생했습니다.')
+    }
+  }
+
+  // 충전 보너스 삭제
+  const handleDeleteChargeBonus = async (chargeBonusId: number | string) => {
+    if (!storeId) {
+      alert('매장 정보가 없습니다.')
+      return
+    }
+
+    if (!confirm('정말로 이 충전 보너스를 삭제하시겠습니까?')) {
+      return
+    }
+
+    try {
+      const response = await deleteChargeBonus(
+        parseInt(storeId),
+        Number(chargeBonusId)
+      )
+
+      if (response.success) {
+        alert('충전 보너스가 삭제되었습니다.')
+        // 목록 새로고침
+        fetchChargeBonusData()
+      } else {
+        alert('충전 보너스 삭제에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('충전 보너스 삭제 오류:', error)
+      alert('충전 보너스 삭제 중 오류가 발생했습니다.')
+    }
+  }
+
+  // 가게 이미지 업로드
+  const handleImageUpload = async () => {
+    if (!selectedImage || !storeId) {
+      alert('이미지를 선택하고 매장 정보를 확인해주세요.')
+      return
+    }
+
+    setIsImageUploading(true)
+    try {
+      // 파일명에 타임스탬프 추가하여 중복 방지
+      const timestamp = Date.now()
+      const fileExtension = selectedImage.name.split('.').pop()
+      const newFileName = `store_image_${timestamp}.${fileExtension}`
+
+      // 새로운 파일 객체 생성
+      const renamedFile = new File([selectedImage], newFileName, {
+        type: selectedImage.type,
+        lastModified: selectedImage.lastModified,
+      })
+
+      const formData = new FormData()
+      formData.append('imgFile', renamedFile)
+
+      const response = await apiClient.patch(
+        `/owners/stores/${storeId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      if (response.data.success) {
+        alert('가게 이미지가 변경되었습니다.')
+        setShowImageModal(false)
+        setSelectedImage(null)
+        // 매장 정보 새로고침 (필요시)
+        if (response.data.data?.imgUrl) {
+          // 이미지 URL 업데이트 처리
+          console.log('새 이미지 URL:', response.data.data.imgUrl)
+        }
+      } else {
+        alert('이미지 변경에 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('이미지 업로드 실패:', error)
+      console.error('응답 데이터:', error.response?.data)
+      console.error('상태 코드:', error.response?.status)
+
+      let errorMessage = '이미지 업로드 중 오류가 발생했습니다.'
+
+      if (error.response?.status === 409) {
+        errorMessage =
+          '이미 같은 이미지가 등록되어 있습니다. 다른 이미지를 선택해주세요.'
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      }
+
+      alert(`이미지 변경 실패: ${errorMessage}`)
+    } finally {
+      setIsImageUploading(false)
+    }
+  }
+
+  const handleDeleteMenu = async (id: number) => {
+    if (!storeId) {
+      alert('매장 정보가 없습니다.')
+      return
+    }
+
+    if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
       const success = await removeMenu(parseInt(storeId), id)
       if (success) {
         alert('메뉴가 삭제되었습니다.')
@@ -113,43 +205,13 @@ const StoreManage = () => {
     }
   }
 
-  // 이미지 업로드 처리
-  const handleImageUpload = async () => {
-    if (!selectedImage || !storeId) {
-      alert('이미지를 선택해주세요.')
-      return
-    }
-
-    setIsImageUploading(true)
-    try {
-      console.log('이미지 업로드:', selectedImage)
-      alert('이미지 업로드가 완료되었습니다.')
-      setShowImageModal(false)
-      setSelectedImage(null)
-    } catch (error) {
-      console.error('이미지 업로드 실패:', error)
-      alert('이미지 업로드에 실패했습니다.')
-    } finally {
-      setIsImageUploading(false)
-    }
-  }
-
-  if (!storeId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-gray-500">매장 정보를 불러오는 중...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-white">
+      {/* 페이지 제목 */}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center justify-center gap-4">
           <h1 className="font-['Tenada'] text-3xl font-extrabold text-black sm:text-4xl">
-            {accountName || selectedStore?.storeName || '매장'} 관리
+            {accountName || '매장'} 관리
           </h1>
           <div className="h-8 w-8">
             <svg
@@ -167,7 +229,7 @@ const StoreManage = () => {
           </div>
         </div>
 
-        {/* 가게 이미지 */}
+        {/* 가게 이미지 (하나만) */}
         <div className="mb-6 flex justify-center">
           <div className="flex h-48 w-full max-w-md items-center justify-center overflow-hidden border border-black bg-gray-100">
             <img
@@ -175,6 +237,7 @@ const StoreManage = () => {
               alt={selectedStore?.storeName || '가게 이미지'}
               className="h-full w-full object-cover"
               onError={e => {
+                // 이미지 로드 실패 시 기본 배경으로 대체
                 e.currentTarget.style.display = 'none'
                 e.currentTarget.parentElement!.innerHTML = `
                   <div class="flex h-full w-full items-center justify-center">
@@ -198,96 +261,7 @@ const StoreManage = () => {
           </button>
         </div>
 
-        {/* 매장 정보 & 오늘의 현황 */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* 매장 기본 정보 */}
-          <div className="border border-black bg-white p-4">
-            <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
-              매장 정보
-            </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  매장명
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {selectedStore?.storeName || '정보 없음'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  카테고리
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {selectedStore?.category || '정보 없음'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  등록 메뉴
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {menus.length}개
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  찜 개수
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium text-red-500">
-                  {favoriteLoading
-                    ? '로딩...'
-                    : `${favoriteCount.toLocaleString()}개`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  운영 상태
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium text-green-600">
-                  운영중
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 매장 운영 현황 안내 */}
-          <div className="border border-black bg-white p-4">
-            <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
-              매장 운영 현황
-            </h3>
-            <div className="space-y-2">
-              <div className="rounded-lg bg-blue-50 p-3">
-                <div className="flex items-center">
-                  <div className="mr-2 text-blue-500">📅</div>
-                  <div>
-                    <div className="font-['nanumsquare'] text-sm font-medium text-blue-800">
-                      일별 상세 현황 확인
-                    </div>
-                    <div className="font-['nanumsquare'] text-xs text-blue-600">
-                      매출 캘린더에서 각 날짜에 마우스를 올려보세요
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg bg-green-50 p-3">
-                <div className="flex items-center">
-                  <div className="mr-2 text-green-500">💡</div>
-                  <div>
-                    <div className="font-['nanumsquare'] text-sm font-medium text-green-800">
-                      실시간 데이터
-                    </div>
-                    <div className="font-['nanumsquare'] text-xs text-green-600">
-                      포인트 사용량, 충전량, 거래건수 등 상세 정보 제공
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 탭 아이콘들 */}
+        {/* 하단 아이콘들 */}
         <div className="mb-6 flex items-center justify-center gap-4">
           <button
             onClick={() => setActiveTab('charge')}
@@ -359,6 +333,18 @@ const StoreManage = () => {
           )}
         </div>
 
+        {/* 충전금액 탭별 액션 버튼 */}
+        {activeTab === 'charge' && (
+          <div className="mb-6 flex items-center gap-2">
+            <button
+              onClick={() => setShowChargeBonusModal(true)}
+              className="border border-black bg-white px-4 py-2 font-['nanumsquare'] text-sm transition-colors hover:bg-gray-50"
+            >
+              충전 보너스 등록
+            </button>
+          </div>
+        )}
+
         {/* 메뉴 탭 내용 */}
         {activeTab === 'menu' && (
           <div className="mb-6 space-y-4">
@@ -390,8 +376,11 @@ const StoreManage = () => {
                 </div>
               </div>
             ) : (
-              menus.map(item => (
-                <div key={item.id} className="border border-black p-4">
+              menus.map((item, index) => (
+                <div
+                  key={item.id || `menu-${index}-${crypto.randomUUID()}`}
+                  className="border border-black p-4"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="mb-2 font-['nanumsquare'] text-lg text-black">
@@ -414,7 +403,7 @@ const StoreManage = () => {
                           수정
                         </button>
                         <button
-                          onClick={() => handleDeleteMenu(item.id, item.name)}
+                          onClick={() => handleDeleteMenu(item.id)}
                           className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                         >
                           삭제
@@ -429,63 +418,182 @@ const StoreManage = () => {
         )}
 
         {/* 충전금액 탭 내용 */}
-        {activeTab === 'charge' && <ChargeBonusManagement storeId={storeId} />}
+        {activeTab === 'charge' && (
+          <div className="mb-6 space-y-4">
+            {chargeBonusLoading ? (
+              <div className="py-8 text-center">
+                <div className="font-['nanumsquare'] text-lg">
+                  충전 보너스 정보를 불러오는 중...
+                </div>
+              </div>
+            ) : chargeBonusData.length === 0 ? (
+              <div className="py-8 text-center">
+                <div className="font-['nanumsquare'] text-gray-500">
+                  설정된 충전 보너스가 없습니다
+                </div>
+              </div>
+            ) : (
+              chargeBonusData
+                .filter(
+                  bonus =>
+                    bonus &&
+                    typeof bonus === 'object' &&
+                    (typeof bonus.chargeAmount === 'number' ||
+                      typeof bonus.chargeAmount === 'string')
+                )
+                .map((bonus, index) => (
+                  <div
+                    key={bonus?.id || `bonus-${index}-${crypto.randomUUID()}`}
+                    className="border border-black bg-white p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span className="font-['nanumsquare'] text-sm font-bold text-black">
+                          {Number(bonus?.chargeAmount || 0).toLocaleString()}원
+                          ={' '}
+                          {Number(
+                            bonus?.expectedTotalPoints || 0
+                          ).toLocaleString()}{' '}
+                          포인트
+                        </span>
+                        <span className="font-['nanumsquare'] text-xs text-gray-500">
+                          (+{Number(bonus?.bonusPercentage || 0)}% 보너스)
+                        </span>
+                      </div>
+                      <button
+                        onClick={() =>
+                          handleDeleteChargeBonus(bonus?.id || index)
+                        }
+                        className="rounded bg-red-500 px-3 py-1 font-['nanumsquare'] text-xs font-bold text-white transition-colors hover:bg-red-600"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        )}
+
+        {/* 수정하기 버튼 */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-md bg-black py-3 text-center text-white">
+            <span className="font-['nanumsquare'] text-sm font-extrabold">
+              수정하기
+            </span>
+          </div>
+        </div>
+
+        {/* 메뉴 추가 모달 */}
+        {showMenuAddModal && (
+          <MenuAddModal
+            onClose={() => setShowMenuAddModal(false)}
+            storeId={storeId}
+            addMenu={addMenu}
+          />
+        )}
+
+        {/* 이미지 변경 모달 */}
+        {showImageModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-['Tenada'] text-lg font-extrabold text-black">
+                  가게 이미지 변경
+                </h3>
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex h-48 w-full items-center justify-center border border-dashed border-gray-300 bg-gray-50">
+                  <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
+                    이미지 선택
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setSelectedImage(file)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {selectedImage && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    선택된 파일: {selectedImage.name}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
+                  disabled={isImageUploading}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleImageUpload}
+                  className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+                  disabled={!selectedImage || isImageUploading}
+                >
+                  {isImageUploading ? '업로드 중...' : '변경하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 충전 보너스 등록
+         모달 */}
+        {showChargeBonusModal && (
+          <ChargeBonusModal
+            onClose={() => setShowChargeBonusModal(false)}
+            storeId={storeId}
+            onSuccess={fetchChargeBonusData}
+          />
+        )}
       </div>
-
-      {/* 메뉴 추가 모달 */}
-      {showMenuAddModal && (
-        <MenuAddModal
-          onClose={() => setShowMenuAddModal(false)}
-          storeId={storeId}
-          addMenu={addMenu}
-          fetchMenus={() => fetchMenus(parseInt(storeId!))}
-        />
-      )}
-
-      {/* 메뉴 수정 모달 */}
-      {showMenuEditModal && editingMenu && (
-        <MenuEditModal
-          onClose={() => {
-            setShowMenuEditModal(false)
-            setEditingMenu(null)
-          }}
-          storeId={storeId}
-          menu={editingMenu}
-          onUpdate={() => {
-            if (storeId) {
-              fetchMenus(parseInt(storeId))
-            }
-          }}
-        />
-      )}
-
-      {/* 이미지 업로드 모달 */}
-      <ImageUploadModal
-        showModal={showImageModal}
-        selectedImage={selectedImage}
-        isUploading={isImageUploading}
-        onImageSelect={setSelectedImage}
-        onUpload={handleImageUpload}
-        onClose={() => setShowImageModal(false)}
-      />
     </div>
   )
 }
 
-// 메뉴 추가 모달 Props 타입
+// 메뉴 추가 모달 컴포넌트
 type MenuAddModalProps = {
   onClose: () => void
   storeId: string | null
   addMenu: (storeId: number, menuData: any) => Promise<boolean>
-  fetchMenus: () => void
 }
 
-const MenuAddModal = ({
-  onClose,
-  storeId,
-  addMenu,
-  fetchMenus,
-}: MenuAddModalProps) => {
+type Category = {
+  categoryId: number
+  categoryName: string
+  storeId: number
+  parentId?: number
+  displayOrder?: number
+  createdAt?: string
+}
+
+type MenuData = {
+  name: string
+  description: string
+  price: number
+  categoryId?: number
+  category?: string
+  categoryName?: string
+  image?: File | null
+}
+
+const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
   const [addMethod, setAddMethod] = useState<
     'ocr' | 'manual' | 'category' | null
   >(null)
@@ -499,7 +607,7 @@ const MenuAddModal = ({
     description: '',
     price: 0,
     categoryId: 0,
-    imgFile: null,
+    image: null,
   })
 
   // 카테고리 목록 로드
@@ -533,9 +641,12 @@ const MenuAddModal = ({
         `/owners/stores/${storeId}/menus/categories`,
         {
           categoryName: newCategoryName,
-          parentId: null,
+          parentId: null, // 최상위 카테고리로 생성 (백엔드는 null 사용)
         }
       )
+
+      console.log('응답 상태:', response.status)
+      console.log('응답 데이터:', response.data)
 
       if (response.data.success) {
         const newCategory: Category = {
@@ -549,45 +660,14 @@ const MenuAddModal = ({
       } else {
         throw new Error(response.data.message || '카테고리 생성 실패')
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('카테고리 생성 실패:', error)
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        '알 수 없는 오류가 발생했습니다.'
+        error instanceof Error
+          ? error.message
+          : (error as any)?.response?.data?.message ||
+            '알 수 없는 오류가 발생했습니다.'
       alert(`카테고리 생성에 실패했습니다: ${errorMessage}`)
-    }
-  }
-
-  const handleDeleteCategory = async (categoryId: number) => {
-    const categoryToDelete = categories.find(
-      cat => cat.categoryId === categoryId
-    )
-    const confirmMessage = categoryToDelete
-      ? `'${categoryToDelete.categoryName}' 카테고리를 삭제하시겠습니까?\n\n주의: 이 카테고리에 속한 메뉴들도 함께 영향을 받을 수 있습니다.`
-      : '정말로 이 카테고리를 삭제하시겠습니까?'
-
-    if (confirm(confirmMessage)) {
-      try {
-        const response = await apiClient.delete(
-          `/owners/stores/${storeId}/menus/categories/${categoryId}`
-        )
-
-        if (response.data.success) {
-          alert('카테고리가 삭제되었습니다.')
-          fetchCategories()
-          fetchMenus()
-        } else {
-          alert('카테고리 삭제에 실패했습니다.')
-        }
-      } catch (error: any) {
-        console.error('카테고리 삭제 실패:', error)
-        const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
-          '알 수 없는 오류가 발생했습니다.'
-        alert(`카테고리 삭제에 실패했습니다: ${errorMessage}`)
-      }
     }
   }
 
@@ -599,6 +679,7 @@ const MenuAddModal = ({
       const formData = new FormData()
       formData.append('file', file)
 
+      // OCR API 호출
       const response = await fetch('/api/ocr/menu', {
         method: 'POST',
         body: formData,
@@ -606,12 +687,13 @@ const MenuAddModal = ({
 
       if (response.ok) {
         const result = await response.json()
+
         if (result.success) {
           const ocrMenus: MenuData[] = result.data.items.map((item: any) => ({
             name: item.nameKr,
             description: item.description || '',
             price: item.price,
-            categoryId: 0,
+            categoryId: 0, // 기본값, 사용자가 선택해야 함
             categoryName: '',
           }))
           setOcrResults(ocrMenus)
@@ -621,18 +703,19 @@ const MenuAddModal = ({
       } else {
         throw new Error('OCR API 호출 실패')
       }
+
+      setIsProcessing(false)
     } catch (error) {
       console.error('OCR 처리 실패:', error)
-      alert('OCR 처리에 실패했습니다.')
-    } finally {
       setIsProcessing(false)
+      alert('OCR 처리에 실패했습니다.')
     }
   }
 
   const handleOcrResultChange = (
     index: number,
     field: keyof MenuData,
-    value: string | number | File | undefined
+    value: string | number
   ) => {
     const updated = [...ocrResults]
     updated[index] = { ...updated[index], [field]: value }
@@ -640,82 +723,151 @@ const MenuAddModal = ({
   }
 
   const handleManualSubmit = async () => {
-    if (
-      !manualMenu.name ||
-      !manualMenu.name.trim() ||
-      !manualMenu.categoryId ||
-      !manualMenu.imgFile
-    ) {
-      alert('메뉴명, 카테고리, 이미지는 필수입니다.')
+    if (!manualMenu.name || !manualMenu.name.trim() || !manualMenu.categoryId) {
+      alert('메뉴명과 카테고리는 필수입니다. (메뉴명은 공백일 수 없습니다)')
       return
     }
 
     try {
-      const formData = new FormData()
-      formData.append('name', manualMenu.name.trim())
-      formData.append('categoryId', manualMenu.categoryId.toString())
-      formData.append('imgFile', manualMenu.imgFile)
-      if (manualMenu.price)
-        formData.append('price', manualMenu.price.toString())
-      if (manualMenu.description)
-        formData.append('description', manualMenu.description)
+      // 카테고리 이름 찾기
+      const selectedCategory = categories.find(
+        cat => cat.categoryId === manualMenu.categoryId
+      )
 
+      if (!selectedCategory) {
+        alert('선택된 카테고리를 찾을 수 없습니다.')
+        return
+      }
+
+      // categoryId 검증
+      if (!manualMenu.categoryId || manualMenu.categoryId <= 0) {
+        alert('카테고리를 선택해주세요.')
+        return
+      }
+
+      // FormData 생성
+      const formData = new FormData()
+      formData.append('menuName', manualMenu.name.trim())
+      formData.append('categoryId', manualMenu.categoryId.toString())
+      formData.append('storeId', parseInt(storeId || '0').toString())
+
+      if (manualMenu.price && manualMenu.price > 0) {
+        formData.append('price', manualMenu.price.toString())
+      }
+      if (manualMenu.description && manualMenu.description.trim()) {
+        formData.append('description', manualMenu.description.trim())
+      }
+      if (manualMenu.image) {
+        formData.append('imgFile', manualMenu.image)
+      }
+
+      console.log('메뉴 추가 요청 FormData:')
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value)
+      }
+
+      // API 직접 호출
       const response = await apiClient.post(
         `/owners/stores/${storeId}/menus`,
         formData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         }
       )
 
-      if (response.data.success) {
+      const success = response.data.success
+
+      console.log('성공 여부:', success)
+
+      if (success) {
         alert('메뉴가 추가되었습니다.')
-        fetchMenus()
+        // 상태 초기화
+        setManualMenu({
+          name: '',
+          description: '',
+          price: 0,
+          categoryId: 0,
+          image: null,
+        })
         onClose()
       } else {
         alert('메뉴 추가에 실패했습니다.')
       }
     } catch (error) {
       console.error('메뉴 추가 실패:', error)
-      alert('메뉴 추가에 실패했습니다.')
     }
   }
 
-  const handleOcrSubmit = async (menu: MenuData, index: number) => {
-    if (!menu.categoryId || !menu.imgFile) {
-      alert('카테고리와 이미지는 필수입니다.')
+  const handleOcrSubmit = async () => {
+    // 카테고리 선택 검증
+    const invalidMenus = ocrResults.filter(menu => !menu.categoryId)
+    if (invalidMenus.length > 0) {
+      alert('모든 메뉴에 카테고리를 선택해주세요.')
       return
     }
 
     try {
-      const formData = new FormData()
-      formData.append('name', menu.name.trim())
-      formData.append('categoryId', menu.categoryId.toString())
-      formData.append('imgFile', menu.imgFile)
-      if (menu.price) formData.append('price', menu.price.toString())
-      if (menu.description) formData.append('description', menu.description)
+      let successCount = 0
+      let failCount = 0
 
-      const response = await apiClient.post(
-        `/owners/stores/${storeId}/menus`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
+      // 메뉴들을 하나씩 순차적으로 추가
+      for (const menu of ocrResults) {
+        try {
+          // 메뉴명이 공백인지 확인
+          if (!menu.name || !menu.name.trim()) {
+            console.error(`메뉴 "${menu.name}" 이름이 공백입니다.`)
+            failCount++
+            continue
+          }
+
+          const formData = new FormData()
+          formData.append('name', menu.name.trim())
+          formData.append('categoryId', (menu.categoryId || 0).toString())
+
+          // 선택적 필드들
+          if (menu.price) {
+            formData.append('price', menu.price.toString())
+          }
+          if (menu.description) {
+            formData.append('description', menu.description)
+          }
+
+          const response = await apiClient.post(
+            `/owners/stores/${storeId}/menus`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          )
+
+          if (response.data.success) {
+            successCount++
+          } else {
+            console.error(
+              `메뉴 "${menu.name}" 추가 실패:`,
+              response.data.message
+            )
+            failCount++
+          }
+        } catch (error) {
+          const axiosError = error as any
+          console.error(`메뉴 "${menu.name}" 추가 실패:`, axiosError)
+          console.error('에러 응답:', axiosError.response?.data)
+          failCount++
         }
-      )
+      }
 
-      if (response.data.success) {
-        alert('메뉴가 추가되었습니다.')
-        // 해당 메뉴를 OCR 결과에서 제거
-        const updated = ocrResults.filter((_, i) => i !== index)
-        setOcrResults(updated)
-        fetchMenus()
-
-        // 모든 메뉴가 등록되면 모달 닫기
-        if (updated.length === 0) {
-          onClose()
-        }
+      if (successCount > 0) {
+        alert(
+          `${successCount}개의 메뉴가 추가되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`
+        )
+        onClose()
       } else {
-        alert('메뉴 추가에 실패했습니다.')
+        alert('모든 메뉴 추가에 실패했습니다.')
       }
     } catch (error) {
       console.error('메뉴 추가 실패:', error)
@@ -851,7 +1003,6 @@ const MenuAddModal = ({
           </div>
         )}
 
-        {/* 카테고리 관리 */}
         {addMethod === 'category' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -865,6 +1016,7 @@ const MenuAddModal = ({
                 카테고리 관리
               </h4>
             </div>
+
             <div className="space-y-3">
               <div className="flex gap-2">
                 <input
@@ -882,6 +1034,7 @@ const MenuAddModal = ({
                   추가
                 </button>
               </div>
+
               <div className="space-y-2">
                 <h5 className="font-['nanumsquare'] text-sm font-bold text-gray-700">
                   현재 카테고리 ({categories.length}개)
@@ -892,19 +1045,33 @@ const MenuAddModal = ({
                   </p>
                 ) : (
                   <div className="max-h-48 space-y-2 overflow-y-auto">
-                    {categories.map(category => (
+                    {categories.map((category, index) => (
                       <div
-                        key={category.categoryId}
+                        key={
+                          category.categoryId ||
+                          `category-${index}-${crypto.randomUUID()}`
+                        }
                         className="flex items-center justify-between rounded border border-gray-200 p-2"
                       >
                         <span className="font-['nanumsquare'] text-sm">
                           {category.categoryName}
                         </span>
                         <button
-                          onClick={() =>
-                            handleDeleteCategory(category.categoryId)
-                          }
-                          className="rounded px-2 py-1 font-['nanumsquare'] text-xs text-red-500 transition-colors hover:bg-red-50"
+                          onClick={() => {
+                            // TODO: 카테고리 삭제 API
+                            if (
+                              confirm(
+                                `'${category.categoryName}' 카테고리를 삭제하시겠습니까?`
+                              )
+                            ) {
+                              setCategories(
+                                categories.filter(
+                                  c => c.categoryId !== category.categoryId
+                                )
+                              )
+                            }
+                          }}
+                          className="text-sm text-red-500 hover:text-red-700"
                         >
                           삭제
                         </button>
@@ -917,7 +1084,6 @@ const MenuAddModal = ({
           </div>
         )}
 
-        {/* OCR 스캔 */}
         {addMethod === 'ocr' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -942,14 +1108,16 @@ const MenuAddModal = ({
                     className="hidden"
                     onChange={e => {
                       const file = e.target.files?.[0]
-                      if (file) handleOcrUpload(file)
+                      if (file) {
+                        handleOcrUpload(file)
+                      }
                     }}
                   />
                 </label>
               </div>
             )}
 
-            {isProcessing && (
+            {ocrImage && isProcessing && (
               <div className="py-8 text-center">
                 <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-black"></div>
                 <p className="font-['nanumsquare'] text-gray-600">
@@ -965,16 +1133,17 @@ const MenuAddModal = ({
                     인식된 메뉴 ({ocrResults.length}개)
                   </h5>
                   <p className="font-['nanumsquare'] text-xs text-gray-500">
-                    각 메뉴를 개별로 등록하세요
+                    정보를 확인하고 수정하세요
                   </p>
                 </div>
+
                 <div className="max-h-64 space-y-3 overflow-y-auto">
                   {ocrResults.map((menu, index) => (
                     <div
-                      key={index}
+                      key={menu.name || `ocr-${index}-${crypto.randomUUID()}`}
                       className="rounded border border-gray-200 p-3"
                     >
-                      <div className="mb-3 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
                             메뉴명
@@ -1025,9 +1194,12 @@ const MenuAddModal = ({
                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                           >
                             <option value="">카테고리 선택</option>
-                            {categories.map(cat => (
+                            {categories.map((cat, index) => (
                               <option
-                                key={cat.categoryId}
+                                key={
+                                  cat.categoryId ||
+                                  `cat-option-${index}-${crypto.randomUUID()}`
+                                }
                                 value={cat.categoryId}
                               >
                                 {cat.categoryName}
@@ -1053,31 +1225,10 @@ const MenuAddModal = ({
                           />
                         </div>
                       </div>
-                      <div className="mb-3">
-                        <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                          이미지 *
-                        </label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => {
-                            const file = e.target.files?.[0]
-                            handleOcrResultChange(index, 'imgFile', file)
-                          }}
-                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                      </div>
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => handleOcrSubmit(menu, index)}
-                          className="rounded bg-black px-3 py-1 font-['nanumsquare'] text-xs font-bold text-white transition-colors hover:bg-gray-800"
-                        >
-                          이 메뉴 등록
-                        </button>
-                      </div>
                     </div>
                   ))}
                 </div>
+
                 <div className="flex justify-end gap-2 pt-4">
                   <button
                     onClick={() => {
@@ -1088,13 +1239,18 @@ const MenuAddModal = ({
                   >
                     다시 스캔
                   </button>
+                  <button
+                    onClick={handleOcrSubmit}
+                    className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                  >
+                    메뉴 추가
+                  </button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* 수동 등록 */}
         {addMethod === 'manual' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -1108,6 +1264,7 @@ const MenuAddModal = ({
                 수동 등록
               </h4>
             </div>
+
             <div className="space-y-3">
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
@@ -1123,6 +1280,7 @@ const MenuAddModal = ({
                   placeholder="메뉴명을 입력하세요"
                 />
               </div>
+
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
                   가격
@@ -1140,6 +1298,7 @@ const MenuAddModal = ({
                   placeholder="가격을 입력하세요"
                 />
               </div>
+
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
                   카테고리 *
@@ -1155,13 +1314,20 @@ const MenuAddModal = ({
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   <option value="">카테고리를 선택하세요</option>
-                  {categories.map(cat => (
-                    <option key={cat.categoryId} value={cat.categoryId}>
+                  {categories.map((cat, index) => (
+                    <option
+                      key={
+                        cat.categoryId ||
+                        `cat-manual-${index}-${crypto.randomUUID()}`
+                      }
+                      value={cat.categoryId}
+                    >
                       {cat.categoryName}
                     </option>
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
                   설명
@@ -1178,21 +1344,39 @@ const MenuAddModal = ({
                   placeholder="메뉴 설명을 입력하세요"
                 />
               </div>
+
               <div>
                 <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  이미지 *
+                  이미지
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => {
-                    const file = e.target.files?.[0]
-                    setManualMenu({ ...manualMenu, imgFile: file || null })
-                  }}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
+                <div className="flex h-32 w-full items-center justify-center border border-dashed border-gray-300 bg-gray-50">
+                  <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
+                    {manualMenu.image ? manualMenu.image.name : '이미지 선택'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setManualMenu(prev => ({
+                            ...prev,
+                            image: file,
+                          }))
+                          console.log('선택된 파일:', file)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {manualMenu.image && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    선택된 파일: {manualMenu.image.name}
+                  </div>
+                )}
               </div>
             </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <button
                 onClick={onClose}
@@ -1214,211 +1398,171 @@ const MenuAddModal = ({
   )
 }
 
-// 메뉴 수정 모달 Props 타입
-type MenuEditModalProps = {
+// 충전 보너스 등록 모달 컴포넌트
+type ChargeBonusModalProps = {
   onClose: () => void
   storeId: string | null
-  menu: any
-  onUpdate: () => void
+  onSuccess: () => void
 }
 
-const MenuEditModal = ({
+const ChargeBonusModal = ({
   onClose,
   storeId,
-  menu,
-  onUpdate,
-}: MenuEditModalProps) => {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [editedMenu, setEditedMenu] = useState({
-    menuName: menu.name || '',
-    categoryId: 0,
-    price: menu.price || 0,
-    description: menu.description || '',
-    imgFile: null as File | null,
-  })
-  const [isUpdating, setIsUpdating] = useState(false)
+  onSuccess,
+}: ChargeBonusModalProps) => {
+  const [chargeAmount, setChargeAmount] = useState('')
+  const [bonusPercentage, setBonusPercentage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (storeId) {
-      fetchCategories()
-    }
-  }, [storeId])
-
-  const fetchCategories = async () => {
-    try {
-      const response = await apiClient.get(
-        `/stores/${storeId}/menus/categories`
-      )
-      if (response.data.success) {
-        setCategories(response.data.data || [])
-        const currentCategory = response.data.data.find(
-          (cat: Category) => cat.categoryName === menu.category
+  const expectedTotalPoints =
+    chargeAmount && bonusPercentage
+      ? Math.floor(
+          parseInt(chargeAmount) * (1 + parseInt(bonusPercentage) / 100)
         )
-        if (currentCategory) {
-          setEditedMenu(prev => ({
-            ...prev,
-            categoryId: currentCategory.categoryId,
-          }))
-        }
-      }
-    } catch (error) {
-      console.error('카테고리 조회 실패:', error)
-    }
-  }
+      : 0
 
-  const handleUpdate = async () => {
-    if (!editedMenu.menuName.trim() || !editedMenu.categoryId) {
-      alert('메뉴명과 카테고리는 필수입니다.')
+  const handleSubmit = async () => {
+    if (!chargeAmount || !bonusPercentage) {
+      alert('충전 금액과 보너스 퍼센티지를 입력해주세요.')
       return
     }
 
-    setIsUpdating(true)
-    try {
-      const formData = new FormData()
-      formData.append('menuName', editedMenu.menuName.trim())
-      formData.append('categoryId', editedMenu.categoryId.toString())
-      if (editedMenu.price)
-        formData.append('price', editedMenu.price.toString())
-      if (editedMenu.description)
-        formData.append('description', editedMenu.description)
-      if (editedMenu.imgFile) formData.append('imgFile', editedMenu.imgFile)
-      if (storeId) formData.append('storeId', storeId)
+    const chargeAmountNum = parseInt(chargeAmount)
+    const bonusPercentageNum = parseInt(bonusPercentage)
 
-      const response = await apiClient.put(
-        `/owners/stores/${storeId}/menus/${menu.id}`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+    // 백엔드 검증 규칙에 맞게 수정
+    if (chargeAmountNum < 1000) {
+      alert('충전 금액은 최소 1,000원 이상이어야 합니다.')
+      return
+    }
+
+    if (bonusPercentageNum < 1 || bonusPercentageNum > 100) {
+      alert('보너스 퍼센트는 1% ~ 100% 사이여야 합니다.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      console.log('충전 보너스 등록 시작:', {
+        storeId,
+        chargeAmountNum,
+        bonusPercentageNum,
+      })
+
+      const response = await apiClient.post(
+        `/owners/stores/${storeId}/charge-bonus`,
+        {
+          chargeAmount: chargeAmountNum,
+          bonusPercentage: bonusPercentageNum,
+        }
       )
 
       if (response.data.success) {
-        alert('메뉴가 수정되었습니다.')
-        onUpdate()
+        alert('충전 보너스가 등록되었습니다.')
+        onSuccess()
         onClose()
       } else {
-        throw new Error(response.data.message || '메뉴 수정 실패')
+        throw new Error(response.data.message || '등록 실패')
       }
     } catch (error: any) {
-      console.error('메뉴 수정 실패:', error)
+      console.error('충전 보너스 등록 실패:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        },
+      })
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        '메뉴 수정에 실패했습니다.'
-      alert(errorMessage)
+        error.response?.data?.message || '등록에 실패했습니다.'
+      alert(`충전 보너스 등록 실패: ${errorMessage}`)
     } finally {
-      setIsUpdating(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
+      <div className="w-full max-w-md rounded-lg bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-['Tenada'] text-lg font-extrabold text-black">
-            메뉴 수정
+            충전 보너스 등록
           </h3>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
+            disabled={isSubmitting}
           >
             ✕
           </button>
         </div>
+
         <div className="space-y-4">
           <div>
             <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              메뉴명 *
-            </label>
-            <input
-              type="text"
-              value={editedMenu.menuName}
-              onChange={e =>
-                setEditedMenu({ ...editedMenu, menuName: e.target.value })
-              }
-              className="w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="메뉴명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              가격
+              충전 금액 (원) *
             </label>
             <input
               type="number"
-              value={editedMenu.price || ''}
-              onChange={e =>
-                setEditedMenu({
-                  ...editedMenu,
-                  price: parseInt(e.target.value) || 0,
-                })
-              }
+              value={chargeAmount}
+              onChange={e => setChargeAmount(e.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="가격을 입력하세요"
+              placeholder="10000"
+              min="1000"
+              step="1000"
+              disabled={isSubmitting}
             />
           </div>
+
           <div>
             <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              카테고리 *
-            </label>
-            <select
-              value={editedMenu.categoryId || ''}
-              onChange={e =>
-                setEditedMenu({
-                  ...editedMenu,
-                  categoryId: parseInt(e.target.value),
-                })
-              }
-              className="w-full rounded border border-gray-300 px-3 py-2"
-            >
-              <option value="">카테고리를 선택하세요</option>
-              {categories.map(cat => (
-                <option key={cat.categoryId} value={cat.categoryId}>
-                  {cat.categoryName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              설명
-            </label>
-            <textarea
-              value={editedMenu.description}
-              onChange={e =>
-                setEditedMenu({ ...editedMenu, description: e.target.value })
-              }
-              className="h-20 w-full resize-none rounded border border-gray-300 px-3 py-2"
-              placeholder="메뉴 설명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              이미지
+              보너스 퍼센티지 (%) *
             </label>
             <input
-              type="file"
-              accept="image/*"
-              onChange={e => {
-                const file = e.target.files?.[0]
-                setEditedMenu({ ...editedMenu, imgFile: file || null })
-              }}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              type="number"
+              value={bonusPercentage}
+              onChange={e => setBonusPercentage(e.target.value)}
+              className="w-full rounded border border-gray-300 px-3 py-2"
+              placeholder="5"
+              min="1"
+              max="100"
+              disabled={isSubmitting}
             />
           </div>
+
+          {expectedTotalPoints > 0 && (
+            <div className="rounded bg-gray-50 p-3">
+              <div className="font-['nanumsquare'] text-sm text-gray-700">
+                <strong>미리보기:</strong>
+              </div>
+              <div className="font-['nanumsquare'] text-sm font-bold text-black">
+                {parseInt(chargeAmount).toLocaleString()}원 ={' '}
+                {expectedTotalPoints.toLocaleString()} 포인트
+              </div>
+              <div className="font-['nanumsquare'] text-xs text-gray-500">
+                (+{bonusPercentage}% 보너스)
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex justify-end gap-2 pt-6">
+
+        <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
             className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
-            disabled={isUpdating}
+            disabled={isSubmitting}
           >
             취소
           </button>
           <button
-            onClick={handleUpdate}
+            onClick={handleSubmit}
             className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
-            disabled={isUpdating}
+            disabled={isSubmitting}
           >
-            {isUpdating ? '수정 중...' : '수정하기'}
+            {isSubmitting ? '등록 중...' : '등록'}
           </button>
         </div>
       </div>

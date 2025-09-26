@@ -23,8 +23,7 @@ const deleteCookie = (name: string) => {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;`
 }
 
-// 메모리 기반 토큰 저장소
-let memoryAccessToken: string | null = null
+// localStorage만 사용 (메모리 저장소 제거)
 
 type AuthUser = {
   // 공통 필드 (OWNER/CUSTOMER 혼용 지원)
@@ -66,7 +65,6 @@ export const useAuthStore = create<AuthState>()(
 
       login: (user, accessToken) => {
         if (accessToken) {
-          memoryAccessToken = accessToken
           try {
             if (typeof window !== 'undefined') {
               localStorage.setItem('accessToken', accessToken)
@@ -86,12 +84,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoggedIn: true, user })
       },
       logout: () => {
-        memoryAccessToken = null
         try {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('refreshToken')
             localStorage.removeItem('user')
+            localStorage.removeItem('fcmToken') // FCM 토큰도 제거
 
             // 쿠키에서 refreshToken 완전 제거
             deleteCookie('refreshToken')
@@ -113,7 +111,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       getAccessToken: () => {
-        if (memoryAccessToken) return memoryAccessToken
         try {
           if (typeof window !== 'undefined') {
             const token = localStorage.getItem('accessToken')
@@ -123,7 +120,6 @@ export const useAuthStore = create<AuthState>()(
         return null
       },
       setAccessToken: (token: string) => {
-        memoryAccessToken = token
         try {
           if (typeof window !== 'undefined') {
             localStorage.setItem('accessToken', token)
@@ -131,7 +127,6 @@ export const useAuthStore = create<AuthState>()(
         } catch {}
       },
       clearAccessToken: () => {
-        memoryAccessToken = null
         try {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('accessToken')
@@ -179,7 +174,6 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (token) {
-            memoryAccessToken = token
             set({ isLoggedIn: true, user: savedUser })
 
             // 토큰 유효성 검증 및 사용자 정보 동기화 (비차단)
@@ -225,11 +219,9 @@ export const useAuthStore = create<AuthState>()(
         }
 
         if (token) {
-          memoryAccessToken = token
           set({ isLoggedIn: true })
           return true
         } else {
-          memoryAccessToken = null
           set({ isLoggedIn: false, user: null })
           return false
         }
@@ -286,7 +278,17 @@ export const useAuthStore = create<AuthState>()(
           if (newToken) {
             get().setAccessToken(newToken)
           }
-        } catch {}
+        } catch (error: any) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              '개발 환경: 토큰 갱신 실패 (백엔드 서버 확인 필요):',
+              error.message
+            )
+          } else {
+            console.error('Token refresh failed:', error)
+          }
+          get().clearAuth()
+        }
       },
     }),
     {

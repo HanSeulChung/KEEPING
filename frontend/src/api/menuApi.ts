@@ -166,6 +166,81 @@ export const editMenu = async (
   }
 }
 
+// 개별 메뉴 삭제
+export const deleteMenu = async (
+  storeId: number,
+  menuId: number
+): Promise<ApiResponse<void>> => {
+  try {
+    const response = await fetch(
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus/${menuId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return {
+      success: true,
+      data: null,
+      message: result.message || '메뉴가 삭제되었습니다.',
+      statusCode: response.status,
+    }
+  } catch (error: any) {
+    console.error('메뉴 삭제 실패:', error)
+    return {
+      success: false,
+      data: null,
+      message: error.message || '메뉴 삭제에 실패했습니다.',
+      statusCode: error.status || 500,
+    }
+  }
+}
+
+// 전체 메뉴 삭제
+export const deleteAllMenus = async (
+  storeId: number
+): Promise<ApiResponse<void>> => {
+  try {
+    const response = await fetch(
+      `${apiConfig.baseURL}/owners/stores/${storeId}/menus`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return {
+      success: true,
+      data: null,
+      message: result.message || '모든 메뉴가 삭제되었습니다.',
+      statusCode: response.status,
+    }
+  } catch (error: any) {
+    console.error('전체 메뉴 삭제 실패:', error)
+    return {
+      success: false,
+      data: null,
+      message: error.message || '전체 메뉴 삭제에 실패했습니다.',
+      statusCode: error.status || 500,
+    }
+  }
+}
+
 // 전체 메뉴 조회
 export const getAllMenus = async (
   storeId: number
@@ -194,59 +269,3 @@ export const getAllMenus = async (
   }
 }
 
-// 메뉴 삭제
-export const deleteMenu = async (
-  storeId: number,
-  menuId: number
-): Promise<ApiResponse<void>> => {
-  try {
-    const response = await fetch(
-      `${apiConfig.baseURL}/owners/stores/${storeId}/menus/${menuId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const result = await response.json()
-    return result
-  } catch (error) {
-    console.error('메뉴 삭제 실패:', error)
-    throw error
-  }
-}
-
-// 전체 메뉴 삭제
-export const deleteAllMenus = async (
-  storeId: number
-): Promise<ApiResponse<void>> => {
-  try {
-    const response = await fetch(
-      `${apiConfig.baseURL}/owners/stores/${storeId}/menus`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const result = await response.json()
-    return result
-  } catch (error) {
-    console.error('전체 메뉴 삭제 실패:', error)
-    throw error
-  }
-}

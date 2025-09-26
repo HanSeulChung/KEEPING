@@ -80,7 +80,16 @@ apiClient.interceptors.response.use(
           try {
             localStorage.removeItem('accessToken')
           } catch {}
-          window.location.href = '/customer/login'
+
+          // 현재 페이지가 점주 페이지인지 고객 페이지인지 확인
+          const currentPath = window.location.pathname
+          const isOwnerPage = currentPath.startsWith('/owner')
+
+          if (isOwnerPage) {
+            window.location.href = '/' // 점주는 홈페이지로
+          } else {
+            window.location.href = '/customer/login' // 고객은 고객 로그인으로
+          }
         }
         return Promise.reject(refreshError)
       }
