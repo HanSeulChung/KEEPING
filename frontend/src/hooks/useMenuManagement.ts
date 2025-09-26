@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { 
-  MenuResponseDto, 
-  MenuRequestDto, 
-  MenuEditRequestDto,
-  getAllMenus, 
-  createMenu, 
-  editMenu, 
-  deleteMenu, 
-  deleteAllMenus 
+import {
+    MenuEditRequestDto,
+    MenuRequestDto,
+    MenuResponseDto,
+    createMenu,
+    deleteAllMenus,
+    deleteMenu,
+    editMenu,
+    getAllMenus
 } from '@/api/menuApi'
+import { useCallback, useState } from 'react'
 
 interface UseMenuManagementReturn {
   menus: MenuResponseDto[]
@@ -92,7 +92,7 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
         // 수정된 메뉴로 목록 업데이트
         setMenus(prev => 
           prev.map(menu => 
-            menu.id === menuId ? response.data : menu
+            menu.menuId === menuId ? response.data : menu
           )
         )
         return true
@@ -119,7 +119,7 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
       
       if (response.success) {
         // 삭제된 메뉴를 목록에서 제거
-        setMenus(prev => prev.filter(menu => menu.id !== menuId))
+        setMenus(prev => prev.filter(menu => menu.menuId !== menuId))
         return true
       } else {
         setError(response.message || '메뉴 삭제에 실패했습니다.')

@@ -189,6 +189,15 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
 
   // OCR 업로드 처리
   const handleOcrUpload = async (file: File) => {
+    // 파일 크기 검증 (1MB = 1048576 bytes)
+    const maxFileSize = 1048576 // 1MB
+    if (file.size > maxFileSize) {
+      alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+      // OCR 이미지 상태 초기화
+      setOcrImage(null)
+      return
+    }
+
     setOcrImage(file)
     setIsProcessing(true)
 
@@ -239,6 +248,8 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
 
   // 수동 메뉴 추가
   const handleManualSubmit = async () => {
+    console.log('수동 메뉴 추가 시작:', { manualMenu, storeId })
+    
     if (!manualMenu.name || !manualMenu.name.trim() || !manualMenu.categoryId) {
       alert('메뉴명과 카테고리는 필수입니다.')
       return
@@ -253,13 +264,19 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
         return
       }
 
-      const success = await addMenu(parseInt(storeId), {
+      const menuData = {
         menuName: manualMenu.name.trim(),
         categoryId: manualMenu.categoryId,
-        price: manualMenu.price || 0,
+        price: manualMenu.price || 1000, // 최소값 1000으로 설정
         description: manualMenu.description || '',
         storeId: parseInt(storeId),
-      })
+      }
+      
+      console.log('전송할 메뉴 데이터:', menuData)
+      console.log('menuName 길이:', menuData.menuName.length)
+      console.log('menuName 값:', `"${menuData.menuName}"`)
+
+      const success = await addMenu(parseInt(storeId), menuData)
 
       if (success) {
         alert('메뉴가 추가되었습니다.')
@@ -404,11 +421,11 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
       {/* 메뉴 목록 */}
       <div className="space-y-4">
         {menus.map(item => (
-          <div key={item.id} className="border border-black p-4">
+          <div key={item.menuId} className="border border-black p-4">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h3 className="mb-2 font-['nanumsquare'] text-lg text-black">
-                  {item.name}
+                  {item.menuName}
                 </h3>
                 <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
                   {item.description}
@@ -418,16 +435,16 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
                     {(item.price || 0).toLocaleString()}원
                   </span>
                   <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
-                    {item.category}
+                    {item.categoryName}
                   </span>
                   <button
-                    onClick={() => handleEditMenu(item.id)}
+                    onClick={() => handleEditMenu(item.menuId)}
                     className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
                   >
                     수정
                   </button>
                   <button
-                    onClick={() => handleRemoveMenu(item.id)}
+                    onClick={() => handleRemoveMenu(item.menuId)}
                     className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                   >
                     삭제
@@ -663,20 +680,25 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
 
                 {!ocrImage && (
                   <div className="flex h-48 w-full items-center justify-center border border-dashed border-gray-300 bg-gray-50">
-                    <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
-                      메뉴판 사진 선택
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={e => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            handleOcrUpload(file)
-                          }
-                        }}
-                      />
-                    </label>
+                    <div className="text-center">
+                      <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
+                        메뉴판 사진 선택
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              handleOcrUpload(file)
+                            }
+                          }}
+                        />
+                      </label>
+                      <p className="mt-2 text-xs text-gray-500">
+                        최대 1MB까지 업로드 가능 (현재 제한: 1MB)
+                      </p>
+                    </div>
                   </div>
                 )}
 

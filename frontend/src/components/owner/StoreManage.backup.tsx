@@ -384,13 +384,13 @@ const StoreManage = () => {
             ) : (
               menus.map((item, index) => (
                 <div
-                  key={item.id || `menu-${index}-${crypto.randomUUID()}`}
+                  key={item.menuId || `menu-${index}-${crypto.randomUUID()}`}
                   className="border border-black p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="mb-2 font-['nanumsquare'] text-lg text-black">
-                        {item.name}
+                        {item.menuName}
                       </h3>
                       <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
                         {item.description}
@@ -400,16 +400,16 @@ const StoreManage = () => {
                           {(item.price || 0).toLocaleString()}원
                         </span>
                         <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
-                          {item.category}
+                          {item.categoryName}
                         </span>
                         <button
-                          onClick={() => handleEditMenu(item.id)}
+                          onClick={() => handleEditMenu(item.menuId)}
                           className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
                         >
                           수정
                         </button>
                         <button
-                          onClick={() => handleDeleteMenu(item.id)}
+                          onClick={() => handleDeleteMenu(item.menuId)}
                           className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                         >
                           삭제
@@ -526,15 +526,26 @@ const StoreManage = () => {
                       onChange={e => {
                         const file = e.target.files?.[0]
                         if (file) {
+                          // 파일 크기 검증 (1MB = 1048576 bytes)
+                          const maxFileSize = 1048576 // 1MB
+                          if (file.size > maxFileSize) {
+                            alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                            // 파일 입력 초기화
+                            e.target.value = ''
+                            return
+                          }
                           setSelectedImage(file)
                         }
                       }}
                     />
                   </label>
                 </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  최대 1MB까지 업로드 가능
+                </div>
                 {selectedImage && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    선택된 파일: {selectedImage.name}
+                  <div className="mt-1 text-xs text-gray-500">
+                    선택된 파일: {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)}MB)
                   </div>
                 )}
               </div>
@@ -1365,6 +1376,15 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
                       onChange={e => {
                         const file = e.target.files?.[0]
                         if (file) {
+                          // 파일 크기 검증 (1MB = 1048576 bytes)
+                          const maxFileSize = 1048576 // 1MB
+                          if (file.size > maxFileSize) {
+                            alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                            // 파일 입력 초기화
+                            e.target.value = ''
+                            return
+                          }
+                          
                           setManualMenu(prev => ({
                             ...prev,
                             image: file,
@@ -1375,9 +1395,12 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
                     />
                   </label>
                 </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  최대 1MB까지 업로드 가능
+                </div>
                 {manualMenu.image && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    선택된 파일: {manualMenu.image.name}
+                  <div className="mt-1 text-xs text-gray-500">
+                    선택된 파일: {manualMenu.image.name} ({(manualMenu.image.size / 1024 / 1024).toFixed(2)}MB)
                   </div>
                 )}
               </div>
