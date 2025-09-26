@@ -192,7 +192,9 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
     // 파일 크기 검증 (1MB = 1048576 bytes)
     const maxFileSize = 1048576 // 1MB
     if (file.size > maxFileSize) {
-      alert('이미지 파일 크기는 1MB 이하여야 합니다.')
+      alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+      // OCR 이미지 상태 초기화
+      setOcrImage(null)
       return
     }
 
@@ -419,11 +421,11 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
       {/* 메뉴 목록 */}
       <div className="space-y-4">
         {menus.map(item => (
-          <div key={item.id} className="border border-black p-4">
+          <div key={item.menuId} className="border border-black p-4">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h3 className="mb-2 font-['nanumsquare'] text-lg text-black">
-                  {item.name}
+                  {item.menuName}
                 </h3>
                 <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
                   {item.description}
@@ -433,16 +435,16 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
                     {(item.price || 0).toLocaleString()}원
                   </span>
                   <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
-                    {item.category}
+                    {item.categoryName}
                   </span>
                   <button
-                    onClick={() => handleEditMenu(item.id)}
+                    onClick={() => handleEditMenu(item.menuId)}
                     className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
                   >
                     수정
                   </button>
                   <button
-                    onClick={() => handleRemoveMenu(item.id)}
+                    onClick={() => handleRemoveMenu(item.menuId)}
                     className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                   >
                     삭제
@@ -694,7 +696,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
                         />
                       </label>
                       <p className="mt-2 text-xs text-gray-500">
-                        최대 1MB까지 업로드 가능
+                        최대 1MB까지 업로드 가능 (현재 제한: 1MB)
                       </p>
                     </div>
                   </div>

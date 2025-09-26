@@ -28,6 +28,7 @@ export interface MenuResponseDto {
   soldOut: boolean
   imgUrl: string
   description: string
+  price: number
 }
 
 export interface ApiResponse<T> {

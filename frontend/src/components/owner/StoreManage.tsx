@@ -38,7 +38,7 @@ type MenuData = {
 const StoreManage = () => {
   const searchParams = useSearchParams()
   const storeId = searchParams.get('storeId')
-  const accountName = searchParams.get('accountName')
+  const accountName = searchParams.get('accountName') ? decodeURIComponent(searchParams.get('accountName') as string) : null
 
   const { selectedStore } = useStoreStore()
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
@@ -919,7 +919,17 @@ const MenuAddModal = ({
                     className="hidden"
                     onChange={e => {
                       const file = e.target.files?.[0]
-                      if (file) handleOcrUpload(file)
+                      if (file) {
+                        // 파일 크기 검증 (1MB = 1048576 bytes)
+                        const maxFileSize = 1048576 // 1MB
+                        if (file.size > maxFileSize) {
+                          alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                          // 파일 입력 초기화
+                          e.target.value = ''
+                          return
+                        }
+                        handleOcrUpload(file)
+                      }
                     }}
                   />
                 </label>
@@ -1039,6 +1049,16 @@ const MenuAddModal = ({
                           accept="image/*"
                           onChange={e => {
                             const file = e.target.files?.[0]
+                            if (file) {
+                              // 파일 크기 검증 (1MB = 1048576 bytes)
+                              const maxFileSize = 1048576 // 1MB
+                              if (file.size > maxFileSize) {
+                                alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                                // 파일 입력 초기화
+                                e.target.value = ''
+                                return
+                              }
+                            }
                             handleOcrResultChange(index, 'imgFile', file)
                           }}
                           className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
@@ -1164,6 +1184,16 @@ const MenuAddModal = ({
                   accept="image/*"
                   onChange={e => {
                     const file = e.target.files?.[0]
+                    if (file) {
+                      // 파일 크기 검증 (1MB = 1048576 bytes)
+                      const maxFileSize = 1048576 // 1MB
+                      if (file.size > maxFileSize) {
+                        alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                        // 파일 입력 초기화
+                        e.target.value = ''
+                        return
+                      }
+                    }
                     setManualMenu({ ...manualMenu, imgFile: file || null })
                   }}
                   className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
@@ -1376,6 +1406,16 @@ const MenuEditModal = ({
               accept="image/*"
               onChange={e => {
                 const file = e.target.files?.[0]
+                if (file) {
+                  // 파일 크기 검증 (1MB = 1048576 bytes)
+                  const maxFileSize = 1048576 // 1MB
+                  if (file.size > maxFileSize) {
+                    alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                    // 파일 입력 초기화
+                    e.target.value = ''
+                    return
+                  }
+                }
                 setEditedMenu({ ...editedMenu, imgFile: file || null })
               }}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
