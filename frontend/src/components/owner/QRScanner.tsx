@@ -1,15 +1,15 @@
 'use client'
 
-import { apiConfig } from '@/api/config'
-import jsQR from 'jsqr'
+import { replaceQRDomain } from '@/api/config'
 import { useRouter } from 'next/navigation'
+import QrScanner from 'qr-scanner'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 export default function QRScanner() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const qrScannerRef = useRef<any>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannedData, setScannedData] = useState<string | null>(null)
@@ -18,15 +18,6 @@ export default function QRScanner() {
   const [showManualInput, setShowManualInput] = useState(false)
   const [isAuthChecked, setIsAuthChecked] = useState(false)
 
-  // 주문 모달 상태
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
-  const [storeId, setStoreId] = useState('')
-  const [menus, setMenus] = useState<
-    Array<{ id: string; name: string; price: number }>
-  >([])
-  const [isLoadingMenus, setIsLoadingMenus] = useState(false)
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const accessToken = useMemo(
     () =>
       typeof window !== 'undefined'
@@ -64,8 +55,8 @@ export default function QRScanner() {
               console.log('QRScanner - 카메라 자동 시작')
               startCamera()
             }, 500)
-            return
-          }
+      return
+    }
           
           // auth-storage에서도 확인
           if (authStorage) {
@@ -101,155 +92,145 @@ export default function QRScanner() {
     return () => clearTimeout(timeoutId)
   }, [router])
 
-  // QR 코드 스캔 함수
-  const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return
+  // QR 코드 스캔 시작
+  const startQRScanning = () => {
+    if (!videoRef.current) return
 
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
+    try {
+      console.log('QrScanner 인스턴스 생성 시작')
+      
+      // QrScanner 인스턴스 생성
+      const qrScanner = new QrScanner(
+        videoRef.current,
+        (result: any) => {
+          console.log('QR 코드 스캔 성공:', result.data)
+          setScannedData(result.data)
+          setIsScanning(false)
+          handleQRResult(result.data)
+        },
+        {
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          preferredCamera: 'environment', // 후면 카메라 우선
+          maxScansPerSecond: 5, // 스캔 빈도 제한
+        }
+      )
 
-    if (!context) return
-
-    // 비디오가 아직 로드되지 않았으면 스킵
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      console.log('비디오 로딩 중...', video.readyState)
-      return
-    }
-
-    // 비디오 프레임을 캔버스에 그리기
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    console.log('스캔 시도 - 비디오 크기:', video.videoWidth, 'x', video.videoHeight)
-    console.log('캔버스 크기:', canvas.width, 'x', canvas.height)
-
-    // 이미지 데이터 가져오기
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
-    // jsQR을 사용하여 QR 코드 스캔
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "attemptBoth",
-    })
-
-    if (code) {
-      console.log('QR 코드 스캔 성공:', code.data)
-      setScannedData(code.data)
-      setIsScanning(false)
-      handleQRResult(code.data)
-    } else {
-      // 스캔 실패 시에도 로그 (너무 많이 출력되지 않도록 제한)
-      if (Math.random() < 0.01) { // 1% 확률로만 로그 출력
-        console.log('QR 코드 스캔 시도 중... (감지되지 않음)')
-      }
+      qrScannerRef.current = qrScanner
+      
+      console.log('QrScanner 인스턴스 생성 완료, 스캔 시작')
+      
+      // 스캔 시작
+      qrScanner.start().then(() => {
+        console.log('QR 스캔 시작됨')
+        setIsScanning(true)
+      }).catch((err: any) => {
+        console.error('QR 스캔 시작 실패:', err)
+        setError('QR 스캔을 시작할 수 없습니다: ' + err.message)
+      })
+    } catch (err: any) {
+      console.error('QrScanner 생성 실패:', err)
+      setError('QR 스캐너를 초기화할 수 없습니다: ' + err.message)
     }
   }
 
+
+
+  // 현재 페이지 URL에서 storeId 가져오기
+  const getCurrentStoreId = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        console.log('=== getCurrentStoreId 디버깅 ===')
+        console.log('현재 페이지 URL:', window.location.href)
+        console.log('URL 파라미터:', window.location.search)
+        
+        const urlParams = new URLSearchParams(window.location.search)
+        const storeId = urlParams.get('storeId')
+        const accountName = urlParams.get('accountName')
+        
+        console.log('추출된 storeId:', storeId)
+        console.log('추출된 accountName:', accountName)
+        console.log('모든 URL 파라미터:', Object.fromEntries(urlParams.entries()))
+        
+        if (storeId) {
+          console.log('storeId 발견:', storeId)
+          return storeId
+        } else {
+          console.log('storeId 없음, 기본값 1 반환')
+          return '1' // storeId가 없으면 기본값
+        }
+      }
+    } catch (e) {
+      console.error('URL 파라미터 파싱 실패:', e)
+    }
+    console.log('window undefined, 기본값 1 반환')
+    return '1' // 기본값
+  }
 
   // QR 코드 결과 처리
   const handleQRResult = (data: string) => {
-    // 스캔 정지 및 모달 오픈
+    // 스캔 정지
     setIsScanning(false)
     setScannedData(data)
-    setIsOrderModalOpen(true)
-  }
-
-  const loadMenus = async () => {
-    if (!storeId) {
-      alert('storeId를 입력하세요.')
-      return
-    }
+    
+    console.log('QR 코드 데이터:', data)
+    console.log('QR 코드 데이터 타입:', typeof data)
+    console.log('QR 코드 데이터 길이:', data.length)
+    console.log('QR 코드 데이터 첫 50자:', data.substring(0, 50))
+    
+    // QR 코드에서 파라미터 추출
+    let qrParams = ''
+    
     try {
-      setIsLoadingMenus(true)
-      const url = `${apiConfig.baseURL.replace(/\/$/, '')}/stores/${encodeURIComponent(storeId)}/menus`
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('메뉴를 불러오지 못했습니다.')
-      const data = await res.json()
-      // 백엔드 스키마에 따라 매핑 필요할 수 있음
-      const list = Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data)
-          ? data
-          : []
-      const mapped = list.map((m: any) => ({
-        id: String(m.id ?? m.menuId),
-        name: m.name,
-        price: Number(m.price ?? 0),
-      }))
-      setMenus(mapped)
+      // HTTP URL인 경우 도메인을 현재 환경의 baseURL로 교체
+      let processedData = data
+      if (data.includes('http')) {
+        processedData = replaceQRDomain(data)
+        console.log('원본 QR URI:', data)
+        console.log('처리된 QR URI:', processedData)
+      }
+
+      // payapp://q? 형태인 경우 파라미터 부분만 추출
+      if (processedData.includes('payapp://q?')) {
+        qrParams = processedData.replace('payapp://q?', '')
+        console.log('payapp URL에서 파라미터 추출:', qrParams)
+      } else if (processedData.includes('http')) {
+        // 일반 URL 형태인 경우 파싱 시도
+        const url = new URL(processedData)
+        console.log('URL 파싱 성공:', url.href)
+        console.log('URL search params:', url.searchParams.toString())
+        
+        // payapp 뒤의 파라미터 추출
+        const pathParts = url.pathname.split('/')
+        const payappIndex = pathParts.findIndex(part => part === 'payapp')
+        if (payappIndex !== -1 && payappIndex < pathParts.length - 1) {
+          qrParams = pathParts[payappIndex + 1]
+        } else {
+          // payapp이 path에 없는 경우 search params 사용
+          qrParams = url.searchParams.toString()
+        }
+        console.log('추출된 QR 파라미터:', qrParams)
+      } else {
+        // URL이 아닌 경우 원본 데이터 사용
+        qrParams = processedData
+      }
     } catch (e) {
-      console.error(e)
-      alert('메뉴 조회 실패')
-    } finally {
-      setIsLoadingMenus(false)
+      // URL 파싱 실패 시 원본 데이터 사용
+      console.log('URL 파싱 실패, 원본 데이터 사용:', data)
+      qrParams = data
     }
+    
+    // 현재 페이지 URL에서 storeId 가져오기
+    const currentStoreId = getCurrentStoreId()
+    
+    // 새로운 페이지로 리다이렉트 (QR 파라미터 + storeId)
+    const intentUrl = `/owner/qr/intent?${qrParams}&storeId=${currentStoreId}`
+    console.log('리다이렉트 URL:', intentUrl)
+    router.push(intentUrl)
   }
 
-  const increaseQty = (menuId: string) =>
-    setQuantities(prev => ({ ...prev, [menuId]: (prev[menuId] ?? 0) + 1 }))
-  const decreaseQty = (menuId: string) =>
-    setQuantities(prev => {
-      const next = (prev[menuId] ?? 0) - 1
-      return { ...prev, [menuId]: Math.max(0, next) }
-    })
 
-  const selectedItems = useMemo(
-    () =>
-      Object.entries(quantities)
-        .filter(([, q]) => q > 0)
-        .map(([menuId, q]) => ({ menuId, quantity: q })),
-    [quantities]
-  )
 
-  const submitOrder = async () => {
-    if (!scannedData) return
-    if (!storeId) {
-      alert('storeId를 입력하세요.')
-      return
-    }
-    if (selectedItems.length === 0) {
-      alert('메뉴와 수량을 선택하세요.')
-      return
-    }
-    try {
-      setIsSubmitting(true)
-      const idempotencyKey = crypto.randomUUID()
-      const url = `${apiConfig.baseURL.replace(/\/$/, '')}/cpqr/${encodeURIComponent(scannedData)}/initiate`
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey,
-        'X-Store-Id': storeId,
-        'X-Orders-Item': JSON.stringify(selectedItems),
-      }
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || '요청 실패')
-      }
-      alert('주문이 시작되었습니다.')
-      setIsOrderModalOpen(false)
-      router.push('/owner/dashboard')
-    } catch (e) {
-      console.error(e)
-      alert('요청 중 오류가 발생했습니다.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   // 카메라 시작
   const startCamera = async () => {
@@ -257,32 +238,9 @@ export default function QRScanner() {
       console.log('QRScanner - 카메라 시작 시도')
       setError(null)
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // 후면 카메라 우선
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
-          frameRate: { ideal: 30, max: 60 },
-        },
-      })
+      // QrScanner가 자체적으로 카메라를 관리
+      startQRScanning()
       
-      console.log('QRScanner - 카메라 권한 획득 성공')
-
-      setStream(mediaStream)
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
-        videoRef.current.play()
-        setIsScanning(true)
-        
-        console.log('QRScanner - 비디오 스트림 설정 완료, 스캔 시작')
-
-        // 스캔 시작 (200ms 간격으로 스캔)
-        scanIntervalRef.current = setInterval(() => {
-          if (isScanning) {
-            scanQRCode()
-          }
-        }, 200)
-      }
     } catch (err: any) {
       console.error('카메라 접근 오류:', err)
       
@@ -304,9 +262,10 @@ export default function QRScanner() {
 
   // 카메라 중지
   const stopCamera = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current)
-      scanIntervalRef.current = null
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop()
+      qrScannerRef.current.destroy()
+      qrScannerRef.current = null
     }
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
@@ -325,17 +284,19 @@ export default function QRScanner() {
     }
   }
 
-  // 컴포넌트 언마운트 시 카메라 정리
+  // 컴포넌트 언마운트 시 QrScanner 정리
   useEffect(() => {
     return () => {
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current)
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop()
+        qrScannerRef.current.destroy()
+        qrScannerRef.current = null
       }
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
     }
-  }, [stream])
+  }, [])
 
 
   // 인증이 완료되지 않았으면 로딩 표시
@@ -434,153 +395,16 @@ export default function QRScanner() {
 
               {scannedData && (
                 <div className="mb-4 text-center text-green-400">
-                  QR 코드 인식됨: {scannedData}
+                  <div className="mb-1 text-sm font-medium">QR 코드 인식됨:</div>
+                  <div className="break-all text-xs text-green-300">
+                    {scannedData}
+                  </div>
                 </div>
               )}
-
-              <div className="flex gap-4">
-                {isScanning && (
-                  <button
-                    onClick={stopCamera}
-                    className="flex-1 rounded-lg bg-red-600 px-6 py-3 font-medium text-white hover:bg-red-700"
-                  >
-                    스캔 중지
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowManualInput(true)}
-                  className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-700"
-                >
-                  수동 입력
-                </button>
-
-                <button
-                  onClick={() => {
-                    // 테스트용 QR 코드 데이터
-                    const testData = 'https://example.com/store/123'
-                    setScannedData(testData)
-                    handleQRResult(testData)
-                  }}
-                  className="flex-1 rounded-lg bg-yellow-600 px-6 py-3 font-medium text-white hover:bg-yellow-700"
-                >
-                  테스트 QR
-                </button>
-
-                <button
-                  onClick={() => router.push('/owner/dashboard')}
-                  className="flex-1 rounded-lg bg-gray-600 px-6 py-3 font-medium text-white hover:bg-gray-700"
-                >
-                  대시보드로
-                </button>
-              </div>
-
             </div>
           </div>
         </div>
       </div>
-      {/* 주문 모달 */}
-      {isOrderModalOpen && (
-        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold">주문 생성</h2>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => setIsOrderModalOpen(false)}
-                aria-label="닫기"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-gray-700">
-                  QR 토큰
-                </label>
-                <div className="truncate rounded border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  {scannedData}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-gray-700">
-                  Store ID
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    value={storeId}
-                    onChange={e => setStoreId(e.target.value)}
-                    className="flex-1 rounded border border-gray-300 px-3 py-2"
-                    placeholder="예: 123"
-                  />
-                  <button
-                    onClick={loadMenus}
-                    disabled={isLoadingMenus || !storeId}
-                    className="rounded bg-gray-800 px-3 py-2 text-white disabled:opacity-50"
-                  >
-                    {isLoadingMenus ? '불러오는 중' : '메뉴 불러오기'}
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-64 overflow-auto rounded border border-gray-200">
-                {menus.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500">
-                    메뉴가 없습니다. 상단에서 스토어 메뉴를 불러오세요.
-                  </div>
-                ) : (
-                  <ul>
-                    {menus.map(m => (
-                      <li
-                        key={m.id}
-                        className="flex items-center justify-between border-b border-gray-100 px-3 py-2 last:border-b-0"
-                      >
-                        <div>
-                          <div className="text-sm font-medium">{m.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {m.price.toLocaleString()}원
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => decreaseQty(m.id)}
-                            className="h-7 w-7 rounded border border-gray-300"
-                          >
-                            -
-                          </button>
-                          <div className="w-6 text-center text-sm">
-                            {quantities[m.id] ?? 0}
-                          </div>
-                          <button
-                            onClick={() => increaseQty(m.id)}
-                            className="h-7 w-7 rounded border border-gray-300"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <span>
-                  선택 수: {selectedItems.reduce((a, b) => a + b.quantity, 0)}
-                </span>
-                <span>메뉴 수: {menus.length}</span>
-              </div>
-              <button
-                onClick={submitOrder}
-                disabled={
-                  isSubmitting || selectedItems.length === 0 || !storeId
-                }
-                className="w-full rounded bg-black py-2 text-white disabled:opacity-50"
-              >
-                {isSubmitting ? '요청 중...' : '완료'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 수동 입력 모달 */}
       {showManualInput && (

@@ -80,8 +80,8 @@ public class CustomerService {
 //        } catch (Exception e) {
             // userKey 생성
             try {
-                String prefix = String.valueOf(UUID.randomUUID());
-                String email = prefix + "@keeping509.com";
+                int prefix = 100;
+                String email = prefix++ + "@keeping509customer.com";
                 log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
 
                 InsertMemberResponseDto member = apiClient.insertMember(email);

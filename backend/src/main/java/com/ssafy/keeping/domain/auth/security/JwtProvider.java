@@ -35,6 +35,7 @@ public class JwtProvider {
     public String generateAccessToken(Long userId, UserRole role) {
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .setIssuedAt(new Date())
                 .claim("role", role.name())
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS384)
@@ -94,5 +95,12 @@ public class JwtProvider {
         } catch (Exception e) {
             return true;
         }
+    }
+
+    // 생성시간 추출 메서드 추가
+    public Date getIssuedAt(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
+                .parseClaimsJws(token).getBody();
+        return claims.getIssuedAt();
     }
 }
