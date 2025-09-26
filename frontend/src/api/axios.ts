@@ -3,6 +3,19 @@ import axios from 'axios'
 
 import { apiConfig, buildURL } from './config'
 
+// 멱등키 생성기: crypto.randomUUID 가급적 사용, 폴백 제공
+const generateIdempotencyKey = (): string => {
+  try {
+    if (
+      typeof crypto !== 'undefined' &&
+      typeof (crypto as any).randomUUID === 'function'
+    ) {
+      return (crypto as any).randomUUID()
+    }
+  } catch {}
+  return `idemp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 // axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: apiConfig.baseURL,
@@ -23,6 +36,18 @@ apiClient.interceptors.request.use(
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`
       }
+    }
+
+    // 멱등키 자동 주입: 변이 메서드에 한해, 이미 지정된 경우는 보존
+    const method = (config.method || 'get').toLowerCase()
+    const isMutating = ['post', 'put', 'patch', 'delete'].includes(method)
+    // AxiosHeaders 안전 처리
+    const headers = config.headers ?? {}
+    const currentKey =
+      (headers as any)['Idempotency-Key'] ?? (headers as any)['idempotency-key']
+    if (isMutating && !currentKey) {
+      ;(headers as any)['Idempotency-Key'] = generateIdempotencyKey()
+      config.headers = headers
     }
     return config
   },

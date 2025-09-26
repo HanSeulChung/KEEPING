@@ -145,7 +145,6 @@ export default function ChargeBonusManagement({
           alert(`수정 실패: ${response.message}`)
         }
       } else {
-        // 추가 - 기존 로직 사용
         const response = await apiClient.post(
           `/owners/stores/${storeId}/charge-bonus`,
           data
