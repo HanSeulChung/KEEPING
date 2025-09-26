@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 
 interface ChargeBonusData {
   id?: number | string
+  chargeBonusId?: number | string
   chargeAmount: number
   bonusPercentage: number
   expectedTotalPoints: number

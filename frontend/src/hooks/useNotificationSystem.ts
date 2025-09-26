@@ -3,24 +3,24 @@
 import apiClient from '@/api/axios'
 import { apiConfig, buildURL } from '@/api/config'
 import {
-    deleteFCMToken,
-    registerCustomerFCMToken,
-    registerOwnerFCMToken,
+  deleteFCMToken,
+  registerCustomerFCMToken,
+  registerOwnerFCMToken,
 } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 import {
-    getFcmToken,
-    requestNotificationPermission,
-    setupForegroundMessageListener,
+  getFcmToken,
+  requestNotificationPermission,
+  setupForegroundMessageListener,
 } from '@/lib/firebase'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
-    NotificationCategory,
-    NotificationData,
-    NotificationType,
-    getNotificationCategory,
-    getNotificationIcon,
-    getNotificationTitle,
+  NotificationCategory,
+  NotificationData,
+  NotificationType,
+  getNotificationCategory,
+  getNotificationIcon,
+  getNotificationTitle,
 } from '@/types/notification'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useCallback, useEffect, useRef, useState } from 'react'
