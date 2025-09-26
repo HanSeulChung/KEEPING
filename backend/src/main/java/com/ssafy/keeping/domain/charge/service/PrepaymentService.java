@@ -33,8 +33,8 @@ import com.ssafy.keeping.domain.wallet.model.WalletStoreLot;
 import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreBalanceRepository;
 import com.ssafy.keeping.domain.wallet.repository.WalletStoreLotRepository;
-import com.ssafy.keeping.domain.notification.service.NotificationService;
-import com.ssafy.keeping.domain.notification.entity.NotificationType;
+import com.ssafy.keeping.domain.event.service.KafkaEventProducer;
+import com.ssafy.keeping.domain.event.dto.PaymentEvent;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +65,7 @@ public class PrepaymentService {
     private final WalletStoreLotRepository walletStoreLotRepository;
     private final WalletStoreBalanceRepository walletStoreBalanceRepository;
     private final SettlementTaskRepository settlementTaskRepository;
-    private final NotificationService notificationService;
+    private final KafkaEventProducer kafkaEventProducer;
     private final ChargeBonusService chargeBonusService;
 
     private final IdempotencyKeyRepository idempotencyKeyRepository;
@@ -252,23 +252,31 @@ public class PrepaymentService {
                 .build();
         settlementTaskRepository.save(settlementTask);
 
-        // 5. 점주에게 알림 전송
+        // 5. 카드 결제 완료 이벤트 발행
         try {
-            Long ownerId = store.getOwner().getOwnerId();
-            String customerName = wallet.getCustomer().getName();
-            String notificationContent = String.format("%s이(가) %,d원을 결제했습니다 (포인트: %,d)",
-                    customerName, actualPaymentAmount, totalPoints);
-            
-            notificationService.sendToOwner(
-                    ownerId,
-                    NotificationType.POINT_CHARGE,
-                    notificationContent
-            );
-            
-            log.info("점주 알림 전송 완료 - 점주ID: {}, 결제금액: {}, 총포인트: {}", ownerId, actualPaymentAmount, totalPoints);
+            PaymentEvent paymentEvent = PaymentEvent.builder()
+                    .customerId(wallet.getCustomer().getCustomerId())
+                    .customerName(wallet.getCustomer().getName())
+                    .storeId(store.getStoreId())
+                    .storeName(store.getStoreName())
+                    .ownerId(store.getOwner().getOwnerId())
+                    .transactionId(transaction.getTransactionId())
+                    .transactionUniqueNo(transaction.getTransactionUniqueNo())
+                    .paymentAmount(actualPaymentAmount)
+                    .totalPoints(totalPoints)
+                    .bonusPercentage(bonusPercentage)
+                    .bonusAmount(bonusAmount)
+                    .transactionTime(transaction.getCreatedAt())
+                    .build();
+
+            kafkaEventProducer.publishPaymentEvent(paymentEvent);
+
+            log.info("카드 결제 이벤트 발행 완료 - 고객ID: {}, 결제금액: {}, 총포인트: {}",
+                    wallet.getCustomer().getCustomerId(), actualPaymentAmount, totalPoints);
         } catch (Exception e) {
-            log.warn("점주 알림 전송 실패 - 점주ID: {}, 오류: {}", store.getOwner().getOwnerId(), e.getMessage());
-            // 알림 실패는 비즈니스 로직에 영향을 주지 않음
+            log.warn("카드 결제 이벤트 발행 실패 - 고객ID: {}, 오류: {}",
+                    wallet.getCustomer().getCustomerId(), e.getMessage());
+            // 이벤트 발행 실패는 비즈니스 로직에 영향을 주지 않음
         }
 
         // 6. 응답 생성
