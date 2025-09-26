@@ -20,7 +20,7 @@ export const registerCustomerFCMToken = async (
     console.log('고객 FCM 토큰 등록 시작 - customerId:', customerId)
 
     const response = await apiClient.post<FCMTokenResponse>(
-      `/fcm/customer/${customerId}/token`,
+      `/api/fcm/customer/${customerId}/token`,
       { token }
     )
 
@@ -41,7 +41,7 @@ export const registerOwnerFCMToken = async (
     console.log('점주 FCM 토큰 등록 시작 - ownerId:', ownerId)
 
     const response = await apiClient.post<FCMTokenResponse>(
-      `/fcm/owner/${ownerId}/token`,
+      `/api/fcm/owner/${ownerId}/token`,
       { token }
     )
 
