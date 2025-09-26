@@ -1,8 +1,18 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/useAuthStore'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import {
+  IoBatteryCharging,
+  IoCard,
+  IoCheckmarkCircle,
+  IoMegaphone,
+  IoNotifications,
+  IoSettings,
+  IoWallet,
+} from 'react-icons/io5'
 
 type NotificationSetting = {
   id: string
@@ -10,254 +20,412 @@ type NotificationSetting = {
   enabled: boolean
 }
 
-const OwnerNotificationPage = () => {
+const NotificationPage = () => {
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const { notifications, markAsRead, markAllAsRead, unreadCount } = useNotificationSystem()
-  
-  // markAsRead 함수를 number 타입으로 사용
-  const handleMarkAsRead = (id: number) => {
-    markAsRead(id)
-  }
+  const { user } = useAuthStore()
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    unreadCount,
+    fcmToken,
+    isConnected,
+  } = useNotificationSystem()
+
   const [settings, setSettings] = useState<NotificationSetting[]>([
-    { id: 'payment', name: '결제 알림', enabled: true },
-    { id: 'like', name: '가게 찜 알림', enabled: true },
-    { id: 'charge', name: '충전 알림', enabled: true },
-    { id: 'prepaid', name: '선결제 구매 알림', enabled: false }
+    { id: 'PAYMENT_CATEGORY', name: '결제/정산 알림', enabled: true },
+    { id: 'GROUP_CATEGORY', name: '모임 관련 알림', enabled: true },
   ])
   const [loading, setLoading] = useState(true)
-  const [filteredNotifications, setFilteredNotifications] = useState(notifications)
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default')
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize] = useState(3) // 한 페이지당 3개 알림
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
   const accountName = searchParams.get('accountName')
 
-  // 가게별 알림 필터링
   useEffect(() => {
-    if (storeId) {
-      // 가게 ID에 해당하는 알림만 필터링
-      const filtered = notifications.filter(notification => 
-        notification.data?.storeId === parseInt(storeId) || 
-        notification.message.includes(accountName || '') ||
-        !notification.data?.storeId // 가게별 필터링이 없는 알림은 모두 표시
-      )
-      setFilteredNotifications(filtered)
-    } else {
-      setFilteredNotifications(notifications)
+    // 브라우저 알림 권한 상태 확인
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission)
     }
+
+    // 개발 환경에서 FCM 에러 처리 안내
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        '개발 환경: Firebase/FCM 에러는 무시됩니다. 실제 푸시 알림 기능은 운영 환경에서 작동합니다.'
+      )
+    }
+
     setLoading(false)
-  }, [notifications, storeId, accountName])
+  }, [])
+
+  // 알림 권한 요청
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('이 브라우저는 알림을 지원하지 않습니다.')
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      setNotificationPermission(permission)
+
+      if (permission === 'granted') {
+        // 권한 허용 시 테스트 알림 보내기
+        new Notification('알림 설정 완료', {
+          body: '이제 실시간 알림을 받을 수 있습니다!',
+          icon: '/icons/qr.png',
+          badge: '/icons/qr.png',
+        })
+      }
+    } catch (error) {
+      console.error('알림 권한 요청 실패:', error)
+    }
+  }
 
   const toggleSetting = (id: string) => {
-    setSettings(prev => 
-      prev.map(setting => 
-        setting.id === id 
-          ? { ...setting, enabled: !setting.enabled }
-          : setting
+    setSettings(prev =>
+      prev.map(setting =>
+        setting.id === id ? { ...setting, enabled: !setting.enabled } : setting
       )
     )
   }
 
-  // 알림 타입별 아이콘 반환
+  // 테스트 알림 전송 로직 제거
+
+  // 알림 타입별 아이콘
   const getNotificationIcon = (type: string) => {
+    const iconClass = 'text-2xl'
     switch (type) {
-      case 'payment':
-        return (
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#10B981"/>
-            </svg>
-          </div>
-        )
-      case 'order':
-        return (
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z" fill="#3B82F6"/>
-            </svg>
-          </div>
-        )
-      case 'review':
-        return (
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#F59E0B"/>
-            </svg>
-          </div>
-        )
-      case 'system':
-        return (
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#6B7280"/>
-            </svg>
-          </div>
-        )
+      case 'PAYMENT':
+        return <IoCard className={`${iconClass} text-green-600`} />
+      case 'CHARGE':
+        return <IoBatteryCharging className={`${iconClass} text-blue-600`} />
+      case 'STORE_PROMOTION':
+        return <IoMegaphone className={`${iconClass} text-purple-600`} />
+      case 'PREPAYMENT_PURCHASE':
+        return <IoWallet className={`${iconClass} text-orange-600`} />
+      case 'SYSTEM':
+        return <IoSettings className={`${iconClass} text-gray-600`} />
       default:
-        return (
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#6B7280"/>
-            </svg>
-          </div>
-        )
+        return <IoNotifications className={`${iconClass} text-blue-600`} />
     }
   }
 
-  // 시간 포맷팅 함수
+  // 시간 포맷팅
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return '방금 전'
-    if (diffInMinutes < 60) return `${diffInMinutes}분 전`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}시간 전`
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}일 전`
-    
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const time = new Date(timestamp)
+    const diff = Math.floor((now.getTime() - time.getTime()) / (1000 * 60)) // 분 단위
+
+    if (diff < 1) return '방금 전'
+    if (diff < 60) return `${diff}분 전`
+    if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`
+    return `${Math.floor(diff / 1440)}일 전`
+  }
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(notifications.length / pageSize)
+  const startIndex = currentPage * pageSize
+  const endIndex = startIndex + pageSize
+  const currentNotifications = notifications.slice(startIndex, endIndex)
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(0, prev - 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg font-['nanumsquare']">알림을 불러오는 중...</div>
+        <div className="flex h-64 items-center justify-center">
+          <div className="font-['nanumsquare'] text-lg">로딩 중...</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 헤더 */}
-      <div className="w-full bg-white border-b border-black">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl sm:text-3xl font-['Tenada'] font-extrabold text-black">
-              알림
+    <div className="min-h-screen bg-gray-50">
+      {/* 모바일 네이티브 헤더 */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm safe-area-top">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-center h-11">
+            <h1 className="text-lg font-['nanumsquare'] font-bold text-black">
+              알림 설정
             </h1>
-            <div className="w-20"></div> {/* 공간 맞추기 */}
           </div>
         </div>
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* 가게 정보 표시 */}
-        {accountName && (
-          <div className="mb-6 p-4 bg-keeping-beige border border-black rounded-lg text-center">
-            <h2 className="text-lg font-['nanumsquare'] font-bold text-black mb-1">
-              {accountName} 알림
-            </h2>
-            <p className="text-sm text-gray-600 font-['nanumsquare']">
-              이 가게와 관련된 알림만 표시됩니다
-            </p>
-          </div>
-        )}
-
-        {/* 알림 목록 */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-['nanumsquare'] font-bold text-black">
-              전체 알림 ({filteredNotifications.length}개)
-            </h2>
-            {filteredNotifications.some(n => !n.isRead) && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800 font-['nanumsquare'] underline"
-              >
-                모두 읽음 처리
-              </button>
-            )}
-          </div>
-          
-          {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg width={24} height={24} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#9CA3AF"/>
-                </svg>
-              </div>
-              <p className="text-gray-500 font-['nanumsquare'] text-lg">알림이 없습니다</p>
-              <p className="text-gray-400 font-['nanumsquare'] text-sm mt-2">
-                새로운 알림이 오면 여기에 표시됩니다
-              </p>
+      <div className="pb-safe">
+        {/* 연결 상태 카드 */}
+        <div className="mx-4 mb-4">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-['nanumsquare'] font-bold text-black">
+                {accountName ? `${accountName} 알림` : '알림 시스템'}
+              </h2>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border border-black bg-white rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !notification.isRead ? 'ring-2 ring-blue-200 bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleMarkAsRead(notification.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* 알림 아이콘 */}
-                    {getNotificationIcon(notification.type)}
-                    
-                    {/* 알림 내용 */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-sm font-['nanumsquare'] font-bold text-black">
-                          {notification.title}
-                        </h3>
-                        {!notification.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-700 font-['nanumsquare'] leading-relaxed mb-2">
-                        {notification.message}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400 font-['nanumsquare']">
-                          {formatTime(notification.timestamp)}
-                        </p>
-                        {notification.data?.amount && (
-                          <span className="text-xs font-['nanumsquare'] font-bold text-green-600">
-                            {notification.data.amount.toLocaleString()}원
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            <div className="text-sm text-gray-600 font-['nanumsquare'] space-y-1">
+              <p>상태: <span className={isConnected ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                {isConnected ? '연결됨' : '연결 안됨'}
+              </span></p>
+              <p>읽지 않은 알림: <span className="font-medium text-blue-600">{unreadCount}개</span></p>
+              {fcmToken && (
+                <p>푸시 알림: <span className="text-green-600 font-medium">활성화</span></p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 알림 권한 상태 */}
+        <div className="mb-8">
+          {notificationPermission !== 'granted' && (
+            <div className="rounded-lg border border-orange-300 bg-orange-50 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="flex items-center gap-2 font-['Tenada'] text-lg font-extrabold text-orange-800">
+                    <IoNotifications className="text-xl" />
+                    브라우저 알림 권한 필요
+                  </h3>
+                  <p className="mt-1 font-['nanumsquare'] text-sm text-orange-700">
+                    {notificationPermission === 'denied'
+                      ? '알림 권한이 차단되었습니다. 브라우저 설정에서 알림을 허용해주세요.'
+                      : '실시간 알림을 받으려면 브라우저 알림 권한을 허용해주세요.'}
+                  </p>
                 </div>
-              ))}
+                <div className="ml-4">
+                  {notificationPermission === 'default' ? (
+                    <button
+                      onClick={requestNotificationPermission}
+                      className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-orange-700"
+                    >
+                      <IoCheckmarkCircle />
+                      알림 허용하기
+                    </button>
+                  ) : notificationPermission === 'denied' ? (
+                    <button
+                      onClick={() => {
+                        alert(
+                          '브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭하여 알림을 허용해주세요.'
+                        )
+                      }}
+                      className="rounded-lg bg-gray-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-700"
+                    >
+                      설정 방법 보기
+                    </button>
+                  ) : (
+                    <button
+                      onClick={requestNotificationPermission}
+                      className="rounded-lg bg-blue-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-blue-700"
+                    >
+                      다시 시도
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
+        {/* 알림 통계 */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="bg-keeping-beige rounded-lg border border-black p-4 text-center">
+            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+              {unreadCount}
+            </div>
+            <div className="font-['nanumsquare'] text-sm text-gray-600">
+              읽지 않은 알림
+            </div>
+          </div>
+          <div className="rounded-lg border border-black bg-white p-4 text-center">
+            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+              {notifications.length}
+            </div>
+            <div className="font-['nanumsquare'] text-sm text-gray-600">
+              전체 알림
+            </div>
+          </div>
+          <div className="rounded-lg border border-black bg-white p-4 text-center">
+            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+              {
+                notifications.filter(n => {
+                  const today = new Date()
+                  const notificationDate = new Date(n.timestamp)
+                  return (
+                    notificationDate.toDateString() === today.toDateString()
+                  )
+                }).length
+              }
+            </div>
+            <div className="font-['nanumsquare'] text-sm text-gray-600">
+              오늘 알림
+            </div>
+          </div>
+        </div>
+
+        {/* 알림 목록 */}
+        <div className="mb-8 rounded-lg border border-black bg-white p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h3 className="font-['Tenada'] text-xl font-extrabold text-black">
+                알림 목록
+              </h3>
+              {notifications.length > 0 && (
+                <span className="font-['nanumsquare'] text-sm text-gray-500">
+                  총 {notifications.length}개 ({currentPage + 1}/{totalPages}{' '}
+                  페이지)
+                </span>
+              )}
+            </div>
+            {notifications.length > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-200"
+              >
+                모두 읽음
+              </button>
+            )}
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="mb-4 text-4xl">
+                <IoNotifications className="mx-auto text-gray-300" />
+              </div>
+              <div className="font-['nanumsquare'] text-gray-500">
+                알림이 없습니다
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {currentNotifications.map(notification => (
+                  <div
+                    key={notification.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                      notification.isRead
+                        ? 'border-gray-200 bg-white'
+                        : 'border-blue-200 bg-blue-50'
+                    }`}
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    <div className="mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`font-['nanumsquare'] text-sm font-bold ${
+                          notification.isRead ? 'text-gray-700' : 'text-black'
+                        }`}
+                      >
+                        {notification.title}
+                      </div>
+                      <div className="mt-1 font-['nanumsquare'] text-xs break-words text-gray-600">
+                        {notification.message}
+                      </div>
+                      <div className="mt-2 font-['nanumsquare'] text-xs text-gray-400">
+                        {formatTime(notification.timestamp)}
+                      </div>
+                    </div>
+                    {!notification.isRead && (
+                      <div className="h-3 w-3 flex-shrink-0 rounded-full bg-blue-500"></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-center gap-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 0}
+                    className={`rounded-lg border px-3 py-2 font-['nanumsquare'] text-sm font-bold transition-colors ${
+                      currentPage === 0
+                        ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    이전
+                  </button>
+
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`h-10 w-10 rounded-lg font-['nanumsquare'] text-sm font-bold transition-colors ${
+                          currentPage === i
+                            ? 'bg-black text-white'
+                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages - 1}
+                    className={`rounded-lg border px-3 py-2 font-['nanumsquare'] text-sm font-bold transition-colors ${
+                      currentPage === totalPages - 1
+                        ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {/* 알림 설정 */}
-        <div className="bg-white">
-          <h2 className="text-lg font-['Inter'] font-bold text-black mb-4">
+        <div className="rounded-lg border border-black bg-white p-6">
+          <h3 className="mb-2 font-['Tenada'] text-xl font-extrabold text-black">
             알림 설정
-          </h2>
-          
+          </h3>
+          <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
+            비활성화하면 브라우저 팝업 알림만 안 뜹니다. 목록에는 계속
+            표시됩니다.
+          </p>
+
           <div className="space-y-3">
-            {settings.map((setting) => (
+            {settings.map(setting => (
               <div
                 key={setting.id}
-                className="flex items-center justify-between p-3 border border-gray-300 rounded-lg"
+                className="flex items-center justify-between rounded-lg border border-gray-300 p-3"
               >
-                <span className="text-sm font-['nanumsquare'] text-black">
-                  {setting.name}
-                </span>
+                <div className="flex-1">
+                  <span className="font-['nanumsquare'] text-sm font-bold text-black">
+                    {setting.name}
+                  </span>
+                  <div className="mt-1 font-['nanumsquare'] text-xs text-gray-500">
+                    {setting.enabled
+                      ? '팝업 알림 + 목록 표시'
+                      : '목록에만 표시 (팝업 없음)'}
+                  </div>
+                </div>
                 <button
                   onClick={() => toggleSetting(setting.id)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                  className={`relative h-6 w-12 rounded-full transition-colors ${
                     setting.enabled ? 'bg-black' : 'bg-gray-300'
                   }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
                       setting.enabled ? 'translate-x-7' : 'translate-x-0.5'
                     }`}
                   />
@@ -271,4 +439,4 @@ const OwnerNotificationPage = () => {
   )
 }
 
-export default OwnerNotificationPage
+export default NotificationPage
