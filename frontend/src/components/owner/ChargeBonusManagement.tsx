@@ -45,6 +45,12 @@ export default function ChargeBonusManagement({
           ? data
               .map(item => {
                 console.log('개별 아이템:', item)
+                console.log('아이템의 ID 필드들:', {
+                  id: item.id,
+                  chargeBonusId: item.chargeBonusId,
+                  charge_bonus_id: item.charge_bonus_id,
+                  모든키: Object.keys(item)
+                })
 
                 // 데이터 정규화 및 포인트 계산
                 const chargeAmount = Number(item.chargeAmount) || 0
@@ -89,7 +95,11 @@ export default function ChargeBonusManagement({
 
   // 충전 보너스 삭제
   const handleDeleteChargeBonus = async (chargeBonusId: number) => {
-    if (!storeId || !chargeBonusId) return
+    console.log('삭제 함수 호출됨 - chargeBonusId:', chargeBonusId, 'storeId:', storeId)
+    if (!storeId || !chargeBonusId) {
+      console.log('삭제 조건 실패 - storeId:', storeId, 'chargeBonusId:', chargeBonusId)
+      return
+    }
 
     const bonusToDelete = chargeBonusData.find(
       bonus => Number(bonus.id) === chargeBonusId
@@ -100,15 +110,18 @@ export default function ChargeBonusManagement({
 
     if (confirm(confirmMessage)) {
       try {
+        console.log('충전 보너스 삭제 시작 - ID:', chargeBonusId, 'Store ID:', storeId)
         const response = await deleteChargeBonus(
           parseInt(storeId),
           chargeBonusId
         )
 
         if (response.success) {
+          console.log('충전 보너스 삭제 성공:', response)
           alert('충전 보너스가 삭제되었습니다.')
           fetchChargeBonusData() // 목록 새로고침
         } else {
+          console.error('충전 보너스 삭제 실패:', response)
           alert(`삭제 실패: ${response.message}`)
         }
       } catch (error) {
@@ -245,7 +258,12 @@ export default function ChargeBonusManagement({
                 변경하기
               </button>
               <button
-                onClick={() => handleDeleteChargeBonus(Number(bonus.id))}
+                onClick={() => {
+                  console.log('삭제 버튼 클릭 - bonus.id:', bonus.id, 'bonus.chargeBonusId:', bonus.chargeBonusId, '타입:', typeof bonus.id)
+                  const idToUse = bonus.chargeBonusId || bonus.id
+                  console.log('사용할 ID:', idToUse)
+                  handleDeleteChargeBonus(Number(idToUse))
+                }}
                 className="rounded-md border border-red-500 px-4 py-2 font-['nanumsquare'] font-bold text-red-500 transition-colors hover:bg-red-50"
               >
                 삭제

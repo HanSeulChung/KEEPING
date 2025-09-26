@@ -301,26 +301,46 @@ export const deleteChargeBonus = async (
   chargeBonusId: number
 ): Promise<ApiResponse<any>> => {
   try {
-    const response = await fetch(
-      `${apiConfig.baseURL}/owners/stores/${storeId}/charge-bonus/${chargeBonusId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      }
-    )
+    const url = `${apiConfig.baseURL}/owners/stores/${storeId}/charge-bonus/${chargeBonusId}`
+    console.log('충전 보너스 삭제 API URL:', url)
+    console.log('삭제할 충전 보너스 ID:', chargeBonusId)
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
+    })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('충전 보너스 삭제 API 오류:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      })
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
     }
 
     const result = await response.json()
-    return result
-  } catch (error) {
+    console.log('충전 보너스 삭제 응답:', result)
+    return {
+      success: true,
+      data: result.data,
+      message: result.message || '충전 보너스가 삭제되었습니다.',
+      statusCode: response.status,
+      timestamp: new Date().toISOString(),
+    }
+  } catch (error: any) {
     console.error('충전 보너스 삭제 실패:', error)
-    throw error
+    return {
+      success: false,
+      data: null,
+      message: error.message || '충전 보너스 삭제에 실패했습니다.',
+      statusCode: error.status || 500,
+      timestamp: new Date().toISOString(),
+    }
   }
 }
 
