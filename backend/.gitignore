@@ -59,4 +59,5 @@ src/main/generated/
 
 ### firebase
 src/resource/keeping-firebase-adminsdk.json
+src/resource/firebase/keeping-firebase-adminsdk.json
 src/resources/application.yml
