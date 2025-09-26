@@ -12,7 +12,7 @@ interface ChargeBonusData {
 interface ChargeBonusModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (data: ChargeBonusData) => void
+  onSave: (data: { chargeAmount: number; bonusPercentage: number }) => void
   editData?: ChargeBonusData | null
   mode: 'add' | 'edit'
 }
@@ -69,12 +69,13 @@ const ChargeBonusModal = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (formData.chargeAmount <= 0) {
-      newErrors.chargeAmount = '충전 금액은 0보다 커야 합니다'
+    if (formData.chargeAmount < 1000) {
+      newErrors.chargeAmount = '충전 금액은 최소 1,000원 이상이어야 합니다'
     }
 
-    if (formData.bonusPercentage < 0 || formData.bonusPercentage > 100) {
-      newErrors.bonusPercentage = '보너스 퍼센트는 0~100 사이여야 합니다'
+    // 수정 모드가 아닐 때만 보너스 퍼센트 검증
+    if (mode === 'add' && (formData.bonusPercentage < 1 || formData.bonusPercentage > 100)) {
+      newErrors.bonusPercentage = '보너스 퍼센트는 1~100% 사이여야 합니다'
     }
 
     setErrors(newErrors)
@@ -85,12 +86,22 @@ const ChargeBonusModal = ({
     e.preventDefault()
 
     if (validateForm()) {
-      onSave(formData)
+      // expectedTotalPoints는 API에 전송하지 않음 (백엔드에서 계산)
+      const dataToSave = {
+        chargeAmount: formData.chargeAmount,
+        bonusPercentage: formData.bonusPercentage
+      }
+      onSave(dataToSave)
       onClose()
     }
   }
 
   const handleInputChange = (field: keyof ChargeBonusData, value: string) => {
+    // 수정 모드일 때 보너스 퍼센트는 변경 불가
+    if (mode === 'edit' && field === 'bonusPercentage') {
+      return
+    }
+
     const numValue = parseFloat(value) || 0
     setFormData(prev => ({
       ...prev,
@@ -123,12 +134,13 @@ const ChargeBonusModal = ({
             </label>
             <input
               type="number"
+              min="1000"
               value={formData.chargeAmount || ''}
               onChange={e => handleInputChange('chargeAmount', e.target.value)}
               className={`w-full rounded-md border px-3 py-2 ${
                 errors.chargeAmount ? 'border-red-500' : 'border-gray-300'
               } focus:border-blue-500 focus:outline-none`}
-              placeholder="충전 금액을 입력하세요"
+              placeholder="최소 1,000원 이상 입력하세요"
             />
             {errors.chargeAmount && (
               <p className="mt-1 text-xs text-red-500">{errors.chargeAmount}</p>
@@ -140,21 +152,32 @@ const ChargeBonusModal = ({
             <label className="mb-1 block text-sm font-medium text-gray-700">
               보너스 퍼센트 (%)
             </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={formData.bonusPercentage || ''}
-              onChange={e =>
-                handleInputChange('bonusPercentage', e.target.value)
-              }
-              className={`w-full rounded-md border px-3 py-2 ${
-                errors.bonusPercentage ? 'border-red-500' : 'border-gray-300'
-              } focus:border-blue-500 focus:outline-none`}
-              placeholder="보너스 퍼센트를 입력하세요"
-            />
-            {errors.bonusPercentage && (
+            {mode === 'edit' ? (
+              <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600">
+                {formData.bonusPercentage}%
+              </div>
+            ) : (
+              <input
+                type="number"
+                min="1"
+                max="100"
+                step="0.1"
+                value={formData.bonusPercentage || ''}
+                onChange={e =>
+                  handleInputChange('bonusPercentage', e.target.value)
+                }
+                className={`w-full rounded-md border px-3 py-2 ${
+                  errors.bonusPercentage ? 'border-red-500' : 'border-gray-300'
+                } focus:border-blue-500 focus:outline-none`}
+                placeholder="1~100% 사이로 입력하세요"
+              />
+            )}
+            {mode === 'edit' && (
+              <p className="mt-1 text-xs text-gray-500">
+                보너스 퍼센트는 수정할 수 없습니다
+              </p>
+            )}
+            {mode === 'add' && errors.bonusPercentage && (
               <p className="mt-1 text-xs text-red-500">
                 {errors.bonusPercentage}
               </p>

@@ -2,16 +2,12 @@
 
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
+import { getNotificationIcon } from '@/types/notification'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  IoBatteryCharging,
-  IoCard,
   IoCheckmarkCircle,
-  IoMegaphone,
-  IoNotifications,
-  IoSettings,
-  IoWallet,
+  IoNotifications
 } from 'react-icons/io5'
 
 type NotificationSetting = {
@@ -96,23 +92,14 @@ const NotificationPage = () => {
 
   // 테스트 알림 전송 로직 제거
 
-  // 알림 타입별 아이콘
-  const getNotificationIcon = (type: string) => {
-    const iconClass = 'text-2xl'
-    switch (type) {
-      case 'PAYMENT':
-        return <IoCard className={`${iconClass} text-green-600`} />
-      case 'CHARGE':
-        return <IoBatteryCharging className={`${iconClass} text-blue-600`} />
-      case 'STORE_PROMOTION':
-        return <IoMegaphone className={`${iconClass} text-purple-600`} />
-      case 'PREPAYMENT_PURCHASE':
-        return <IoWallet className={`${iconClass} text-orange-600`} />
-      case 'SYSTEM':
-        return <IoSettings className={`${iconClass} text-gray-600`} />
-      default:
-        return <IoNotifications className={`${iconClass} text-blue-600`} />
-    }
+  // 알림 타입별 아이콘 (이모지 기반)
+  const getNotificationIconComponent = (type: string) => {
+    const iconEmoji = getNotificationIcon(type as any)
+    return (
+      <div className="text-2xl flex items-center justify-center w-8 h-8">
+        {iconEmoji}
+      </div>
+    )
   }
 
   // 시간 포맷팅
@@ -317,10 +304,16 @@ const NotificationPage = () => {
                         ? 'border-gray-200 bg-white'
                         : 'border-blue-200 bg-blue-50'
                     }`}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => {
+                      if (notification.id && !isNaN(Number(notification.id))) {
+                        markAsRead(Number(notification.id))
+                      } else {
+                        console.error('유효하지 않은 notification.id:', notification.id)
+                      }
+                    }}
                   >
                     <div className="mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIconComponent(notification.type)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div
