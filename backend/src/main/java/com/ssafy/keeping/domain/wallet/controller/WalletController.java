@@ -57,12 +57,13 @@ public class WalletController {
                 .body(ApiResponse.success(msg, status.value(), result.getBody()));
     }
 
-    @GetMapping("/{walletId}/points/available")
+    @GetMapping("/{walletId}/stores/{storeId}/points/available")
     public ResponseEntity<ApiResponse<AvailablePointResponseDto>> getReclaimable(
             @PathVariable Long walletId,
+            @PathVariable Long storeId,
             @AuthenticationPrincipal Long customerId
     ) {
-        AvailablePointResponseDto dto = walletService.getReclaimablePoints(walletId, customerId);
+        AvailablePointResponseDto dto = walletService.getReclaimablePoints(walletId, storeId, customerId);
         return ResponseEntity.ok(
                 ApiResponse.success("회수 가능한 포인트를 조회했습니다.", HttpStatus.OK.value(), dto)
         );

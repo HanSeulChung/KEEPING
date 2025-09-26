@@ -12,6 +12,8 @@ import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -165,6 +167,41 @@ public class NotificationService {
             
         } catch (Exception e) {
             log.error("점주 알림 전송 중 예상치 못한 오류 - 점주ID: {}, 타입: {}", ownerId, notificationType, e);
+        }
+    }
+
+    /**
+     * 고객에게 알림 전체 전송
+     * @param customerIds 고객 ID들
+     * @param notificationType 알림 타입
+     * @param content 알림 내용
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendGroupSharedToMembers(List<Long> customerIds, NotificationType notificationType, String content) {
+        if (customerIds == null || customerIds.isEmpty()) return;
+
+        // 중복 제거
+        for (Long cid : customerIds.stream().distinct().toList()) {
+            try {
+                Customer c = customerRepository.findById(cid).orElse(null);
+                if (c == null) {
+                    log.warn("알림 스킵 - 없는 고객 ID: {}", cid);
+                    continue;
+                }
+
+                Notification n = Notification.builder()
+                        .customer(c)
+                        .notificationType(notificationType)
+                        .content(content)
+                        .build();
+
+                Notification saved = notificationRepository.save(n);
+                // 기존 전송 전략 그대로 재사용
+                sendNotificationWithStrategy(NotificationResponseDto.from(saved));
+
+            } catch (Exception e) {
+                log.error("그룹 알림 중 오류 - 고객ID: {}", cid, e);
+            }
         }
     }
 

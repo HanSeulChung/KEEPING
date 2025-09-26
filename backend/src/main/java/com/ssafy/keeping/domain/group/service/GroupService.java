@@ -27,10 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
 
@@ -108,6 +105,28 @@ public class GroupService {
                 group.getGroupId(), group.getGroupName(),
                 group.getGroupDescription(), group.getGroupCode(),
                 groupWallet.walletId()
+        );
+    }
+
+    @Transactional
+    public GroupResponseDto editGroup(Long groupId, Long customerId, GroupEditRequestDto requestDto) {
+        Group group = validGroup(groupId);
+
+        boolean isGroupLeader = groupMemberRepository
+                .existsLeader(groupId, customerId);
+        if (!isGroupLeader)
+            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+
+        // 방어 로직
+        group.editGroup(
+                Optional.ofNullable(requestDto.getGroupName()).orElse(group.getGroupName()),
+                Optional.ofNullable(requestDto.getGroupDescription()).orElse(group.getGroupDescription())
+        );
+
+        return new GroupResponseDto(
+                group.getGroupId(), group.getGroupName(),
+                group.getGroupDescription(), group.getGroupCode(),
+                null
         );
     }
 
@@ -333,27 +352,32 @@ public class GroupService {
     @Transactional
     public void expelMember(Long groupId, Long leaderId, Long targetCustomerId) {
         Group group = validGroup(groupId);
-
-        if (!groupMemberRepository.existsLeader(groupId, leaderId))
-            throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
-        if (leaderId.equals(targetCustomerId))
-            throw new CustomException(ErrorCode.BAD_REQUEST);
+        if (!groupMemberRepository.existsLeader(groupId, leaderId)) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
+        if (leaderId.equals(targetCustomerId)) throw new CustomException(ErrorCode.BAD_REQUEST);
 
         GroupMember target = validGroupMember(groupId, targetCustomerId);
-        if (target.isLeader())
-            throw new CustomException(ErrorCode.BAD_REQUEST);
+        if (target.isLeader()) throw new CustomException(ErrorCode.BAD_REQUEST);
 
         long remain = walletService.getMemberSharedBalance(group, targetCustomerId);
         if (remain > 0L) walletService.settleShareToIndividual(group, targetCustomerId);
+
+        String groupName = group.getGroupName();
+        String targetName = target.getUser().getName();
+        List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
 
         groupMemberRepository.delete(target);
 
         afterCommit(() -> {
             notificationService.sendToCustomer(
-                    targetCustomerId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.");
-            groupMemberRepository.findMemberIdsByGroupId(groupId).forEach(id ->
+                    targetCustomerId, NotificationType.MEMBER_EXPELLED,
+                    String.format("%s 모임에서 내보내졌습니다.", groupName)
+            );
+            memberIds.forEach(id ->
                     notificationService.sendToCustomer(
-                            id, NotificationType.MEMBER_EXPELLED, "모임원이 내보내졌습니다."));
+                            id, NotificationType.MEMBER_EXPELLED,
+                            String.format("%s 모임의 모임원 %s이 내보내졌습니다.", groupName, targetName)
+                    )
+            );
         });
     }
 

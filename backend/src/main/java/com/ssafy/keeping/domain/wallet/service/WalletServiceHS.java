@@ -273,16 +273,19 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .build()
         );
 
+        String message = String.format(
+                "%s님이 %s 모임에 %s 가게 point %,d원 공유했습니다.",
+                actor.getName(),
+                group.getGroup().getGroupName(),
+                store.getStoreName(),
+                shareAmount
+        );
+
         afterCommit(() -> {
-            // 모임원 전원 조회 후 알림 전송
             List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
-            memberIds.stream()
-                    .distinct()
-                    .forEach(id -> notificationService.sendToCustomer(
-                            id,
-                            NotificationType.GROUP_POINT_SHARED,
-                            "모임에 포인트가 공유되었습니다."
-                    ));
+            notificationService.sendGroupSharedToMembers(
+                    memberIds, NotificationType.GROUP_POINT_SHARED, message
+            );
         });
 
         return new PointShareResponseDto(
@@ -413,7 +416,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                         .relatedWallet(individual)
                         .customer(actor)
                         .store(store)
-                        .transactionType(TransactionType.USE)           // 그룹에서 차감
+                        .transactionType(TransactionType.TRANSFER_OUT)           // 그룹에서 회수
                         .amount(amount)
                         .build()
         );
@@ -470,17 +473,22 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
 
 
     @Transactional(readOnly = true)
-    public AvailablePointResponseDto getReclaimablePoints(Long walletId, Long customerId) {
+    public AvailablePointResponseDto getReclaimablePoints(Long walletId, Long storeId, Long customerId) {
         Wallet groupWallet = validWallet(walletId);
-        Group group = groupWallet.getGroup();
-        Long groupId = group.getGroupId();
-        if (!groupMemberRepository.existsMember(groupId, customerId)) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
-        }
+        Long groupId = groupWallet.getGroup().getGroupId();
 
-        long available = getMemberSharedBalance(group, customerId);
+        if (!groupMemberRepository.existsMember(groupId, customerId)) throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
 
-        return new AvailablePointResponseDto(groupWallet.getWalletId(), customerId, available);
+        long available = getMemberSharedBalanceByStore(walletId, storeId, customerId);
+
+        return new AvailablePointResponseDto(storeId, groupWallet.getWalletId(), customerId, available);
+    }
+
+    @Transactional(readOnly = true)
+    public long getMemberSharedBalanceByStore(Long groupWalletId, Long storeId, Long customerId) {
+        List<WalletStoreLot> lots = lotRepository.findReclaimableByStore(
+                groupWalletId, storeId, customerId, LocalDateTime.now());
+        return lots.stream().mapToLong(WalletStoreLot::getAmountRemaining).sum();
     }
 
     @Transactional(readOnly = true)
@@ -570,7 +578,7 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
                 transactionRepository.save(Transaction.builder()
                         .wallet(groupWallet).relatedWallet(individual)
                         .customer(individual.getCustomer()).store(store)
-                        .transactionType(TransactionType.USE).amount(remain).build());
+                        .transactionType(TransactionType.TRANSFER_OUT).amount(remain).build());
 
                 movedSum += remain;
             }

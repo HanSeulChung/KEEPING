@@ -4,9 +4,11 @@ import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyApiHeaderDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardPaymentRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardCancelRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyAccountDepositRequestDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.request.SsafyCardInquiryRequestDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardPaymentResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardCancelResponseDto;
 import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyAccountDepositResponseDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardInquiryResponseDto;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -308,5 +310,86 @@ public class SsafyFinanceApiService {
                 apiKey,
                 apiName
         );
+    }
+
+    /**
+     * 카드 조회용 API 헤더 생성
+     */
+    private SsafyApiHeaderDto createCardInquiryHeader(String userKey) {
+        LocalDateTime now = LocalDateTime.now();
+        String transmissionDate = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String transmissionTime = now.format(DateTimeFormatter.ofPattern("HHmmss"));
+        String institutionTransactionUniqueNo = generateInstitutionTransactionUniqueNo(now);
+
+        return SsafyApiHeaderDto.createCardInquiryHeader(
+                transmissionDate,
+                transmissionTime,
+                institutionTransactionUniqueNo,
+                apiKey,
+                userKey
+        );
+    }
+
+    /**
+     * 카드 조회 API 호출
+     */
+    public SsafyCardInquiryResponseDto inquireCreditCardList(String userKey) {
+        // API 헤더 생성
+        SsafyApiHeaderDto header = createCardInquiryHeader(userKey);
+
+        // 요청 DTO 생성
+        SsafyCardInquiryRequestDto requestDto = SsafyCardInquiryRequestDto.create(header);
+
+        // HTTP 요청 생성
+        HttpEntity<SsafyCardInquiryRequestDto> requestEntity = createHttpEntity(requestDto);
+
+        // 디버그: 실제 JSON 요청 로깅
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String jsonRequest = objectMapper.writeValueAsString(requestDto);
+            log.info("=== 실제 전송되는 JSON ===");
+            log.info("{}", jsonRequest);
+        } catch (Exception e) {
+            log.warn("JSON 변환 실패", e);
+        }
+
+        // 디버그: 요청 데이터 로깅
+        log.info("=== 카드 조회 API 요청 데이터 ===");
+        log.info("userKey: {}", userKey);
+        log.info("apiName: {}", header.getApiName());
+        log.info("transmissionDate: {}", header.getTransmissionDate());
+        log.info("transmissionTime: {}", header.getTransmissionTime());
+        log.info("institutionTransactionUniqueNo: {}", header.getInstitutionTransactionUniqueNo());
+        log.info("apiKey: {}", header.getApiKey());
+        log.info("userKey in header: {}", header.getUserKey());
+        log.info("institutionCode: {}", header.getInstitutionCode());
+        log.info("fintechAppNo: {}", header.getFintechAppNo());
+        log.info("apiServiceCode: {}", header.getApiServiceCode());
+        log.info("URL: {}", baseUrl + "/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList");
+
+        // API 호출
+        String url = baseUrl + "/ssafy/api/v1/edu/creditCard/inquireSignUpCreditCardList";
+
+        ResponseEntity<SsafyCardInquiryResponseDto> response;
+        try {
+            response = restTemplate.postForEntity(url, requestEntity, SsafyCardInquiryResponseDto.class);
+        } catch (Exception e) {
+            log.error("카드 조회 API 통신 오류", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+        }
+
+        SsafyCardInquiryResponseDto responseDto = response.getBody();
+
+        if (responseDto == null || !responseDto.isSuccess()) {
+            String errorMessage = (responseDto != null && responseDto.getHeader() != null)
+                    ? responseDto.getHeader().getResponseMessage()
+                    : "응답 없음";
+            log.error("카드 조회 실패 - {}", errorMessage);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+        }
+
+        log.info("카드 조회 성공 - 카드 수: {}",
+                responseDto.getREC() != null ? responseDto.getREC().size() : 0);
+        return responseDto;
     }
 }

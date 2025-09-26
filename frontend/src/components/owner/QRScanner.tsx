@@ -1,19 +1,22 @@
 'use client'
 
 import { apiConfig } from '@/api/config'
-import { useAuthStore } from '@/store/useAuthStore'
+import jsQR from 'jsqr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 export default function QRScanner() {
   const router = useRouter()
-  const { isLoggedIn } = useAuthStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannedData, setScannedData] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [manualInput, setManualInput] = useState('')
+  const [showManualInput, setShowManualInput] = useState(false)
+  const [isAuthChecked, setIsAuthChecked] = useState(false)
 
   // 주문 모달 상태
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
@@ -32,13 +35,71 @@ export default function QRScanner() {
     []
   )
 
-  // 인증 상태 확인
+  // 인증 상태 확인 - 더 관대한 방식
   useEffect(() => {
-    if (!isLoggedIn) {
-      router.push('/owner/login')
-      return
+    const checkAuth = () => {
+      if (typeof window !== 'undefined') {
+        try {
+          // localStorage에서 모든 키 확인
+          const allKeys = Object.keys(localStorage)
+          console.log('QRScanner - localStorage 모든 키:', allKeys)
+          
+          const accessToken = localStorage.getItem('accessToken')
+          const user = localStorage.getItem('user')
+          const authStorage = localStorage.getItem('auth-storage')
+          
+          console.log('QRScanner - 인증 데이터 확인:', {
+            accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'null',
+            user: user ? JSON.parse(user) : 'null',
+            authStorage: authStorage ? '존재' : 'null',
+            allKeys
+          })
+          
+          // accessToken이 있으면 인증 성공으로 간주 (user는 선택적)
+          if (accessToken) {
+            console.log('QRScanner - accessToken 존재, 인증 성공')
+            setIsAuthChecked(true)
+            // 인증 성공 후 자동으로 카메라 시작 (핸드폰에서 바로 시작)
+            setTimeout(() => {
+              console.log('QRScanner - 카메라 자동 시작')
+              startCamera()
+            }, 500)
+            return
+          }
+          
+          // auth-storage에서도 확인
+          if (authStorage) {
+            try {
+              const authData = JSON.parse(authStorage)
+              if (authData.state?.isLoggedIn) {
+                console.log('QRScanner - auth-storage에서 인증 확인')
+                setIsAuthChecked(true)
+                // 인증 성공 후 자동으로 카메라 시작 (핸드폰에서 바로 시작)
+                setTimeout(() => {
+                  console.log('QRScanner - 카메라 자동 시작')
+                  startCamera()
+                }, 500)
+                return
+              }
+            } catch (e) {
+              console.log('QRScanner - auth-storage 파싱 실패')
+            }
+          }
+          
+          console.log('QRScanner - 모든 인증 방법 실패, 로그인 페이지로 이동')
+          router.push('/owner/login')
+        } catch (error) {
+          console.error('QRScanner - 인증 확인 오류:', error)
+          router.push('/owner/login')
+        }
+      }
     }
-  }, [isLoggedIn, router])
+
+    // 100ms 지연 후 실행
+    const timeoutId = setTimeout(checkAuth, 100)
+    
+    return () => clearTimeout(timeoutId)
+  }, [router])
 
   // QR 코드 스캔 함수
   const scanQRCode = () => {
@@ -50,32 +111,41 @@ export default function QRScanner() {
 
     if (!context) return
 
+    // 비디오가 아직 로드되지 않았으면 스킵
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      console.log('비디오 로딩 중...', video.readyState)
+      return
+    }
+
     // 비디오 프레임을 캔버스에 그리기
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
+    console.log('스캔 시도 - 비디오 크기:', video.videoWidth, 'x', video.videoHeight)
+    console.log('캔버스 크기:', canvas.width, 'x', canvas.height)
+
     // 이미지 데이터 가져오기
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
 
-    // 간단한 QR 코드 패턴 감지 시뮬레이션
-    // 실제로는 jsQR 라이브러리를 사용해야 하지만, 여기서는 시뮬레이션
-    const hasQRPattern = detectQRPattern(imageData)
+    // jsQR을 사용하여 QR 코드 스캔
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "attemptBoth",
+    })
 
-    if (hasQRPattern) {
-      // 실제 QR 코드 데이터를 스캔해야 함
-      // 현재는 패턴만 감지하고 실제 데이터는 없음
-      console.log('QR 패턴 감지됨 - 실제 구현 필요')
+    if (code) {
+      console.log('QR 코드 스캔 성공:', code.data)
+      setScannedData(code.data)
       setIsScanning(false)
+      handleQRResult(code.data)
+    } else {
+      // 스캔 실패 시에도 로그 (너무 많이 출력되지 않도록 제한)
+      if (Math.random() < 0.01) { // 1% 확률로만 로그 출력
+        console.log('QR 코드 스캔 시도 중... (감지되지 않음)')
+      }
     }
   }
 
-  // 간단한 QR 패턴 감지 함수 (시뮬레이션)
-  const detectQRPattern = (imageData: ImageData): boolean => {
-    // 실제 QR 코드는 특정 패턴을 가지므로, 여기서는 랜덤 시뮬레이션
-    // 실제 구현에서는 jsQR 라이브러리의 qrcode.decode() 함수를 사용
-    return Math.random() > 0.995 // 0.5% 확률로 감지 (더 현실적으로)
-  }
 
   // QR 코드 결과 처리
   const handleQRResult = (data: string) => {
@@ -184,38 +254,60 @@ export default function QRScanner() {
   // 카메라 시작
   const startCamera = async () => {
     try {
+      console.log('QRScanner - 카메라 시작 시도')
       setError(null)
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment', // 후면 카메라 우선
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, max: 60 },
         },
       })
+      
+      console.log('QRScanner - 카메라 권한 획득 성공')
 
       setStream(mediaStream)
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
         videoRef.current.play()
         setIsScanning(true)
+        
+        console.log('QRScanner - 비디오 스트림 설정 완료, 스캔 시작')
 
-        // 스캔 시작 (requestAnimationFrame 사용)
-        const scanFrame = () => {
+        // 스캔 시작 (200ms 간격으로 스캔)
+        scanIntervalRef.current = setInterval(() => {
           if (isScanning) {
             scanQRCode()
-            requestAnimationFrame(scanFrame)
           }
-        }
-        requestAnimationFrame(scanFrame)
+        }, 200)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('카메라 접근 오류:', err)
-      setError('카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.')
+      
+      let errorMessage = '카메라에 접근할 수 없습니다.'
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.'
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
+      }
+      
+      setError(errorMessage)
     }
   }
 
   // 카메라 중지
   const stopCamera = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current)
+      scanIntervalRef.current = null
+    }
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
       setStream(null)
@@ -224,19 +316,36 @@ export default function QRScanner() {
     setScannedData(null)
   }
 
+  // 수동 입력 처리
+  const handleManualInput = () => {
+    if (manualInput.trim()) {
+      setScannedData(manualInput.trim())
+      setShowManualInput(false)
+      setManualInput('')
+    }
+  }
+
   // 컴포넌트 언마운트 시 카메라 정리
   useEffect(() => {
     return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current)
+      }
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
     }
   }, [stream])
 
-  if (!isLoggedIn) {
+
+  // 인증이 완료되지 않았으면 로딩 표시
+  if (!isAuthChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg">로그인 페이지로 이동 중...</div>
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="text-center text-white">
+          <div className="mb-4 text-lg">인증 확인 중...</div>
+          <div className="text-sm text-gray-300">잠시만 기다려주세요</div>
+        </div>
       </div>
     )
   }
@@ -251,6 +360,10 @@ export default function QRScanner() {
             className="h-screen w-full object-cover"
             playsInline
             muted
+            autoPlay
+            webkit-playsinline="true"
+            x5-video-player-type="h5"
+            x5-video-player-fullscreen="true"
           />
 
           {/* 숨겨진 캔버스 (QR 코드 분석용) */}
@@ -291,7 +404,32 @@ export default function QRScanner() {
             {/* 하단 컨트롤 */}
             <div className="bg-opacity-50 bg-black p-6">
               {error && (
-                <div className="mb-4 text-center text-red-400">{error}</div>
+                <div className="mb-4 rounded-lg bg-red-900/50 p-4 text-center text-red-300">
+                  <div className="mb-2 font-bold">{error}</div>
+                  <div className="text-sm text-red-200">
+                    {error.includes('카메라를 찾을 수 없습니다') && (
+                      <>
+                        데스크톱 환경에서는 카메라가 없을 수 있습니다.<br />
+                        모바일 기기에서 접속하거나 외부 카메라를 연결해주세요.
+                      </>
+                    )}
+                    {error.includes('권한이 거부되었습니다') && (
+                      <>
+                        브라우저 주소창 옆의 카메라 아이콘을 클릭하여<br />
+                        카메라 권한을 허용해주세요.
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setError(null)
+                      startCamera()
+                    }}
+                    className="mt-2 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+                  >
+                    다시 시도
+                  </button>
+                </div>
               )}
 
               {scannedData && (
@@ -301,14 +439,7 @@ export default function QRScanner() {
               )}
 
               <div className="flex gap-4">
-                {!isScanning ? (
-                  <button
-                    onClick={startCamera}
-                    className="flex-1 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700"
-                  >
-                    스캔 시작
-                  </button>
-                ) : (
+                {isScanning && (
                   <button
                     onClick={stopCamera}
                     className="flex-1 rounded-lg bg-red-600 px-6 py-3 font-medium text-white hover:bg-red-700"
@@ -318,6 +449,25 @@ export default function QRScanner() {
                 )}
 
                 <button
+                  onClick={() => setShowManualInput(true)}
+                  className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-700"
+                >
+                  수동 입력
+                </button>
+
+                <button
+                  onClick={() => {
+                    // 테스트용 QR 코드 데이터
+                    const testData = 'https://example.com/store/123'
+                    setScannedData(testData)
+                    handleQRResult(testData)
+                  }}
+                  className="flex-1 rounded-lg bg-yellow-600 px-6 py-3 font-medium text-white hover:bg-yellow-700"
+                >
+                  테스트 QR
+                </button>
+
+                <button
                   onClick={() => router.push('/owner/dashboard')}
                   className="flex-1 rounded-lg bg-gray-600 px-6 py-3 font-medium text-white hover:bg-gray-700"
                 >
@@ -325,19 +475,6 @@ export default function QRScanner() {
                 </button>
               </div>
 
-              {/* 테스트용 QR 시뮬레이션 버튼 */}
-              <div className="mt-4">
-                <button
-                  onClick={() => {
-                    // 실제 QR 코드 스캔 기능 구현 필요
-                    console.log('수동 QR 스캔 버튼 클릭 - 실제 구현 필요')
-                    setIsScanning(false)
-                  }}
-                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
-                >
-                  테스트: QR 코드 시뮬레이션
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -439,6 +576,44 @@ export default function QRScanner() {
                 className="w-full rounded bg-black py-2 text-white disabled:opacity-50"
               >
                 {isSubmitting ? '요청 중...' : '완료'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 수동 입력 모달 */}
+      {showManualInput && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6">
+            <h3 className="mb-4 text-lg font-bold">수동으로 QR 코드 입력</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              QR 코드를 스캔할 수 없는 경우, QR 코드의 내용을 직접 입력해주세요.
+            </p>
+            <input
+              type="text"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder="QR 코드 내용을 입력하세요"
+              className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={handleManualInput}
+                disabled={!manualInput.trim()}
+                className="flex-1 rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50 hover:bg-blue-700"
+              >
+                확인
+              </button>
+              <button
+                onClick={() => {
+                  setShowManualInput(false)
+                  setManualInput('')
+                }}
+                className="flex-1 rounded bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
+              >
+                취소
               </button>
             </div>
           </div>

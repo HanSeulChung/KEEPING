@@ -7,6 +7,7 @@ import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterRequest;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerRegisterResponse;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileResponse;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileUpdateRequest;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerCardResponse;
 import com.ssafy.keeping.domain.otp.session.RegSession;
 import com.ssafy.keeping.domain.otp.session.RegSessionStore;
 import com.ssafy.keeping.domain.otp.session.RegStep;
@@ -19,6 +20,9 @@ import com.ssafy.keeping.domain.wallet.repository.WalletRepository;
 import com.ssafy.keeping.global.client.FinOpenApiClient;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import com.ssafy.keeping.domain.charge.service.SsafyFinanceApiService;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardInquiryResponseDto;
+import com.ssafy.keeping.domain.charge.dto.ssafyapi.response.SsafyCardInquiryRecDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 
 @Service
@@ -40,6 +45,7 @@ public class CustomerService {
     private final PinAuthService pinAuthService;
     private final WalletRepository walletRepository;
     private final ImageService imageService;
+    private final SsafyFinanceApiService ssafyFinanceApiService;
 
     private static final String SIGN_UP_INFO_KEY = "signup:info:";
 
@@ -54,28 +60,31 @@ public class CustomerService {
         // userKey 생성
         String userKey;
 
-        try {
-            SearchUserKeyResponseDto searchUserKeyResponse = apiClient.searchUserKey(session.getEmail());
-
-            // userKey 있으면
-            if(searchUserKeyResponse != null
-                    && searchUserKeyResponse.getUserKey() != null
-                    && !searchUserKeyResponse.getUserKey().isEmpty()) {
-
-                userKey = searchUserKeyResponse.getUserKey();
-                log.debug("기존 userKey 사용");
-
-            } else {
-                // userKey 생성 (catch 문으로 이동)
-                log.debug("새로운 userKey 생성");
-                throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
-            }
-
-        } catch (Exception e) {
+//        try {
+//            SearchUserKeyResponseDto searchUserKeyResponse = apiClient.searchUserKey(session.getEmail());
+//
+//            // userKey 있으면
+//            if(searchUserKeyResponse != null
+//                    && searchUserKeyResponse.getUserKey() != null
+//                    && !searchUserKeyResponse.getUserKey().isEmpty()) {
+//
+//                userKey = searchUserKeyResponse.getUserKey();
+//                log.debug("기존 userKey 사용");
+//
+//            } else {
+//                // userKey 생성 (catch 문으로 이동)
+//                log.debug("새로운 userKey 생성");
+//                throw new CustomException(ErrorCode.USER_KEY_NOT_FOUND);
+//            }
+//
+//        } catch (Exception e) {
             // userKey 생성
             try {
-                log.debug("FinOpenApi userkey 생성 : {}", session.getEmail());
-                InsertMemberResponseDto member = apiClient.insertMember(session.getEmail());
+                String prefix = String.valueOf(UUID.randomUUID());
+                String email = prefix + "@keeping509.com";
+                log.debug("email : {}, FinOpenApi userkey 생성 : {}", email, session.getEmail());
+
+                InsertMemberResponseDto member = apiClient.insertMember(email);
                 userKey = member.getUserKey();
                 log.debug("userKey 생성 완료");
 
@@ -84,7 +93,7 @@ public class CustomerService {
                 log.warn("FinOpenApi Member 생성 실패 : {}", session.getEmail());
                 throw new CustomException(ErrorCode.BAD_REQUEST);
             }
-        }
+//        }
 
         // userKey 가 null 이거나 empty
         if(userKey == null || userKey.isEmpty()) {
@@ -220,6 +229,33 @@ public class CustomerService {
         } catch (Exception e) {
             log.error("고객 프로필 수정 실패 - 고객ID: {}", customerId, e);
             throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+    }
+
+    // 내 카드 조회
+    public CustomerCardResponse getMyCard(Long customerId) {
+        Customer customer = validCustomer(customerId);
+
+        try {
+            // SSAFY 금융API로 카드 목록 조회
+            SsafyCardInquiryResponseDto response = ssafyFinanceApiService.inquireCreditCardList(customer.getUserKey());
+
+            // 카드 목록에서 첫 번째 카드만 반환 (비즈니스 로직상 카드는 1개만 존재)
+            if (response.getREC() != null && !response.getREC().isEmpty()) {
+                SsafyCardInquiryRecDto firstCard = response.getREC().get(0);
+
+                log.info("고객 카드 조회 성공 - 고객ID: {}, 카드번호: {}",
+                         customerId, firstCard.getCardNo());
+
+                return CustomerCardResponse.from(firstCard);
+            } else {
+                log.warn("고객 카드 없음 - 고객ID: {}", customerId);
+                throw new CustomException(ErrorCode.USER_NOT_FOUND);
+            }
+
+        } catch (Exception e) {
+            log.error("고객 카드 조회 실패 - 고객ID: {}", customerId, e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
     }
 

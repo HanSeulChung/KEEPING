@@ -4,6 +4,7 @@ import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.user.customer.dto.MyGroupsResponse;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileResponse;
 import com.ssafy.keeping.domain.user.customer.dto.CustomerProfileUpdateRequest;
+import com.ssafy.keeping.domain.user.customer.dto.CustomerCardResponse;
 import com.ssafy.keeping.domain.user.customer.service.CustomerService;
 import com.ssafy.keeping.domain.user.dto.ProfileUploadResponse;
 import com.ssafy.keeping.global.s3.service.ImageService;
@@ -64,6 +65,14 @@ public class CustomerController {
         List<Long> ids = groupMemberRepository.findGroupIdsByCustomerId(customerId);
         MyGroupsResponse data = MyGroupsResponse.of(ids);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("내가 속한 그룹을 조회하였습니다.", HttpStatus.CREATED.value(), data));
+    }
+
+    // 내 카드 조회
+    @PostMapping("/me/card")
+    public ResponseEntity<ApiResponse<CustomerCardResponse>> getMyCard(@AuthenticationPrincipal Long customerId) {
+        CustomerCardResponse response = customerService.getMyCard(customerId);
+
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("카드 조회 성공", HttpStatus.OK.value(), response));
     }
 
     // 회원가입
