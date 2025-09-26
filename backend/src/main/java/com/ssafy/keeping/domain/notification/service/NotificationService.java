@@ -9,6 +9,9 @@ import com.ssafy.keeping.domain.user.customer.model.Customer;
 import com.ssafy.keeping.domain.user.customer.repository.CustomerRepository;
 import com.ssafy.keeping.domain.user.owner.model.Owner;
 import com.ssafy.keeping.domain.user.owner.repository.OwnerRepository;
+import com.ssafy.keeping.domain.auth.security.JwtProvider;
+import com.ssafy.keeping.domain.auth.enums.UserRole;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +36,8 @@ public class NotificationService {
     private final CustomerRepository customerRepository;
     private final OwnerRepository ownerRepository;
     private final FcmService fcmService;
+    private final JwtProvider jwtProvider;
+    private final StringRedisTemplate redisTemplate;
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60; // 60분
 
@@ -42,10 +50,11 @@ public class NotificationService {
      * @param receiverType "customer" 또는 "owner"
      * @param receiverId 사용자 ID
      * @param lastEventId 마지막으로 받은 이벤트 ID (재연결용)
+     * @param accessToken AccessToken (토큰 기반 재전송을 위함, null 가능)
      * @return SseEmitter
      */
     // "구독"은 실시간 알림을 받기 위해 맨 처음 단 한 번, 서버와 클라이언트(브라우저) 사이에 '알림 전용 통신선'을 개통하는 행위입니다.
-    public SseEmitter subscribe(String receiverType, Long receiverId, String lastEventId) {
+    public SseEmitter subscribe(String receiverType, Long receiverId, String lastEventId, String accessToken) {
         String emitterId = makeTimeIncludeId(receiverType, receiverId);
 
         SseEmitter sseEmitter = emitterRepository.save(emitterId, new SseEmitter(DEFAULT_TIMEOUT));
@@ -77,8 +86,14 @@ public class NotificationService {
                 log.warn("초기 연결 이벤트 전송 실패 - EmitterID: {}", emitterId);
             }
 
-            if (hasLostData(lastEventId)) {
-                sendLostData(lastEventId, receiverType, receiverId, emitterId, sseEmitter);
+            // 토큰 기반 유실 데이터 재전송 처리
+            if (accessToken != null && !accessToken.trim().isEmpty()) {
+                // AccessToken이 있는 경우 - 네트워크 재연결 시나리오
+                log.info("AccessToken 기반 재전송 시도 - {}:{}", receiverType, receiverId);
+                sendLostDataWithTokenFilter(accessToken, receiverType, receiverId, emitterId, sseEmitter);
+            } else {
+                // AccessToken이 없는 경우 - 로그아웃 상태로 간주하여 재전송 차단
+                log.info("AccessToken 없음 - 로그아웃 상태로 간주하여 재전송 차단 - {}:{}", receiverType, receiverId);
             }
 
         } catch (Exception e) {
@@ -88,6 +103,7 @@ public class NotificationService {
 
         return sseEmitter;
     }
+
 
     /**
      * 고객에게 알림 전송
@@ -206,26 +222,35 @@ public class NotificationService {
     }
 
     /**
-     * 포그라운드/백그라운드 분기하여 알림 전송
+     * 포그라운드/백그라운드/로그아웃 분기하여 알림 전송
      */
     private void sendNotificationWithStrategy(NotificationResponseDto data) {
         String receiverType = data.getReceiverType().toLowerCase();
         Long receiverId = data.getReceiverId();
-        
+
         try {
             // 활성 SSE 연결이 있는지 확인
             boolean hasActiveConnection = emitterRepository.hasActiveConnection(receiverType, receiverId);
-            
+
             if (hasActiveConnection) {
-                // 포그라운드: SSE로 실시간 전송
+                // 1. 포그라운드: SSE로 실시간 전송
                 log.info("포그라운드 상태 감지 - SSE로 알림 전송: {}:{}", receiverType, receiverId);
                 sendRealTimeNotification(data);
             } else {
-                // 백그라운드: FCM으로 푸시 알림 전송
-                log.info("백그라운드 상태 감지 - FCM으로 푸시 알림 전송: {}:{}", receiverType, receiverId);
-                sendFcmNotification(data);
+                // SSE 연결이 없는 경우: 로그인 상태 확인 필요
+                boolean isLoggedIn = isUserLoggedIn(receiverType, receiverId);
+
+                if (isLoggedIn) {
+                    // 2. 백그라운드 (로그인 상태): FCM으로 푸시 알림 전송
+                    log.info("백그라운드 상태 감지 - FCM으로 푸시 알림 전송: {}:{}", receiverType, receiverId);
+                    sendFcmNotification(data);
+                } else {
+                    // 3. 로그아웃 상태: 알림 전송 차단
+                    log.info("로그아웃 상태 감지 - 알림 전송 차단: {}:{}", receiverType, receiverId);
+                    // DB에는 저장되지만 실시간/푸시 알림은 보내지 않음
+                }
             }
-            
+
         } catch (Exception e) {
             log.error("알림 전송 전략 선택 중 오류 - {}:{}", receiverType, receiverId, e);
         }
@@ -366,24 +391,140 @@ public class NotificationService {
         return receiverType + "-" + receiverId + "_" + System.currentTimeMillis();
     }
 
+
     /**
-     * 유실된 데이터가 있는지 확인
+     * AccessToken에서 발급시간 추출
      */
-    private boolean hasLostData(String lastEventId) {
-        return lastEventId != null && !lastEventId.isEmpty();
+    private LocalDateTime getTokenIssuedAt(String accessToken) {
+        try {
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                return null;
+            }
+
+            Date issuedAt = jwtProvider.getIssuedAt(accessToken);
+            if (issuedAt == null) {
+                return null;
+            }
+
+            return issuedAt.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        } catch (Exception e) {
+            log.warn("AccessToken 발급시간 추출 실패 - 토큰: {}, 오류: {}",
+                    accessToken != null ? accessToken.substring(0, Math.min(accessToken.length(), 20)) + "..." : "null",
+                    e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * 유실된 데이터 전송
+     * 이벤트가 토큰 발급시간 이후에 생성되었는지 확인
      */
-    private void sendLostData(String lastEventId, String receiverType, Long receiverId, 
-                             String emitterId, SseEmitter emitter) {
-        Map<String, Object> eventCaches = emitterRepository.findAllEventCacheStartWithByReceiver(receiverType, receiverId);
-        
-        eventCaches.entrySet().stream()
-                .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-                .forEach(entry -> sendNotification(emitter, entry.getKey(), emitterId, entry.getValue()));
-                
-        log.info("유실된 데이터 재전송 완료 - {}:{}, 재전송 수: {}", receiverType, receiverId, eventCaches.size());
+    private boolean isEventAfterTokenTime(Object eventData, LocalDateTime tokenIssuedAt) {
+        try {
+            if (tokenIssuedAt == null || eventData == null) {
+                return false;
+            }
+
+            if (eventData instanceof NotificationResponseDto) {
+                NotificationResponseDto notification = (NotificationResponseDto) eventData;
+                String createdAtStr = notification.getCreatedAt();
+
+                if (createdAtStr == null || createdAtStr.isEmpty()) {
+                    return false;
+                }
+
+                // String 형태의 createdAt을 LocalDateTime으로 파싱
+                LocalDateTime eventCreatedAt = LocalDateTime.parse(createdAtStr,
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+                return eventCreatedAt.isAfter(tokenIssuedAt);
+            }
+
+            return false;
+        } catch (Exception e) {
+            log.warn("이벤트 시간 비교 실패 - 토큰발급시간: {}, 오류: {}", tokenIssuedAt, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 토큰 기반 유실 데이터 재전송
+     */
+    private void sendLostDataWithTokenFilter(String accessToken, String receiverType, Long receiverId,
+                                           String emitterId, SseEmitter emitter) {
+        try {
+            LocalDateTime tokenIssuedAt = getTokenIssuedAt(accessToken);
+            if (tokenIssuedAt == null) {
+                log.warn("토큰 발급시간을 확인할 수 없어 재전송을 차단합니다 - {}:{}", receiverType, receiverId);
+                return;
+            }
+
+            Map<String, Object> eventCaches = emitterRepository.findAllEventCacheStartWithByReceiver(receiverType, receiverId);
+
+            if (eventCaches.isEmpty()) {
+                log.info("재전송할 캐시 이벤트가 없습니다 - {}:{}", receiverType, receiverId);
+                return;
+            }
+
+            int totalEvents = eventCaches.size();
+            int sentEvents = 0;
+
+            for (Map.Entry<String, Object> entry : eventCaches.entrySet()) {
+                if (isEventAfterTokenTime(entry.getValue(), tokenIssuedAt)) {
+                    boolean success = sendNotification(emitter, entry.getKey(), emitterId, entry.getValue());
+                    if (success) {
+                        sentEvents++;
+                    }
+                }
+            }
+
+            log.info("토큰 기반 유실 데이터 재전송 완료 - {}:{}, 토큰발급시간: {}, 총 캐시: {}, 재전송: {}",
+                    receiverType, receiverId, tokenIssuedAt, totalEvents, sentEvents);
+
+        } catch (Exception e) {
+            log.error("토큰 기반 유실 데이터 재전송 중 오류 - {}:{}", receiverType, receiverId, e);
+        }
+    }
+
+    /**
+     * 사용자 로그인 상태 확인 (Redis RefreshToken 존재 여부 확인)
+     * @param receiverType "customer" 또는 "owner"
+     * @param receiverId 사용자 ID
+     * @return 로그인 상태
+     */
+    private boolean isUserLoggedIn(String receiverType, Long receiverId) {
+        try {
+            UserRole userRole = convertToUserRole(receiverType);
+            if (userRole == null) {
+                log.warn("유효하지 않은 receiverType: {}", receiverType);
+                return false;
+            }
+
+            // TokenService와 동일한 키 패턴 사용: "auth:rt:" + userRole + ":" + userId
+            String refreshTokenKey = "auth:rt:" + userRole.name() + ":" + receiverId;
+
+            // Redis에서 RefreshToken 존재 여부 확인
+            boolean hasRefreshToken = redisTemplate.hasKey(refreshTokenKey);
+
+            log.debug("로그인 상태 확인 - {}:{}, RefreshToken 존재: {}", receiverType, receiverId, hasRefreshToken);
+
+            return hasRefreshToken;
+
+        } catch (Exception e) {
+            log.error("로그인 상태 확인 중 오류 - {}:{}", receiverType, receiverId, e);
+            // 예외 발생 시 안전하게 true 반환 (알림 차단보다는 전송이 나음)
+            return true;
+        }
+    }
+
+    /**
+     * receiverType을 UserRole로 변환
+     */
+    private UserRole convertToUserRole(String receiverType) {
+        if ("customer".equalsIgnoreCase(receiverType)) {
+            return UserRole.CUSTOMER;
+        } else if ("owner".equalsIgnoreCase(receiverType)) {
+            return UserRole.OWNER;
+        }
+        return null;
     }
 }
