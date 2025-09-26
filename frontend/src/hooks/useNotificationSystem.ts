@@ -1,6 +1,7 @@
 'use client'
 
-import { buildURL } from '@/api/config'
+import apiClient from '@/api/axios'
+import { apiConfig, buildURL } from '@/api/config'
 import {
   deleteFCMToken,
   registerCustomerFCMToken,
@@ -23,6 +24,13 @@ import {
 } from '@/types/notification'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+// Base에 /api 존재 여부에 따라 경로에 /api를 한 번만 붙여주는 유틸
+const apiPath = (path: string) => {
+  const base = apiConfig.baseURL.replace(/\/$/, '')
+  const hasApi = /\/api$/.test(base)
+  return `${hasApi ? '' : '/api'}${path}`
+}
 
 interface UseNotificationSystemReturn {
   notifications: NotificationData[]
@@ -64,13 +72,17 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   // 백엔드 응답을 프론트엔드 형식으로 변환
   const convertNotificationData = (backendData: any): NotificationData => {
     return {
-      id: backendData.id,
-      type: backendData.type,
-      title: backendData.title,
-      message: backendData.message,
+      id: backendData.notificationId,
+      type: backendData.notificationType,
+      title: getNotificationTitle(backendData.notificationType),
+      message: backendData.content,
       timestamp: backendData.createdAt,
       isRead: backendData.isRead,
-      data: backendData.data,
+      data: {
+        receiverType: backendData.receiverType,
+        receiverId: backendData.receiverId,
+        receiverName: backendData.receiverName,
+      },
     }
   }
 
@@ -515,9 +527,32 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         return
       }
 
+      // notificationId 유효성 검사
+      if (!id || isNaN(id) || id <= 0) {
+        console.error('유효하지 않은 notificationId:', id)
+        return
+      }
+
       try {
-        // 서버에 읽음 상태 전송
-        await notificationApi.markAsRead(parseInt(String(user.id)), id)
+        // 사용자 ID 추출 (ownerId 우선, 없으면 userId, 없으면 id)
+        const userId = user.ownerId || user.userId || user.id
+        if (!userId) {
+          console.error('유효한 사용자 ID가 없습니다:', user)
+          return
+        }
+
+        // 사용자 역할 확인 (OWNER 또는 CUSTOMER)
+        const userRole = user.role || 'OWNER'
+        const isOwner = userRole === 'OWNER'
+
+        console.log('알림 읽음 처리 - userId:', userId, 'notificationId:', id, 'role:', userRole)
+
+        // 서버에 읽음 상태 전송 (역할에 따라 다른 API 엔드포인트 사용)
+        if (isOwner) {
+          await apiClient.put(apiPath(`/notifications/owner/${userId}/${id}/read`))
+        } else {
+          await apiClient.put(apiPath(`/notifications/customer/${userId}/${id}/read`))
+        }
 
         // 로컬 상태 업데이트
         setNotifications(prev =>
@@ -531,26 +566,69 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         console.error('읽음 상태 업데이트 오류:', error)
       }
     },
-    [user?.id]
+    [user?.id, user?.ownerId, user?.userId, user?.role]
   )
 
   // 모든 알림 읽음 처리
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, isRead: true }))
-    )
+  const markAllAsRead = useCallback(async () => {
+    if (!user?.id) {
+      console.error('사용자 정보가 없습니다.')
+      return
+    }
 
-    // 서버에 모든 알림 읽음 상태 전송
-    fetch('/api/notifications/read-all', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId: user?.id }),
-    }).catch(error => {
+    // 사용자 ID 추출 (ownerId 우선, 없으면 userId, 없으면 id)
+    const userId = user.ownerId || user.userId || user.id
+    if (!userId) {
+      console.error('유효한 사용자 ID가 없습니다:', user)
+      return
+    }
+
+    // 사용자 역할 확인 (OWNER 또는 CUSTOMER)
+    const userRole = user.role || 'OWNER'
+    const isOwner = userRole === 'OWNER'
+
+    try {
+      // 읽지 않은 알림들만 필터링
+      const unreadNotifications = notifications.filter(n => !n.isRead)
+      
+      if (unreadNotifications.length === 0) {
+        console.log('읽지 않은 알림이 없습니다.')
+        return
+      }
+
+      console.log(`${unreadNotifications.length}개의 읽지 않은 알림을 읽음 처리합니다.`)
+
+      // 로컬 상태 먼저 업데이트
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, isRead: true }))
+      )
+
+      // 각 알림을 개별적으로 읽음 처리
+      const promises = unreadNotifications.map(async (notification) => {
+        try {
+          if (isOwner) {
+            await apiClient.put(apiPath(`/notifications/owner/${userId}/${notification.id}/read`))
+          } else {
+            await apiClient.put(apiPath(`/notifications/customer/${userId}/${notification.id}/read`))
+          }
+          console.log(`알림 ${notification.id} 읽음 처리 완료`)
+        } catch (error) {
+          console.error(`알림 ${notification.id} 읽음 처리 실패:`, error)
+          throw error
+        }
+      })
+
+      // 모든 알림 읽음 처리 완료 대기
+      await Promise.all(promises)
+      console.log('모든 알림 읽음 처리 완료')
+    } catch (error) {
       console.error('모든 알림 읽음 상태 업데이트 오류:', error)
-    })
-  }, [user?.id])
+      // 서버 요청 실패 시 로컬 상태도 롤백
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, isRead: false }))
+      )
+    }
+  }, [user?.id, user?.ownerId, user?.userId, user?.role, notifications])
 
   // 알림 추가 함수 (브라우저 알림 자동 표시)
   const addNotification = useCallback(
