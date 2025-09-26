@@ -16,7 +16,7 @@ public class CookieUtil {
     public void addHttpOnlyRefreshCookie(HttpServletResponse response, String refreshToken, Duration ttl) {
         ResponseCookie responseCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(ttl)
                 .sameSite("Lax")
@@ -42,7 +42,7 @@ public class CookieUtil {
     public void removeRefreshTokenFromCookie(HttpServletResponse response) {
         ResponseCookie responseCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Lax")

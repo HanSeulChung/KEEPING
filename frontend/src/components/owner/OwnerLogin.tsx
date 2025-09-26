@@ -21,12 +21,11 @@ export default function OwnerLogin() {
         authApi.kakaoOwnerLogin()
         return
       }
-      
+
       // if (provider === 'google') {
       //   authApi.googleOwnerLogin()
       //   return
       // }
-
     } catch (error) {
       console.error('로그인 오류:', error)
       alert(`로그인 중 오류가 발생했습니다: ${error}`)
@@ -40,16 +39,16 @@ export default function OwnerLogin() {
       {/* 캐릭터 일러스트 */}
       <div className="mb-10">
         <Image
-          src="/owner.png"
+          src="/common/owner.svg"
           alt="사장님 캐릭터"
-          width={180}
-          height={180}
+          width={300}
+          height={300}
           priority
         />
       </div>
 
       {/* 제목 */}
-      <h1 className="font-display mb-6 text-xl font-bold text-gray-900">
+      <h1 className="font-jalnan mb-6 text-3xl font-bold text-[#6ED2FF]">
         사장님 로그인
       </h1>
 
@@ -94,9 +93,13 @@ export default function OwnerLogin() {
         href="/customer/login"
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
       >
-        <Image src="/customer.png" alt="고객 아이콘" width={20} height={20} />
-        <span className="font-medium text-yellow-600">고객</span>
-        <span>으로 로그인하기</span>
+        <Image src="/customer.png" alt="고객 아이콘" width={24} height={24} />
+        <span className="font-nanum-square-round-eb text-base text-[#FFC800]">
+          고객
+        </span>
+        <span className="font-nanum-square-round-eb text-base">
+          으로 로그인하기
+        </span>
       </Link>
     </div>
   )

@@ -124,102 +124,105 @@ const OtpVerificationModal = ({
   if (!isOpen) return null
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
-      <div className="mx-4 w-full max-w-md rounded-lg bg-white p-8">
-        {/* 헤더 */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-['Tenada'] text-2xl font-extrabold text-black">
-            KEEPING PASS 인증
-          </h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="h-[20.6875rem] w-[412px]">
+        <div className="h-[20.6875rem] w-[412px] flex-shrink-0 rounded-[30px] bg-[#fbf9f5]">
+          {/* 제목과 닫기 버튼 */}
+          <div className="flex items-center justify-between px-6 pt-6">
+            <div className="font-jalnan text-2xl leading-[140%] text-[#ffc800]">
+              문자 인증
+            </div>
+            <button
+              onClick={handleClose}
+              className="text-[#ffc800] hover:text-[#ffc800]/80"
             >
-              <path
-                d="M18 6L6 18M6 6L18 18"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* 전화번호 표시 */}
-        <div className="mb-6 rounded-lg bg-gray-50 p-4">
-          <p className="mb-1 font-['nanumsquare'] text-sm text-gray-600">
-            인증번호를 발송한 번호
-          </p>
-          <p className="font-['nanumsquare'] text-lg font-bold text-black">
-            {phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')}
-          </p>
-        </div>
-
-        {/* 에러 메시지 */}
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="font-['nanumsquare'] text-sm text-red-600">{error}</p>
+              <svg
+                width={36}
+                height={36}
+                viewBox="0 0 36 36"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
-        )}
 
-        {/* OTP 입력 */}
-        <div className="mb-6">
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
-            인증번호 입력
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={otpCode}
-              onChange={e =>
-                setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
-              }
-              placeholder="6자리 인증번호"
-              className="flex-1 rounded-lg border border-gray-300 p-3 text-center font-['nanumsquare'] text-lg font-bold tracking-widest"
-              maxLength={6}
-            />
-            {timeLeft > 0 && (
-              <div className="font-['nanumsquare'] text-sm font-bold text-red-500">
-                {formatTime(timeLeft)}
+          {/* 상단 바 */}
+          <div className="mt-4 flex justify-center">
+            <div className="h-[0.1875rem] w-96 bg-[#ffc800]" />
+          </div>
+
+          {/* 안내 메시지 */}
+          <div className="flex justify-center px-6 py-6">
+            <div className="font-nanum-square-round-eb text-center text-lg leading-[140%] font-bold text-gray-500">
+              입력하신 번호로 인증번호가 전송되었습니다.
+              <br />
+              인증번호를 입력해 인증을 완료해주세요 !
+            </div>
+          </div>
+
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="mb-4 flex justify-center px-6">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="font-nanum-square-round-eb text-sm text-red-600">
+                  {error}
+                </p>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* OTP 입력 필드 */}
+          <div className="mb-4 flex justify-center px-6">
+            <div className="flex h-12 w-[22rem] flex-shrink-0 items-center justify-end rounded-[0.625rem] border-[3px] border-[#d9d9d9] pl-[18rem]">
+              <input
+                type="text"
+                value={otpCode}
+                onChange={e =>
+                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="6자리 인증번호"
+                className="font-nanum-square-round-eb h-full flex-1 px-4 text-center text-lg focus:outline-none"
+                maxLength={6}
+              />
+              <div className="flex h-12 w-20 flex-shrink-0 items-center justify-center rounded-tr-[0.625rem] rounded-br-[0.625rem] bg-[#fdda60] px-3 pt-2 pb-[0.4375rem]">
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={loading || !otpCode || otpCode.length !== 6}
+                  className="font-jalnan flex h-[1.5625rem] w-12 flex-shrink-0 items-center justify-center text-xl leading-[140%] text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? '인증 중...' : '입력'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* 버튼들 */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleRequestOtp}
-            disabled={loading || timeLeft > 0}
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? '전송 중...' : '인증번호 재전송'}
-          </button>
-          <button
-            onClick={handleVerifyOtp}
-            disabled={loading || !otpCode || otpCode.length !== 6}
-            className="flex-1 rounded-lg bg-black px-4 py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? '인증 중...' : '인증하기'}
-          </button>
-        </div>
+          {/* 타이머 */}
+          {timeLeft > 0 && (
+            <div className="mb-4 flex justify-center px-6">
+              <span className="font-nanum-square-round-eb text-base font-bold text-red-500">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+          )}
 
-        {/* 안내 메시지 */}
-        <div className="mt-6 rounded-lg bg-blue-50 p-4">
-          <p className="font-['nanumsquare'] text-sm text-blue-700">
-            • 인증번호는 3분 후 만료됩니다.
-            <br />
-            • 인증번호가 오지 않으면 스팸함을 확인해주세요.
-            <br />• 여러 번 시도해도 인증번호가 오지 않으면 재전송을 눌러주세요.
-          </p>
+          {/* 재전송 버튼 */}
+          <div className="flex justify-center px-6">
+            <button
+              onClick={handleRequestOtp}
+              disabled={loading || timeLeft > 0}
+              className="font-nanum-square-round-eb text-base text-[#ffc800] hover:text-[#ffc800]/80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? '전송 중...' : '인증번호 재전송'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

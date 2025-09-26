@@ -1,7 +1,6 @@
 'use client'
 import { apiConfig, endpoints } from '@/api/config'
 import { useUser } from '@/contexts/UserContext'
-import { Heart } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -24,6 +23,10 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: userLoading, error: userError } = useUser()
+  const [selectedCategory, setSelectedCategory] = useState(
+    initialCategory || (type === 'food' ? '한식' : '헤어')
+  )
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   // 사용자 정보 디버깅
   console.log('StoreList 사용자 정보:', {
@@ -72,13 +75,25 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
 
   const categoryFromUrl = searchParams.get('category')
   const [activeCategory, setActiveCategory] = useState(
-    categoryFromUrl || initialCategory || categories[0]
+    categoryFromUrl || initialCategory || (type === 'food' ? '한식' : '헤어')
   )
 
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+
+  // 드롭다운 토글 함수
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen)
+  }
+
+  // 카테고리 선택 함수
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category)
+    setActiveCategory(category)
+    setIsDropdownOpen(false)
+  }
 
   // 찜하기 상태 확인 함수
   const checkFavoriteStatus = async (storeId: number): Promise<boolean> => {
@@ -272,12 +287,14 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     const categoryFromUrl = searchParams.get('category')
     if (categoryFromUrl && categoryFromUrl !== activeCategory) {
       setActiveCategory(categoryFromUrl)
+      setSelectedCategory(categoryFromUrl)
     }
   }, [searchParams, activeCategory])
 
   // 카테고리 변경 시 가게 목록 업데이트
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category)
+    setSelectedCategory(category)
     // URL 파라미터 업데이트
     router.push(`/customer/list?category=${encodeURIComponent(category)}`)
     setCurrentPage(1)
@@ -346,100 +363,75 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   }
 
   return (
-    <div className="w-full">
-      {/* 제목 */}
-      <div className="mb-2 text-center">
-        <h1 className="font-display text-2xl font-bold">
-          {type === 'food' ? 'Food' : 'Life'}
-        </h1>
-        {/* 검/흰 번갈아가는 줄 */}
-        <div className="mt-1 flex justify-center">
-          <div className="relative h-[20px] w-[932px] overflow-hidden md:w-[90vw] md:max-w-[932px]">
-            <div className="absolute top-[10px] left-2.5 h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[47px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[84px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[121px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[158px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[195px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[232px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[269px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[306px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[343px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[380px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[417px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[454px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[491px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[528px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[565px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[602px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[639px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[676px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[713px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[750px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[787px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[824px] h-1 w-[37px] bg-black" />
-            <div className="absolute top-[10px] left-[861px] h-1 w-[37px] border border-black bg-white" />
-            <div className="absolute top-[10px] left-[898px] h-1 w-[37px] bg-black" />
+    <div className="mx-auto h-[795px] w-[23.6875rem]">
+      {/* 검색바 */}
+      <div className="mb-4 flex h-14 w-[22.5rem] max-w-[720px] flex-shrink-0 items-center gap-1 rounded-[28px] bg-[#f6f8fc]">
+        <div className="state-layer flex items-center self-stretch p-1">
+          <div className="content flex items-center gap-2.5 self-stretch px-5 py-0">
+            <span className="font-nanum-square-round-eb text-base text-[#d9d9d9]">
+              가게 검색
+            </span>
+          </div>
+          <div className="absolute top-[0.25rem] right-[0.25rem] flex items-center justify-end">
+            <div className="flex h-12 w-12 items-center justify-center">
+              <div className="flex w-10 flex-shrink-0 flex-col items-center justify-center rounded-full">
+                <div className="flex h-10 items-center justify-center self-stretch">
+                  <svg
+                    width={24}
+                    height={24}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z"
+                      fill="#D9D9D9"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 카테고리 탭들 */}
-      <div className="mt-1 mb-6">
-        <div className="relative">
-          <div className="scrollbar-hide flex justify-start gap-2 overflow-x-auto px-4 md:justify-center md:px-0">
+      {/* 카테고리 드롭다운 */}
+      <div className="relative mb-6">
+        <div className="inline-flex items-center justify-end gap-1.5 rounded-full border-[3px] border-[#fdda60] py-1 pr-1 pl-7">
+          <div className="font-jalnan text-[.9375rem] leading-[140%] text-[#ffc800]">
+            {selectedCategory}
+          </div>
+          <button onClick={toggleDropdown}>
+            <svg
+              width={30}
+              height={30}
+              viewBox="0 0 30 30"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M15 18.75L8.75 12.5H21.25L15 18.75Z" fill="#FFC800" />
+            </svg>
+          </button>
+        </div>
+
+        {/* 드롭다운 메뉴 */}
+        {isDropdownOpen && (
+          <div className="absolute top-full left-0 z-10 mt-2 w-full rounded-lg border border-[#fdda60] bg-white shadow-lg">
             {categories.map(category => (
-              <div
+              <button
                 key={category}
-                className="relative flex h-[46px] w-[93px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden"
-                onClick={() => handleCategoryChange(category)}
+                onClick={() => handleCategorySelect(category)}
+                className="font-nanum-square-round-eb w-full px-4 py-2 text-left text-sm hover:bg-yellow-50"
               >
-                <div className="flex items-center gap-2">
-                  <svg
-                    width={17}
-                    height={17}
-                    viewBox="0 0 17 17"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-[16.51px] w-[16.7px] flex-shrink-0"
-                    preserveAspectRatio="none"
-                  >
-                    <circle
-                      cx="8.69727"
-                      cy="8.51172"
-                      r="7.5"
-                      fill={activeCategory === category ? 'black' : 'white'}
-                      stroke="black"
-                    />
-                    {activeCategory === category && (
-                      <path
-                        d="M5.5 8.5L7.5 10.5L12 6"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-                    {activeCategory !== category && (
-                      <path
-                        d="M11.6973 1.51172C11.6973 1.51172 7.52196 2.41697 5.37247 4.09306C3.12803 5.84319 1.20994 9.90158 1.20994 9.90158"
-                        stroke="black"
-                        strokeLinejoin="round"
-                      />
-                    )}
-                  </svg>
-                  <p className="text-[13.6px] font-bold whitespace-nowrap text-black">
-                    {category}
-                  </p>
-                </div>
-              </div>
+                {category}
+              </button>
             ))}
           </div>
-        </div>
+        )}
       </div>
 
       {/* 가게 목록 */}
-      <div className="space-y-0">
+      <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-gray-500">가게 목록을 불러오는 중...</div>
@@ -456,82 +448,68 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
           </div>
         ) : (
           stores.map((store, index) => (
-            <div key={store.id}>
-              <div className="flex items-center gap-4 bg-white p-4 transition-colors hover:bg-gray-50">
-                {/* 가게 이미지 */}
-                <div
-                  className="h-16 w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded bg-gray-200"
-                  onClick={() => handleStoreClick(store.id)}
-                >
-                  {store.image ? (
-                    <img
-                      src={
-                        Array.isArray(store.image)
-                          ? store.image[0]
-                          : store.image
-                      }
-                      alt={store.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
-                      이미지 없음
-                    </div>
-                  )}
-                </div>
-
-                {/* 가게 정보 */}
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => handleStoreClick(store.id)}
-                >
-                  <h3 className="mb-1 font-medium text-black">{store.name}</h3>
-                  <p className="mb-2 text-sm text-gray-600">{store.location}</p>
-                  <div className="flex items-center gap-1"></div>
-                </div>
-
-                {/* 좋아요 버튼 */}
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    toggleLike(store.id)
-                  }}
-                  className="p-2"
-                >
-                  <Heart
-                    size={20}
-                    fill={store.isLiked ? 'currentColor' : 'none'}
-                    className={`transition-colors ${
-                      store.isLiked
-                        ? 'fill-red-500 text-red-500'
-                        : 'text-gray-400 hover:text-red-500'
-                    }`}
+            <div
+              key={store.id}
+              className="flex h-[4.75rem] w-[23.75rem] flex-shrink-0 items-center rounded-[0.3125rem] bg-[#f8f8f8] p-4"
+            >
+              {/* 가게 이미지 */}
+              <div
+                className="mr-4 h-[3.75rem] w-[3.75rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-full bg-gray-200"
+                onClick={() => handleStoreClick(store.id)}
+              >
+                {store.image ? (
+                  <img
+                    src={
+                      Array.isArray(store.image) ? store.image[0] : store.image
+                    }
+                    alt={store.name}
+                    className="h-full w-full object-cover"
                   />
-                </button>
-              </div>
-              {/* 가게 간 구분선 */}
-              {index < stores.length - 1 && (
-                <div className="flex justify-center py-2">
-                  <div className="flex w-[932px] justify-center md:w-[90vw] md:max-w-[932px]">
-                    <svg
-                      width="932"
-                      height="2"
-                      viewBox="0 0 932 2"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-0.5 w-full"
-                    >
-                      <path
-                        d="M0 1H932"
-                        stroke="black"
-                        strokeWidth="1"
-                        strokeDasharray="10 10"
-                        strokeLinecap="round"
-                      />
-                    </svg>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
+                    이미지 없음
                   </div>
+                )}
+              </div>
+
+              {/* 가게 정보 */}
+              <div
+                className="flex-1 cursor-pointer"
+                onClick={() => handleStoreClick(store.id)}
+              >
+                <div className="font-jalnan mb-1 text-[.9375rem] leading-[140%] text-black">
+                  {store.name}
                 </div>
-              )}
+                <div className="font-nanum-square-round-eb text-xs leading-[140%] font-extrabold text-[#99a1af]">
+                  {store.location}
+                </div>
+              </div>
+
+              {/* 좋아요 버튼 */}
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  toggleLike(store.id)
+                }}
+                className="p-2"
+              >
+                <svg
+                  width={20}
+                  height={20}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M17.3671 3.84172C16.9415 3.41589 16.4361 3.0781 15.8799 2.84763C15.3237 2.61716 14.7275 2.49854 14.1254 2.49854C13.5234 2.49854 12.9272 2.61716 12.371 2.84763C11.8147 3.0781 11.3094 3.41589 10.8838 3.84172L10.0004 4.72506L9.11709 3.84172C8.25735 2.98198 7.09129 2.49898 5.87542 2.49898C4.65956 2.49898 3.4935 2.98198 2.63376 3.84172C1.77401 4.70147 1.29102 5.86753 1.29102 7.08339C1.29102 8.29925 1.77401 9.46531 2.63376 10.3251L10.0004 17.6917L17.3671 10.3251C17.7929 9.89943 18.1307 9.39407 18.3612 8.83785C18.5917 8.28164 18.7103 7.68546 18.7103 7.08339C18.7103 6.48132 18.5917 5.88514 18.3612 5.32893C18.1307 4.77271 17.7929 4.26735 17.3671 3.84172Z"
+                    stroke="#FF6F6F"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill={store.isLiked ? '#FF6F6F' : 'none'}
+                  />
+                </svg>
+              </button>
             </div>
           ))
         )}

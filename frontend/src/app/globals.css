@@ -48,11 +48,30 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Jalnan';
+  src: url('/fonts/Jalnan2TTF.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NanumSquareRoundEB';
+  src: url('/fonts/NanumSquareRoundEB.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
   --font-nanum-square-neo: 'NanumSquareNeo', Arial, Helvetica, sans-serif;
   --font-tenada: 'Tenada', Arial, Helvetica, sans-serif;
+  --font-jalnan: 'Jalnan', Arial, Helvetica, sans-serif;
+  --font-nanum-square-round-eb:
+    'NanumSquareRoundEB', Arial, Helvetica, sans-serif;
 }
 
 @theme inline {
@@ -60,6 +79,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-nanum-square-neo, Arial, Helvetica, sans-serif);
   --font-display: var(--font-tenada, Arial, Helvetica, sans-serif);
+  --font-jalnan: var(--font-jalnan, Arial, Helvetica, sans-serif);
+  --font-nanum-square-round-eb: var(
+    --font-nanum-square-round-eb,
+    Arial,
+    Helvetica,
+    sans-serif
+  );
 
   /* Keeping 색상 토큰 */
   --color-black: #000000;

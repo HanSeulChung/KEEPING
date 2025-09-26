@@ -142,12 +142,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      console.log('🔑 Access Token 발급 시도...')
-      const accessToken = await initializeAuth()
-      console.log(
-        '✅ Access Token 발급 완료:',
-        accessToken ? '토큰 있음' : '토큰 없음'
-      )
+      // 먼저 localStorage에서 accessToken 확인
+      let accessToken = null
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken')
+        console.log(
+          '🔍 localStorage에서 accessToken 확인:',
+          accessToken ? '토큰 있음' : '토큰 없음'
+        )
+      }
+
+      // accessToken이 없으면 refresh 시도
+      if (!accessToken) {
+        console.log('🔑 Access Token 발급 시도...')
+        try {
+          accessToken = await initializeAuth()
+          console.log(
+            '✅ Access Token 발급 완료:',
+            accessToken ? '토큰 있음' : '토큰 없음'
+          )
+        } catch (refreshError) {
+          console.log('⚠️ Refresh 실패, 로그인되지 않은 상태로 처리')
+          setUser(null)
+          setLoading(false)
+          return
+        }
+      } else {
+        console.log('✅ 기존 Access Token 사용')
+      }
 
       console.log('👤 사용자 정보 조회 시도...')
       const userData = await getCurrentUser(accessToken)
@@ -160,16 +182,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (err instanceof Error) {
         if (err.name === 'TimeoutError') {
           setError('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.')
-        } else if (err.message.includes('Token refresh failed')) {
-          setError('인증이 만료되었습니다. 다시 로그인해주세요.')
+        } else if (
+          err.message.includes('Token refresh failed') ||
+          err.message.includes('Invalid access token')
+        ) {
+          // 토큰 관련 에러는 로그인되지 않은 상태로 처리
+          console.log('⚠️ 토큰 에러, 로그인되지 않은 상태로 처리')
+          setUser(null)
+          setError(null) // 에러 메시지 제거
         } else {
           setError('인증에 실패했습니다.')
         }
       } else {
         setError('알 수 없는 오류가 발생했습니다.')
       }
-
-      // 리다이렉트 로직 완전 제거
     } finally {
       setLoading(false)
       console.log('🏁 사용자 정보 로딩 완료')

@@ -1,8 +1,7 @@
 //API 호출을 위한 클라이언트 사이드 설정
 //브라우저에서 서버로 API 요청할 때 사용
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
@@ -23,7 +22,7 @@ export const replaceQRDomain = (qrUri: string): string => {
   try {
     const url = new URL(qrUri)
     const currentBaseURL = apiConfig.baseURL.replace(/\/$/, '')
-    
+
     // 기존 도메인을 현재 환경의 baseURL로 교체
     return qrUri.replace(url.origin, currentBaseURL)
   } catch (error) {
