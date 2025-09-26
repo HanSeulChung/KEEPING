@@ -210,8 +210,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         return
       }
 
-      // BASE URL: 어떤 형태든 마지막 /와 /api를 제거한 뒤, 항상 /api 경로를 붙인다
-      const rawBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+      // BASE URL: apiConfig에서 가져온 baseURL 사용
+      const rawBase = apiConfig.baseURL
       const base = rawBase.replace(/\/$/, '')
       const baseWithoutApi = base.replace(/\/api\/?$/, '')
 
