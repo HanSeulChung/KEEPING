@@ -72,6 +72,8 @@ export default function ChargeBonusManagement({
           : []
 
         console.log('최종 처리된 데이터:', validData)
+        console.log('수정 전 데이터 개수:', chargeBonusData.length)
+        console.log('수정 후 데이터 개수:', validData.length)
         setChargeBonusData(validData)
       } else {
         console.error('충전 보너스 조회 실패:', response.data.message)
@@ -129,7 +131,10 @@ export default function ChargeBonusManagement({
   }) => {
     try {
       if (editingChargeBonus && editingChargeBonus.id) {
-        // 수정
+        // 수정 - expectedTotalPoints는 백엔드에서 계산됨
+        console.log('충전 보너스 수정 요청 데이터:', data)
+        console.log('수정할 충전 보너스 ID:', editingChargeBonus.id)
+        console.log('스토어 ID:', storeId)
         const response = await updateChargeBonus(
           parseInt(storeId),
           Number(editingChargeBonus.id),
@@ -137,14 +142,18 @@ export default function ChargeBonusManagement({
         )
 
         if (response.success) {
+          console.log('충전 보너스 수정 성공:', response)
           alert('충전 보너스가 수정되었습니다.')
           setShowChargeBonusModal(false)
           setEditingChargeBonus(null)
           fetchChargeBonusData()
         } else {
+          console.error('충전 보너스 수정 실패:', response)
           alert(`수정 실패: ${response.message}`)
         }
       } else {
+        // 추가 - expectedTotalPoints는 백엔드에서 계산됨
+        console.log('충전 보너스 추가 요청 데이터:', data)
         const response = await apiClient.post(
           `/owners/stores/${storeId}/charge-bonus`,
           data

@@ -251,23 +251,31 @@ export const updateChargeBonus = async (
   data: { chargeAmount: number; bonusPercentage: number }
 ): Promise<ApiResponse<any>> => {
   try {
-    const response = await fetch(
-      `${apiConfig.baseURL}/owners/stores/${storeId}/charge-bonus/${chargeBonusId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(data),
-      }
-    )
+    const url = `${apiConfig.baseURL}/owners/stores/${storeId}/charge-bonus/${chargeBonusId}`
+    console.log('충전 보너스 수정 API URL:', url)
+    console.log('충전 보너스 수정 요청 데이터:', data)
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
+      body: JSON.stringify(data),
+    })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('충전 보너스 수정 API 오류:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      })
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
     }
 
     const result = await response.json()
+    console.log('충전 보너스 수정 응답:', result)
     return {
       success: true,
       data: result.data,
