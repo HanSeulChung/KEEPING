@@ -65,10 +65,9 @@ public class CancelController {
      * @param cancelRequestDto 취소 요청 정보 (transactionUniqueNo, cardNo, cvc)
      * @return 취소 처리 결과
      */
-    @PostMapping("/payments/cancel/{customerId}")
+    @PostMapping("/payments/cancel")
     public ResponseEntity<ApiResponse<CancelResponseDto>> cancelPayment(
-//            @AuthenticationPrincipal Long customerId,
-            @PathVariable Long customerId,
+            @AuthenticationPrincipal Long customerId,
             @RequestBody @Valid CancelRequestDto cancelRequestDto) {
         
         log.info("카드 결제 취소 요청 - 거래번호: {}, 카드번호: {}", 
