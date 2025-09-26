@@ -52,9 +52,9 @@ public class RoleAwareAuthorizationRequestResolver implements OAuth2Authorizatio
             redis.opsForValue().set(key, role, Duration.ofMinutes(5));
             System.out.println("[OAUTH] save role=" + role + " state=" + base.getState());
             
-            // 추가 파라미터로 prompt=consent 추가 (항상 동의 화면 표시)
+            // prompt=login 항상 새로 로그인
             Map<String, Object> additionalParameters = new HashMap<>(base.getAdditionalParameters());
-            additionalParameters.put("prompt", "consent");
+            additionalParameters.put("prompt", "login");
             
             return OAuth2AuthorizationRequest.from(base)
                     .additionalParameters(additionalParameters)
