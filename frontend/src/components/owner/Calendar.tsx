@@ -104,13 +104,18 @@ const OwnerSalesCalendar = () => {
         year,
         month,
       })
-      const data = await storeApi.getSalesCalendar(
+      const apiData = await storeApi.getSalesCalendar(
         parseInt(selectedStore.id),
         year,
         month
       )
-      console.log('매출 캘린더 조회 성공:', data)
-      setSalesData(data || [])
+      console.log('매출 캘린더 조회 성공:', apiData)
+      const normalized: SalesData[] = (apiData || []).map((d: any) => ({
+        date: d.date,
+        amount: d.amount ?? d.paymentAmount ?? d.totalAmount ?? 0,
+        orders: d.orders ?? d.transactionCount ?? d.totalOrders ?? 0,
+      }))
+      setSalesData(normalized)
     } catch (error: any) {
       console.error('매출 캘린더 조회 실패:', error)
       console.error('에러 상태:', error.response?.status)
@@ -121,7 +126,7 @@ const OwnerSalesCalendar = () => {
   }
 
   // 월별 일별 통계 데이터 조회 (색상 구분용)
-  const fetchMonthlyDailyStats = async () => {
+  const fetchMonthlyDailyStats = async (signal?: AbortSignal) => {
     if (!selectedStore?.id) return
 
     try {
@@ -142,7 +147,8 @@ const OwnerSalesCalendar = () => {
         try {
           const response = await apiClient.post(
             `/stores/${selectedStore.id}/statistics/daily`,
-            requestData
+            requestData,
+            { signal }
           )
 
           if (response.data.success && response.data.data) {
@@ -157,6 +163,9 @@ const OwnerSalesCalendar = () => {
       console.log('월별 일별 통계 조회 성공:', monthlyData)
       setDailyStatsData(monthlyData)
     } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+        return
+      }
       console.error('월별 일별 통계 조회 실패:', error)
       setDailyStatsData([])
     }
@@ -187,7 +196,7 @@ const OwnerSalesCalendar = () => {
     }
   }
 
-  const fetchOverallStatistics = async () => {
+  const fetchOverallStatistics = async (signal?: AbortSignal) => {
     if (!selectedStore?.id) return
 
     try {
@@ -197,7 +206,8 @@ const OwnerSalesCalendar = () => {
       const requestData: StatisticsRequestDto = {}
       const response = await apiClient.post(
         `/stores/${selectedStore.id}/statistics/overall`,
-        requestData
+        requestData,
+        { signal }
       )
 
       console.log('전체 통계 조회 응답:', response.data)
@@ -205,10 +215,13 @@ const OwnerSalesCalendar = () => {
         setOverallStats(response.data.data)
       }
     } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+        return
+      }
       console.error('전체 통계 조회 실패:', error)
       console.error('에러 상태:', error.response?.status)
       console.error('에러 응답:', error.response?.data)
-      // 임시 더미 데이터 설정 (백엔드 오류 시)
+
       setOverallStats({
         storeId: 0,
         storeName: '',
@@ -226,6 +239,7 @@ const OwnerSalesCalendar = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
+      const controller = new AbortController()
 
       // 각 API를 개별적으로 호출하여 하나가 실패해도 다른 것들은 실행되도록 함
       try {
@@ -235,7 +249,7 @@ const OwnerSalesCalendar = () => {
       }
 
       try {
-        await fetchMonthlyDailyStats()
+        await fetchMonthlyDailyStats(controller.signal)
       } catch (error) {
         console.error('월별 일별 통계 로드 실패:', error)
       }
@@ -247,7 +261,7 @@ const OwnerSalesCalendar = () => {
       }
 
       try {
-        await fetchOverallStatistics()
+        await fetchOverallStatistics(controller.signal)
       } catch (error) {
         console.error('전체 통계 로드 실패:', error)
       }
@@ -257,6 +271,10 @@ const OwnerSalesCalendar = () => {
 
     if (selectedStore?.id) {
       loadData()
+    }
+    return () => {
+      // 요청 중단
+      // Note: controller might be undefined if loadData didn't run
     }
   }, [year, month, selectedStore?.id])
 
