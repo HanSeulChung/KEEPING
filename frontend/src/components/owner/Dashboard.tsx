@@ -143,12 +143,12 @@ export default function OwnerHome() {
     }
   }, [stores.length, loading])
 
-  // 사용자 정보가 있을 때 알림 개수 가져오기
+  // 사용자 정보가 있을 때 알림 개수 가져오기 (한 번만 실행)
   useEffect(() => {
     if (user && (user.ownerId || user.id)) {
       fetchUnreadCount()
     }
-  }, [user])
+  }, [user?.ownerId, user?.userId, user?.id])
 
   // 선택된 가게가 변경될 때 통계 데이터 가져오기
   useEffect(() => {
