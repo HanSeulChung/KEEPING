@@ -34,12 +34,12 @@ const StoreRegistration = () => {
   const formatBusinessNumber = (businessNumber: string): string => {
     // 숫자만 추출
     const numbers = businessNumber.replace(/\D/g, '')
-    
+
     // 10자리인 경우 XXX-XX-XXXXX 형식으로 변환
     if (numbers.length === 10) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`
     }
-    
+
     // 이미 형식이 맞는 경우 그대로 반환
     return businessNumber
   }
@@ -87,15 +87,15 @@ const StoreRegistration = () => {
     }
 
     setUploadedFile(file)
-    
+
     // 이미지 업로드 시 에러 상태 초기화
     if (errors.image) {
       setErrors(prev => ({ ...prev, image: false }))
     }
-    
+
     // 미리보기 URL 생성
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = e => {
       setPreviewUrl(e.target?.result as string)
     }
     reader.readAsDataURL(file)
@@ -123,7 +123,7 @@ const StoreRegistration = () => {
 
       // 1. 회원가입 완료 API 호출
       const signupData = {
-        regSessionId: regSessionId
+        regSessionId: regSessionId,
       }
 
       const signupResult = await authApi.completeOwnerSignup(signupData)
@@ -151,7 +151,7 @@ const StoreRegistration = () => {
       console.log('토큰 재발급 요청 시작')
       const refreshResult = await authApi.refreshToken()
       console.log('토큰 재발급 성공:', refreshResult)
-      
+
       if (!refreshResult.accessToken) {
         console.error('토큰 재발급 실패!')
         alert('토큰 갱신에 실패했습니다. 다시 시도해주세요.')
@@ -164,20 +164,22 @@ const StoreRegistration = () => {
 
       // 2. 사업자 정보 가져오기 (context에서)
       const businessInfo = registrationData.businessInfo
-      
+
       // 3. 매장 등록 API 호출 (multipart/form-data)
       const storeFormData = new FormData()
-      
+
       console.log('🔍 매장 등록 FormData 구성 시작')
       console.log('📋 ownerId:', ownerId, '타입:', typeof ownerId)
-      
+
       // ownerId 추가
       storeFormData.append('ownerId', ownerId.toString())
       console.log('✅ ownerId 추가됨:', ownerId.toString())
-      
+
       // 사업자 번호를 taxIdNumber로 추가 (XXX-XX-XXXXX 형식으로 변환)
       if (businessInfo?.businessNumber) {
-        const formattedBusinessNumber = formatBusinessNumber(businessInfo.businessNumber)
+        const formattedBusinessNumber = formatBusinessNumber(
+          businessInfo.businessNumber
+        )
         storeFormData.append('taxIdNumber', formattedBusinessNumber)
         console.log('✅ taxIdNumber 추가됨:', formattedBusinessNumber)
       } else {
@@ -185,7 +187,7 @@ const StoreRegistration = () => {
         router.push('/owner/register/step2')
         return
       }
-      
+
       // StoreRequestDto에 맞게 필드 추가
       storeFormData.append('storeName', formData.storeName)
       storeFormData.append('address', formData.address)
@@ -193,24 +195,29 @@ const StoreRegistration = () => {
       storeFormData.append('bankAccount', formData.bankAccount)
       storeFormData.append('category', formData.category)
       storeFormData.append('description', formData.description)
-      
+
       console.log('✅ 기본 필드들 추가됨:', {
         storeName: formData.storeName,
         address: formData.address,
         phoneNumber: formData.phoneNumber,
         bankAccount: formData.bankAccount,
         category: formData.category,
-        description: formData.description
+        description: formData.description,
       })
 
       // 이미지 파일 추가
       if (uploadedFile) {
         storeFormData.append('imgFile', uploadedFile)
-        console.log('✅ 이미지 파일 추가됨:', uploadedFile.name, '크기:', uploadedFile.size)
+        console.log(
+          '✅ 이미지 파일 추가됨:',
+          uploadedFile.name,
+          '크기:',
+          uploadedFile.size
+        )
       } else {
         console.log('⚠️ 이미지 파일 없음')
       }
-      
+
       // FormData 내용 확인
       console.log('📦 FormData 내용 확인:')
       for (const [key, value] of storeFormData.entries()) {
@@ -226,16 +233,19 @@ const StoreRegistration = () => {
         bankAccount: formData.bankAccount,
         category: formData.category,
         description: formData.description,
-        hasImage: !!uploadedFile
+        hasImage: !!uploadedFile,
       })
 
       const apiUrl = `${apiConfig.baseURL}${endpoints.stores.register}`
       console.log('🚀 API 요청 시작')
       console.log('📍 요청 URL:', apiUrl)
-      console.log('🔑 Authorization 헤더:', `Bearer ${refreshResult.accessToken}`)
+      console.log(
+        '🔑 Authorization 헤더:',
+        `Bearer ${refreshResult.accessToken}`
+      )
       console.log('📋 요청 메서드: POST')
       console.log('📦 요청 바디 타입: FormData')
-      
+
       const storeResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -243,10 +253,17 @@ const StoreRegistration = () => {
         },
         body: storeFormData,
       })
-      
+
       console.log('📡 API 응답 받음')
-      console.log('📊 응답 상태:', storeResponse.status, storeResponse.statusText)
-      console.log('📋 응답 헤더:', Object.fromEntries(storeResponse.headers.entries()))
+      console.log(
+        '📊 응답 상태:',
+        storeResponse.status,
+        storeResponse.statusText
+      )
+      console.log(
+        '📋 응답 헤더:',
+        Object.fromEntries(storeResponse.headers.entries())
+      )
 
       if (!storeResponse.ok) {
         const errorText = await storeResponse.text()
@@ -256,7 +273,7 @@ const StoreRegistration = () => {
 
       const storeResult = await storeResponse.json()
       console.log('매장 등록 성공:', storeResult)
-      
+
       alert('회원가입 및 매장 등록이 완료되었습니다!')
       router.push('/owner/dashboard')
     } catch (error) {
@@ -315,7 +332,9 @@ const StoreRegistration = () => {
             placeholder="가게에 대한 간단한 설명을 입력해주세요"
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-500">가게 설명을 입력해주세요</p>
+            <p className="mt-1 text-sm text-red-500">
+              가게 설명을 입력해주세요
+            </p>
           )}
         </div>
 
@@ -377,7 +396,9 @@ const StoreRegistration = () => {
             placeholder="매장 주소를 입력해주세요"
           />
           {errors.address && (
-            <p className="mt-1 text-sm text-red-500">매장 주소를 입력해주세요</p>
+            <p className="mt-1 text-sm text-red-500">
+              매장 주소를 입력해주세요
+            </p>
           )}
         </div>
 
@@ -398,7 +419,9 @@ const StoreRegistration = () => {
             placeholder="매장 전화번호를 입력해주세요"
           />
           {errors.phoneNumber && (
-            <p className="mt-1 text-sm text-red-500">매장 전화번호를 입력해주세요</p>
+            <p className="mt-1 text-sm text-red-500">
+              매장 전화번호를 입력해주세요
+            </p>
           )}
         </div>
 
@@ -419,10 +442,11 @@ const StoreRegistration = () => {
             placeholder="정산 계좌를 입력해주세요"
           />
           {errors.bankAccount && (
-            <p className="mt-1 text-sm text-red-500">정산 계좌를 입력해주세요</p>
+            <p className="mt-1 text-sm text-red-500">
+              정산 계좌를 입력해주세요
+            </p>
           )}
         </div>
-
 
         {/* 이미지 업로드 */}
         <div>
@@ -441,7 +465,9 @@ const StoreRegistration = () => {
               } focus:outline-none`}
             />
             {errors.image && (
-              <p className="mt-1 text-sm text-red-500">가게 이미지를 업로드해주세요</p>
+              <p className="mt-1 text-sm text-red-500">
+                가게 이미지를 업로드해주세요
+              </p>
             )}
             {previewUrl && (
               <div className="mt-4">

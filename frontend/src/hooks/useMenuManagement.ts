@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { 
-  MenuResponseDto, 
-  MenuRequestDto, 
+import {
   MenuEditRequestDto,
-  getAllMenus, 
-  createMenu, 
-  editMenu, 
-  deleteMenu, 
-  deleteAllMenus 
+  MenuRequestDto,
+  MenuResponseDto,
+  createMenu,
+  deleteAllMenus,
+  deleteMenu,
+  editMenu,
+  getAllMenus
 } from '@/api/menuApi'
+import { useCallback, useState } from 'react'
 
 interface UseMenuManagementReturn {
   menus: MenuResponseDto[]
@@ -66,9 +66,10 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
         setError(response.message || '메뉴 생성에 실패했습니다.')
         return false
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('메뉴 생성 오류:', err)
-      setError('메뉴 생성 중 오류가 발생했습니다.')
+      const errorMessage = err.message || '메뉴 생성 중 오류가 발생했습니다.'
+      setError(errorMessage)
       return false
     } finally {
       setLoading(false)
@@ -91,7 +92,7 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
         // 수정된 메뉴로 목록 업데이트
         setMenus(prev => 
           prev.map(menu => 
-            menu.id === menuId ? response.data : menu
+            menu.menuId === menuId ? response.data : menu
           )
         )
         return true
@@ -118,7 +119,7 @@ export const useMenuManagement = (): UseMenuManagementReturn => {
       
       if (response.success) {
         // 삭제된 메뉴를 목록에서 제거
-        setMenus(prev => prev.filter(menu => menu.id !== menuId))
+        setMenus(prev => prev.filter(menu => menu.menuId !== menuId))
         return true
       } else {
         setError(response.message || '메뉴 삭제에 실패했습니다.')

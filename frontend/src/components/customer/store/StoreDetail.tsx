@@ -1,7 +1,7 @@
 'use client'
 
 import { apiConfig, buildURL } from '@/api/config'
-import { useUser } from '@/contexts/UserContext'
+import { useAuthStore } from '@/store/useAuthStore'
 import { Heart } from 'lucide-react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
@@ -128,7 +128,7 @@ export const StoreDetailPage = () => {
   const params = useParams()
   const storeId = params.id as string
 
-  const { user, loading: userLoading, error: userError } = useUser()
+  const { user, loading: userLoading, error: userError } = useAuthStore()
   console.log('StoreDetail - useUser 상태:', {
     user,
     loading: userLoading,

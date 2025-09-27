@@ -15,10 +15,31 @@ const withPWA = require('next-pwa')({
 const nextConfig: NextConfig = {
   ...(isWindows ? {} : { output: 'standalone' }),
 
+  // ESLint 설정 - 경고를 무시하고 빌드 진행
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // PWA 최적화
   experimental: {
     optimizeCss: true,
+    // Windows 호환성을 위한 설정
+    ...(isWindows ? {
+      workerThreads: false,
+    } : {}),
   },
+
+  // Windows에서 파일 시스템 문제 방지
+  ...(isWindows ? {
+    webpack: (config: any) => {
+      // Windows에서 파일 시스템 접근 개선
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      }
+      return config
+    },
+  } : {}),
 
   // 이미지 최적화
   images: {

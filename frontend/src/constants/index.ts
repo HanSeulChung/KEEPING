@@ -4,7 +4,7 @@
  * API 관련 상수
  */
 export const API = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL,
   TIMEOUT: 10000,
 } as const
 

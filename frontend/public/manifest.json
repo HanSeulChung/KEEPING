@@ -16,21 +16,17 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/qr.png", 
+      "src": "/icons/logo_owner+cust.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/qr.png",
-      "sizes": "512x512", 
+      "src": "/icons/logo_owner+cust1.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ],
-  "categories": [
-    "business",
-    "finance",
-    "food"
-  ],
+  "categories": ["business", "finance", "food"],
   "lang": "ko",
   "dir": "ltr",
   "shortcuts": [
@@ -41,7 +37,7 @@
       "url": "/owner/dashboard",
       "icons": [
         {
-          "src": "/icons/main_owner.svg",
+          "src": "/icons/logo_owner+cust.png",
           "sizes": "any",
           "type": "image/svg+xml"
         }
@@ -49,7 +45,7 @@
     },
     {
       "name": "QR 스캔",
-      "short_name": "QR 스캔", 
+      "short_name": "QR 스캔",
       "description": "고객 QR 코드 스캔",
       "url": "/owner/scan",
       "icons": [
@@ -64,7 +60,7 @@
       "name": "알림",
       "short_name": "알림",
       "description": "실시간 알림 확인",
-      "url": "/owner/notification", 
+      "url": "/owner/notification",
       "icons": [
         {
           "src": "/icons/bell.svg",
