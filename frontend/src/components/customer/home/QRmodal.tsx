@@ -1,5 +1,6 @@
 import apiClient from '@/api/axios'
 import QRCode from 'qrcode'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 const XIcon = ({ size = 20, className = '' }) => (
@@ -34,6 +35,7 @@ const QRModal = ({
   isOpen = false,
   onClose,
 }: QRModalProps) => {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('결제')
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
@@ -177,9 +179,12 @@ const QRModal = ({
         {/* 하단 텍스트 */}
         <div className="text-center">
           <div className="mb-2 h-px bg-gray-400"></div>
-          <p className="font-display text-sm font-medium text-gray-800">
+          <button
+            onClick={() => router.push('/customer/home')}
+            className="font-display text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors cursor-pointer"
+          >
             KEEPING
-          </p>
+          </button>
         </div>
       </div>
     </div>

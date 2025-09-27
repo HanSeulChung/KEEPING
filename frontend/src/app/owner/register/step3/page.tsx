@@ -1,7 +1,7 @@
 'use client'
 
 import { authApi } from '@/api/authApi'
-import { apiConfig, endpoints } from '@/api/config'
+import { apiConfig, buildURL, endpoints } from '@/api/config'
 import { useRegistration } from '@/contexts/RegistrationContext'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
@@ -106,9 +106,25 @@ const StoreRegistration = () => {
 
     setIsSubmitting(true)
     try {
-      // 세션에서 regSessionId 가져오기
-      const sessionInfo = await authApi.getSessionInfo()
-      const regSessionId = sessionInfo.data
+      // 회원가입 단계에서는 백엔드 세션 정보 엔드포인트 직접 호출
+      const response = await fetch(buildURL('/auth/session-info'), {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      let regSessionId = null
+      if (response.ok) {
+        const data = await response.json()
+        regSessionId = data?.data?.regSessionId ?? data?.data ?? null
+      } else if (response.status === 400 || response.status === 401) {
+        console.log('회원가입 단계: 세션 인증 정보 없음 (정상)')
+      } else {
+        console.error(
+          '세션 정보 조회 실패:',
+          response.status,
+          response.statusText
+        )
+      }
 
       console.log('회원가입에 사용할 regSessionId (세션에서):', regSessionId)
 

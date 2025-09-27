@@ -17,6 +17,7 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
   const [sessionRegSessionId, setSessionRegSessionId] = useState<string | null>(
     null
   )
+  const [isSessionInfoLoaded, setIsSessionInfoLoaded] = useState(false)
   const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
@@ -26,40 +27,32 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
   })
 
   useEffect(() => {
-    // 세션에서 regSessionId 가져오기
-    const fetchSessionInfo = async () => {
+    // 이미 로드되었거나 로딩 중이면 중복 실행 방지
+    if (isSessionInfoLoaded) return
+
+    // 쿠키에서 regSessionId 확인
+    const checkRegSessionId = () => {
       try {
-        // Authorization 헤더 추가
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        }
+        const regSessionId = document.cookie
+          .split(';')
+          .find(row => row.trim().startsWith('regSessionId='))
+          ?.split('=')[1]
 
-        if (typeof window !== 'undefined') {
-          const accessToken = localStorage.getItem('accessToken')
-          if (accessToken) {
-            headers.Authorization = `Bearer ${accessToken}`
-          }
-        }
-
-        const response = await fetch(buildURL('/auth/session-info'), {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        })
-        const data = await response.json()
-        if (data.success && data.data) {
-          setSessionRegSessionId(data.data as string)
-          console.log('세션에서 가져온 regSessionId:', data.data)
+        if (regSessionId) {
+          setSessionRegSessionId(regSessionId)
+          console.log('쿠키에서 가져온 regSessionId:', regSessionId)
         } else {
-          console.log('세션 정보를 가져올 수 없습니다.')
+          console.log('regSessionId 쿠키가 없습니다.')
         }
       } catch (error) {
-        console.error('세션 정보 조회 실패:', error)
+        console.error('쿠키 확인 실패:', error)
+      } finally {
+        setIsSessionInfoLoaded(true)
       }
     }
 
-    fetchSessionInfo()
-  }, [])
+    checkRegSessionId()
+  }, [isSessionInfoLoaded])
 
   const handlePassAuth = () => {
     // 전화번호가 입력되어 있는지 확인
@@ -67,7 +60,14 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
       alert('전화번호를 먼저 입력해주세요.')
       return
     }
-    if (!sessionRegSessionId) {
+
+    // 쿠키에서 regSessionId 확인
+    const regSessionId = document.cookie
+      .split(';')
+      .find(row => row.trim().startsWith('regSessionId='))
+      ?.split('=')[1]
+
+    if (!regSessionId) {
       alert('세션 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
       return
     }
@@ -219,11 +219,7 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={
-          authForm.birthDate && authForm.birthDate.length === 6
-            ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
-            : authForm.birthDate
-        }
+        birth={authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="CUSTOMER"
         onSuccess={handleOtpSuccess}

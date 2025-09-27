@@ -10,10 +10,10 @@
 
 'use client'
 
-import { useState } from 'react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { useIdempotentButton } from '@/hooks/useIdempotentRequest'
 import { paymentApi } from '@/api/idempotentClient'
+import { useIdempotentButton } from '@/hooks/useIdempotentRequest'
+import { useAuthStore } from '@/store/useAuthStore'
+import { useState } from 'react'
 
 interface PaymentButtonProps {
   storeId: number
@@ -28,7 +28,7 @@ export const IdempotentPaymentButton = ({
   amount,
   description = '선결제',
   onSuccess,
-  onError
+  onError,
 }: PaymentButtonProps) => {
   const { user } = useAuthStore()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -47,7 +47,7 @@ export const IdempotentPaymentButton = ({
           userId: user.userId,
           storeId,
           amount,
-          description
+          description,
         })
 
         console.log('결제 성공:', result)
@@ -72,14 +72,14 @@ export const IdempotentPaymentButton = ({
       errorMessage: '결제 처리 중 오류가 발생했습니다.',
 
       // 콜백
-      onSuccess: (result) => {
+      onSuccess: result => {
         console.log('결제 완료:', result)
         onSuccess?.(result)
       },
-      onError: (error) => {
+      onError: error => {
         console.error('결제 실패:', error)
         onError?.(error)
-      }
+      },
     }
   )
 
@@ -101,7 +101,7 @@ export const IdempotentPaymentButton = ({
     <div className="space-y-4">
       {/* 결제 정보 표시 */}
       <div className="rounded-lg bg-gray-50 p-4">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <span className="text-gray-700">결제 금액</span>
           <span className="text-xl font-bold">{amount.toLocaleString()}원</span>
         </div>
@@ -151,7 +151,7 @@ export const IdempotentPaymentButton = ({
 
       {/* 확인 다이얼로그 */}
       {payment.showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
           <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6">
             <h3 className="mb-4 text-lg font-bold">결제 확인</h3>
             <p className="mb-6 text-gray-600">
@@ -201,7 +201,7 @@ export const IdempotentQrProcessor = ({
   storeId,
   qrData,
   scanType,
-  onSuccess
+  onSuccess,
 }: QrProcessorProps) => {
   const { user } = useAuthStore()
 
@@ -217,14 +217,14 @@ export const IdempotentQrProcessor = ({
         userId: user.userId,
         storeId,
         qrData,
-        scanType
+        scanType,
       })
     },
     {
       userId: user?.userId,
       storeId,
       action: `qr_process_${scanType}`,
-      data: { qrData },
+      // data 필드는 지원되지 않음. 필요한 경우 buttonAction 인자로 전달하세요.
 
       skipIfPending: true,
       retryOnError: true,
@@ -232,10 +232,10 @@ export const IdempotentQrProcessor = ({
       successMessage: 'QR 코드 처리가 완료되었습니다!',
       errorMessage: 'QR 코드 처리 중 오류가 발생했습니다.',
 
-      onSuccess: (result) => {
+      onSuccess: result => {
         console.log('QR 처리 성공:', result)
         onSuccess?.(result)
-      }
+      },
     }
   )
 
@@ -263,12 +263,12 @@ export const IdempotentQrProcessor = ({
         disabled={qrProcessor.disabled}
         className={`w-full rounded-lg px-6 py-3 text-white transition-colors ${
           qrProcessor.isSuccess
-            ? 'bg-green-600 cursor-not-allowed'
+            ? 'cursor-not-allowed bg-green-600'
             : qrProcessor.isError && qrProcessor.canRetry
-            ? 'bg-red-600 hover:bg-red-700'
-            : qrProcessor.disabled
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700'
+              ? 'bg-red-600 hover:bg-red-700'
+              : qrProcessor.disabled
+                ? 'cursor-not-allowed bg-gray-400'
+                : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
         {qrProcessor.getButtonText('QR 코드 처리', 'QR 처리 중...')}

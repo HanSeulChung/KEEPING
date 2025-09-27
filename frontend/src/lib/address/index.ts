@@ -3,7 +3,10 @@
 // 타입 정의
 import type {
   AddressData,
-  AddressValidation
+  AddressFormProps,
+  AddressSearchOptions,
+  AddressValidation,
+  DaumPostcodeData,
 } from '@/types/address'
 
 export type {
@@ -11,19 +14,19 @@ export type {
   AddressFormProps,
   AddressSearchOptions,
   AddressValidation,
-  DaumPostcodeData
-} from '@/types/address'
+  DaumPostcodeData,
+}
 
 // 훅
 export {
   useAddressSearch,
-  useEmbeddedAddressSearch
+  useEmbeddedAddressSearch,
 } from '@/hooks/useAddressSearch'
 
 // 컴포넌트
 export {
   AddressDisplay,
-  default as AddressInput
+  default as AddressInput,
 } from '@/components/common/AddressInput'
 
 // 유틸리티 함수들
@@ -35,7 +38,7 @@ export {
   formatAddress,
   normalizeAddress,
   parseAddressString,
-  validateAddress
+  validateAddress,
 } from '@/lib/addressUtils'
 
 // 기본 주소 데이터 생성자

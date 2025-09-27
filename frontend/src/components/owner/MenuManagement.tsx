@@ -59,20 +59,20 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
   const handleDeleteMenu = async (menuId: number, menuName: string) => {
     const confirmMessage = `'${menuName}' 메뉴를 삭제하시겠습니까?`
 
-    if (confirm(confirmMessage)) {
-      try {
-        const response = await deleteMenu(parseInt(storeId), menuId)
+    if (!confirm(confirmMessage)) return
 
-        if (response.success) {
-          alert('메뉴가 삭제되었습니다.')
-          fetchMenus(parseInt(storeId)) // 메뉴 목록 새로고침
-        } else {
-          alert(`메뉴 삭제 실패: ${response.message}`)
-        }
-      } catch (error: any) {
-        console.error('메뉴 삭제 실패:', error)
-        alert('메뉴 삭제 중 오류가 발생했습니다.')
+    try {
+      const response = await deleteMenu(parseInt(storeId), menuId)
+
+      if (response.success) {
+        alert('메뉴가 삭제되었습니다.')
+        fetchMenus(parseInt(storeId))
+      } else {
+        alert(`메뉴 삭제 실패: ${response.message}`)
       }
+    } catch (error: any) {
+      console.error('메뉴 삭제 실패:', error)
+      alert('메뉴 삭제 중 오류가 발생했습니다.')
     }
   }
 
@@ -192,7 +192,11 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
     // 파일 크기 검증 (1MB = 1048576 bytes)
     const maxFileSize = 1048576 // 1MB
     if (file.size > maxFileSize) {
-      alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+      alert(
+        '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+          (file.size / 1024 / 1024).toFixed(2) +
+          'MB'
+      )
       // OCR 이미지 상태 초기화
       setOcrImage(null)
       return
@@ -249,7 +253,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
   // 수동 메뉴 추가
   const handleManualSubmit = async () => {
     console.log('수동 메뉴 추가 시작:', { manualMenu, storeId })
-    
+
     if (!manualMenu.name || !manualMenu.name.trim() || !manualMenu.categoryId) {
       alert('메뉴명과 카테고리는 필수입니다.')
       return
@@ -271,7 +275,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
         description: manualMenu.description || '',
         storeId: parseInt(storeId),
       }
-      
+
       console.log('전송할 메뉴 데이터:', menuData)
       console.log('menuName 길이:', menuData.menuName.length)
       console.log('menuName 값:', `"${menuData.menuName}"`)
@@ -353,21 +357,8 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
     }
   }
 
-  const handleRemoveMenu = async (id: number) => {
-    if (!storeId) {
-      alert('매장 정보가 없습니다.')
-      return
-    }
-
-    if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
-      const success = await removeMenu(parseInt(storeId), id)
-      if (success) {
-        alert('메뉴가 삭제되었습니다.')
-      } else {
-        alert('메뉴 삭제에 실패했습니다.')
-      }
-    }
-  }
+  // handleRemoveMenu는 handleDeleteMenu와 동일한 기능이므로 중복 제거
+  const handleRemoveMenu = handleDeleteMenu
 
   const handleEditMenu = (id: number) => {
     // 메뉴 수정 기능은 추후 구현
@@ -444,7 +435,7 @@ export default function MenuManagement({ storeId }: MenuManagementProps) {
                     수정
                   </button>
                   <button
-                    onClick={() => handleRemoveMenu(item.menuId)}
+                    onClick={() => handleRemoveMenu(item.menuId, item.menuName)}
                     className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                   >
                     삭제

@@ -141,10 +141,10 @@ const NotificationPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 모바일 네이티브 헤더 */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm safe-area-top">
+      <div className="safe-area-top sticky top-0 z-10 bg-white shadow-sm">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-center h-11">
-            <h1 className="text-lg font-['nanumsquare'] font-bold text-black">
+          <div className="flex h-11 items-center justify-center">
+            <h1 className="font-['nanumsquare'] text-lg font-bold text-black">
               알림 설정
             </h1>
           </div>
@@ -153,43 +153,12 @@ const NotificationPage = () => {
 
       {/* 메인 컨텐츠 */}
       <div className="pb-safe">
-        {/* 연결 상태 카드 */}
-        <div className="mx-4 mb-4">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-['nanumsquare'] font-bold text-black">
-                {accountName ? `${accountName} 알림` : '알림 시스템'}
-              </h2>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            </div>
-            <div className="text-sm text-gray-600 font-['nanumsquare'] space-y-1">
-              <p>상태: <span className={isConnected ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                {isConnected ? '연결됨' : '연결 안됨'}
-              </span></p>
-              <p>읽지 않은 알림: <span className="font-medium text-blue-600">{unreadCount}개</span></p>
-              {fcmToken && (
-                <p>푸시 알림: <span className="text-green-600 font-medium">활성화</span></p>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* 알림 권한 상태 */}
         <div className="mb-8">
           {notificationPermission !== 'granted' && (
             <div className="rounded-lg border border-orange-300 bg-orange-50 p-6">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="flex items-center gap-2 font-['Tenada'] text-lg font-extrabold text-orange-800">
-                    <IoNotifications className="text-xl" />
-                    브라우저 알림 권한 필요
-                  </h3>
-                  <p className="mt-1 font-['nanumsquare'] text-sm text-orange-700">
-                    {notificationPermission === 'denied'
-                      ? '알림 권한이 차단되었습니다. 브라우저 설정에서 알림을 허용해주세요.'
-                      : '실시간 알림을 받으려면 브라우저 알림 권한을 허용해주세요.'}
-                  </p>
-                </div>
+                <div className="flex-1"></div>
                 <div className="ml-4">
                   {notificationPermission === 'default' ? (
                     <button
@@ -411,18 +380,38 @@ const NotificationPage = () => {
                       : '목록에만 표시 (팝업 없음)'}
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleSetting(setting.id)}
-                  className={`relative h-6 w-12 rounded-full transition-colors ${
-                    setting.enabled ? 'bg-black' : 'bg-gray-300'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                      setting.enabled ? 'translate-x-7' : 'translate-x-0.5'
-                    }`}
-                  />
-                </button>
+                <div className="flex h-8 items-center">
+                  <button
+                    onClick={() => toggleSetting(setting.id)}
+                    className="flex h-8 overflow-hidden rounded-lg border-2 border-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {/* OFF 버튼 */}
+                    <div
+                      className={`flex h-full w-12 items-center justify-center transition-all duration-200 ${
+                        !setting.enabled
+                          ? 'bg-black text-white'
+                          : 'bg-white text-black hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-['nanumsquare'] text-xs font-bold">
+                        OFF
+                      </span>
+                    </div>
+
+                    {/* ON 버튼 */}
+                    <div
+                      className={`flex h-full w-12 items-center justify-center transition-all duration-200 ${
+                        setting.enabled
+                          ? 'bg-black text-white'
+                          : 'bg-white text-black hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-['nanumsquare'] text-xs font-bold">
+                        ON
+                      </span>
+                    </div>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

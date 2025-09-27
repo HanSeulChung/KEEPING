@@ -1,6 +1,6 @@
 'use client'
 
-import { authApi } from '@/api/authApi'
+import { buildURL } from '@/api/config'
 import OtpVerificationModal from '@/components/common/OtpVerificationModal'
 import { AuthForm } from '@/types'
 import { useState } from 'react'
@@ -36,12 +36,28 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
 
     // 세션에서 regSessionId 가져와서 localStorage에 저장 (다음 단계에서 사용)
     try {
-      const sessionInfo = await authApi.getSessionInfo()
-      const regSessionId = sessionInfo.data
-      
-      if (regSessionId) {
-        localStorage.setItem('regSessionId', regSessionId)
-        console.log('세션에서 가져온 regSessionId 저장:', regSessionId)
+      // 회원가입 단계에서는 백엔드 세션 정보 엔드포인트 직접 호출
+      const response = await fetch(buildURL('/auth/session-info'), {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const regSessionId = data?.data?.regSessionId ?? data?.data ?? null
+
+        if (regSessionId) {
+          localStorage.setItem('regSessionId', regSessionId)
+          console.log('세션에서 가져온 regSessionId 저장:', regSessionId)
+        }
+      } else if (response.status === 400 || response.status === 401) {
+        console.log('회원가입 단계: 세션 인증 정보 없음 (정상)')
+      } else {
+        console.error(
+          '세션 정보 조회 실패:',
+          response.status,
+          response.statusText
+        )
       }
     } catch (error) {
       console.error('세션 정보 조회 실패:', error)
@@ -61,7 +77,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
   }
 
-  const handleResidentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResidentNumberChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const input = e.target.value.replace(/\D/g, '')
 
     if (input.length <= 7) {
@@ -95,7 +113,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       {/* 입력 폼 */}
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">이름</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            이름
+          </label>
           <input
             type="text"
             value={authForm.name}
@@ -106,7 +126,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">주민등록번호</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            주민등록번호
+          </label>
           <input
             type="text"
             value={authForm.residentNumber}
@@ -118,11 +140,15 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">전화번호</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            전화번호
+          </label>
           <input
             type="tel"
             value={authForm.phoneNumber}
-            onChange={e => handleFormChange('phoneNumber', formatPhoneNumber(e.target.value))}
+            onChange={e =>
+              handleFormChange('phoneNumber', formatPhoneNumber(e.target.value))
+            }
             className="w-full rounded-lg border border-gray-300 p-3 font-['nanumsquare'] focus:border-black focus:outline-none"
             placeholder="010-1234-5678"
             maxLength={13}
@@ -136,9 +162,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
           type="button"
           onClick={handlePassAuth}
           disabled={
-            !authForm.name ||
-            !authForm.residentNumber ||
-            !authForm.phoneNumber
+            !authForm.name || !authForm.residentNumber || !authForm.phoneNumber
           }
           className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -167,9 +191,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={authForm.birthDate && authForm.birthDate.length === 6 
-          ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
-          : authForm.birthDate}
+        birth={authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="OWNER"
         onSuccess={handleOtpSuccess}

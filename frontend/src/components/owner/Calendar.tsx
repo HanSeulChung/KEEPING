@@ -104,17 +104,26 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
   const fetchSalesData = async () => {
     if (!selectedStore?.id) return
 
+    // selectedStore.id가 문자열인 경우 숫자로 변환, 이미 숫자인 경우 그대로 사용
+    const storeId =
+      typeof selectedStore.id === 'string'
+        ? parseInt(selectedStore.id)
+        : selectedStore.id
+
     try {
       console.log('매출 캘린더 조회 시작:', {
         storeId: selectedStore.id,
         year,
         month,
       })
-      const apiData = await storeApi.getSalesCalendar(
-        parseInt(selectedStore.id),
-        year,
-        month
-      )
+
+      if (isNaN(storeId)) {
+        console.error('유효하지 않은 storeId:', selectedStore.id)
+        setSalesData([])
+        return
+      }
+
+      const apiData = await storeApi.getSalesCalendar(storeId, year, month)
       console.log('매출 캘린더 조회 성공:', apiData)
       const normalized: SalesData[] = (apiData || []).map((d: any) => ({
         date: d.date,
@@ -126,6 +135,22 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
       console.error('매출 캘린더 조회 실패:', error)
       console.error('에러 상태:', error.response?.status)
       console.error('에러 응답:', error.response?.data)
+
+      // 500 에러인 경우 더 자세한 로그
+      if (error.response?.status === 500) {
+        console.error('서버 내부 오류 - 매출 캘린더 API')
+        console.error('요청 정보:', {
+          storeId,
+          year,
+          month,
+          url: `/stores/${storeId}/statistics/period`,
+          requestBody: {
+            startDate: `${year}-${month.toString().padStart(2, '0')}-01`,
+            endDate: `${year}-${month.toString().padStart(2, '0')}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`,
+          },
+        })
+      }
+
       // 에러 발생 시 빈 배열로 설정
       setSalesData([])
     }
@@ -186,11 +211,19 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
         year,
         month,
       })
-      const data = await storeApi.getMonthlyStatistics(
-        parseInt(selectedStore.id),
-        year,
-        month
-      )
+
+      // selectedStore.id가 문자열인 경우 숫자로 변환, 이미 숫자인 경우 그대로 사용
+      const storeId =
+        typeof selectedStore.id === 'string'
+          ? parseInt(selectedStore.id)
+          : selectedStore.id
+
+      if (isNaN(storeId)) {
+        console.error('유효하지 않은 storeId:', selectedStore.id)
+        return
+      }
+
+      const data = await storeApi.getMonthlyStatistics(storeId, year, month)
       console.log('월별 통계 조회 성공:', data)
       setMonthlyStats(data || null)
     } catch (error: any) {

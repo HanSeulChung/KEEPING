@@ -26,15 +26,19 @@ const apiClient = axios.create({
   },
 })
 
-// 요청 인터셉터 - 모든 요청에 자동으로 Authorization 헤더 추가
+// 요청 인터셉터 - 회원가입 페이지가 아닌 경우에만 Authorization 헤더 추가
 apiClient.interceptors.request.use(
   config => {
     if (typeof window !== 'undefined') {
-      const tokenFromStore = useAuthStore.getState().getAccessToken()
-      const tokenFromLocal = localStorage.getItem('accessToken')
-      const accessToken = tokenFromStore || tokenFromLocal
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`
+      // 회원가입 페이지에서는 Authorization 헤더 추가하지 않음
+      const isRegisterPage = window.location.pathname.includes('/register/')
+      if (!isRegisterPage) {
+        const tokenFromStore = useAuthStore.getState().getAccessToken()
+        const tokenFromLocal = localStorage.getItem('accessToken')
+        const accessToken = tokenFromStore || tokenFromLocal
+        if (accessToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/store/useAuthStore'
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
 interface AuthProviderProps {
@@ -9,8 +10,16 @@ interface AuthProviderProps {
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const { initializeAuth } = useAuthStore()
+  const pathname = usePathname()
 
   useEffect(() => {
+    // 회원가입 페이지에서는 인증 초기화를 건너뛰기
+    const isRegisterPage = pathname.includes('/register/')
+    if (isRegisterPage) {
+      console.log('회원가입 페이지: 인증 초기화 건너뛰기')
+      return
+    }
+
     const initAuth = async () => {
       try {
         await initializeAuth()
@@ -23,7 +32,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
     }
     initAuth()
-  }, [initializeAuth])
+  }, [initializeAuth, pathname])
 
   return <>{children}</>
 }

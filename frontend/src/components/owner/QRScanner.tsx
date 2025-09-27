@@ -34,30 +34,34 @@ export default function QRScanner() {
           // localStorage에서 모든 키 확인
           const allKeys = Object.keys(localStorage)
           console.log('QRScanner - localStorage 모든 키:', allKeys)
-          
+
           const accessToken = localStorage.getItem('accessToken')
           const user = localStorage.getItem('user')
           const authStorage = localStorage.getItem('auth-storage')
-          
+
           console.log('QRScanner - 인증 데이터 확인:', {
-            accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'null',
+            accessToken: accessToken
+              ? `${accessToken.substring(0, 20)}...`
+              : 'null',
             user: user ? JSON.parse(user) : 'null',
             authStorage: authStorage ? '존재' : 'null',
-            allKeys
+            allKeys,
           })
-          
+
           // accessToken이 있으면 인증 성공으로 간주 (user는 선택적)
           if (accessToken) {
             console.log('QRScanner - accessToken 존재, 인증 성공')
             setIsAuthChecked(true)
-            // 인증 성공 후 자동으로 카메라 시작 (핸드폰에서 바로 시작)
-            setTimeout(() => {
-              console.log('QRScanner - 카메라 자동 시작')
-              startCamera()
-            }, 500)
-      return
-    }
-          
+            // iOS Safari에서는 자동 카메라 시작 안함 (사용자 제스처 필요)
+            if (!(isIOS() && isSafari())) {
+              setTimeout(() => {
+                console.log('QRScanner - 카메라 자동 시작')
+                startCamera()
+              }, 500)
+            }
+            return
+          }
+
           // auth-storage에서도 확인
           if (authStorage) {
             try {
@@ -65,18 +69,20 @@ export default function QRScanner() {
               if (authData.state?.isLoggedIn) {
                 console.log('QRScanner - auth-storage에서 인증 확인')
                 setIsAuthChecked(true)
-                // 인증 성공 후 자동으로 카메라 시작 (핸드폰에서 바로 시작)
-                setTimeout(() => {
-                  console.log('QRScanner - 카메라 자동 시작')
-                  startCamera()
-                }, 500)
+                // iOS Safari에서는 자동 카메라 시작 안함 (사용자 제스처 필요)
+                if (!(isIOS() && isSafari())) {
+                  setTimeout(() => {
+                    console.log('QRScanner - 카메라 자동 시작')
+                    startCamera()
+                  }, 500)
+                }
                 return
               }
             } catch (e) {
               console.log('QRScanner - auth-storage 파싱 실패')
             }
           }
-          
+
           console.log('QRScanner - 모든 인증 방법 실패, 로그인 페이지로 이동')
           router.push('/owner/login')
         } catch (error) {
@@ -88,9 +94,79 @@ export default function QRScanner() {
 
     // 100ms 지연 후 실행
     const timeoutId = setTimeout(checkAuth, 100)
-    
+
     return () => clearTimeout(timeoutId)
   }, [router])
+
+  // 기기 및 브라우저 감지
+  const isIOS = () => {
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    )
+  }
+
+  const isSafari = () => {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+  }
+
+  // 카메라 상태 미리 확인
+  const checkCameraStatus = async () => {
+    try {
+      console.log('카메라 상태 확인 중...')
+
+      // 1단계: 기본 카메라 존재 여부 확인
+      const hasCamera = await QrScanner.hasCamera()
+      console.log('카메라 존재:', hasCamera)
+
+      if (!hasCamera) {
+        return {
+          available: false,
+          error:
+            '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.',
+        }
+      }
+
+      // 2단계: 실제 카메라 접근 테스트
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        })
+        console.log('카메라 접근 성공')
+
+        // 테스트 스트림 즉시 종료
+        stream.getTracks().forEach(track => track.stop())
+
+        return { available: true, error: null }
+      } catch (mediaError: any) {
+        console.log('카메라 접근 실패:', mediaError)
+
+        // 후면 카메라 실패 시 전면 카메라 시도
+        try {
+          const frontStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+          })
+          console.log('전면 카메라 접근 성공')
+
+          frontStream.getTracks().forEach(track => track.stop())
+          return { available: true, error: null }
+        } catch (frontError) {
+          console.log('전면 카메라도 실패:', frontError)
+          return {
+            available: false,
+            error:
+              '카메라에 접근할 수 없습니다. 카메라가 꺼져있거나 다른 앱에서 사용 중일 수 있습니다.',
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('카메라 상태 확인 실패:', error)
+      return {
+        available: false,
+        error: '카메라 상태를 확인할 수 없습니다.',
+      }
+    }
+  }
 
   // QR 코드 스캔 시작
   const startQRScanning = async () => {
@@ -101,34 +177,72 @@ export default function QRScanner() {
 
     try {
       console.log('카메라 사용 가능 여부 확인 중...')
+      console.log('iOS 기기:', isIOS())
+      console.log('Safari 브라우저:', isSafari())
 
-      // 카메라 사용 가능 여부 미리 확인
-      const hasCamera = await QrScanner.hasCamera()
-      console.log('카메라 사용 가능:', hasCamera)
+      // 카메라 상태 미리 확인
+      const cameraStatus = await checkCameraStatus()
 
-      if (!hasCamera) {
-        setError('카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.')
+      if (!cameraStatus.available) {
+        setError(cameraStatus.error || '카메라를 사용할 수 없습니다.')
         return
       }
 
+      console.log('카메라 상태 확인 완료 - 사용 가능')
+
       console.log('QrScanner 인스턴스 생성 시작')
+
+      // iOS Safari 전용 설정
+      const scannerOptions: {
+        onDecodeError?: (error: Error | string) => void
+        calculateScanRegion?: (video: HTMLVideoElement) => QrScanner.ScanRegion
+        preferredCamera?: QrScanner.FacingMode | QrScanner.DeviceId
+        maxScansPerSecond?: number
+        highlightScanRegion?: boolean
+        highlightCodeOutline?: boolean
+        overlay?: HTMLDivElement
+        returnDetailedScanResult?: true
+      } =
+        isIOS() && isSafari()
+          ? {
+              highlightScanRegion: true,
+              highlightCodeOutline: true,
+              // iOS Safari에서는 preferredCamera 제거
+              maxScansPerSecond: 3, // iOS에서는 낮은 빈도로
+              returnDetailedScanResult: true,
+            }
+          : {
+              highlightScanRegion: true,
+              highlightCodeOutline: true,
+              preferredCamera: 'environment', // 후면 카메라 우선
+              maxScansPerSecond: 10, // 스캔 빈도 증가
+              returnDetailedScanResult: true, // 상세한 스캔 결과 반환
+              calculateScanRegion: (video: HTMLVideoElement) => {
+                // 스캔 영역 최적화
+                const smallestDimension = Math.min(
+                  video.videoWidth,
+                  video.videoHeight
+                )
+                const scanRegionSize = Math.round(0.7 * smallestDimension)
+                return {
+                  x: Math.round((video.videoWidth - scanRegionSize) / 2),
+                  y: Math.round((video.videoHeight - scanRegionSize) / 2),
+                  width: scanRegionSize,
+                  height: scanRegionSize,
+                }
+              },
+            }
 
       // QrScanner 인스턴스 생성
       const qrScanner = new QrScanner(
         videoRef.current,
-        (result: any) => {
+        (result: QrScanner.ScanResult) => {
           console.log('QR 코드 스캔 성공:', result.data)
           setScannedData(result.data)
           setIsScanning(false)
           handleQRResult(result.data)
         },
-        {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-          preferredCamera: 'environment', // 후면 카메라 우선
-          maxScansPerSecond: 5, // 스캔 빈도 제한
-          returnDetailedScanResult: true, // 상세한 스캔 결과 반환
-        }
+        scannerOptions
       )
 
       qrScannerRef.current = qrScanner
@@ -140,7 +254,6 @@ export default function QRScanner() {
       console.log('QR 스캔 시작됨')
       setIsScanning(true)
       setError(null) // 성공 시 에러 메시지 클리어
-
     } catch (err: any) {
       console.error('QR 스캔 실패:', err)
       console.error('에러 타입:', typeof err)
@@ -151,15 +264,37 @@ export default function QRScanner() {
 
       // 에러 타입별 메시지 처리
       if (err.message && err.message.includes('Camera not found')) {
-        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.'
-      } else if (err.name === 'NotAllowedError' || err.message?.includes('permission')) {
-        errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
-      } else if (err.name === 'NotFoundError') {
-        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.'
+        errorMessage =
+          '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인하거나 모바일 기기에서 접속해주세요.'
+      } else if (
+        err.name === 'NotAllowedError' ||
+        err.message?.includes('permission')
+      ) {
+        errorMessage =
+          '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
+      } else if (
+        err.name === 'NotFoundError' ||
+        err.message?.includes('not found')
+      ) {
+        errorMessage =
+          '카메라를 찾을 수 없습니다. 카메라가 꺼져있거나 연결되지 않았습니다.'
       } else if (err.name === 'NotSupportedError') {
-        errorMessage = '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
-      } else if (err.name === 'NotReadableError') {
-        errorMessage = '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
+        errorMessage =
+          '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
+      } else if (
+        err.name === 'NotReadableError' ||
+        err.message?.includes('Could not start video source')
+      ) {
+        errorMessage =
+          '카메라에 접근할 수 없습니다. 카메라가 꺼져있거나 다른 앱에서 사용 중일 수 있습니다.'
+      } else if (err.name === 'AbortError') {
+        errorMessage = '카메라 시작이 중단되었습니다. 다시 시도해주세요.'
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage =
+          '요청한 카메라 설정을 지원하지 않습니다. 다른 카메라를 시도해주세요.'
+      } else if (err.message?.includes('deviceId')) {
+        errorMessage =
+          '지정된 카메라를 찾을 수 없습니다. 사용 가능한 카메라로 다시 시도해주세요.'
       } else if (err.message) {
         errorMessage = `QR 스캐너 오류: ${err.message}`
       }
@@ -168,8 +303,6 @@ export default function QRScanner() {
     }
   }
 
-
-
   // 현재 페이지 URL에서 storeId 가져오기
   const getCurrentStoreId = () => {
     try {
@@ -177,15 +310,18 @@ export default function QRScanner() {
         console.log('=== getCurrentStoreId 디버깅 ===')
         console.log('현재 페이지 URL:', window.location.href)
         console.log('URL 파라미터:', window.location.search)
-        
+
         const urlParams = new URLSearchParams(window.location.search)
         const storeId = urlParams.get('storeId')
         const accountName = urlParams.get('accountName')
-        
+
         console.log('추출된 storeId:', storeId)
         console.log('추출된 accountName:', accountName)
-        console.log('모든 URL 파라미터:', Object.fromEntries(urlParams.entries()))
-        
+        console.log(
+          '모든 URL 파라미터:',
+          Object.fromEntries(urlParams.entries())
+        )
+
         if (storeId) {
           console.log('storeId 발견:', storeId)
           return storeId
@@ -206,15 +342,15 @@ export default function QRScanner() {
     // 스캔 정지
     setIsScanning(false)
     setScannedData(data)
-    
+
     console.log('QR 코드 데이터:', data)
     console.log('QR 코드 데이터 타입:', typeof data)
     console.log('QR 코드 데이터 길이:', data.length)
     console.log('QR 코드 데이터 첫 50자:', data.substring(0, 50))
-    
+
     // QR 코드에서 파라미터 추출
     let qrParams = ''
-    
+
     try {
       // HTTP URL인 경우 도메인을 현재 환경의 baseURL로 교체
       let processedData = data
@@ -233,7 +369,7 @@ export default function QRScanner() {
         const url = new URL(processedData)
         console.log('URL 파싱 성공:', url.href)
         console.log('URL search params:', url.searchParams.toString())
-        
+
         // payapp 뒤의 파라미터 추출
         const pathParts = url.pathname.split('/')
         const payappIndex = pathParts.findIndex(part => part === 'payapp')
@@ -253,18 +389,15 @@ export default function QRScanner() {
       console.log('URL 파싱 실패, 원본 데이터 사용:', data)
       qrParams = data
     }
-    
+
     // 현재 페이지 URL에서 storeId 가져오기
     const currentStoreId = getCurrentStoreId()
-    
+
     // 새로운 페이지로 리다이렉트 (QR 파라미터 + storeId)
     const intentUrl = `/owner/qr/intent?${qrParams}&storeId=${currentStoreId}`
     console.log('리다이렉트 URL:', intentUrl)
     router.push(intentUrl)
   }
-
-
-
 
   // 카메라 시작
   const startCamera = async () => {
@@ -272,22 +405,37 @@ export default function QRScanner() {
       console.log('QRScanner - 카메라 시작 시도')
       setError(null)
 
+      // 먼저 카메라 상태 확인
+      console.log('카메라 상태 사전 확인 중...')
+      const cameraStatus = await checkCameraStatus()
+
+      if (!cameraStatus.available) {
+        console.log('카메라 사용 불가:', cameraStatus.error)
+        setError(cameraStatus.error || '카메라를 사용할 수 없습니다.')
+        return
+      }
+
+      console.log('카메라 사용 가능 확인됨, QR 스캐너 시작')
+
       // QrScanner가 자체적으로 카메라를 관리
       await startQRScanning()
-
     } catch (err: any) {
       console.error('카메라 접근 오류:', err)
 
       let errorMessage = '카메라에 접근할 수 없습니다.'
 
       if (err.name === 'NotAllowedError') {
-        errorMessage = '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
+        errorMessage =
+          '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.'
       } else if (err.name === 'NotFoundError') {
-        errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.'
+        errorMessage =
+          '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.'
       } else if (err.name === 'NotSupportedError') {
-        errorMessage = '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
+        errorMessage =
+          '이 브라우저는 카메라를 지원하지 않습니다. Chrome, Firefox, Safari를 사용해주세요.'
       } else if (err.name === 'NotReadableError') {
-        errorMessage = '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
+        errorMessage =
+          '카메라가 다른 애플리케이션에서 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요.'
       }
 
       setError(errorMessage)
@@ -331,7 +479,6 @@ export default function QRScanner() {
       }
     }
   }, [])
-
 
   // 인증이 완료되지 않았으면 로딩 표시
   if (!isAuthChecked) {
@@ -403,36 +550,78 @@ export default function QRScanner() {
                   <div className="mb-3 text-lg font-bold">📷 카메라 오류</div>
                   <div className="mb-3 text-red-200">{error}</div>
                   <div className="mb-4 text-sm text-red-200">
-                    {error.includes('카메라를 찾을 수 없습니다') && (
+                    {isIOS() && isSafari() && (
                       <>
-                        💡 해결 방법:<br />
-                        • 모바일 기기에서 접속해보세요<br />
-                        • 외부 카메라가 연결되어 있는지 확인하세요<br />
-                        • 다른 탭에서 카메라를 사용 중인지 확인하세요
+                        🍎 iOS Safari 전용 해결법:
+                        <br />
+                        • 설정 → Safari → 카메라 접근 허용
+                        <br />
+                        • 프라이빗 브라우징 모드 끄기
+                        <br />
+                        • HTTPS 연결 확인
+                        <br />
+                        • 페이지 새로고침 후 "카메라로 QR 스캔하기" 직접 클릭
+                        <br />
+                      </>
+                    )}
+                    {(error.includes('카메라를 찾을 수 없습니다') ||
+                      error.includes('카메라에 접근할 수 없습니다')) &&
+                      !isIOS() && (
+                        <>
+                          💡 해결 방법:
+                          <br />
+                          • 📱 모바일 기기에서 접속해보세요
+                          <br />
+                          • 🔌 외부 카메라가 연결되어 있는지 확인하세요
+                          <br />
+                          • 📷 카메라가 켜져있는지 확인하세요
+                          <br />
+                          • 🚫 다른 탭에서 카메라를 사용 중인지 확인하세요
+                          <br />• 🔄 페이지를 새로고침하고 다시 시도하세요
+                        </>
+                      )}
+                    {error.includes('꺼져있거나') && (
+                      <>
+                        📷 카메라 확인 방법:
+                        <br />
+                        • Windows: 카메라 앱 실행해서 작동 확인
+                        <br />
+                        • Mac: Photo Booth 앱으로 카메라 테스트
+                        <br />
+                        • 모바일: 기본 카메라 앱 실행 테스트
+                        <br />• 노트북: Fn + 카메라 키 조합 확인
                       </>
                     )}
                     {error.includes('권한이 거부되었습니다') && (
                       <>
-                        💡 해결 방법:<br />
-                        • 브라우저 주소창 옆의 카메라 아이콘을 클릭하세요<br />
-                        • "허용" 또는 "Allow" 버튼을 눌러주세요<br />
-                        • 페이지를 새로고침 후 다시 시도하세요
+                        💡 해결 방법:
+                        <br />
+                        • 브라우저 주소창 옆의 카메라 아이콘을 클릭하세요
+                        <br />
+                        • "허용" 또는 "Allow" 버튼을 눌러주세요
+                        <br />• 페이지를 새로고침 후 다시 시도하세요
                       </>
                     )}
                     {error.includes('다른 애플리케이션에서 사용 중') && (
                       <>
-                        💡 해결 방법:<br />
-                        • 다른 화상회의 앱을 종료해주세요<br />
-                        • 다른 브라우저 탭을 닫아주세요<br />
-                        • 페이지를 새로고침 후 다시 시도하세요
+                        💡 해결 방법:
+                        <br />
+                        • 다른 화상회의 앱을 종료해주세요
+                        <br />
+                        • 다른 브라우저 탭을 닫아주세요
+                        <br />• 페이지를 새로고침 후 다시 시도하세요
                       </>
                     )}
-                    {error.includes('브라우저는 카메라를 지원하지 않습니다') && (
+                    {error.includes(
+                      '브라우저는 카메라를 지원하지 않습니다'
+                    ) && (
                       <>
-                        💡 해결 방법:<br />
-                        • Chrome, Firefox, Safari 브라우저를 사용하세요<br />
-                        • 브라우저를 최신 버전으로 업데이트하세요<br />
-                        • 모바일 기기에서 접속해보세요
+                        💡 해결 방법:
+                        <br />
+                        • Chrome, Firefox, Safari 브라우저를 사용하세요
+                        <br />
+                        • 브라우저를 최신 버전으로 업데이트하세요
+                        <br />• 모바일 기기에서 접속해보세요
                       </>
                     )}
                   </div>
@@ -458,8 +647,10 @@ export default function QRScanner() {
 
               {scannedData && (
                 <div className="mb-4 text-center text-green-400">
-                  <div className="mb-1 text-sm font-medium">QR 코드 인식됨:</div>
-                  <div className="break-all text-xs text-green-300">
+                  <div className="mb-1 text-sm font-medium">
+                    QR 코드 인식됨:
+                  </div>
+                  <div className="text-xs break-all text-green-300">
                     {scannedData}
                   </div>
                 </div>
@@ -499,7 +690,7 @@ export default function QRScanner() {
 
       {/* 수동 입력 모달 */}
       {showManualInput && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
           <div className="w-full max-w-md rounded-lg bg-white p-6">
             <h3 className="mb-4 text-lg font-bold">수동으로 QR 코드 입력</h3>
             <p className="mb-4 text-sm text-gray-600">
@@ -508,7 +699,7 @@ export default function QRScanner() {
             <input
               type="text"
               value={manualInput}
-              onChange={(e) => setManualInput(e.target.value)}
+              onChange={e => setManualInput(e.target.value)}
               placeholder="QR 코드 내용을 입력하세요"
               className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
               autoFocus
@@ -517,7 +708,7 @@ export default function QRScanner() {
               <button
                 onClick={handleManualInput}
                 disabled={!manualInput.trim()}
-                className="flex-1 rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50 hover:bg-blue-700"
+                className="flex-1 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 확인
               </button>

@@ -156,9 +156,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={authForm.birthDate && authForm.birthDate.length === 6 
-          ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
-          : authForm.birthDate}         
+        birth={authForm.birthDate}         
         genderDigit={authForm.genderCode}
         userRole="OWNER"
         onSuccess={handleOtpSuccess}

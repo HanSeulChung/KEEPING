@@ -71,8 +71,12 @@ export const storeApi = {
     month: number
   ): Promise<StoreAPI.SalesData[]> => {
     try {
-      const response = await apiClient.get<StoreAPI.SalesCalendarResponse>(
-        `/api/owners/stores/${storeId}/sales/calendar?year=${year}&month=${month}`
+      const response = await apiClient.post<StoreAPI.SalesCalendarResponse>(
+        `/stores/${storeId}/statistics/period`,
+        {
+          startDate: `${year}-${month.toString().padStart(2, '0')}-01`,
+          endDate: `${year}-${month.toString().padStart(2, '0')}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
+        }
       )
 
       return response.data.data
@@ -94,7 +98,7 @@ export const storeApi = {
       }
 
       const response = await apiClient.post(
-        `/api/stores/${storeId}/statistics/monthly`,
+        `/stores/${storeId}/statistics/monthly`,
         requestBody
       )
 

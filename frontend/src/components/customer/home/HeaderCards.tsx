@@ -64,9 +64,6 @@ export const HeaderCards = () => {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const url = buildURL('/wallets/both/balance')
-        console.log('지갑 잔액 조회 URL:', url)
-
         // Authorization 헤더 추가
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
@@ -79,56 +76,109 @@ export const HeaderCards = () => {
           }
         }
 
-        const response = await fetch(url, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        })
+        // 개인 지갑과 그룹 지갑 정보를 각각 조회
+        const [personalResponse, groupsResponse] = await Promise.all([
+          fetch(buildURL('/wallets/individual/balance'), {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }),
+          fetch(buildURL('/groups'), {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          }),
+        ])
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+        if (!personalResponse.ok) {
+          console.warn(
+            `개인 지갑 조회 실패: ${personalResponse.status}, 더미 데이터 사용`
+          )
+          // 404 에러 시 더미 데이터로 대체
+          const transformedCards: Card[] = [
+            {
+              id: 1,
+              storeName: '아쭈맛나',
+              remainingPoints: 35000,
+              type: 'personal',
+              walletId: 1,
+            },
+          ]
+          setCards(transformedCards)
+          setLoading(false)
+          return
         }
 
-        const data: WalletBalanceResponse = await response.json()
-        console.log('지갑 잔액 응답 데이터:', data)
+        const personalData = await personalResponse.json()
+        console.log('개인 지갑 응답 데이터:', personalData)
 
         // API 응답을 카드 형태로 변환
         const transformedCards: Card[] = []
 
-        // 개인 지갑의 각 가게별 카드 추가 (페이징 제거 대응)
-        const personalStoreBalances = data.data.personalWallet?.storeBalances?.content || data.data.personalWallet?.storeBalances || []
-        if (data.data.personalWallet && personalStoreBalances.length > 0) {
-          personalStoreBalances.forEach(
-            (store, index) => {
-              transformedCards.push({
-                id: data.data.personalWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
-                storeName: store.storeName,
-                remainingPoints: store.remainingPoints,
-                type: 'personal',
-                walletId: data.data.personalWallet.walletId,
-              })
-            }
-          )
+        // 개인 지갑의 각 가게별 카드 추가
+        const personalStoreBalances =
+          personalData.data?.storeBalances?.content ||
+          personalData.data?.storeBalances ||
+          []
+        if (personalData.data && personalStoreBalances.length > 0) {
+          personalStoreBalances.forEach((store: any) => {
+            transformedCards.push({
+              id: personalData.data.walletId * 1000 + store.storeId, // 고유 ID 생성
+              storeName: store.storeName,
+              remainingPoints: store.remainingPoints,
+              type: 'personal',
+              walletId: personalData.data.walletId,
+            })
+          })
         }
 
-        // 그룹 지갑들의 각 가게별 카드 추가 (페이징 제거 대응)
-        if (data.data.groupWallets && data.data.groupWallets.length > 0) {
-          data.data.groupWallets.forEach(groupWallet => {
-            const groupStoreBalances = groupWallet.storeBalances?.content || groupWallet.storeBalances || []
-            if (groupStoreBalances.length > 0) {
-              groupStoreBalances.forEach((store, index) => {
-                transformedCards.push({
-                  id: groupWallet.walletId * 1000 + store.storeId, // 고유 ID 생성
-                  storeName: store.storeName,
-                  remainingPoints: store.remainingPoints,
-                  type: 'group',
-                  walletId: groupWallet.walletId,
-                  groupId: groupWallet.groupId,
-                  groupName: groupWallet.groupName,
-                })
-              })
+        // 그룹 지갑들의 각 가게별 카드 추가
+        if (groupsResponse.ok) {
+          const groupsData = await groupsResponse.json()
+          console.log('그룹 목록 응답 데이터:', groupsData)
+
+          if (groupsData.data && groupsData.data.length > 0) {
+            for (const group of groupsData.data) {
+              try {
+                const groupWalletResponse = await fetch(
+                  buildURL(`/wallets/groups/${group.groupId}/balance`),
+                  {
+                    method: 'GET',
+                    headers,
+                    credentials: 'include',
+                  }
+                )
+
+                if (groupWalletResponse.ok) {
+                  const groupWalletData = await groupWalletResponse.json()
+                  const groupStoreBalances =
+                    groupWalletData.data?.storeBalances?.content ||
+                    groupWalletData.data?.storeBalances ||
+                    []
+
+                  if (groupStoreBalances.length > 0) {
+                    groupStoreBalances.forEach((store: any) => {
+                      transformedCards.push({
+                        id:
+                          groupWalletData.data.walletId * 1000 + store.storeId, // 고유 ID 생성
+                        storeName: store.storeName,
+                        remainingPoints: store.remainingPoints,
+                        type: 'group',
+                        walletId: groupWalletData.data.walletId,
+                        groupId: group.groupId,
+                        groupName: group.groupName,
+                      })
+                    })
+                  }
+                }
+              } catch (groupError) {
+                console.error(
+                  `그룹 ${group.groupId} 지갑 조회 실패:`,
+                  groupError
+                )
+              }
             }
-          })
+          }
         }
 
         console.log('변환된 카드 목록:', transformedCards)

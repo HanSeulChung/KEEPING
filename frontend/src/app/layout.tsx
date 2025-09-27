@@ -37,12 +37,28 @@ export default function RootLayout({
           async
         ></script>
 
-        {/* Service Worker 등록 */}
+        {/* Service Worker 등록 (Production 환경에서만) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
+                  // 개발 모드에서는 기존 서비스 워커 해제
+                  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    console.log('개발 모드: 기존 Service Worker 해제');
+                    navigator.serviceWorker.getRegistrations()
+                      .then(function(registrations) {
+                        registrations.forEach(function(registration) {
+                          registration.unregister()
+                            .then(function() {
+                              console.log('Service Worker 해제됨:', registration.scope);
+                            });
+                        });
+                      });
+                    return;
+                  }
+
+                  // Production 환경에서만 등록
                   navigator.serviceWorker.register('/sw.js')
                     .then(function(registration) {
                       console.log('Service Worker 등록 성공:', registration.scope);

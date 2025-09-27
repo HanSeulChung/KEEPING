@@ -172,7 +172,7 @@ export const editMenu = async (
 export const deleteMenu = async (
   storeId: number,
   menuId: number
-): Promise<ApiResponse<void>> => {
+): Promise<ApiResponse<null>> => {
   try {
     const response = await fetch(
       `${apiConfig.baseURL}/owners/stores/${storeId}/menus/${menuId}`,
@@ -191,7 +191,7 @@ export const deleteMenu = async (
     const result = await response.json()
     return {
       success: true,
-      data: undefined,
+      data: null,
       message: result.message || '메뉴가 삭제되었습니다.',
       statusCode: response.status,
     }
@@ -199,7 +199,7 @@ export const deleteMenu = async (
     console.error('메뉴 삭제 실패:', error)
     return {
       success: false,
-      data: undefined,
+      data: null,
       message: error.message || '메뉴 삭제에 실패했습니다.',
       statusCode: error.status || 500,
     }
@@ -209,7 +209,7 @@ export const deleteMenu = async (
 // 전체 메뉴 삭제
 export const deleteAllMenus = async (
   storeId: number
-): Promise<ApiResponse<void>> => {
+): Promise<ApiResponse<null>> => {
   try {
     const response = await fetch(
       `${apiConfig.baseURL}/owners/stores/${storeId}/menus`,
@@ -228,7 +228,7 @@ export const deleteAllMenus = async (
     const result = await response.json()
     return {
       success: true,
-      data: undefined,
+      data: null,
       message: result.message || '모든 메뉴가 삭제되었습니다.',
       statusCode: response.status,
     }
@@ -236,7 +236,7 @@ export const deleteAllMenus = async (
     console.error('전체 메뉴 삭제 실패:', error)
     return {
       success: false,
-      data: undefined,
+      data: null,
       message: error.message || '전체 메뉴 삭제에 실패했습니다.',
       statusCode: error.status || 500,
     }
@@ -270,4 +270,3 @@ export const getAllMenus = async (
     throw error
   }
 }
-

@@ -38,7 +38,9 @@ type MenuData = {
 const StoreManage = () => {
   const searchParams = useSearchParams()
   const storeId = searchParams.get('storeId')
-  const accountName = searchParams.get('accountName') ? decodeURIComponent(searchParams.get('accountName') as string) : null
+  const accountName = searchParams.get('accountName')
+    ? decodeURIComponent(searchParams.get('accountName') as string)
+    : null
 
   const { selectedStore } = useStoreStore()
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
@@ -202,52 +204,63 @@ const StoreManage = () => {
         {/* 매장 정보 */}
         <div className="mb-6 flex justify-center">
           {/* 매장 기본 정보 */}
-          <div className="border border-black bg-white p-4">
+          <div className="w-full max-w-md border border-black bg-white p-4">
             <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
               매장 정보
             </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  매장명
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {selectedStore?.storeName || '정보 없음'}
-                </span>
+            <div className="space-y-3">
+              {/* 첫 번째 줄: 매장명 + 카테고리 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between">
+                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                    매장명
+                  </span>
+                  <span className="font-['nanumsquare'] text-sm font-medium">
+                    {selectedStore?.storeName || '정보 없음'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                    카테고리
+                  </span>
+                  <span className="font-['nanumsquare'] text-sm font-medium">
+                    {selectedStore?.category || '정보 없음'}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  카테고리
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {selectedStore?.category || '정보 없음'}
-                </span>
+
+              {/* 두 번째 줄: 등록 메뉴 + 찜 개수 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between">
+                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                    등록 메뉴
+                  </span>
+                  <span className="font-['nanumsquare'] text-sm font-medium">
+                    {menus.length}개
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                    찜 개수
+                  </span>
+                  <span className="font-['nanumsquare'] text-sm font-medium text-red-500">
+                    {favoriteLoading
+                      ? '로딩...'
+                      : `${favoriteCount.toLocaleString()}개`}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  등록 메뉴
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium">
-                  {menus.length}개
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  찜 개수
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium text-red-500">
-                  {favoriteLoading
-                    ? '로딩...'
-                    : `${favoriteCount.toLocaleString()}개`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-['nanumsquare'] text-sm text-gray-600">
-                  운영 상태
-                </span>
-                <span className="font-['nanumsquare'] text-sm font-medium text-green-600">
-                  운영중
-                </span>
+
+              {/* 세 번째 줄: 운영 상태 (혼자) */}
+              <div className="flex justify-center">
+                <div className="flex w-48 justify-between">
+                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                    운영 상태
+                  </span>
+                  <span className="font-['nanumsquare'] text-sm font-medium text-green-600">
+                    운영중
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -361,27 +374,29 @@ const StoreManage = () => {
                   <div className="flex items-center gap-4">
                     {/* 이미지 */}
                     {item.imgUrl ? (
-                      <img 
-                        src={item.imgUrl} 
+                      <img
+                        src={item.imgUrl}
                         alt={item.menuName}
-                        className="h-20 w-20 object-cover rounded border border-gray-300 flex-shrink-0"
+                        className="h-20 w-20 flex-shrink-0 rounded border border-gray-300 object-cover"
                       />
                     ) : (
-                      <div className="h-20 w-20 bg-gray-100 rounded border border-gray-300 flex items-center justify-center flex-shrink-0">
-                        <span className="text-gray-400 text-xs">이미지 없음</span>
+                      <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-100">
+                        <span className="text-xs text-gray-400">
+                          이미지 없음
+                        </span>
                       </div>
                     )}
-                    
+
                     {/* 메뉴명과 카테고리 */}
                     <div className="flex-1">
-                      <h3 className="font-['nanumsquare'] text-lg text-black mb-1">
+                      <h3 className="mb-1 font-['nanumsquare'] text-lg text-black">
                         {item.menuName}
                       </h3>
                       <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
                         {item.categoryName}
                       </span>
                     </div>
-                    
+
                     {/* 버튼들 */}
                     <div className="flex gap-2">
                       <button
@@ -391,7 +406,9 @@ const StoreManage = () => {
                         수정
                       </button>
                       <button
-                        onClick={() => handleDeleteMenu(item.menuId, item.menuName)}
+                        onClick={() =>
+                          handleDeleteMenu(item.menuId, item.menuName)
+                        }
                         className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
                       >
                         삭제
@@ -616,11 +633,7 @@ const MenuAddModal = ({
   }
 
   const handleManualSubmit = async () => {
-    if (
-      !manualMenu.name ||
-      !manualMenu.name.trim() ||
-      !manualMenu.categoryId
-    ) {
+    if (!manualMenu.name || !manualMenu.name.trim() || !manualMenu.categoryId) {
       alert('메뉴명과 카테고리는 필수입니다.')
       return
     }
@@ -664,38 +677,27 @@ const MenuAddModal = ({
       return
     }
 
-    try {
-      const formData = new FormData()
-      formData.append('name', menu.name.trim())
-      formData.append('categoryId', menu.categoryId.toString())
-      formData.append('imgFile', menu.imgFile)
-      if (menu.price) formData.append('price', menu.price.toString())
-      if (menu.description) formData.append('description', menu.description)
+    const menuData = {
+      menuName: menu.name.trim(),
+      description: menu.description || '',
+      price: menu.price || 0,
+      categoryId: menu.categoryId,
+      storeId: parseInt(storeId!),
+      image: menu.imgFile,
+    }
 
-      const response = await apiClient.post(
-        `/owners/stores/${storeId}/menus`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      )
+    const success = await addMenu(parseInt(storeId!), menuData)
+    if (success) {
+      alert('메뉴가 추가되었습니다.')
+      // 해당 메뉴를 OCR 결과에서 제거
+      const updated = ocrResults.filter((_, i) => i !== index)
+      setOcrResults(updated)
 
-      if (response.data.success) {
-        alert('메뉴가 추가되었습니다.')
-        // 해당 메뉴를 OCR 결과에서 제거
-        const updated = ocrResults.filter((_, i) => i !== index)
-        setOcrResults(updated)
-        fetchMenus()
-
-        // 모든 메뉴가 등록되면 모달 닫기
-        if (updated.length === 0) {
-          onClose()
-        }
-      } else {
-        alert('메뉴 추가에 실패했습니다.')
+      // 모든 메뉴가 등록되면 모달 닫기
+      if (updated.length === 0) {
+        onClose()
       }
-    } catch (error) {
-      console.error('메뉴 추가 실패:', error)
+    } else {
       alert('메뉴 추가에 실패했습니다.')
     }
   }
@@ -923,7 +925,11 @@ const MenuAddModal = ({
                         // 파일 크기 검증 (1MB = 1048576 bytes)
                         const maxFileSize = 1048576 // 1MB
                         if (file.size > maxFileSize) {
-                          alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                          alert(
+                            '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                              (file.size / 1024 / 1024).toFixed(2) +
+                              'MB'
+                          )
                           // 파일 입력 초기화
                           e.target.value = ''
                           return
@@ -958,7 +964,7 @@ const MenuAddModal = ({
                 <div className="max-h-64 space-y-3 overflow-y-auto">
                   {ocrResults.map((menu, index) => (
                     <div
-                      key={index}
+                      key={`ocr-${index}`}
                       className="rounded border border-gray-200 p-3"
                     >
                       <div className="mb-3 grid grid-cols-2 gap-3">
@@ -1014,7 +1020,7 @@ const MenuAddModal = ({
                             <option value="">카테고리 선택</option>
                             {categories.map(cat => (
                               <option
-                                key={cat.categoryId}
+                                key={`ocr-cat-${cat.categoryId}`}
                                 value={cat.categoryId}
                               >
                                 {cat.categoryName}
@@ -1053,7 +1059,11 @@ const MenuAddModal = ({
                               // 파일 크기 검증 (1MB = 1048576 bytes)
                               const maxFileSize = 1048576 // 1MB
                               if (file.size > maxFileSize) {
-                                alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                                alert(
+                                  '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                                    (file.size / 1024 / 1024).toFixed(2) +
+                                    'MB'
+                                )
                                 // 파일 입력 초기화
                                 e.target.value = ''
                                 return
@@ -1153,7 +1163,10 @@ const MenuAddModal = ({
                 >
                   <option value="">카테고리를 선택하세요</option>
                   {categories.map(cat => (
-                    <option key={cat.categoryId} value={cat.categoryId}>
+                    <option
+                      key={`manual-cat-${cat.categoryId}`}
+                      value={cat.categoryId}
+                    >
                       {cat.categoryName}
                     </option>
                   ))}
@@ -1188,7 +1201,11 @@ const MenuAddModal = ({
                       // 파일 크기 검증 (1MB = 1048576 bytes)
                       const maxFileSize = 1048576 // 1MB
                       if (file.size > maxFileSize) {
-                        alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                        alert(
+                          '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                            (file.size / 1024 / 1024).toFixed(2) +
+                            'MB'
+                        )
                         // 파일 입력 초기화
                         e.target.value = ''
                         return
@@ -1378,7 +1395,10 @@ const MenuEditModal = ({
             >
               <option value="">카테고리를 선택하세요</option>
               {categories.map(cat => (
-                <option key={cat.categoryId} value={cat.categoryId}>
+                <option
+                  key={`edit-cat-${cat.categoryId}`}
+                  value={cat.categoryId}
+                >
                   {cat.categoryName}
                 </option>
               ))}
@@ -1410,7 +1430,11 @@ const MenuEditModal = ({
                   // 파일 크기 검증 (1MB = 1048576 bytes)
                   const maxFileSize = 1048576 // 1MB
                   if (file.size > maxFileSize) {
-                    alert('이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB')
+                    alert(
+                      '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                        (file.size / 1024 / 1024).toFixed(2) +
+                        'MB'
+                    )
                     // 파일 입력 초기화
                     e.target.value = ''
                     return

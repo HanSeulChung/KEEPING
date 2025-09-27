@@ -1,10 +1,8 @@
 'use client'
 
-import { authApi } from '@/api/authApi'
 import { buildURL, endpoints } from '@/api/config'
 import { useCallback, useState } from 'react'
 
-type Purpose = 'REGISTER' | 'LOGIN' | 'PASSWORD_RESET'
 type Role = 'CUSTOMER' | 'OWNER'
 
 type VerifyResult = { verified: boolean }
@@ -30,15 +28,26 @@ export function useOtpAuth() {
       birth: string,
       genderDigit: string,
       userRole: Role
-    ) => {
+    ): Promise<boolean> => {
       setLoading(true)
       setError(null)
       try {
-        // birth를 YYYY-MM-DD 형식으로 변환 (6자리 YYMMDD -> YYYY-MM-DD)
-        const formattedBirth =
-          birth && birth.length === 6
-            ? `20${birth.slice(0, 2)}-${birth.slice(2, 4)}-${birth.slice(4, 6)}`
-            : birth || ''
+        // birth를 YYYY-MM-DD 형식으로 변환
+        let formattedBirth = birth || ''
+
+        if (birth) {
+          if (birth.length === 6) {
+            // 6자리 YYMMDD -> YYYY-MM-DD (90년대는 19XX, 00년대는 20XX)
+            const year = parseInt(birth.slice(0, 2))
+            const fullYear =
+              year >= 90 ? `19${birth.slice(0, 2)}` : `20${birth.slice(0, 2)}`
+            formattedBirth = `${fullYear}-${birth.slice(2, 4)}-${birth.slice(4, 6)}`
+          } else if (!birth.includes('-') && birth.length === 8) {
+            // YYYYMMDD -> YYYY-MM-DD
+            formattedBirth = `${birth.slice(0, 4)}-${birth.slice(4, 6)}-${birth.slice(6, 8)}`
+          }
+          // 이미 YYYY-MM-DD 형식이면 그대로 사용
+        }
 
         console.log('OTP 요청 데이터:', {
           name,
@@ -49,10 +58,12 @@ export function useOtpAuth() {
           userRole,
         })
 
-        // /auth/session-info에서 regSessionId 가져오기
-        const sessionInfo = await authApi.getSessionInfo()
-        const regSessionId = sessionInfo.data
-        console.log('/auth/session-info에서 가져온 regSessionId:', regSessionId)
+        // 쿠키에서 regSessionId 가져오기
+        const regSessionId = document.cookie
+          .split(';')
+          .find(row => row.trim().startsWith('regSessionId='))
+          ?.split('=')[1]
+        console.log('쿠키에서 가져온 regSessionId:', regSessionId)
 
         if (!regSessionId) {
           throw new Error(
@@ -60,16 +71,9 @@ export function useOtpAuth() {
           )
         }
 
-        // Authorization 헤더 추가
+        // 회원가입 단계: Authorization 헤더 없이 전송
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-        }
-
-        if (typeof window !== 'undefined') {
-          const accessToken = localStorage.getItem('accessToken')
-          if (accessToken) {
-            headers.Authorization = `Bearer ${accessToken}`
-          }
         }
 
         const res = await fetch(buildURL(endpoints.auth.otpRequest), {
@@ -96,8 +100,12 @@ export function useOtpAuth() {
         setExpiresAt(data?.data?.expiresAt ?? null)
 
         return true
-      } catch (e: any) {
-        setError(e?.message ?? 'OTP 요청 중 오류가 발생했습니다.')
+      } catch (err: unknown) {
+        const message =
+          typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'OTP 요청 중 오류가 발생했습니다.'
+        setError(message)
         return false
       } finally {
         setLoading(false)
@@ -111,9 +119,11 @@ export function useOtpAuth() {
       setLoading(true)
       setError(null)
       try {
-        // /auth/session-info에서 regSessionId 가져오기
-        const sessionInfo = await authApi.getSessionInfo()
-        const regSessionId = sessionInfo.data
+        // 쿠키에서 regSessionId 가져오기
+        const regSessionId = document.cookie
+          .split(';')
+          .find(row => row.trim().startsWith('regSessionId='))
+          ?.split('=')[1]
         console.log('OTP 검증에 사용할 regSessionId:', regSessionId)
 
         if (!regSessionId) {
@@ -122,16 +132,9 @@ export function useOtpAuth() {
           )
         }
 
-        // Authorization 헤더 추가
+        // 회원가입 단계: Authorization 헤더 없이 전송
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-        }
-
-        if (typeof window !== 'undefined') {
-          const accessToken = localStorage.getItem('accessToken')
-          if (accessToken) {
-            headers.Authorization = `Bearer ${accessToken}`
-          }
         }
 
         const res = await fetch(buildURL(endpoints.auth.otpVerify), {
@@ -156,8 +159,12 @@ export function useOtpAuth() {
 
         // 서버가 success 플래그를 내려준다고 가정
         return { verified: true }
-      } catch (e: any) {
-        setError(e?.message ?? 'OTP 검증 중 오류가 발생했습니다.')
+      } catch (err: unknown) {
+        const message =
+          typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'OTP 검증 중 오류가 발생했습니다.'
+        setError(message)
         return null
       } finally {
         setLoading(false)

@@ -48,9 +48,8 @@ const CustomerPinSetup = () => {
 
     setIsSubmitting(true)
     try {
-      // 세션에서 regSessionId 가져오기
-      const sessionInfo = await authApi.getSessionInfo()
-      const regSessionId = sessionInfo.data
+      // localStorage에서 regSessionId 가져오기
+      const regSessionId = localStorage.getItem('regSessionId')
 
       if (!regSessionId) {
         alert('세션 정보를 찾을 수 없습니다. 다시 로그인해주세요.')
@@ -58,15 +57,26 @@ const CustomerPinSetup = () => {
         return
       }
 
-      // 회원가입 완료 API 호출
+      // 회원가입 완료 API 호출 (fetch 사용)
       const signupData = {
         regSessionId: regSessionId,
         paymentPin: pinNumber
       }
 
       console.log('회원가입 요청 데이터:', signupData)
-      
-      const result = await authApi.completeCustomerSignup(signupData)
+
+      const signupResponse = await fetch('/api/auth/signup/customer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(signupData)
+      })
+
+      if (!signupResponse.ok) {
+        throw new Error('회원가입에 실패했습니다.')
+      }
+
+      const result = await signupResponse.json()
       console.log('회원가입 완료:', result)
 
       // 회원가입 성공 시 토큰 저장
