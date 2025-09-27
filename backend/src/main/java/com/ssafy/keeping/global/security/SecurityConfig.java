@@ -46,7 +46,9 @@ public class SecurityConfig {
             "/s3/**",
             "/owners/stores/**",
             "/api/v1/stores/**",
-            "/ocr/*"
+            "/ocr/*",
+            "/customer/register/**",
+            "/owners/register/**"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
