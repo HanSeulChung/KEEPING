@@ -1,4 +1,4 @@
-import { apiConfig } from './config'
+import { apiConfig, buildURL, endpoints } from './config'
 
 export interface OtpRequest {
   regSessionId: string
@@ -37,19 +37,28 @@ export const requestOtp = async (
   otpData: OtpRequest
 ): Promise<ApiResponse<OtpRequestResponse>> => {
   try {
-    const response = await fetch(`${apiConfig.baseURL}/otp/request`, {
+    // 백엔드 직접 호출 (환경변수 기반 baseURL)
+    const response = await fetch(buildURL(endpoints.auth.otpRequest), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(otpData),
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    const rawText = await response.text()
+    let result: any = {}
+    try {
+      result = rawText ? JSON.parse(rawText) : {}
+    } catch {}
+
+    if (!response.ok || result?.success === false) {
+      const message =
+        result?.message || result?.backend?.raw || `HTTP ${response.status}`
+      throw new Error(message)
     }
 
-    const result = await response.json()
     return result
   } catch (error) {
     console.error('OTP 요청 실패:', error)
@@ -62,23 +71,29 @@ export const verifyOtp = async (
   verifyData: OtpVerifyRequest
 ): Promise<ApiResponse<OtpVerifyResponse>> => {
   try {
-    const response = await fetch(`${apiConfig.baseURL}/otp/verify`, {
+    // 백엔드 직접 호출 (환경변수 기반 baseURL)
+    const response = await fetch(buildURL(endpoints.auth.otpVerify), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(verifyData),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('OTP 검증 실패:', response.status, errorText)
-      throw new Error(
-        `HTTP error! status: ${response.status}, message: ${errorText}`
-      )
+    const rawText = await response.text()
+    let result: any = {}
+    try {
+      result = rawText ? JSON.parse(rawText) : {}
+    } catch {}
+
+    if (!response.ok || result?.success === false) {
+      const message =
+        result?.message || result?.backend?.raw || `HTTP ${response.status}`
+      console.error('OTP 검증 실패:', response.status, message)
+      throw new Error(message)
     }
 
-    const result = await response.json()
     console.log('OTP 검증 응답:', result)
     return result
   } catch (error) {

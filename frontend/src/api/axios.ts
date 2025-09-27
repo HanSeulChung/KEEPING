@@ -26,19 +26,15 @@ const apiClient = axios.create({
   },
 })
 
-// 요청 인터셉터 - 회원가입 페이지가 아닌 경우에만 Authorization 헤더 추가
+// 요청 인터셉터 - 모든 요청에 Authorization 헤더 추가(가능한 경우)
 apiClient.interceptors.request.use(
   config => {
     if (typeof window !== 'undefined') {
-      // 회원가입 페이지에서는 Authorization 헤더 추가하지 않음
-      const isRegisterPage = window.location.pathname.includes('/register/')
-      if (!isRegisterPage) {
-        const tokenFromStore = useAuthStore.getState().getAccessToken()
-        const tokenFromLocal = localStorage.getItem('accessToken')
-        const accessToken = tokenFromStore || tokenFromLocal
-        if (accessToken) {
-          config.headers.Authorization = `Bearer ${accessToken}`
-        }
+      const tokenFromStore = useAuthStore.getState().getAccessToken()
+      const tokenFromLocal = localStorage.getItem('accessToken')
+      const accessToken = tokenFromStore || tokenFromLocal
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`
       }
     }
 
@@ -66,11 +62,11 @@ apiClient.interceptors.response.use(
     return response
   },
   async error => {
-    const originalRequest = error.config
+    const originalRequest = error.config || {}
 
     // 401 에러이고 아직 재시도하지 않은 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
+    if (error.response?.status === 401 && !(originalRequest as any)._retry) {
+      ;(originalRequest as any)._retry = true
 
       try {
         // 백엔드의 /auth/refresh는 HttpOnly 쿠키 기반으로 처리되고,
@@ -78,11 +74,26 @@ apiClient.interceptors.response.use(
         const refreshResponse = await fetch(buildURL('/auth/refresh'), {
           method: 'POST',
           credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
         })
 
         if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json()
-          const newAccessToken = refreshData.data?.accessToken
+          const refreshData = await refreshResponse.json().catch(() => ({}))
+          let newAccessToken =
+            refreshData?.data?.accessToken ||
+            refreshData?.accessToken ||
+            refreshData?.token
+
+          // 개발 환경: 응답에 토큰이 없을 경우 DEV 토큰 사용
+          if (!newAccessToken && process.env.NODE_ENV === 'development') {
+            const devToken = (
+              process.env.NEXT_PUBLIC_DEV_ACCESS_TOKEN || ''
+            ).trim()
+            if (devToken) newAccessToken = devToken
+          }
 
           if (!newAccessToken) throw new Error('Token refresh failed')
 
@@ -98,26 +109,27 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest)
         }
 
-        // 토큰 갱신 실패 시 로그아웃 처리
+        // 토큰 갱신 실패 시 에러 처리
         throw new Error('Token refresh failed')
       } catch (refreshError) {
-        // 토큰 갱신 실패 시 로그아웃 처리
-        try {
-          useAuthStore.getState().logout()
-        } catch {}
-        if (typeof window !== 'undefined') {
+        // 개발 환경에서는 강제 로그아웃/리다이렉트 하지 않음
+        if (process.env.NODE_ENV !== 'development') {
           try {
-            localStorage.removeItem('accessToken')
+            useAuthStore.getState().logout()
           } catch {}
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.removeItem('accessToken')
+            } catch {}
 
-          // 현재 페이지가 점주 페이지인지 고객 페이지인지 확인
-          const currentPath = window.location.pathname
-          const isOwnerPage = currentPath.startsWith('/owner')
+            const currentPath = window.location.pathname
+            const isOwnerPage = currentPath.startsWith('/owner')
 
-          if (isOwnerPage) {
-            window.location.href = '/' // 점주는 홈페이지로
-          } else {
-            window.location.href = '/customer/login' // 고객은 고객 로그인으로
+            if (isOwnerPage) {
+              window.location.href = '/'
+            } else {
+              window.location.href = '/customer/login'
+            }
           }
         }
         return Promise.reject(refreshError)

@@ -30,22 +30,36 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
     // 이미 로드되었거나 로딩 중이면 중복 실행 방지
     if (isSessionInfoLoaded) return
 
-    // 쿠키에서 regSessionId 확인
-    const checkRegSessionId = () => {
+    // auth/session-info에서 regSessionId 확인
+    const checkRegSessionId = async () => {
       try {
-        const regSessionId = document.cookie
-          .split(';')
-          .find(row => row.trim().startsWith('regSessionId='))
-          ?.split('=')[1]
+        const response = await fetch(buildURL('/auth/session-info'), {
+          method: 'GET',
+          credentials: 'include',
+        })
 
-        if (regSessionId) {
-          setSessionRegSessionId(regSessionId)
-          console.log('쿠키에서 가져온 regSessionId:', regSessionId)
+        if (response.ok) {
+          const result = await response.json()
+          const regSessionId = result?.data
+
+          if (regSessionId) {
+            setSessionRegSessionId(regSessionId)
+            // localStorage에 저장
+            localStorage.setItem('regSessionId', regSessionId)
+            console.log(
+              'auth/session-info에서 가져온 regSessionId:',
+              regSessionId
+            )
+          } else {
+            console.log(
+              'auth/session-info에서 regSessionId를 찾을 수 없습니다.'
+            )
+          }
         } else {
-          console.log('regSessionId 쿠키가 없습니다.')
+          console.log('auth/session-info 호출 실패:', response.status)
         }
       } catch (error) {
-        console.error('쿠키 확인 실패:', error)
+        console.error('auth/session-info 호출 실패:', error)
       } finally {
         setIsSessionInfoLoaded(true)
       }
@@ -54,25 +68,21 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
     checkRegSessionId()
   }, [isSessionInfoLoaded])
 
-  const handlePassAuth = () => {
+  const handlePassAuth = async () => {
     // 전화번호가 입력되어 있는지 확인
     if (!authForm.phoneNumber) {
       alert('전화번호를 먼저 입력해주세요.')
       return
     }
 
-    // 쿠키에서 regSessionId 확인
-    const regSessionId = document.cookie
-      .split(';')
-      .find(row => row.trim().startsWith('regSessionId='))
-      ?.split('=')[1]
-
+    // localStorage에서 regSessionId 확인 (운영)
+    const regSessionId = localStorage.getItem('regSessionId')
     if (!regSessionId) {
       alert('세션 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
       return
     }
 
-    // OTP 인증 모달 열기
+    // OTP 인증 모달 열기 (운영)
     setIsOtpModalOpen(true)
   }
 
@@ -190,7 +200,10 @@ export default function CustomerAuthForm({ onNext }: CustomerAuthFormProps) {
           type="button"
           onClick={handlePassAuth}
           disabled={
-            !authForm.name || !authForm.residentNumber || !authForm.phoneNumber
+            !authForm.name ||
+            !authForm.residentNumber ||
+            !authForm.phoneNumber ||
+            !authForm.genderCode
           }
           className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >

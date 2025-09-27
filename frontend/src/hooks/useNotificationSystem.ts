@@ -61,6 +61,21 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
 
+  // 역할/식별자 보조 함수들 (숫자 id 강제)
+  const getUserRole = useCallback((): 'OWNER' | 'CUSTOMER' => {
+    return (user?.role === 'CUSTOMER' ? 'CUSTOMER' : 'OWNER') as
+      | 'OWNER'
+      | 'CUSTOMER'
+  }, [user?.role])
+
+  const getUserNumericId = useCallback((): number | null => {
+    const raw =
+      (user as any)?.ownerId ?? (user as any)?.userId ?? (user as any)?.id
+    const num = Number(raw)
+    if (!Number.isFinite(num) || num <= 0) return null
+    return num
+  }, [user?.ownerId, user?.userId, user?.id])
+
   const convertNotificationData = (backendData: any): NotificationData => {
     return {
       id: backendData.notificationId,
@@ -217,9 +232,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // SSE 연결 (최적화된 토큰 관리)
   const connectSSE = useCallback(async () => {
-    if (!user?.id || sseAbortControllerRef.current || !isOnline) return
+    if (sseAbortControllerRef.current || !isOnline) return
 
-    const userId = user.ownerId || user.userId || user.id
+    const userId = getUserNumericId()
     if (!userId) return
 
     // 최적화된 토큰 가져오기 (필요시에만 갱신)
@@ -231,7 +246,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     // API 주소는 절대 변경하지 않음 - 기존 config 사용
     const rawBase = apiConfig.baseURL.replace(/\/$/, '')
-    const userRole = user.role || 'OWNER'
+    const userRole = getUserRole()
     const ssePath =
       userRole === 'CUSTOMER'
         ? `/api/notifications/subscribe/customer/${userId}`
@@ -259,6 +274,30 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       headers['Authorization'] = `Bearer ${accessToken}`
     }
 
+    // 개발 모드: 콘솔 외에도 디버그 정보 저장 (헤더 포함 여부 확인용)
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const authHeader = headers['Authorization'] || ''
+        const debug = {
+          url: sseUrl,
+          hasAuthorization: Boolean(authHeader),
+          authorizationPreview: authHeader
+            ? `${authHeader.slice(0, 24)}...`
+            : null,
+          timestamp: new Date().toISOString(),
+        }
+        ;(window as any).__KEEPING_SSE_DEBUG__ = debug
+        localStorage.setItem('sse:url', sseUrl)
+        localStorage.setItem('sse:hasAuth', String(debug.hasAuthorization))
+        if (debug.authorizationPreview) {
+          localStorage.setItem('sse:authPreview', debug.authorizationPreview)
+        } else {
+          localStorage.removeItem('sse:authPreview')
+        }
+        localStorage.setItem('sse:time', debug.timestamp)
+      } catch {}
+    }
+
     fetchEventSource(sseUrl, {
       method: 'GET',
       credentials: 'include',
@@ -267,6 +306,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       onopen: async response => {
         if (response.ok) {
           console.log('[SSE] connected')
+          // 연결 즉시 상태 반영
+          setIsConnected(true)
           reconnectAttemptsRef.current = 0
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current)
@@ -310,12 +351,37 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             setIsConnected(true)
           }
 
-          if (typeof event.data === 'string' && !event.data.startsWith('{')) {
-            console.log('[SSE] text message:', event.data)
-            return
+          // 문자열 데이터에 공백/프리픽스가 포함된 경우를 대비해 견고한 파싱
+          let rawText =
+            typeof event.data === 'string' ? event.data.trim() : event.data
+
+          if (typeof rawText === 'string' && rawText.startsWith('data:')) {
+            rawText = rawText.slice(5).trim()
           }
 
-          const data = JSON.parse(event.data)
+          let data: any = null
+          if (typeof rawText === 'string') {
+            try {
+              data = JSON.parse(rawText)
+            } catch {
+              const firstBrace = rawText.indexOf('{')
+              if (firstBrace >= 0) {
+                const maybeJson = rawText.slice(firstBrace)
+                try {
+                  data = JSON.parse(maybeJson)
+                } catch (e) {
+                  console.warn('[SSE] JSON parse failed:', rawText)
+                  return
+                }
+              } else {
+                console.log('[SSE] non-JSON text message:', rawText)
+                return
+              }
+            }
+          } else {
+            data = rawText
+          }
+
           if (data.type === 'connection') return
 
           const notification: NotificationData = convertNotificationData(data)
@@ -345,7 +411,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       console.error('[SSE] connection failed', error)
       setIsConnected(false)
     })
-  }, [user?.id, isOnline])
+  }, [getUserNumericId, getUserRole, isOnline])
 
   const disconnectSSE = useCallback(() => {
     if (sseAbortControllerRef.current) {
@@ -652,10 +718,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }
   const markAsRead = useCallback(
     async (id: number) => {
-      if (!user?.id) return
-      const userId = user.ownerId || user.userId || user.id
-      const userRole = user.role || 'OWNER'
-      const isOwner = userRole === 'OWNER'
+      const userId = getUserNumericId()
+      if (!userId) return
+      const isOwner = getUserRole() === 'OWNER'
       if (isOwner) {
         await apiClient.put(`/api/notifications/owner/${userId}/${id}/read`)
       } else {
@@ -669,14 +734,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         )
       )
     },
-    [user?.id, user?.ownerId, user?.userId, user?.role]
+    [getUserNumericId, getUserRole]
   )
 
   const markAllAsRead = useCallback(async () => {
-    if (!user?.id) return
-    const userId = user.ownerId || user.userId || user.id
-    const userRole = user.role || 'OWNER'
-    const isOwner = userRole === 'OWNER'
+    const userId = getUserNumericId()
+    if (!userId) return
+    const isOwner = getUserRole() === 'OWNER'
     const unreadNotifications = notifications.filter(n => !n.isRead)
     if (unreadNotifications.length === 0) return
     setNotifications(prev =>
@@ -695,7 +759,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         }
       })
     )
-  }, [user?.id, user?.ownerId, user?.userId, user?.role, notifications])
+  }, [getUserNumericId, getUserRole, notifications])
 
   const addNotification = useCallback(
     (
@@ -711,8 +775,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(newNotification.title, {
           body: newNotification.message,
-          icon: '/icons/qr.png',
-          badge: '/icons/qr.png',
+          icon: '/icons/logo_owner+cust.png',
+          badge: '/icons/logo_owner+cust.png',
           tag: String(newNotification.id),
         })
       }
@@ -721,14 +785,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   )
 
   const fetchNotifications = async () => {
-    if (!user) return
-    let userId: number | null = null
-    if (user.ownerId) userId = Number(user.ownerId)
-    else if (user.userId) userId = Number(user.userId)
-    else if (user.id) userId = Number(user.id)
-    if (!userId || isNaN(userId) || userId <= 0) return
-    const userRole = user.role || 'OWNER'
-    const isOwner = userRole === 'OWNER'
+    const userId = getUserNumericId()
+    if (!userId) return
+    const isOwner = getUserRole() === 'OWNER'
     const notifications = isOwner
       ? await notificationApi.owner.getNotificationList(userId)
       : await notificationApi.customer.getNotificationList(userId)
@@ -743,6 +802,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (typeof window !== 'undefined' && user?.id && isOnline) {
         if ('Notification' in window) {
           setIsPermissionGranted(Notification.permission === 'granted')
+        }
+
+        // 권한 미부여 시 권한 요청 및 FCM 등록 (백그라운드 알림 보장)
+        if ('Notification' in window && Notification.permission !== 'granted') {
+          try {
+            await registerFCM()
+          } catch {}
         }
 
         // 알림 목록 로드

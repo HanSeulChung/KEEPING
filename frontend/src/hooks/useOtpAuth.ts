@@ -49,21 +49,9 @@ export function useOtpAuth() {
           // 이미 YYYY-MM-DD 형식이면 그대로 사용
         }
 
-        console.log('OTP 요청 데이터:', {
-          name,
-          phoneNumber,
-          originalBirth: birth,
-          formattedBirth,
-          genderDigit,
-          userRole,
-        })
-
-        // 쿠키에서 regSessionId 가져오기
-        const regSessionId = document.cookie
-          .split(';')
-          .find(row => row.trim().startsWith('regSessionId='))
-          ?.split('=')[1]
-        console.log('쿠키에서 가져온 regSessionId:', regSessionId)
+        // localStorage에서 regSessionId 가져오기 (auth/session-info에서 저장된 값)
+        const regSessionId = localStorage.getItem('regSessionId')
+        console.log('localStorage에서 가져온 regSessionId:', regSessionId)
 
         if (!regSessionId) {
           throw new Error(
@@ -71,33 +59,85 @@ export function useOtpAuth() {
           )
         }
 
+        const requestData = {
+          name,
+          phoneNumber: phoneNumber.replace(/\D/g, ''),
+          birth: formattedBirth,
+          genderDigit,
+          userRole,
+          regSessionId,
+        }
+
+        console.log('OTP 요청 데이터:', {
+          ...requestData,
+          originalBirth: birth,
+          originalPhoneNumber: phoneNumber,
+        })
+
         // 회원가입 단계: Authorization 헤더 없이 전송
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         }
 
+        // 백엔드 직접 호출 (8080 등 환경변수 기반)
         const res = await fetch(buildURL(endpoints.auth.otpRequest), {
           method: 'POST',
           headers,
           credentials: 'include', // 쿠키 동반
-          body: JSON.stringify({
-            name,
-            phoneNumber,
-            birth: formattedBirth,
-            genderDigit,
-            userRole,
-            regSessionId,
-          }),
+          body: JSON.stringify(requestData),
         })
 
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || data?.success === false) {
-          throw new Error(data?.message || `OTP 요청 실패 (HTTP ${res.status})`)
+        console.log('=== 서버 응답 ===')
+        console.log('Status:', res.status)
+        console.log('Status Text:', res.statusText)
+        console.log('Content-Type:', res.headers.get('content-type'))
+
+        // 응답 텍스트 먼저 확인
+        const responseText = await res.text()
+        console.log('Raw response text:', responseText)
+
+        type OtpProxyResponse = {
+          success?: boolean
+          message?: string
+          data?: {
+            requestId?: string
+            expiresAt?: string
+            regSessionId?: string
+          }
+        }
+        let data: OtpProxyResponse = {}
+        try {
+          data = responseText ? JSON.parse(responseText) : {}
+        } catch (parseError) {
+          console.error('JSON 파싱 에러:', parseError)
+          console.error('파싱 실패한 응답:', responseText)
         }
 
-        // 서버가 만약 requestId/만료시각을 내려주면 저장
+        console.log('Parsed data:', data)
+
+        if (!res.ok || data?.success === false) {
+          const errorMessage =
+            data?.message ||
+            (data as any)?.backend?.raw ||
+            `서버 오류 (HTTP ${res.status})`
+          console.error('OTP 요청 실패:', {
+            status: res.status,
+            statusText: res.statusText,
+            errorMessage: errorMessage,
+            data: data,
+          })
+          throw new Error(errorMessage)
+        }
+
+        // 서버가 만약 requestId/만료시각/regSessionId를 내려주면 저장
         setRequestId(data?.data?.requestId ?? null)
         setExpiresAt(data?.data?.expiresAt ?? null)
+        if (data?.data?.regSessionId) {
+          try {
+            localStorage.setItem('regSessionId', String(data.data.regSessionId))
+            console.log('응답에서 regSessionId 저장:', data.data.regSessionId)
+          } catch {}
+        }
 
         return true
       } catch (err: unknown) {
@@ -119,11 +159,8 @@ export function useOtpAuth() {
       setLoading(true)
       setError(null)
       try {
-        // 쿠키에서 regSessionId 가져오기
-        const regSessionId = document.cookie
-          .split(';')
-          .find(row => row.trim().startsWith('regSessionId='))
-          ?.split('=')[1]
+        // localStorage에서 regSessionId 가져오기 (auth/session-info에서 저장된 값)
+        const regSessionId = localStorage.getItem('regSessionId')
         console.log('OTP 검증에 사용할 regSessionId:', regSessionId)
 
         if (!regSessionId) {
@@ -137,6 +174,7 @@ export function useOtpAuth() {
           'Content-Type': 'application/json',
         }
 
+        // 백엔드 직접 호출 (8080 등 환경변수 기반)
         const res = await fetch(buildURL(endpoints.auth.otpVerify), {
           method: 'POST',
           headers,

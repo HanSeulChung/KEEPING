@@ -1,11 +1,11 @@
 'use client'
 
-import { authApi } from '@/api/authApi'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const CustomerPinSetup = () => {
   const router = useRouter()
+
   const [pinNumber, setPinNumber] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,7 +60,7 @@ const CustomerPinSetup = () => {
       // 회원가입 완료 API 호출 (fetch 사용)
       const signupData = {
         regSessionId: regSessionId,
-        paymentPin: pinNumber
+        paymentPin: pinNumber,
       }
 
       console.log('회원가입 요청 데이터:', signupData)
@@ -69,7 +69,7 @@ const CustomerPinSetup = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(signupData)
+        body: JSON.stringify(signupData),
       })
 
       if (!signupResponse.ok) {
@@ -80,16 +80,20 @@ const CustomerPinSetup = () => {
       console.log('회원가입 완료:', result)
 
       // 회원가입 성공 시 토큰 저장
-      if (result.accessToken) {
-        localStorage.setItem('accessToken', result.accessToken)
-        localStorage.setItem('user', JSON.stringify(result.user))
+      const accessToken = result?.accessToken || result?.data?.accessToken
+      const userObj = result?.user || result?.data?.user
+      if (accessToken) {
+        localStorage.setItem('accessToken', accessToken)
+      }
+      if (userObj) {
+        localStorage.setItem('user', JSON.stringify(userObj))
       }
 
       // PIN 번호도 localStorage에 저장 (결제 시 사용)
       localStorage.setItem('customerPaymentPin', pinNumber)
 
       alert('회원가입이 완료되었습니다!')
-      
+
       // 홈페이지로 이동
       router.push('/customer/home')
     } catch (error) {
@@ -211,7 +215,6 @@ const CustomerPinSetup = () => {
             onClick={handleBack}
             disabled={isSubmitting}
             className="w-full rounded-lg bg-gray-200 py-3 font-['nanumsquare'] font-bold text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-
           >
             이전 단계로
           </button>
@@ -229,4 +232,3 @@ const CustomerPinSetup = () => {
 }
 
 export default CustomerPinSetup
-
