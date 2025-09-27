@@ -74,6 +74,34 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }
 
+  // 토큰 갱신 함수
+  const refreshAccessToken = useCallback(async (): Promise<string | null> => {
+    try {
+      console.log('accessToken 갱신 시도')
+      const refreshResponse = await fetch(buildURL('/auth/refresh'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json()
+        const newAccessToken = refreshData.data?.accessToken
+        if (newAccessToken) {
+          localStorage.setItem('accessToken', newAccessToken)
+          useAuthStore.getState().setAccessToken(newAccessToken)
+          console.log('accessToken 갱신 성공')
+          return newAccessToken
+        }
+      }
+      console.warn('accessToken 갱신 실패: 응답에 토큰 없음')
+      return null
+    } catch (error) {
+      console.error('accessToken 갱신 실패:', error)
+      return null
+    }
+  }, [])
+
   // 네트워크 상태 감지
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -175,33 +203,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     // 실제 백엔드 SSE 연결
     try {
-      // SSE 연결 전에 토큰 갱신 시도
-      try {
-        const refreshResponse = await fetch(buildURL('/auth/refresh'), {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        })
 
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json()
-          const newAccessToken = refreshData.data?.accessToken
-          if (newAccessToken) {
-            localStorage.setItem('accessToken', newAccessToken)
-            useAuthStore.getState().setAccessToken(newAccessToken)
-            console.log('SSE 연결 전 토큰 갱신 성공')
-          }
-        }
-      } catch (refreshError) {
-        console.warn('SSE 연결 전 토큰 갱신 실패:', refreshError)
-        // 토큰 갱신 실패 시 SSE 연결 중단
-        return
-      }
-
-      // BASE URL: 어떤 형태든 마지막 /와 /api를 제거한 뒤, 항상 /api 경로를 붙인다
+      // BASE URL: 마지막 /만 제거하고, 경로는 그대로 결합 (중복된 /api 제거하지 않음)
       const rawBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       const base = rawBase.replace(/\/$/, '')
-      const baseWithoutApi = base.replace(/\/api\/?$/, '')
 
       // 백엔드 NotificationController SSE 엔드포인트 사용
       // user 역할에 따라 적절한 엔드포인트 선택
@@ -211,7 +216,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           ? `/api/notifications/subscribe/customer/${userId}`
           : `/api/notifications/subscribe/owner/${userId}`
 
-      const sseUrl = `${baseWithoutApi}${ssePath}`
+      const sseUrl = `${base}${ssePath}`
 
       // Authorization 헤더에 accessToken을 포함
       let accessToken: string | null = null
@@ -246,6 +251,24 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
               clearTimeout(reconnectTimeoutRef.current)
               reconnectTimeoutRef.current = null
             }
+          } else if (response.status === 401) {
+            console.log('SSE 401 에러 - 토큰 갱신 후 재시도')
+            // 토큰 갱신 시도
+            const newToken = await refreshAccessToken()
+            if (newToken) {
+              // 현재 연결 중단
+              if (sseAbortControllerRef.current) {
+                sseAbortControllerRef.current.abort()
+                sseAbortControllerRef.current = null
+              }
+              // 새 토큰으로 재연결
+              setTimeout(() => {
+                if (isVisibleRef.current && isOnline) {
+                  connectSSE().catch(console.error)
+                }
+              }, 1000)
+            }
+            throw new Error('Token refreshed, retrying SSE connection')
           } else {
             console.error(
               'SSE 오픈 실패:',
@@ -263,9 +286,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
               setIsConnected(true)
             }
 
-            // 단순 텍스트 메시지는 무시 (연결 성공 메시지 등)
+            // 단순 텍스트 메시지 처리 (연결 성공 메시지 등)
             if (typeof event.data === 'string' && !event.data.startsWith('{')) {
               console.log('SSE 텍스트 메시지:', event.data)
+              // 연결 메시지는 콘솔 로그만 남기고 브라우저 알림은 표시하지 않음
               return
             }
 
@@ -356,16 +380,53 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }, [])
 
+  // 알림 타입별 아이콘 및 설정 가져오기
+  const getNotificationConfig = (type: NotificationType) => {
+    const category = getNotificationCategory(type)
+    const icon = getNotificationIcon(type)
+
+    // 카테고리별 설정
+    const configs = {
+      payment: {
+        icon: '/icons/payment-icon.png',
+        requireInteraction: true,
+        duration: 8000, // 결제는 중요하니 8초
+        emoji: '💳'
+      },
+      point: {
+        icon: '/icons/point-icon.png',
+        requireInteraction: false,
+        duration: 5000,
+        emoji: '💰'
+      },
+      group: {
+        icon: '/icons/group-icon.png',
+        requireInteraction: false,
+        duration: 6000,
+        emoji: '👥'
+      }
+    }
+
+    return configs[category] || {
+      icon: '/icons/notification-icon.png',
+      requireInteraction: false,
+      duration: 5000,
+      emoji: '🔔'
+    }
+  }
+
   // 브라우저 알림 표시
   const showBrowserNotification = (notification: NotificationData) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const browserNotification = new Notification(notification.title, {
+      const config = getNotificationConfig(notification.type)
+
+      const browserNotification = new Notification(
+        `${config.emoji} ${notification.title}`, {
         body: notification.message,
-        icon: '/icons/notification-icon.png',
+        icon: config.icon,
         badge: '/icons/badge-icon.png',
         tag: String(notification.id),
-        requireInteraction: true,
-        // actions는 Service Worker를 통해서만 사용 가능하므로 제거
+        requireInteraction: config.requireInteraction,
       })
 
       browserNotification.onclick = () => {
@@ -375,10 +436,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         markAsRead(notification.id)
       }
 
-      // 5초 후 자동 닫기
+      // 타입별 다른 시간 후 자동 닫기
       setTimeout(() => {
         browserNotification.close()
-      }, 5000)
+      }, config.duration)
     }
   }
 
@@ -424,6 +485,16 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         return false
       }
 
+      // 이미 등록된 토큰인지 확인
+      const storedToken = localStorage.getItem('fcmToken')
+      const isTokenRegistered = localStorage.getItem(`fcmRegistered_${user.id}`)
+
+      if (storedToken === token && isTokenRegistered === 'true') {
+        console.log('이미 등록된 FCM 토큰 - 건너뜀')
+        setFcmToken(token)
+        return true
+      }
+
       // FCM 토큰을 state와 localStorage에 저장
       setFcmToken(token)
       if (typeof window !== 'undefined') {
@@ -434,10 +505,24 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const isOwner = (user.role || 'OWNER') === 'OWNER'
       const ownerId = user.ownerId || user.id
       const customerId = user.userId || user.id
-      if (isOwner && ownerId) {
-        await registerOwnerFCMToken(Number(ownerId), token)
-      } else if (!isOwner && customerId) {
-        await registerCustomerFCMToken(Number(customerId), token)
+
+      try {
+        if (isOwner && ownerId) {
+          await registerOwnerFCMToken(Number(ownerId), token)
+        } else if (!isOwner && customerId) {
+          await registerCustomerFCMToken(Number(customerId), token)
+        }
+
+        // 등록 성공 시 플래그 저장
+        localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
+      } catch (registrationError: any) {
+        // 409 에러는 이미 등록된 상태이므로 성공으로 처리
+        if (registrationError?.response?.status === 409) {
+          console.log('이미 등록된 토큰 - 정상 처리')
+          localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
+        } else {
+          throw registrationError
+        }
       }
 
       console.log('FCM 토큰 등록 완료')
@@ -476,6 +561,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const registerServiceWorker = async () => {
     if (!('serviceWorker' in navigator)) {
       console.log('이 브라우저는 서비스 워커를 지원하지 않습니다.')
+      return
+    }
+
+    // 개발 모드에서는 서비스 워커 등록 비활성화
+    if (process.env.NODE_ENV === 'development') {
+      console.log('개발 모드: Service Worker 등록 건너뜀')
       return
     }
 
@@ -678,6 +769,21 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }
 
+  // 테스트 알림 발송 함수
+  const sendTestNotification = useCallback((message: string = '테스트 알림입니다') => {
+    addNotification({
+      type: 'ORDER',
+      title: 'KEEPING 테스트 알림',
+      message: message,
+      data: {
+        receiverType: 'CUSTOMER',
+        receiverId: user?.id || 0,
+        receiverName: user?.name || '사용자',
+      },
+    })
+    console.log('테스트 알림 발송됨:', message)
+  }, [addNotification, user])
+
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return {
@@ -690,6 +796,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     markAsRead,
     markAllAsRead,
     addNotification,
+    sendTestNotification,
     registerFCM,
     unregisterFCM,
     getNotificationCategory,

@@ -1,13 +1,5 @@
 import { NotificationAPI } from '@/types/api'
 import apiClient from './axios'
-import { apiConfig } from './config'
-
-// Base에 /api 존재 여부에 따라 경로에 /api를 한 번만 붙여주는 유틸
-const apiPath = (path: string) => {
-  const base = apiConfig.baseURL.replace(/\/$/, '')
-  const hasApi = /\/api$/.test(base)
-  return `${hasApi ? '' : '/api'}${path}`
-}
 
 // 알림 관련 API 함수들
 export const notificationApi = {
@@ -31,7 +23,7 @@ export const notificationApi = {
           message: string
           status: number
           data: number
-        }>(`/notifications/customer/${customerId}/unread-count`)
+        }>(`/api/notifications/customer/${customerId}/unread-count`)
 
         console.log('고객 읽지 않은 알림 개수 조회 성공:', response.data)
         return response.data.data || 0
@@ -78,7 +70,9 @@ export const notificationApi = {
             number: number
             size: number
           }
-        }>(`/notifications/customer/${customerId}?page=${page}&size=${size}`)
+        }>(
+          `/api/notifications/customer/${customerId}?page=${page}&size=${size}`
+        )
 
         console.log('고객 알림 목록 조회 성공:', response.data)
         return response.data.data?.content || []
@@ -112,7 +106,7 @@ export const notificationApi = {
             size: number
           }
         }>(
-          `/notifications/customer/${customerId}/unread?page=${page}&size=${size}`
+          `/api/notifications/customer/${customerId}/unread?page=${page}&size=${size}`
         )
 
         return response.data.data?.content || []
@@ -129,7 +123,7 @@ export const notificationApi = {
     ): Promise<boolean> => {
       try {
         await apiClient.put(
-          `/notifications/customer/${customerId}/${notificationId}/read`
+          `/api/notifications/customer/${customerId}/${notificationId}/read`
         )
         return true
       } catch (error) {
@@ -164,7 +158,7 @@ export const notificationApi = {
           message: string
           status: number
           data: number
-        }>(apiPath(`/notifications/owner/${ownerId}/unread-count`))
+        }>(`/api/notifications/owner/${ownerId}/unread-count`)
 
         console.log('점주 읽지 않은 알림 개수 조회 성공:', response.data)
         return response.data.data || 0
@@ -213,7 +207,7 @@ export const notificationApi = {
             number: number
             size: number
           }
-        }>(apiPath(`/notifications/owner/${ownerId}?page=${page}&size=${size}`))
+        }>(`/api/notifications/owner/${ownerId}?page=${page}&size=${size}`)
 
         console.log('점주 알림 목록 조회 성공:', response.data)
         return response.data.data?.content || []
@@ -249,9 +243,7 @@ export const notificationApi = {
             size: number
           }
         }>(
-          apiPath(
-            `/notifications/owner/${ownerId}/unread?page=${page}&size=${size}`
-          )
+          `/api/notifications/owner/${ownerId}/unread?page=${page}&size=${size}`
         )
 
         return response.data.data?.content || []
@@ -268,7 +260,7 @@ export const notificationApi = {
     ): Promise<boolean> => {
       try {
         await apiClient.put(
-          apiPath(`/notifications/owner/${ownerId}/${notificationId}/read`)
+          `/api/notifications/owner/${ownerId}/${notificationId}/read`
         )
         return true
       } catch (error) {
