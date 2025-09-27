@@ -134,14 +134,14 @@ export default function OwnerHome() {
     }
   }
 
-  // 컴포넌트 마운트 시 가게 목록 가져오기
+  // 컴포넌트 마운트 시 가게 목록 가져오기 (한 번만 실행)
   useEffect(() => {
     // 가게 목록이 없고, 로딩 중이 아닐 때만 fetch
     if (stores.length === 0 && !loading) {
       console.log('가게 목록을 가져오는 중...')
       fetchStores()
     }
-  }, [stores.length, loading])
+  }, []) // 빈 의존성 배열로 마운트 시에만 실행
 
   // 사용자 정보가 있을 때 알림 개수 가져오기 (한 번만 실행)
   useEffect(() => {

@@ -5,13 +5,6 @@ import type { NextConfig } from 'next'
 
 const isWindows = process.platform === 'win32'
 
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-})
-
 const nextConfig: NextConfig = {
   ...(isWindows ? {} : { output: 'standalone' }),
 
@@ -78,4 +71,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withPWA(nextConfig)
+export default nextConfig
