@@ -37,6 +37,7 @@ const NotificationPage = () => {
     useState<NotificationPermission>('default')
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize] = useState(3) // 한 페이지당 3개 알림
+  const [showPermissionModal, setShowPermissionModal] = useState(false)
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -46,6 +47,10 @@ const NotificationPage = () => {
     // 브라우저 알림 권한 상태 확인
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission)
+      // 권한이 기본 상태이면 모달 표시
+      if (Notification.permission === 'default') {
+        setShowPermissionModal(true)
+      }
     }
 
     // 개발 환경에서 FCM 에러 처리 안내
@@ -68,6 +73,7 @@ const NotificationPage = () => {
     try {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
+      setShowPermissionModal(false)
 
       if (permission === 'granted') {
         // 권한 허용 시 테스트 알림 보내기
@@ -79,7 +85,26 @@ const NotificationPage = () => {
       }
     } catch (error) {
       console.error('알림 권한 요청 실패:', error)
+      setShowPermissionModal(false)
     }
+  }
+
+  // 브라우저 설정 안내
+  const showBrowserSettingsGuide = () => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    let message = ''
+
+    if (userAgent.includes('chrome')) {
+      message = '1. 주소창 왼쪽의 자물쇠 아이콘 클릭\n2. "알림" 설정을 "허용"으로 변경\n3. 페이지 새로고침'
+    } else if (userAgent.includes('firefox')) {
+      message = '1. 주소창 왼쪽의 방패 아이콘 클릭\n2. "알림" 권한을 허용으로 변경\n3. 페이지 새로고침'
+    } else if (userAgent.includes('safari')) {
+      message = '1. Safari 메뉴 > 환경설정 > 웹사이트\n2. 알림 탭에서 이 사이트 허용\n3. 페이지 새로고침'
+    } else {
+      message = '브라우저 설정에서 이 사이트의 알림을 허용해주세요.'
+    }
+
+    alert(message)
   }
 
   const toggleSetting = (id: string) => {
@@ -153,45 +178,22 @@ const NotificationPage = () => {
 
       {/* 메인 컨텐츠 */}
       <div className="pb-safe">
-        {/* 알림 권한 상태 */}
-        <div className="mb-8">
-          {notificationPermission !== 'granted' && (
-            <div className="rounded-lg border border-orange-300 bg-orange-50 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1"></div>
-                <div className="ml-4">
-                  {notificationPermission === 'default' ? (
-                    <button
-                      onClick={requestNotificationPermission}
-                      className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-orange-700"
-                    >
-                      <IoCheckmarkCircle />
-                      알림 허용하기
-                    </button>
-                  ) : notificationPermission === 'denied' ? (
-                    <button
-                      onClick={() => {
-                        alert(
-                          '브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭하여 알림을 허용해주세요.'
-                        )
-                      }}
-                      className="rounded-lg bg-gray-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-700"
-                    >
-                      설정 방법 보기
-                    </button>
-                  ) : (
-                    <button
-                      onClick={requestNotificationPermission}
-                      className="rounded-lg bg-blue-600 px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-blue-700"
-                    >
-                      다시 시도
-                    </button>
-                  )}
-                </div>
+        {/* 알림 권한이 거부된 경우에만 작은 안내 표시 */}
+        {notificationPermission === 'denied' && (
+          <div className="mb-8 rounded-lg border border-orange-300 bg-orange-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-['nanumsquare'] text-sm text-orange-800">
+                브라우저에서 알림이 차단되어 있습니다
               </div>
+              <button
+                onClick={showBrowserSettingsGuide}
+                className="rounded-lg bg-orange-600 px-3 py-1 font-['nanumsquare'] text-xs font-bold text-white transition-colors hover:bg-orange-700"
+              >
+                설정 방법
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 알림 통계 */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -417,6 +419,48 @@ const NotificationPage = () => {
           </div>
         </div>
       </div>
+
+      {/* 알림 권한 요청 모달 */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <IoNotifications className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="mb-2 font-['Tenada'] text-xl font-extrabold text-black">
+                실시간 알림 받기
+              </h3>
+              <p className="font-['nanumsquare'] text-sm text-gray-600">
+                주문, 결제 등 중요한 알림을 즉시 받아보세요.
+                <br />
+                언제든지 설정에서 변경할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={requestNotificationPermission}
+                className="w-full rounded-lg bg-blue-600 px-4 py-3 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-blue-700"
+              >
+                알림 허용하기
+              </button>
+              <button
+                onClick={() => setShowPermissionModal(false)}
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 font-['nanumsquare'] text-sm font-bold text-gray-700 transition-colors hover:bg-gray-100"
+              >
+                나중에
+              </button>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="font-['nanumsquare'] text-xs text-gray-500">
+                브라우저에서 알림을 허용해야 실시간 알림을 받을 수 있습니다
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

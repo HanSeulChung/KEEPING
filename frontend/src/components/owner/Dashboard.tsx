@@ -59,6 +59,20 @@ export default function OwnerHome() {
   const fetchOverallStatistics = async (storeId: number) => {
     try {
       setStatsLoading(true)
+
+      // 샘플 가게인 경우 샘플 데이터 반환
+      if (storeId === -1) {
+        console.log('샘플 가게 SSAFY 통계 데이터 설정')
+        setOverallStats({
+          totalSales: 1500000,
+          totalOrders: 150,
+          averageOrderValue: 10000,
+          totalCustomers: 120,
+        })
+        setStatsLoading(false)
+        return
+      }
+
       console.log('전체 통계 조회 시작:', storeId)
       console.log('통계 API 호출 시작...')
 
@@ -91,10 +105,8 @@ export default function OwnerHome() {
 
   // 읽지 않은 알림 개수 가져오기
   const fetchUnreadCount = async () => {
-    console.log('현재 사용자 정보:', user)
-
     if (!user?.ownerId && !user?.userId && !user?.id) {
-      console.warn('사용자 ID를 찾을 수 없습니다:', user)
+      console.warn('사용자 ID를 찾을 수 없습니다')
       return
     }
 
@@ -109,10 +121,8 @@ export default function OwnerHome() {
         ownerId = Number(user.id)
       }
 
-      console.log('알림 조회할 ownerId:', ownerId)
-
       if (isNaN(ownerId) || ownerId <= 0) {
-        console.error('유효하지 않은 ownerId:', ownerId)
+        console.error('유효하지 않은 ownerId')
         return
       }
 
@@ -131,7 +141,7 @@ export default function OwnerHome() {
       console.log('가게 목록을 가져오는 중...')
       fetchStores()
     }
-  }, [stores.length, fetchStores, loading])
+  }, [stores.length, loading])
 
   // 사용자 정보가 있을 때 알림 개수 가져오기
   useEffect(() => {
@@ -162,39 +172,32 @@ export default function OwnerHome() {
     )
   }
 
-  // 가게가 없는 경우 (로딩이 완료되고 가게가 정말 없는 경우만)
-  if (!loading && stores.length === 0) {
-    return (
-      <div className="min-h-screen bg-white">
-        <main className="mx-auto w-full max-w-[626px] px-4 py-8">
-          <div className="flex h-64 flex-col items-center justify-center">
-            <div className="mb-4 text-lg text-gray-600">
-              등록된 가게가 없습니다
-            </div>
-            <button
-              onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="rounded-lg bg-black px-6 py-3 text-white transition-colors hover:bg-gray-800"
-            >
-              첫 번째 가게 등록하기
-            </button>
-          </div>
-        </main>
-
-        {/* 매장 등록 모달 */}
-        <StoreRegisterModal
-          isOpen={isStoreRegisterModalOpen}
-          onClose={() => setIsStoreRegisterModalOpen(false)}
-        />
-      </div>
-    )
-  }
+  // 가게가 없는 경우 샘플 가게 "SSAFY" 추가
+  const displayStores = stores.length === 0 && !loading ? [
+    {
+      storeId: -1,
+      storeName: "SSAFY",
+      address: "서울시 강남구 테헤란로 212",
+      phoneNumber: "02-1234-5678",
+      merchantId: -1,
+      category: "교육",
+      storeStatus: "ACTIVE" as const,
+      description: "샘플 매장입니다. 실제 매장을 등록해보세요!",
+      createdAt: new Date().toISOString(),
+      imgUrl: "",
+      id: "-1",
+      name: "SSAFY",
+      ownerId: "",
+      phone: "02-1234-5678"
+    }
+  ] : stores
 
   return (
     <div className="min-h-screen bg-white">
       <main className="mx-auto w-full max-w-[626px] px-4 py-8">
         <div className="top-8 mb-6 flex justify-center sm:mb-8">
           <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
-            {stores.map((s, index) => (
+            {displayStores.map((s, index) => (
               <button
                 key={s.storeId}
                 onClick={() => handleStoreSelect(s)}
