@@ -74,7 +74,7 @@ export const GroupSettings = ({
 
       const url = buildURL(`/groups/${groupId}/group-members`)
       console.log('그룹 멤버 조회 URL:', url)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -92,7 +92,11 @@ export const GroupSettings = ({
         credentials: 'include',
       })
 
-      console.log('그룹 멤버 조회 응답 상태:', response.status, response.statusText)
+      console.log(
+        '그룹 멤버 조회 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -100,7 +104,7 @@ export const GroupSettings = ({
 
       const data: GroupMembersResponse = await response.json()
       console.log('그룹 멤버 조회 응답 데이터:', data)
-      
+
       if (data.success) {
         setGroupMembers(data.data || [])
       } else {
@@ -126,7 +130,7 @@ export const GroupSettings = ({
       setError(null)
 
       const url = buildURL(`/groups/${groupId}/group-member`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -139,7 +143,7 @@ export const GroupSettings = ({
       }
 
       const requestBody = {
-        targetCustomerId: customerId
+        targetCustomerId: customerId,
       }
 
       console.log('멤버 내보내기 요청:', {
@@ -149,7 +153,7 @@ export const GroupSettings = ({
         requestBody,
         groupId,
         customerId,
-        customerName
+        customerName,
       })
 
       const response = await fetch(url, {
@@ -159,11 +163,15 @@ export const GroupSettings = ({
         body: JSON.stringify(requestBody),
       })
 
-      console.log('멤버 내보내기 응답 상태:', response.status, response.statusText)
+      console.log(
+        '멤버 내보내기 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         let errorMessage = `멤버 내보내기에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log('멤버 내보내기 에러 응답:', errorData)
@@ -177,7 +185,7 @@ export const GroupSettings = ({
             errorMessage = errorText
           }
         }
-        
+
         console.log('멤버 내보내기 실패 - 최종 에러 메시지:', errorMessage)
         alert(errorMessage)
         return
@@ -185,12 +193,11 @@ export const GroupSettings = ({
 
       const result = await response.json()
       console.log('멤버 내보내기 성공 응답:', result)
-      
+
       alert(`${customerName}을/를 성공적으로 내보냈습니다.`)
-      
+
       // 멤버 목록 새로고침
       fetchGroupMembers()
-      
     } catch (error) {
       console.error('멤버 내보내기 실패:', error)
       alert('멤버 내보내기 중 오류가 발생했습니다.')
@@ -204,7 +211,7 @@ export const GroupSettings = ({
     try {
       const url = buildURL(`/groups/${groupId}`)
       console.log('그룹 정보 조회 URL:', url)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -228,7 +235,7 @@ export const GroupSettings = ({
 
       const data = await response.json()
       console.log('그룹 정보 조회 응답:', data)
-      
+
       if (data.success) {
         setGroupInfo(data.data)
         setGroupName(data.data.groupName)
@@ -247,7 +254,7 @@ export const GroupSettings = ({
 
       const url = buildURL(`/groups/${groupId}/add-requests`)
       console.log('가입 요청 목록 조회 URL:', url)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -267,7 +274,11 @@ export const GroupSettings = ({
         credentials: 'include',
       })
 
-      console.log('가입 요청 목록 조회 응답 상태:', response.status, response.statusText)
+      console.log(
+        '가입 요청 목록 조회 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -275,10 +286,12 @@ export const GroupSettings = ({
 
       const data: GroupAddRequestsResponse = await response.json()
       console.log('가입 요청 목록 조회 응답 데이터:', data)
-      
+
       if (data.success) {
         // PENDING 상태의 요청만 필터링
-        const pendingOnly = data.data.filter(request => request.status === 'PENDING')
+        const pendingOnly = data.data.filter(
+          request => request.status === 'PENDING'
+        )
         console.log('PENDING 상태 요청들:', pendingOnly)
         setPendingRequests(pendingOnly)
       } else {
@@ -293,13 +306,16 @@ export const GroupSettings = ({
   }
 
   // 가입 요청 승인/거절
-  const handleRequestDecision = async (requestId: number, isAccept: boolean) => {
+  const handleRequestDecision = async (
+    requestId: number,
+    isAccept: boolean
+  ) => {
     try {
       setLoading(true)
       setError(null)
 
       const url = buildURL(`/groups/${groupId}/add-requests`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -313,7 +329,7 @@ export const GroupSettings = ({
 
       const requestBody = {
         groupAddRequestId: requestId,
-        isAccept: isAccept
+        isAccept: isAccept,
       }
 
       console.log(`${isAccept ? '승인' : '거절'} 요청 시작:`, {
@@ -322,7 +338,7 @@ export const GroupSettings = ({
         headers,
         requestBody,
         groupId,
-        requestId
+        requestId,
       })
 
       const response = await fetch(url, {
@@ -332,11 +348,15 @@ export const GroupSettings = ({
         body: JSON.stringify(requestBody),
       })
 
-      console.log(`${isAccept ? '승인' : '거절'} 응답 상태:`, response.status, response.statusText)
+      console.log(
+        `${isAccept ? '승인' : '거절'} 응답 상태:`,
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         let errorMessage = `${isAccept ? '승인' : '거절'} 처리에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log(`${isAccept ? '승인' : '거절'} 에러 응답:`, errorData)
@@ -350,21 +370,26 @@ export const GroupSettings = ({
             errorMessage = errorText
           }
         }
-        
-        console.log(`${isAccept ? '승인' : '거절'} 실패 - 최종 에러 메시지:`, errorMessage)
+
+        console.log(
+          `${isAccept ? '승인' : '거절'} 실패 - 최종 에러 메시지:`,
+          errorMessage
+        )
         alert(errorMessage)
         return
       }
 
       const result = await response.json()
       console.log(`${isAccept ? '승인' : '거절'} 성공 응답:`, result)
-      
+
       if (result.success) {
         alert(`${isAccept ? '승인' : '거절'} 처리되었습니다.`)
         // 목록 새로고침
         fetchAddRequests()
       } else {
-        alert(result.message || `${isAccept ? '승인' : '거절'} 처리에 실패했습니다.`)
+        alert(
+          result.message || `${isAccept ? '승인' : '거절'} 처리에 실패했습니다.`
+        )
       }
     } catch (error) {
       console.error('가입 요청 처리 실패:', error)
@@ -390,7 +415,9 @@ export const GroupSettings = ({
     }
 
     // 선택된 멤버의 customerId 찾기
-    const selectedMemberData = groupMembers.find(member => member.customerName === selectedMember)
+    const selectedMemberData = groupMembers.find(
+      member => member.customerName === selectedMember
+    )
     if (!selectedMemberData) {
       alert('선택된 멤버를 찾을 수 없습니다.')
       return
@@ -406,7 +433,7 @@ export const GroupSettings = ({
       setError(null)
 
       const url = buildURL(`/groups/${groupId}/group-leader`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -419,7 +446,7 @@ export const GroupSettings = ({
       }
 
       const requestBody = {
-        newGroupLeaderId: selectedMemberData.customerId
+        newGroupLeaderId: selectedMemberData.customerId,
       }
 
       console.log('모임장 위임 요청:', {
@@ -429,7 +456,7 @@ export const GroupSettings = ({
         requestBody,
         groupId,
         selectedMember,
-        newGroupLeaderId: selectedMemberData.customerId
+        newGroupLeaderId: selectedMemberData.customerId,
       })
 
       const response = await fetch(url, {
@@ -439,11 +466,15 @@ export const GroupSettings = ({
         body: JSON.stringify(requestBody),
       })
 
-      console.log('모임장 위임 응답 상태:', response.status, response.statusText)
+      console.log(
+        '모임장 위임 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         let errorMessage = `모임장 위임에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log('모임장 위임 에러 응답:', errorData)
@@ -457,7 +488,7 @@ export const GroupSettings = ({
             errorMessage = errorText
           }
         }
-        
+
         console.log('모임장 위임 실패 - 최종 에러 메시지:', errorMessage)
         alert(errorMessage)
         return
@@ -465,12 +496,11 @@ export const GroupSettings = ({
 
       const result = await response.json()
       console.log('모임장 위임 성공 응답:', result)
-      
+
       alert(`"${selectedMember}"에게 모임장을 성공적으로 위임했습니다.`)
-      
+
       // 페이지 나가기
       window.location.href = '/customer/groupWallet'
-      
     } catch (error) {
       console.error('모임장 위임 실패:', error)
       alert('모임장 위임 중 오류가 발생했습니다.')
@@ -495,7 +525,7 @@ export const GroupSettings = ({
       setError(null)
 
       const url = buildURL(`/groups/${groupId}`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -511,7 +541,7 @@ export const GroupSettings = ({
         url,
         method: 'DELETE',
         headers,
-        groupId
+        groupId,
       })
 
       const response = await fetch(url, {
@@ -524,7 +554,7 @@ export const GroupSettings = ({
 
       if (!response.ok) {
         let errorMessage = `모임 해체에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log('모임 해체 에러 응답:', errorData)
@@ -538,7 +568,7 @@ export const GroupSettings = ({
             errorMessage = errorText
           }
         }
-        
+
         console.log('모임 해체 실패 - 최종 에러 메시지:', errorMessage)
         alert(errorMessage)
         return
@@ -546,12 +576,11 @@ export const GroupSettings = ({
 
       const result = await response.json()
       console.log('모임 해체 성공 응답:', result)
-      
+
       alert('모임이 성공적으로 해체되었습니다.')
-      
+
       // 메인 페이지로 이동
       window.location.href = '/customer/groupWallet'
-      
     } catch (error) {
       console.error('모임 해체 실패:', error)
       alert('모임 해체 중 오류가 발생했습니다.')
@@ -560,14 +589,13 @@ export const GroupSettings = ({
     }
   }
 
-
   const handleUpdateGroup = async () => {
     try {
       setLoading(true)
       setError(null)
 
       const url = buildURL(`/groups/${groupId}`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -581,7 +609,7 @@ export const GroupSettings = ({
 
       const requestBody = {
         groupName: groupName,
-        groupDescription: groupDescription
+        groupDescription: groupDescription,
       }
 
       console.log('모임 수정 요청:', {
@@ -589,7 +617,7 @@ export const GroupSettings = ({
         method: 'PATCH',
         headers,
         requestBody,
-        groupId
+        groupId,
       })
 
       const response = await fetch(url, {
@@ -603,7 +631,7 @@ export const GroupSettings = ({
 
       if (!response.ok) {
         let errorMessage = `모임 수정에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log('모임 수정 에러 응답:', errorData)
@@ -617,7 +645,7 @@ export const GroupSettings = ({
             errorMessage = errorText
           }
         }
-        
+
         console.log('모임 수정 실패 - 최종 에러 메시지:', errorMessage)
         alert(errorMessage)
         return
@@ -625,12 +653,11 @@ export const GroupSettings = ({
 
       const result = await response.json()
       console.log('모임 수정 성공 응답:', result)
-      
+
       alert('모임 정보가 성공적으로 수정되었습니다.')
-      
+
       // 그룹 정보 새로고침
       fetchGroupInfo()
-      
     } catch (error) {
       console.error('모임 수정 실패:', error)
       alert('모임 수정 중 오류가 발생했습니다.')
@@ -649,254 +676,227 @@ export const GroupSettings = ({
   }, [groupId])
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="mx-auto w-full max-w-6xl">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1
-            className="text-3xl leading-8 font-extrabold text-black"
-            style={{ fontFamily: 'Tenada' }}
-          >
-            {groupName}
-          </h1>
+    <div className="w-full bg-white">
+      {/* 그룹명 헤더 */}
+      <div className="flex items-center justify-between bg-[#f5f5f5] px-4 py-2">
+        <div className="font-['Jalnan2TTF'] text-lg text-gray-600">
+          {groupName}
+        </div>
+      </div>
+
+      <div className="space-y-4 px-4 py-4">
+        {/* 모임 추가 신청 */}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 font-['Jalnan2TTF'] text-lg font-bold text-black">
+            모임 추가 신청
+          </div>
+
+          {loading && (
+            <div className="text-center text-sm text-gray-500">로딩 중...</div>
+          )}
+
+          {error && (
+            <div className="text-center text-sm text-red-500">{error}</div>
+          )}
+
+          {!loading && !error && pendingRequests.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-gray-200"></div>
+              <div className="flex-1">
+                <div className="font-['NanumSquareRound'] text-sm font-medium text-gray-700">
+                  {pendingRequests[0].name}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    handleAcceptRequest(pendingRequests[0].groupAddRequestId)
+                  }
+                  disabled={loading}
+                  className="rounded-lg bg-blue-500 px-3 py-2 font-['NanumSquareRound'] text-xs font-bold text-white disabled:bg-gray-300"
+                >
+                  수락
+                </button>
+                <button
+                  onClick={() =>
+                    handleRejectRequest(pendingRequests[0].groupAddRequestId)
+                  }
+                  disabled={loading}
+                  className="rounded-lg bg-red-500 px-3 py-2 font-['NanumSquareRound'] text-xs font-bold text-white disabled:bg-gray-300"
+                >
+                  거절
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && pendingRequests.length === 0 && (
+            <div className="text-center text-sm text-gray-500">
+              신청이 없습니다
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* 왼쪽 컬럼 - 상단: 모임 추가 신청 */}
-          <div className="lg:col-span-1">
-            <div className="h-full border border-black bg-[#faf8f6] p-6">
-              <div
-                className="mb-6 text-xl font-extrabold text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                모임 추가 신청
-              </div>
-              {/* 로딩 상태 */}
-              {loading && (
-                <div className="p-3 text-center text-sm text-gray-500">
-                  로딩 중...
-                </div>
-              )}
+        {/* 멤버 관리 */}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 font-['Jalnan2TTF'] text-lg font-bold text-black">
+            멤버 관리
+          </div>
 
-              {/* 에러 메시지 */}
-              {error && (
-                <div className="p-3 text-center text-sm text-red-500">
-                  {error}
-                </div>
-              )}
+          {membersLoading && (
+            <div className="text-center text-sm text-gray-500">
+              멤버 로딩 중...
+            </div>
+          )}
 
-              {/* 가입 요청 목록 */}
-              {!loading && !error && pendingRequests.length > 0 && (
-                pendingRequests.map(request => (
-                  <div key={request.groupAddRequestId} className="flex items-center gap-3 p-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-300"></div>
-                    <div
-                      className="flex-1 text-xs font-bold text-black"
-                      style={{ fontFamily: 'NanumSquare Neo' }}
-                    >
-                      {request.name}
-                    </div>
-                    <button
-                      onClick={() => handleAcceptRequest(request.groupAddRequestId)}
-                      disabled={loading}
-                      className="bg-blue-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      style={{ fontFamily: 'NanumSquare Neo' }}
-                    >
-                      수락
-                    </button>
-                    <button
-                      onClick={() => handleRejectRequest(request.groupAddRequestId)}
-                      disabled={loading}
-                      className="bg-red-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      style={{ fontFamily: 'NanumSquare Neo' }}
-                    >
-                      거절
-                    </button>
+          {!membersLoading &&
+            groupMembers.filter(member => !member.isLeader).length > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-gray-200"></div>
+                <div className="flex-1">
+                  <div className="font-['NanumSquareRound'] text-sm font-medium text-gray-700">
+                    {
+                      groupMembers.filter(member => !member.isLeader)[0]
+                        ?.customerName
+                    }
                   </div>
-                ))
-              )}
-
-              {/* 신청이 없는 경우 */}
-              {!loading && !error && pendingRequests.length === 0 && (
-                <div className="p-3 text-center text-sm text-gray-500">
-                  신청이 없습니다
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 왼쪽 컬럼 - 하단: 멤버 관리 */}
-          <div className="lg:col-span-1">
-            <div className="h-full border border-black bg-[#faf8f6] p-6">
-              <div
-                className="mb-6 text-xl font-extrabold text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                멤버 관리
-              </div>
-              {/* 로딩 상태 */}
-              {membersLoading && (
-                <div className="p-3 text-center text-sm text-gray-500">
-                  멤버 로딩 중...
-                </div>
-              )}
-
-              {/* 멤버 목록 (리더가 아닌 사람들만) */}
-              {!membersLoading && groupMembers.filter(member => !member.isLeader).length > 0 && (
-                <div className="space-y-3">
-                  {groupMembers
-                    .filter(member => !member.isLeader)
-                    .map(member => (
-                      <div key={member.customerId} className="flex items-center gap-3 p-3">
-                        <div className="h-10 w-10 rounded-full bg-gray-300"></div>
-                        <div
-                          className="flex-1 text-xs font-bold text-black"
-                          style={{ fontFamily: 'NanumSquare Neo' }}
-                        >
-                          {member.customerName}
-                        </div>
-                        <button
-                          onClick={() => removeMember(member.customerId, member.customerName)}
-                          disabled={loading}
-                          className="bg-black px-2 py-1 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400"
-                          style={{ fontFamily: 'NanumSquare Neo' }}
-                        >
-                          {loading ? '처리 중...' : '내보내기'}
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              {/* 멤버가 없는 경우 */}
-              {!membersLoading && groupMembers.filter(member => !member.isLeader).length === 0 && (
-                <div className="p-3 text-center text-sm text-gray-500">
-                  내보낼 수 있는 멤버가 없습니다.
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* 오른쪽 컬럼 - 상단: 모임장 위임 */}
-          <div className="lg:col-span-1">
-            <div className="h-full border border-black p-6">
-              <div
-                className="mb-4 text-xl font-extrabold text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                모임장 위임
-              </div>
-              <div
-                className="mb-4 text-[10px] text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                위임할 멤버를 선택해주세요.
-              </div>
-              <select
-                value={selectedMember}
-                onChange={e => setSelectedMember(e.target.value)}
-                disabled={membersLoading}
-                className="mb-4 h-8 w-full rounded border border-black px-2 disabled:bg-gray-100"
-              >
-                <option value="">
-                  {membersLoading ? '로딩 중...' : '멤버 선택'}
-                </option>
-                {/* API 성공 시: 실제 멤버 데이터 (리더 제외) */}
-                {!membersLoading && groupMembers.length > 0 && 
-                  groupMembers
-                    .filter(member => !member.isLeader)
-                    .map(member => (
-                      <option key={member.customerId} value={member.customerName}>
-                        {member.customerName}
-                      </option>
-                    ))
-                }
-              </select>
-              <button
-                onClick={handleTransferLeadership}
-                disabled={loading || !selectedMember}
-                className="w-full bg-black py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                {loading ? '위임 중...' : '위임하기'}
-              </button>
-            </div>
-          </div>
-
-          {/* 오른쪽 컬럼 - 중간: 모임 수정 */}
-          <div className="lg:col-span-1">
-            <div className="h-full border border-black bg-[#faf8f6] p-6">
-              <div
-                className="mb-4 text-xl font-extrabold text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                모임 수정
-              </div>
-
-              {/* 모임명 */}
-              <div className="mb-4">
-                <div
-                  className="mb-2 text-[10px] font-bold text-black"
-                  style={{ fontFamily: 'NanumSquare Neo' }}
+                <button
+                  onClick={() => {
+                    const member = groupMembers.filter(
+                      member => !member.isLeader
+                    )[0]
+                    if (member)
+                      removeMember(member.customerId, member.customerName)
+                  }}
+                  disabled={loading}
+                  className="rounded-lg bg-red-500 px-3 py-2 font-['NanumSquareRound'] text-xs font-bold text-white disabled:bg-gray-300"
                 >
-                  모임명
-                </div>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={e => setGroupName(e.target.value)}
-                  className="h-8 w-full border border-black px-2 text-[11px] font-bold"
-                  style={{ fontFamily: 'NanumSquare Neo' }}
-                />
+                  내보내기
+                </button>
               </div>
+            )}
 
-              {/* 모임 설명 */}
-              <div className="mb-4">
-                <div
-                  className="mb-2 text-[10px] font-bold text-black"
-                  style={{ fontFamily: 'NanumSquare Neo' }}
-                >
-                  모임 설명
-                </div>
-                <textarea
-                  value={groupDescription}
-                  onChange={e => setGroupDescription(e.target.value)}
-                  className="h-16 w-full resize-none border border-black px-2 py-1 text-[11px] font-bold"
-                  style={{ fontFamily: 'NanumSquare Neo' }}
-                />
+          {!membersLoading &&
+            groupMembers.filter(member => !member.isLeader).length === 0 && (
+              <div className="text-center text-sm text-gray-500">
+                내보낼 수 있는 멤버가 없습니다
               </div>
+            )}
+        </div>
 
-              <button
-                onClick={handleUpdateGroup}
-                disabled={loading}
-                className="w-full bg-black py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                {loading ? '수정 중...' : '수정하기'}
-              </button>
-            </div>
+        {/* 모임장 위임 */}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 font-['Jalnan2TTF'] text-lg font-bold text-black">
+            모임장 위임
+          </div>
+          <div className="mb-3 font-['NanumSquareRound'] text-sm text-gray-600">
+            위임할 멤버를 선택해주세요.
           </div>
 
-          {/* 오른쪽 컬럼 - 하단: 모임 해체 */}
-          <div className="lg:col-span-1">
-            <div className="flex h-full flex-col justify-center border border-black p-6">
-              <div
-                className="mb-4 text-xl font-extrabold text-black"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                모임 해체
-              </div>
-              <button
-                onClick={handleDisbandGroup}
-                disabled={loading}
-                className="bg-black px-4 py-2 text-[10px] font-bold text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'NanumSquare Neo' }}
-              >
-                {loading ? '해체 중...' : '모임 해체하기'}
-              </button>
-            </div>
+          <div className="mb-3 flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+            <select
+              value={selectedMember}
+              onChange={e => setSelectedMember(e.target.value)}
+              disabled={membersLoading}
+              className="flex-1 border-none bg-transparent font-['NanumSquareRound'] text-sm font-medium text-gray-700 outline-none"
+            >
+              <option value="">
+                {membersLoading ? '로딩 중...' : '멤버 선택'}
+              </option>
+              {!membersLoading &&
+                groupMembers.length > 0 &&
+                groupMembers
+                  .filter(member => !member.isLeader)
+                  .map(member => (
+                    <option key={member.customerId} value={member.customerName}>
+                      {member.customerName}
+                    </option>
+                  ))}
+            </select>
+            <svg
+              width={20}
+              height={20}
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 7.5L10 12.5L15 7.5"
+                stroke="#666"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
+
+          <button
+            onClick={handleTransferLeadership}
+            disabled={loading || !selectedMember}
+            className="w-full rounded-lg bg-gray-300 py-2 font-['Jalnan2TTF'] text-sm font-bold text-white disabled:bg-gray-200"
+          >
+            위임하기
+          </button>
+        </div>
+
+        {/* 모임 수정 */}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 font-['Jalnan2TTF'] text-lg font-bold text-black">
+            모임 수정
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-['NanumSquareRound'] text-sm font-medium text-gray-600">
+              모임 이름
+            </div>
+            <input
+              type="text"
+              value={groupName}
+              onChange={e => setGroupName(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 font-['NanumSquareRound'] text-sm font-medium text-gray-700 outline-none focus:border-[#ffc800] focus:bg-white"
+              placeholder="모임 이름을 입력하세요"
+            />
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 font-['NanumSquareRound'] text-sm font-medium text-gray-600">
+              모임 설명
+            </div>
+            <textarea
+              value={groupDescription}
+              onChange={e => setGroupDescription(e.target.value)}
+              className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 font-['NanumSquareRound'] text-sm font-medium text-gray-700 outline-none focus:border-[#ffc800] focus:bg-white"
+              placeholder="모임 설명을 입력하세요"
+              rows={3}
+            />
+          </div>
+
+          <button
+            onClick={handleUpdateGroup}
+            disabled={loading}
+            className="w-full rounded-lg bg-gray-300 py-2 font-['Jalnan2TTF'] text-sm font-bold text-white disabled:bg-gray-200"
+          >
+            수정하기
+          </button>
+        </div>
+
+        {/* 모임 해체 */}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 font-['Jalnan2TTF'] text-lg font-bold text-red-500">
+            모임 해체
+          </div>
+          <div className="mb-3 font-['NanumSquareRound'] text-sm text-gray-600">
+            모임을 해체하면 모든 데이터가 삭제되며 복구할 수 없습니다.
+          </div>
+
+          <button
+            onClick={handleDisbandGroup}
+            disabled={loading}
+            className="w-full rounded-lg bg-red-500 py-2 font-['Jalnan2TTF'] text-sm font-bold text-white disabled:bg-red-300"
+          >
+            모임 해체하기
+          </button>
         </div>
       </div>
     </div>

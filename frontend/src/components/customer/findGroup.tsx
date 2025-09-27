@@ -32,7 +32,8 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
   const [joiningGroup, setJoiningGroup] = useState<number | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [showCodeInput, setShowCodeInput] = useState(false)
-  const [selectedGroupForCode, setSelectedGroupForCode] = useState<Group | null>(null)
+  const [selectedGroupForCode, setSelectedGroupForCode] =
+    useState<Group | null>(null)
 
   // 코드로 그룹 가입 함수
   const joinGroupByCode = async (code: string, groupId: number) => {
@@ -46,7 +47,7 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
 
     try {
       const url = buildURL(`/groups/${groupId}/entrance`)
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
@@ -66,7 +67,7 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
         headers,
         requestBody,
         groupId,
-        code
+        code,
       })
 
       const response = await fetch(url, {
@@ -76,11 +77,15 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
         body: JSON.stringify(requestBody),
       })
 
-      console.log('코드로 가입 응답 상태:', response.status, response.statusText)
+      console.log(
+        '코드로 가입 응답 상태:',
+        response.status,
+        response.statusText
+      )
 
       if (!response.ok) {
         let errorMessage = `그룹 가입에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           console.log('코드로 가입 에러 응답:', errorData)
@@ -94,7 +99,7 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
             errorMessage = errorText
           }
         }
-        
+
         console.log('코드로 가입 실패 - 최종 에러 메시지:', errorMessage)
         alert(errorMessage)
         return
@@ -102,19 +107,20 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
 
       const result = await response.json()
       console.log('코드로 가입 성공 응답:', result)
-      
+
       alert('그룹에 성공적으로 가입되었습니다!')
       setGroupCode('')
       setShowCodeInput(false)
       setSelectedGroupForCode(null)
       onClose()
-      
+
       // 페이지 새로고침 또는 상태 업데이트
       window.location.reload()
-      
     } catch (error) {
       console.error('그룹 가입 실패:', error)
-      setError(error instanceof Error ? error.message : '그룹 가입에 실패했습니다.')
+      setError(
+        error instanceof Error ? error.message : '그룹 가입에 실패했습니다.'
+      )
     } finally {
       setLoading(false)
     }
@@ -205,7 +211,7 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
 
       if (!response.ok) {
         let errorMessage = `가입 요청에 실패했습니다. (${response.status})`
-        
+
         try {
           const errorData = await response.json()
           if (errorData.message) {
@@ -218,7 +224,7 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
             errorMessage = errorText
           }
         }
-        
+
         console.error('가입 요청 에러 응답:', errorMessage)
         alert(errorMessage)
         return
@@ -269,74 +275,155 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
   if (!isOpen) return null
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black">
-      <div className="relative mx-4 my-8 w-full max-w-6xl rounded-lg bg-white p-6">
-        {/* 닫기 버튼 */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 rounded-full p-1 hover:bg-gray-100"
-        >
-          <svg
-            width={20}
-            height={20}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-gray-500"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="relative h-[622px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between p-4">
+          <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#ffc800]">
+            그룹 검색
+          </div>
+          <button onClick={onClose}>
+            <svg
+              width={36}
+              height={36}
+              viewBox="0 0 36 36"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
 
-        {/* 메인 컨텐츠 */}
-        <div className="w-full max-w-5xl">
-          {/* 제목 */}
-          <div className="mb-4">
-            <h1 className="text-left font-['Tenada'] text-[2rem] leading-8 font-extrabold text-black">
-              모임 찾기
-            </h1>
+        {/* 노란색 구분선 */}
+        <div className="h-[3px] w-full bg-[#ffc800]" />
+
+        {/* 검색 입력 */}
+        <div className="p-4">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              onKeyPress={e => {
+                if (e.key === 'Enter') {
+                  searchGroups(searchTerm)
+                }
+              }}
+              placeholder="눈농팀"
+              className="w-full rounded-[28px] border border-[#fdda60] px-5 py-3 pr-12 text-[#fdda60] placeholder-[#fdda60] focus:outline-none"
+            />
+            <div className="absolute top-1/2 right-3 -translate-y-1/2">
+              <svg
+                width={24}
+                height={24}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z"
+                  fill="#FDDA60"
+                />
+              </svg>
+            </div>
           </div>
 
-          {/* 검색바 */}
-          <div className="mb-4">
-            <div className="flex items-center">
-              <div className="flex h-[2.5625rem] w-full max-w-[782px] items-center border border-black pt-[0.5625rem] pr-[0.5625rem] pb-1 pl-2">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  onKeyPress={e => {
-                    if (e.key === 'Enter') {
-                      searchGroups(searchTerm)
-                    }
-                  }}
-                  placeholder="모임 검색"
-                  className="flex h-7 w-full flex-shrink-0 items-center bg-white p-2 font-['Inter'] leading-6 text-black placeholder:text-[#ccc] focus:outline-none"
-                />
+          <div className="mt-2 text-sm text-gray-500">
+            그룹명을 정확하게 입력해주세요.
+          </div>
+        </div>
+
+        {/* 검색 결과 */}
+        {loading && (
+          <div className="px-4 text-center text-gray-500">검색 중...</div>
+        )}
+
+        {error && <div className="px-4 text-center text-red-500">{error}</div>}
+
+        {hasSearched && groups.length === 0 && !loading && (
+          <div className="px-4 text-center text-gray-500">
+            검색 결과가 없습니다.
+          </div>
+        )}
+
+        {groups.length > 0 && (
+          <div className="px-4">
+            {groups.map(group => (
+              <div
+                key={group.groupId}
+                className="mb-4 rounded-[10px] border-2 border-[#fdda60] p-4"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full border-2 border-[#fdda60] px-2 py-1 text-xs text-[#ffc800]">
+                      리더
+                    </div>
+                    <div className="text-sm text-[#99a1af]">
+                      {group.leaderMaskingName}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3 text-sm text-gray-500">
+                  {group.groupDescription}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedGroupForCode(group)
+                      setShowCodeInput(true)
+                    }}
+                    className="flex-1 rounded-[10px] bg-[#fdda60] px-4 py-2 font-['NanumSquareRoundEB'] text-white"
+                  >
+                    코드로 가입
+                  </button>
+                  <button
+                    onClick={() => requestJoinGroup(group.groupId)}
+                    disabled={joiningGroup === group.groupId}
+                    className="flex-1 rounded-[10px] border-2 border-[#fdda60] px-4 py-2 font-['NanumSquareRoundEB'] text-[#ffc800]"
+                  >
+                    {joiningGroup === group.groupId
+                      ? '가입 중...'
+                      : '가입 신청'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 코드 입력 모달 */}
+        {showCodeInput && selectedGroupForCode && (
+          <div className="absolute inset-0 rounded-[30px] bg-[#fbf9f5] p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#ffc800]">
+                코드로 가입
               </div>
               <button
-                onClick={() => searchGroups(searchTerm)}
-                className="flex h-[2.5625rem] w-[2.1875rem] flex-col items-center justify-center border-l border-black bg-gray-800 hover:bg-gray-700"
+                onClick={() => {
+                  setShowCodeInput(false)
+                  setSelectedGroupForCode(null)
+                  setGroupCode('')
+                }}
               >
                 <svg
-                  width={20}
-                  height={21}
-                  viewBox="0 0 20 21"
+                  width={36}
+                  height={36}
+                  viewBox="0 0 36 36"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    d="M17.4985 18.1152L13.8818 14.4985"
-                    stroke="white"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9.16471 16.4486C12.8466 16.4486 15.8314 13.4638 15.8314 9.7819C15.8314 6.1 12.8466 3.11523 9.16471 3.11523C5.48282 3.11523 2.49805 6.1 2.49805 9.7819C2.49805 13.4638 5.48282 16.4486 9.16471 16.4486Z"
-                    stroke="white"
+                    d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                    stroke="#FFC800"
                     strokeWidth={2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -344,162 +431,38 @@ const FindGroup = ({ isOpen, onClose }: FindGroupProps) => {
                 </svg>
               </button>
             </div>
-          </div>
 
-          {/* 로딩 상태 */}
-          {loading && (
-            <div className="w-full border border-black p-4">
-              <div className="flex items-center justify-center">
-                <div className="font-['nanumsquare'] text-lg leading-6 text-gray-500">
-                  검색 중...
-                </div>
+            <div className="h-[3px] w-full bg-[#ffc800]" />
+
+            <div className="p-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={groupCode}
+                  onChange={e => setGroupCode(e.target.value.toUpperCase())}
+                  placeholder="코드입력"
+                  className="w-full rounded-[28px] border border-[#fdda60] px-5 py-3 text-[#fdda60] placeholder-[#fdda60] focus:outline-none"
+                />
               </div>
-            </div>
-          )}
 
-          {/* 에러 메시지 */}
-          {error && (
-            <div className="w-full border border-red-500 bg-red-50 p-4">
-              <div className="flex items-center justify-center">
-                <div className="font-['nanumsquare'] text-lg leading-6 text-red-600">
-                  {error}
-                </div>
+              <div className="mt-2 text-sm text-gray-500">
+                {selectedGroupForCode.groupName}의 그룹 코드를 입력해주세요.
               </div>
-            </div>
-          )}
 
-          {/* 그룹 목록 */}
-          {!loading && !error && groups.length === 0 && hasSearched && (
-            <div className="w-full border border-black p-4">
-              <div className="flex items-center justify-center">
-                <div className="font-['nanumsquare'] text-lg leading-6 text-gray-500">
-                  검색 결과가 없습니다.
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 검색된 그룹 목록 */}
-          {!loading && !error && groups.length > 0 && (
-            <div className="w-full space-y-2">
-              {groups.map(group => (
-                <div
-                  key={group.groupId}
-                  className="w-full border border-black p-4"
+              <div className="mt-4">
+                <button
+                  onClick={() =>
+                    joinGroupByCode(groupCode, selectedGroupForCode.groupId)
+                  }
+                  disabled={loading || !groupCode.trim()}
+                  className="w-full rounded-[10px] bg-[#fdda60] px-4 py-3 font-['Jalnan2TTF'] text-white disabled:bg-gray-400"
                 >
-                  <div className="flex h-full items-center justify-between">
-                    <div className="flex flex-col gap-2">
-                      {/* 그룹 이름 */}
-                      <div className="font-['Tenada'] text-[2rem] leading-8 font-extrabold text-black">
-                        {group.groupName}
-                      </div>
-
-                      {/* 별 아이콘과 리더명 */}
-                      <div className="flex items-center gap-2">
-                        <svg
-                          width={21}
-                          height={13}
-                          viewBox="0 0 21 13"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M10.5 0L13.0622 4.73785L18.5 5.36475L14.75 8.96215L15.6244 14.4352L10.5 11.9243L5.37564 14.4352L6.25 8.96215L2.5 5.36475L7.93782 4.73785L10.5 0Z"
-                            fill="#FFD700"
-                            stroke="#FFA500"
-                            strokeWidth="0.5"
-                          />
-                        </svg>
-                        <span className="font-['nanumsquare'] text-lg leading-6 text-black">
-                          {group.leaderMaskingName}
-                        </span>
-                      </div>
-
-                      {/* 그룹 설명 */}
-                      <div className="font-['nanumsquare'] text-lg leading-6 text-gray-500">
-                        {group.groupDescription}
-                      </div>
-                    </div>
-
-                    {/* 버튼들 */}
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      {/* 코드로 가입 버튼 */}
-                      <button
-                        onClick={() => {
-                          setSelectedGroupForCode(group)
-                          setShowCodeInput(true)
-                        }}
-                        className="flex h-10 w-24 items-center justify-center border border-blue-500 bg-blue-500 text-white hover:bg-blue-600"
-                      >
-                        <span className="font-['nanumsquare'] text-lg leading-6">
-                          코드로 가입
-                        </span>
-                      </button>
-
-                      {/* 가입 요청 버튼 */}
-                      <button
-                        onClick={() => requestJoinGroup(group.groupId)}
-                        disabled={joiningGroup === group.groupId}
-                        className="flex h-10 w-24 items-center justify-center border border-black bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      >
-                        <span className="font-['nanumsquare'] text-lg leading-6 text-black">
-                          {joiningGroup === group.groupId ? '요청 중...' : '가입 신청'}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 코드 입력 모달 */}
-          {showCodeInput && selectedGroupForCode && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
-                <div className="mb-4">
-                  <h2 className="text-lg font-bold text-black">
-                    {selectedGroupForCode.groupName} 코드로 가입
-                  </h2>
-                </div>
-                
-                <div className="mb-4">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    그룹 코드
-                  </label>
-                  <input
-                    type="text"
-                    value={groupCode}
-                    onChange={e => setGroupCode(e.target.value.toUpperCase())}
-                    placeholder="그룹 코드를 입력하세요"
-                    className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setShowCodeInput(false)
-                      setSelectedGroupForCode(null)
-                      setGroupCode('')
-                    }}
-                    className="flex-1 rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={() => joinGroupByCode(groupCode, selectedGroupForCode.groupId)}
-                    disabled={loading || !groupCode.trim()}
-                    className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {loading ? '가입 중...' : '가입'}
-                  </button>
-                </div>
+                  {loading ? '가입 중...' : '가입'}
+                </button>
               </div>
             </div>
-          )}
-
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

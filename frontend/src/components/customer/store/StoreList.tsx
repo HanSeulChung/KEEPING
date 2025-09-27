@@ -93,6 +93,9 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
     setSelectedCategory(category)
     setActiveCategory(category)
     setIsDropdownOpen(false)
+    // URL 파라미터 업데이트
+    router.push(`/customer/list?category=${encodeURIComponent(category)}`)
+    setCurrentPage(1)
   }
 
   // 찜하기 상태 확인 함수

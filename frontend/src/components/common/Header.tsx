@@ -47,6 +47,9 @@ export default function Header() {
   const isCustomerPage = pathname.startsWith('/customer')
   const isOwnerPage = pathname.startsWith('/owner')
 
+  // 클라이언트 사이드에서만 로그인 상태 확인
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
   // localStorage에서 로그인 상태 확인 (여러 방법 체크)
   const checkLoginStatus = () => {
     if (typeof window === 'undefined') return false
@@ -86,7 +89,10 @@ export default function Header() {
     return false
   }
 
-  const isLoggedIn = checkLoginStatus()
+  // 클라이언트에서 로그인 상태 확인
+  useEffect(() => {
+    setIsLoggedIn(checkLoginStatus())
+  }, [forceUpdate])
   const user = isCustomerPage ? customerUser : ownerUser
 
   // 홈페이지인지 확인
