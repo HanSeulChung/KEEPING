@@ -431,9 +431,7 @@ export const MyPage = () => {
       <div className="flex w-full flex-col items-start">
         {/* 헤더 */}
         <div className="mb-6">
-          <h1 className="font-['Jalnan2TTF'] text-2xl font-bold text-[#ffc800]">
-            MY
-          </h1>
+          <h1 className="font-jalnan text-2xl font-bold text-[#ffc800]">MY</h1>
         </div>
 
         {/* 프로필 및 정보 수정 섹션 */}
@@ -449,7 +447,7 @@ export const MyPage = () => {
                 />
               ) : (
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white">
-                  <div className="font-['NanumSquareRoundEB'] text-xl leading-8 font-bold text-[#ffc800]">
+                  <div className="font-nanum-square-round-eb text-xl leading-8 font-bold text-[#ffc800]">
                     {customerInfo?.name ? customerInfo.name.charAt(0) : '?'}
                   </div>
                 </div>
@@ -457,15 +455,15 @@ export const MyPage = () => {
             </div>
             <div className="flex flex-col justify-center">
               {loading ? (
-                <div className="mb-1 text-xl font-bold text-gray-400">
+                <div className="font-nanum-square-round-eb mb-1 text-xl font-bold text-gray-400">
                   로딩 중...
                 </div>
               ) : (
                 <>
-                  <div className="mb-1 font-['NanumSquareRoundEB'] text-xl font-bold text-black">
+                  <div className="font-nanum-square-round-eb mb-1 text-xl font-bold text-black">
                     {customerInfo?.name || '정보 없음'}
                   </div>
-                  <div className="font-['NanumSquareRound'] text-sm text-gray-500">
+                  <div className="font-nanum-square-round-eb text-sm text-gray-500">
                     {customerInfo?.phoneNumber || '정보 없음'}
                   </div>
                 </>
@@ -546,7 +544,7 @@ export const MyPage = () => {
             <button
               onClick={updateCustomerInfo}
               disabled={loading || !editName.trim() || !editPhoneNumber.trim()}
-              className="h-10 w-full rounded-md bg-[#ffc800] font-['Jalnan2TTF'] text-sm font-bold text-white hover:bg-[#e6b400] disabled:cursor-not-allowed disabled:bg-gray-400"
+              className="font-jalnan h-10 w-full rounded-md bg-[#ffc800] text-sm font-bold text-white hover:bg-[#e6b400] disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               {loading ? '수정 중...' : '정보 수정'}
             </button>
@@ -555,25 +553,25 @@ export const MyPage = () => {
 
         {/* 카드 취소 섹션 */}
         <div className="w-full max-w-2xl rounded-lg border border-gray-200 p-6">
-          <h2 className="mb-6 font-['Jalnan2TTF'] text-sm font-bold text-black">
+          <h2 className="font-jalnan mb-6 text-sm font-bold text-black">
             카드 취소
           </h2>
 
           {cancelLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="font-['NanumSquareRound'] text-sm text-gray-500">
+              <div className="font-nanum-square-round-eb text-sm text-gray-500">
                 결제 취소 목록을 불러오는 중...
               </div>
             </div>
           ) : cancelError ? (
             <div className="flex items-center justify-center py-8">
-              <div className="font-['NanumSquareRound'] text-sm text-red-500">
+              <div className="font-nanum-square-round-eb text-sm text-red-500">
                 {cancelError}
               </div>
             </div>
           ) : cancelTransactions.length === 0 ? (
             <div className="flex items-center justify-center py-8">
-              <div className="font-['NanumSquareRound'] text-sm text-gray-500">
+              <div className="font-nanum-square-round-eb text-sm text-gray-500">
                 취소 가능한 결제 내역이 없습니다.
               </div>
             </div>
@@ -586,27 +584,27 @@ export const MyPage = () => {
                 >
                   <div className="mb-3 flex items-start justify-between">
                     <div>
-                      <div className="font-['NanumSquareRoundEB'] font-bold text-black">
+                      <div className="font-nanum-square-round-eb font-bold text-black">
                         {transaction.storeName}
                       </div>
-                      <div className="font-['NanumSquareRound'] text-sm text-gray-500">
+                      <div className="font-nanum-square-round-eb text-sm text-gray-500">
                         {new Date(transaction.transactionTime).toLocaleString(
                           'ko-KR'
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-['NanumSquareRoundEB'] font-bold text-black">
+                      <div className="font-nanum-square-round-eb font-bold text-black">
                         {transaction.paymentAmount.toLocaleString()}원
                       </div>
                     </div>
                   </div>
-                  <div className="mb-3 font-['NanumSquareRound'] text-xs text-gray-400">
+                  <div className="font-nanum-square-round-eb mb-3 text-xs text-gray-400">
                     거래번호: {transaction.transactionUniqueNo}
                   </div>
                   <button
                     onClick={() => handleCancelClick(transaction)}
-                    className="w-full rounded bg-red-500 px-4 py-2 font-['Jalnan2TTF'] font-bold text-white transition-colors hover:bg-red-600"
+                    className="font-jalnan w-full rounded bg-red-500 px-4 py-2 font-bold text-white transition-colors hover:bg-red-600"
                   >
                     결제 취소
                   </button>
@@ -618,14 +616,14 @@ export const MyPage = () => {
 
         {/* 알림 설정 섹션 */}
         <div className="mt-8 w-full max-w-2xl rounded-lg border border-gray-200 p-6">
-          <h2 className="mb-6 font-['Jalnan2TTF'] text-sm font-bold text-black">
+          <h2 className="font-jalnan mb-6 text-sm font-bold text-black">
             알림 설정
           </h2>
 
           <div className="space-y-4">
             {/* 결제 알림 */}
             <div className="flex items-center justify-between">
-              <span className="font-['NanumSquareRound'] text-sm text-black">
+              <span className="font-nanum-square-round-eb text-sm text-black">
                 결제 알림
               </span>
               <button
@@ -646,7 +644,7 @@ export const MyPage = () => {
 
             {/* 모임 알림 */}
             <div className="flex items-center justify-between">
-              <span className="font-['NanumSquareRound'] text-sm text-black">
+              <span className="font-nanum-square-round-eb text-sm text-black">
                 모임 알림
               </span>
               <button
@@ -665,7 +663,7 @@ export const MyPage = () => {
 
             {/* 충전 알림 */}
             <div className="flex items-center justify-between">
-              <span className="font-['NanumSquareRound'] text-sm text-black">
+              <span className="font-nanum-square-round-eb text-sm text-black">
                 충전 알림
               </span>
               <button
@@ -693,7 +691,7 @@ export const MyPage = () => {
           <div className="relative h-[400px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
             {/* 헤더 */}
             <div className="flex items-center justify-between p-6">
-              <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#ffc800]">
+              <div className="font-jalnan text-xl leading-[140%] text-[#ffc800]">
                 결제 취소
               </div>
               <button
@@ -728,13 +726,13 @@ export const MyPage = () => {
             {/* 내용 */}
             <div className="px-6 pt-6">
               <div className="mb-4 space-y-2">
-                <div className="font-['NanumSquareRound'] text-sm text-gray-600">
+                <div className="font-nanum-square-round-eb text-sm text-gray-600">
                   가게: {selectedTransaction.storeName}
                 </div>
-                <div className="font-['NanumSquareRound'] text-sm text-gray-600">
+                <div className="font-nanum-square-round-eb text-sm text-gray-600">
                   금액: {selectedTransaction.paymentAmount.toLocaleString()}원
                 </div>
-                <div className="font-['NanumSquareRound'] text-sm text-gray-600">
+                <div className="font-nanum-square-round-eb text-sm text-gray-600">
                   거래번호: {selectedTransaction.transactionUniqueNo}
                 </div>
               </div>
@@ -742,22 +740,22 @@ export const MyPage = () => {
               {/* 카드 정보 */}
               {cardsLoading ? (
                 <div className="mb-6 flex items-center justify-center py-4">
-                  <div className="font-['NanumSquareRound'] text-sm text-gray-500">
+                  <div className="font-nanum-square-round-eb text-sm text-gray-500">
                     카드 정보를 불러오는 중...
                   </div>
                 </div>
               ) : cardsError ? (
                 <div className="mb-6 flex items-center justify-center py-4">
-                  <div className="font-['NanumSquareRound'] text-sm text-red-500">
+                  <div className="font-nanum-square-round-eb text-sm text-red-500">
                     {cardsError}
                   </div>
                 </div>
               ) : creditCard ? (
                 <div className="mb-6 rounded-lg border border-[#ffc800] bg-white p-4">
-                  <div className="font-['NanumSquareRoundEB'] text-sm font-bold text-black">
+                  <div className="font-nanum-square-round-eb text-sm font-bold text-black">
                     {creditCard.cardName}
                   </div>
-                  <div className="font-['NanumSquareRound'] text-sm text-gray-600">
+                  <div className="font-nanum-square-round-eb text-sm text-gray-600">
                     {creditCard.cardNo.replace(
                       /(\d{4})(\d{4})(\d{4})(\d{4})/,
                       '$1-$2-$3-$4'
@@ -772,7 +770,7 @@ export const MyPage = () => {
                 disabled={cancelProcessing || !creditCard}
                 className="flex h-11 w-full items-center justify-center rounded-[10px] bg-red-500 disabled:bg-gray-300"
               >
-                <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-white">
+                <div className="font-jalnan text-xl leading-[140%] text-white">
                   {cancelProcessing ? '처리 중...' : '결제 취소하기'}
                 </div>
               </button>

@@ -82,24 +82,24 @@ const TabSection = ({
   onTabChange: (tab: string) => void
 }) => {
   return (
-    <div className="mb-6 flex w-[220px] items-start">
+    <div className="mb-6 flex w-[240px] items-start md:w-[260px]">
       <button
         onClick={() => onTabChange('menu')}
-        className={`flex w-[100px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+        className={`flex h-[2.5rem] w-[110px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
           activeTab === 'menu'
             ? 'bg-[#fdda60] text-white'
             : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
-        } font-['NanumSquareRoundEB'] text-xl leading-[140%] whitespace-nowrap`}
+        } font-jalnan text-lg leading-[140%] whitespace-nowrap`}
       >
         메뉴
       </button>
       <button
         onClick={() => onTabChange('charge')}
-        className={`flex w-[120px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+        className={`flex h-[2.5rem] w-[110px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
           activeTab === 'charge'
             ? 'bg-[#fdda60] text-white'
             : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
-        } font-['NanumSquareRoundEB'] text-xl leading-[140%] whitespace-nowrap`}
+        } font-jalnan text-lg leading-[140%] whitespace-nowrap`}
       >
         충전금액
       </button>
@@ -122,7 +122,7 @@ const CategoryTag = ({
       onClick={onClick}
       className={`inline-flex items-center justify-center rounded-full border border-[#cccccc]/80 px-6 py-3 ${
         isActive ? 'bg-[#cccccc]/80 text-white' : 'bg-white text-[#99a1af]'
-      } font-['NanumSquareRoundEB'] text-lg leading-[140%] font-extrabold whitespace-nowrap transition-colors hover:bg-[#cccccc]/60`}
+      } font-nanum-square-round-eb text-base leading-[140%] font-extrabold whitespace-nowrap transition-colors hover:bg-[#cccccc]/60`}
     >
       {category}
     </button>
@@ -132,25 +132,25 @@ const CategoryTag = ({
 // 메뉴 아이템 컴포넌트
 const MenuItem = ({ menu }: { menu: MenuItemData }) => {
   return (
-    <div className="mb-4 flex h-[76px] w-[380px] items-center rounded-[5px] bg-[#f8f8f8] p-4">
-      <div className="mr-4 h-[60px] w-[60px] flex-shrink-0 rounded bg-gray-300">
+    <div className="mb-4 flex h-[70px] w-full max-w-[380px] items-center rounded-[5px] bg-[#f8f8f8] p-3 md:max-w-none">
+      <div className="mr-3 h-[54px] w-[54px] flex-shrink-0 rounded bg-gray-300">
         <Image
           src={menu.imgUrl || '/common/customer.svg'}
           alt={menu.menuName}
-          width={60}
-          height={60}
+          width={54}
+          height={54}
           className="h-full w-full rounded object-cover"
         />
       </div>
       <div className="flex-1">
-        <div className="mb-2 font-['NanumSquareRoundEB'] text-xl leading-[140%] text-black">
+        <div className="font-nanum-square-round-eb mb-1 text-lg leading-[140%] text-black">
           {menu.menuName}
         </div>
-        <div className="font-['NanumSquareRoundEB'] text-base leading-[140%] font-extrabold text-[#99a1af]">
+        <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#99a1af]">
           {menu.description}
         </div>
         {menu.soldOut && (
-          <div className="mt-2 font-['NanumSquareRoundEB'] text-sm leading-[140%] font-extrabold text-red-500">
+          <div className="font-nanum-square-round-eb mt-2 text-sm leading-[140%] font-extrabold text-red-500">
             품절
           </div>
         )}
@@ -181,11 +181,11 @@ const StoreImageAndInfo = ({
       </div>
 
       {/* 가게 정보 카드 (사진 아래에 배치) */}
-      <div className="mx-4 mt-4 rounded-[20px] border border-gray-200 bg-white px-8 py-6 shadow-lg">
+      <div className="mx-4 mt-4 rounded-[20px] border border-gray-200 bg-white px-8 py-6 shadow-lg md:mx-8 md:px-12 md:py-8">
         <div className="text-center">
           {/* 가게 이름과 하트 버튼 */}
           <div className="mb-2 flex items-center justify-center gap-3">
-            <div className="font-['NanumSquareRoundEB'] text-3xl leading-[140%] text-black">
+            <div className="font-jalnan text-lg leading-[140%] text-black md:text-xl">
               {storeData.storeName}
             </div>
             <button
@@ -214,10 +214,10 @@ const StoreImageAndInfo = ({
               </svg>
             </button>
           </div>
-          <div className="mb-1 font-['NanumSquareRoundEB'] text-xl leading-[140%] font-extrabold text-[#99a1af]">
+          <div className="font-nanum-square-round-eb mb-1 text-xl leading-[140%] font-extrabold text-[#99a1af]">
             {storeData.phoneNumber}
           </div>
-          <div className="font-['NanumSquareRoundEB'] text-xl leading-[140%] font-extrabold text-[#99a1af]">
+          <div className="font-nanum-square-round-eb text-xl leading-[140%] font-extrabold text-[#99a1af]">
             {storeData.address}
           </div>
         </div>
@@ -624,7 +624,7 @@ export const StoreDetailPage = () => {
   }
 
   return (
-    <div className="mx-auto h-screen w-[412px] overflow-y-auto bg-gray-50">
+    <div className="mx-auto min-h-screen w-full max-w-[412px] overflow-y-auto bg-gray-50 md:w-full md:max-w-none">
       {/* 가게 사진 및 정보 */}
       {storeData && (
         <StoreImageAndInfo storeData={storeData} onToggleLike={toggleLike} />
@@ -671,7 +671,7 @@ export const StoreDetailPage = () => {
 
         {/* 충전금액 탭 내용 */}
         {activeTab === 'charge' && (
-          <div className="mx-auto w-full max-w-md">
+          <div className="mx-auto w-full max-w-md md:max-w-2xl">
             {/* 충전 옵션들 */}
             <div className="mb-8 space-y-3">
               {chargeOptions.length === 0 ? (
@@ -682,17 +682,17 @@ export const StoreDetailPage = () => {
                 chargeOptions.map((option, index) => (
                   <div
                     key={index}
-                    className={`flex h-20 w-full cursor-pointer items-center justify-between rounded-lg border-2 px-6 transition-colors ${
+                    className={`flex h-16 w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 transition-colors ${
                       selectedChargeIndex === index
                         ? 'border-[#fdda60] bg-yellow-50'
                         : 'border-gray-300 bg-white hover:bg-yellow-50'
                     }`}
                     onClick={() => setSelectedChargeIndex(index)}
                   >
-                    <div className="font-['NanumSquareRoundEB'] text-lg font-bold text-[#fdda60]">
+                    <div className="font-nanum-square-round-eb text-base font-bold text-[#fdda60]">
                       {option.bonusPercentage}% 보너스
                     </div>
-                    <div className="font-['NanumSquareRoundEB'] text-3xl font-bold text-black">
+                    <div className="font-nanum-square-round-eb text-lg font-bold text-black">
                       {option.chargeAmount.toLocaleString()}원
                     </div>
                   </div>
@@ -701,17 +701,17 @@ export const StoreDetailPage = () => {
             </div>
 
             {/* 결제 금액 */}
-            <div className="mb-8 rounded-lg bg-gray-50 p-6">
-              <div className="mb-3 font-['NanumSquareRoundEB'] text-lg font-bold text-gray-600">
+            <div className="mb-6 rounded-lg bg-gray-50 p-4">
+              <div className="font-jalnan mb-2 text-base font-bold text-gray-600">
                 결제 금액
               </div>
-              <div className="font-['NanumSquareRoundEB'] text-3xl font-bold text-black">
+              <div className="font-nanum-square-round-eb text-lg font-bold text-black">
                 {calculatePaymentAmount() > 0
                   ? `${calculatePaymentAmount().toLocaleString()}원`
                   : '옵션을 선택해주세요'}
               </div>
               {calculateChargeAmount() > 0 && (
-                <div className="mt-3 font-['NanumSquareRoundEB'] text-xl font-bold text-[#fdda60]">
+                <div className="font-jalnan mt-2 text-lg font-bold text-[#fdda60]">
                   충전 금액: {calculateChargeAmount().toLocaleString()}원
                 </div>
               )}
@@ -719,7 +719,7 @@ export const StoreDetailPage = () => {
 
             {/* 충전하기 버튼 */}
             <button
-              className={`mb-20 flex h-16 w-full items-center justify-center rounded-lg border-2 transition-colors ${
+              className={`mb-20 flex h-12 w-full items-center justify-center rounded-lg border-2 transition-colors ${
                 selectedChargeIndex !== null
                   ? 'border-[#fdda60] bg-[#fdda60] hover:bg-[#f4d03f]'
                   : 'cursor-not-allowed border-gray-300 bg-gray-300'
@@ -732,7 +732,7 @@ export const StoreDetailPage = () => {
               }}
             >
               <span
-                className={`font-['NanumSquareRoundEB'] text-2xl font-bold ${
+                className={`font-jalnan text-lg font-bold ${
                   selectedChargeIndex !== null ? 'text-white' : 'text-gray-500'
                 }`}
               >

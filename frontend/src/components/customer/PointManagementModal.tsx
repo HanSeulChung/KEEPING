@@ -1,5 +1,6 @@
 'use client'
 import { buildURL } from '@/api/config'
+import { Alert } from '@/components/ui/Alert'
 import React, { useEffect, useState } from 'react'
 
 interface PointManagementModalProps {
@@ -40,11 +41,23 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
   const [isReclaiming, setIsReclaiming] = useState(false)
+  const [alertMessage, setAlertMessage] = useState('')
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<'success' | 'error'>('success')
 
   // 첫 번째 개인 카드를 기본 선택으로 설정
   useEffect(() => {
+    console.log('PointManagementModal - individualBalance:', individualBalance)
+    console.log(
+      'PointManagementModal - individualBalance length:',
+      individualBalance?.length
+    )
     if (individualBalance && individualBalance.length > 0 && !selectedStore) {
       setSelectedStore(individualBalance[0])
+      console.log(
+        'PointManagementModal - selectedStore 설정:',
+        individualBalance[0]
+      )
     }
   }, [individualBalance, selectedStore])
 
@@ -54,6 +67,8 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
       setShareAmount('')
       setReclaimAmount('')
       setAvailableReclaimAmount(0)
+      setIsAlertOpen(false)
+      setAlertMessage('')
     }
   }, [isOpen, activeTab])
 
@@ -168,12 +183,15 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
       const result = await response.json()
       console.log('공유 성공:', result)
 
-      alert('포인트 공유가 완료되었습니다!')
+      setAlertMessage('포인트 공유가 완료되었습니다!')
+      setAlertType('success')
+      setIsAlertOpen(true)
       onShareSuccess?.()
-      onClose()
     } catch (error) {
       console.error('공유 실패:', error)
-      alert('포인트 공유에 실패했습니다. 다시 시도해주세요.')
+      setAlertMessage('포인트 공유에 실패했습니다. 다시 시도해주세요.')
+      setAlertType('error')
+      setIsAlertOpen(true)
     } finally {
       setIsSharing(false)
     }
@@ -221,12 +239,15 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
       const result = await response.json()
       console.log('회수 성공:', result)
 
-      alert('포인트 회수가 완료되었습니다!')
+      setAlertMessage('포인트 회수가 완료되었습니다!')
+      setAlertType('success')
+      setIsAlertOpen(true)
       onReclaimSuccess?.()
-      onClose()
     } catch (error) {
       console.error('회수 실패:', error)
-      alert('포인트 회수에 실패했습니다. 다시 시도해주세요.')
+      setAlertMessage('포인트 회수에 실패했습니다. 다시 시도해주세요.')
+      setAlertType('error')
+      setIsAlertOpen(true)
     } finally {
       setIsReclaiming(false)
     }
@@ -239,8 +260,8 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
       <div className="relative h-[440px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-6">
-          <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#99a1af]">
-            {groupName} 포인트 관리
+          <div className="font-jalnan text-xl leading-[140%]">
+            <span className="text-[#ffc800]">{groupName}</span> 포인트 관리
           </div>
           <button
             onClick={onClose}
@@ -268,7 +289,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
         <div className="h-[3px] w-full bg-[#ffc800]" />
 
         {/* 탭 네비게이션 */}
-        <div className="flex w-[12.6875rem] items-start px-6 pt-6">
+        <div className="flex w-[12.6875rem] items-end px-6 pt-6">
           <button
             onClick={() => setActiveTab('share')}
             className={`flex items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
@@ -277,9 +298,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
             }`}
           >
-            <div className="font-['Jalnan2TTF'] text-xl leading-[140%]">
-              공유
-            </div>
+            <div className="font-jalnan text-xl leading-[140%]">공유</div>
           </button>
           <button
             onClick={() => setActiveTab('reclaim')}
@@ -289,9 +308,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
             }`}
           >
-            <div className="font-['Jalnan2TTF'] text-xl leading-[140%]">
-              회수
-            </div>
+            <div className="font-jalnan text-xl leading-[140%]">회수</div>
           </button>
         </div>
 
@@ -305,7 +322,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 <div className="mb-2 text-sm text-gray-500">
                   포인트를 공유할 가게를 선택해주세요.
                 </div>
-                <div className="inline-flex items-center justify-end rounded-full border-[3px] border-[#fdda60] py-1 pr-2 pl-7">
+                <div className="flex w-[280px] items-center justify-end rounded-full border-[3px] border-[#fdda60] py-2 pr-2 pl-7">
                   <select
                     value={selectedStore?.storeId || ''}
                     onChange={e => {
@@ -314,28 +331,22 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                       )
                       setSelectedStore(selected)
                     }}
-                    className="border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
+                    className="flex-1 border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
                   >
                     <option value="">가게를 선택해주세요</option>
-                    {individualBalance?.map(balance => (
-                      <option key={balance.storeId} value={balance.storeId}>
-                        {balance.storeName} (잔액:{' '}
-                        {balance.remainingPoints.toLocaleString()}P)
+                    {individualBalance && individualBalance.length > 0 ? (
+                      individualBalance.map(balance => (
+                        <option key={balance.storeId} value={balance.storeId}>
+                          {balance.storeName} (잔액:{' '}
+                          {balance.remainingPoints.toLocaleString()}P)
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        사용 가능한 가게가 없습니다
                       </option>
-                    ))}
+                    )}
                   </select>
-                  <svg
-                    width={30}
-                    height={30}
-                    viewBox="0 0 30 30"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M15 18.75L8.75 12.5H21.25L15 18.75Z"
-                      fill="#FFC800"
-                    />
-                  </svg>
                 </div>
               </div>
 
@@ -344,15 +355,15 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 <div className="mb-2 text-sm text-gray-500">
                   공유할 포인트를 입력해주세요.
                 </div>
-                <div className="flex items-center rounded-full border-[3px] border-[#fdda60] py-1 pr-2 pl-7">
+                <div className="flex w-[280px] items-center justify-end rounded-full border-[3px] border-[#fdda60] py-2 pr-2 pl-7">
                   <input
                     type="text"
                     value={shareAmount}
                     onChange={handleShareAmountChange}
                     placeholder="0"
-                    className="flex-1 border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
+                    className="flex-1 border-none bg-transparent text-right font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-black outline-none"
                   />
-                  <span className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800]">
+                  <span className="ml-2 font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800]">
                     P
                   </span>
                 </div>
@@ -369,7 +380,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 }
                 className="flex h-11 w-full items-center justify-center rounded-[10px] bg-[#fdda60] disabled:bg-gray-300"
               >
-                <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-white">
+                <div className="font-jalnan text-xl leading-[140%] text-white">
                   {isSharing ? '공유 중...' : '공유하기'}
                 </div>
               </button>
@@ -382,7 +393,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 <div className="mb-2 text-sm text-gray-500">
                   포인트를 회수할 가게를 선택해주세요.
                 </div>
-                <div className="inline-flex items-center justify-end rounded-full border-[3px] border-[#fdda60] py-1 pr-2 pl-7">
+                <div className="flex w-[280px] items-center justify-end rounded-full border-[3px] border-[#fdda60] py-2 pr-2 pl-7">
                   <select
                     value={selectedStore?.storeId || ''}
                     onChange={e => {
@@ -391,28 +402,22 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                       )
                       setSelectedStore(selected)
                     }}
-                    className="border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
+                    className="flex-1 border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
                   >
                     <option value="">가게를 선택해주세요</option>
-                    {individualBalance?.map(balance => (
-                      <option key={balance.storeId} value={balance.storeId}>
-                        {balance.storeName} (회수 가능 포인트:{' '}
-                        {availableReclaimAmount.toLocaleString()}P)
+                    {individualBalance && individualBalance.length > 0 ? (
+                      individualBalance.map(balance => (
+                        <option key={balance.storeId} value={balance.storeId}>
+                          {balance.storeName} (회수 가능 포인트:{' '}
+                          {availableReclaimAmount.toLocaleString()}P)
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        사용 가능한 가게가 없습니다
                       </option>
-                    ))}
+                    )}
                   </select>
-                  <svg
-                    width={30}
-                    height={30}
-                    viewBox="0 0 30 30"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M15 18.75L8.75 12.5H21.25L15 18.75Z"
-                      fill="#FFC800"
-                    />
-                  </svg>
                 </div>
               </div>
 
@@ -421,15 +426,15 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 <div className="mb-2 text-sm text-gray-500">
                   회수할 포인트를 입력해주세요.
                 </div>
-                <div className="flex items-center rounded-full border-[3px] border-[#fdda60] py-1 pr-2 pl-7">
+                <div className="flex w-[280px] items-center justify-end rounded-full border-[3px] border-[#fdda60] py-2 pr-2 pl-7">
                   <input
                     type="text"
                     value={reclaimAmount}
                     onChange={handleReclaimAmountChange}
                     placeholder="0"
-                    className="flex-1 border-none bg-transparent font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800] outline-none"
+                    className="flex-1 border-none bg-transparent text-right font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-black outline-none"
                   />
-                  <span className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800]">
+                  <span className="ml-2 font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-bold text-[#ffc800]">
                     P
                   </span>
                 </div>
@@ -446,7 +451,7 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
                 }
                 className="flex h-11 w-full items-center justify-center rounded-[10px] bg-[#fdda60] disabled:bg-gray-300"
               >
-                <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-white">
+                <div className="font-jalnan text-xl leading-[140%] text-white">
                   {isReclaiming ? '회수 중...' : '회수하기'}
                 </div>
               </button>
@@ -454,6 +459,30 @@ const PointManagementModal: React.FC<PointManagementModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Alert 모달 */}
+      <Alert
+        isOpen={isAlertOpen}
+        onClose={() => {
+          setIsAlertOpen(false)
+          // 성공 시에만 모달 닫기 후 새로고침
+          if (alertType === 'success') {
+            onClose()
+            window.location.reload()
+          }
+        }}
+        onConfirm={() => {
+          setIsAlertOpen(false)
+          // 성공 시에만 모달 닫기 후 새로고침
+          if (alertType === 'success') {
+            onClose()
+            window.location.reload()
+          }
+        }}
+        title=""
+        message={alertMessage}
+        type={alertType}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { Alert } from '../ui/Alert'
 import { GroupCreateModal } from '../ui/GroupCreateModal'
 import FindGroup from './findGroup'
 import QRModal from './home/QRmodal'
@@ -893,7 +894,9 @@ const ShareModal = ({
     <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="mx-auto w-full max-w-md rounded-lg bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-black">포인트 공유</h2>
+          <h2 className="font-jalnan text-lg font-bold text-black">
+            포인트 공유
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -905,7 +908,7 @@ const ShareModal = ({
         <div className="mb-6">
           {/* 개인 카드 선택 드롭다운 */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="font-nanum-square-round-eb mb-2 block text-sm font-medium text-gray-700">
               공유할 개인 카드 선택
             </label>
             <select
@@ -1193,7 +1196,9 @@ const MemberListModal = ({
 
         {/* 제목 */}
         <div className="mb-6 text-center">
-          <h2 className="text-lg font-bold text-black">그룹원 목록</h2>
+          <h2 className="font-jalnan text-lg font-bold text-black">
+            그룹원 목록
+          </h2>
         </div>
 
         {/* 멤버 목록 */}
@@ -1312,6 +1317,10 @@ export const GroupWallet = () => {
   // 현재 사용자가 리더인지 확인하는 상태
   const [isCurrentUserLeader, setIsCurrentUserLeader] = useState(false)
   const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false)
+  const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false)
+  const [isLeaveAlertOpen, setIsLeaveAlertOpen] = useState(false)
+  const [leaveAlertMessage, setLeaveAlertMessage] = useState('')
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false)
 
   // 사용자 그룹 목록 로드 함수
   const loadUserGroups = async () => {
@@ -1672,18 +1681,18 @@ export const GroupWallet = () => {
     }
   }
 
-  // 그룹 탈퇴 함수
-  const handleLeaveGroup = async () => {
+  // 그룹 탈퇴 확인 함수
+  const handleLeaveGroup = () => {
     if (!selectedGroup) {
-      alert('그룹 정보가 없습니다.')
+      setLeaveAlertMessage('그룹 정보가 없습니다.')
+      setIsLeaveAlertOpen(true)
       return
     }
+    setIsLeaveConfirmOpen(true)
+  }
 
-    const confirmMessage = `정말로 이 그룹에서 탈퇴하시겠습니까?`
-    if (!confirm(confirmMessage)) {
-      return
-    }
-
+  // 실제 그룹 탈퇴 실행 함수
+  const executeLeaveGroup = async () => {
     try {
       const url = buildURL(`/groups/${selectedGroup}/group-member`)
 
@@ -1731,23 +1740,23 @@ export const GroupWallet = () => {
         }
 
         console.log('그룹 탈퇴 실패 - 최종 에러 메시지:', errorMessage)
-        alert(errorMessage)
+        setLeaveAlertMessage(errorMessage)
+        setIsLeaveAlertOpen(true)
         return
       }
 
       const result = await response.json()
       console.log('그룹 탈퇴 성공 응답:', result)
 
-      alert('그룹에서 성공적으로 탈퇴했습니다.')
+      setLeaveAlertMessage('그룹에서 성공적으로 탈퇴했습니다.')
+      setIsLeaveAlertOpen(true)
 
       // 그룹 목록 새로고침
       await loadUserGroups()
-
-      // 페이지 새로고침으로 UI 업데이트
-      window.location.reload()
     } catch (error) {
       console.error('그룹 탈퇴 실패:', error)
-      alert('그룹 탈퇴 중 오류가 발생했습니다.')
+      setLeaveAlertMessage('그룹 탈퇴 중 오류가 발생했습니다.')
+      setIsLeaveAlertOpen(true)
     }
   }
 
@@ -1784,11 +1793,8 @@ export const GroupWallet = () => {
       // 모달 닫기
       setIsGroupCreateModalOpen(false)
 
-      // 성공 알림
-      alert('그룹이 성공적으로 생성되었습니다!')
-
-      // 페이지 새로고침으로 그룹 목록 업데이트
-      window.location.reload()
+      // 성공 알림 표시
+      setIsSuccessAlertOpen(true)
     } catch (error) {
       console.error('그룹 생성 에러:', error)
 
@@ -1817,14 +1823,13 @@ export const GroupWallet = () => {
     isSelected: card.storeId === selectedCard,
   }))
 
-  // 그룹 데이터 (사용자가 속한 그룹 + 추가 버튼)
+  // 그룹 데이터 (사용자가 속한 그룹)
   const groups = [
     ...userGroupIds.map(groupId => ({
       id: groupId,
       name: groupNames[groupId] || `그룹 ${groupId}`,
       isSelected: selectedGroup === groupId,
     })),
-    { id: -1, name: '+', isAddButton: true as const },
   ]
 
   // 모임원 데이터
@@ -1845,7 +1850,7 @@ export const GroupWallet = () => {
             fill="white"
           />
         </svg>
-        <div className="ml-2 font-['Jalnan2TTF'] text-lg leading-[140%] text-white">
+        <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
           그룹 지갑
         </div>
       </div>
@@ -1855,7 +1860,7 @@ export const GroupWallet = () => {
         {/* 검색 버튼 */}
         <button
           onClick={() => setIsFindGroupOpen(true)}
-          className="flex h-[31px] w-[42px] items-center justify-center rounded-[10px] bg-[#ccc]"
+          className="flex h-[40px] w-[50px] items-center justify-center rounded-[10px] bg-[#ccc]"
         >
           <svg
             width={17}
@@ -1874,29 +1879,47 @@ export const GroupWallet = () => {
           </svg>
         </button>
 
+        {/* 그룹 생성 버튼 */}
+        <button
+          onClick={() => setIsGroupCreateModalOpen(true)}
+          className="flex h-[40px] w-[50px] items-center justify-center rounded-[10px] bg-[#fdda60]"
+        >
+          <svg
+            width={17}
+            height={17}
+            viewBox="0 0 17 17"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M8.5 2.125V13.4583M2.125 7.79167H14.875"
+              stroke="white"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
         {/* 그룹 리스트 */}
-        <div className="flex gap-2">
-          {groups.map(group => (
-            <button
-              key={group.id}
-              onClick={() => {
-                if ('isAddButton' in group && group.isAddButton) {
-                  setIsGroupCreateModalOpen(true)
-                } else {
-                  handleGroupSelect(group.id)
-                }
-              }}
-              className={`flex h-[25px] items-center justify-center rounded-[10px] border-2 px-3 transition-colors ${
-                selectedGroup === group.id
-                  ? 'border-[#fddb5f] bg-[#fddb5f] text-white'
-                  : 'border-[#ccc] bg-white text-[#ccc]'
-              }`}
-            >
-              <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold">
-                {'isAddButton' in group && group.isAddButton ? '+' : group.name}
-              </div>
-            </button>
-          ))}
+        <div className="flex-1 overflow-x-auto pb-2">
+          <div className="flex gap-2" style={{ width: 'max-content' }}>
+            {groups.map(group => (
+              <button
+                key={group.id}
+                onClick={() => handleGroupSelect(group.id)}
+                className={`flex h-[40px] items-center justify-center rounded-[10px] border-2 px-3 whitespace-nowrap transition-colors ${
+                  selectedGroup === group.id
+                    ? 'border-[#fddb5f] bg-[#fddb5f] text-white'
+                    : 'border-[#ccc] bg-white text-[#ccc]'
+                }`}
+              >
+                <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold">
+                  {group.name}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1931,7 +1954,7 @@ export const GroupWallet = () => {
           <div className="mb-4 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#99a1af]">
+                <div className="font-jalnan text-xl leading-[140%] text-[#99a1af]">
                   {groupInfo?.groupName || '눈농팀'}
                 </div>
                 <button
@@ -1956,102 +1979,92 @@ export const GroupWallet = () => {
                   </svg>
                 </button>
               </div>
-
-              {/* 그룹 코드 및 복사 버튼 */}
-              <div className="flex items-center gap-2">
-                <div className="font-['NanumSquareRound'] text-sm font-medium text-gray-500">
-                  그룹 코드: {groupInfo?.groupCode || selectedGroup}
-                </div>
-                <button
-                  onClick={copyGroupCode}
-                  className="flex items-center justify-center rounded-lg bg-[#ffc800] px-2 py-1"
-                >
-                  <svg
-                    width={16}
-                    height={16}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
-                      fill="white"
-                    />
-                  </svg>
-                </button>
-              </div>
             </div>
 
             {/* 드롭다운 메뉴 */}
             {isGroupDropdownOpen && (
-              <div className="mt-2 space-y-2">
-                <button
-                  onClick={() => {
-                    setIsMemberListModalOpen(true)
-                    setIsGroupDropdownOpen(false)
-                  }}
-                  className="flex h-[25px] w-full items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-3"
-                >
-                  <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
-                    멤버 보기
+              <div className="mt-2">
+                {/* 그룹 코드 및 복사 버튼 */}
+                <div className="mb-2 flex items-center justify-between rounded-lg bg-gray-50 p-2">
+                  <div className="font-nanum-square-round-eb text-sm font-medium text-gray-500">
+                    그룹 코드: {groupInfo?.groupCode || selectedGroup}
                   </div>
-                  <div className="ml-1 font-['NanumSquareRoundEB'] text-xl leading-[140%] font-bold text-white">
-                    +
-                  </div>
-                </button>
+                  <button
+                    onClick={copyGroupCode}
+                    className="flex items-center justify-center rounded-lg bg-[#ffc800] px-2 py-1"
+                  >
+                    <svg
+                      width={16}
+                      height={16}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
+                        fill="white"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
-                <button
-                  onClick={() => {
-                    setIsPointManagementModalOpen(true)
-                    setIsGroupDropdownOpen(false)
-                  }}
-                  className="flex h-[25px] w-full items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-3"
-                >
-                  <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
-                    포인트 관리
-                  </div>
-                  <div className="ml-1 font-['NanumSquareRoundEB'] text-xl leading-[140%] font-bold text-white">
-                    +
-                  </div>
-                </button>
-
-                {isCurrentUserLeader ? (
+                <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`
+                      setIsMemberListModalOpen(true)
                       setIsGroupDropdownOpen(false)
                     }}
-                    className="flex h-[25px] w-full items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-3"
+                    className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
                   >
-                    <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
-                      그룹 설정
-                    </div>
-                    <div className="ml-1 font-['NanumSquareRoundEB'] text-xl leading-[140%] font-bold text-white">
-                      +
+                    <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                      멤버 보기
                     </div>
                   </button>
-                ) : (
+
                   <button
                     onClick={() => {
-                      handleLeaveGroup()
+                      setIsPointManagementModalOpen(true)
                       setIsGroupDropdownOpen(false)
                     }}
-                    className="flex h-[25px] w-full items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-3"
+                    className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
                   >
-                    <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
-                      그룹 나가기
-                    </div>
-                    <div className="ml-1 font-['NanumSquareRoundEB'] text-xl leading-[140%] font-bold text-white">
-                      +
+                    <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                      포인트 관리
                     </div>
                   </button>
-                )}
+
+                  {isCurrentUserLeader ? (
+                    <button
+                      onClick={() => {
+                        window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`
+                        setIsGroupDropdownOpen(false)
+                      }}
+                      className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
+                    >
+                      <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                        그룹 설정
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleLeaveGroup()
+                        setIsGroupDropdownOpen(false)
+                      }}
+                      className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
+                    >
+                      <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                        그룹 나가기
+                      </div>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* 지갑 카드 캐러셀 */}
-          <div className="px-4 py-6">
+          <div className="px-4 py-2">
             <div className="scrollbar-hide overflow-x-auto">
               <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
                 {walletLoading ? (
@@ -2084,7 +2097,7 @@ export const GroupWallet = () => {
                 onClick={() => setActiveTab('history')}
                 className="flex items-center justify-center rounded-tl-lg rounded-tr-lg bg-[#fdda60] px-3 py-1 text-white"
               >
-                <div className="font-['Jalnan2TTF'] text-xl leading-[140%]">
+                <div className="font-jalnan text-xl leading-[140%]">
                   사용내역
                 </div>
               </button>
@@ -2186,6 +2199,46 @@ export const GroupWallet = () => {
           }
         }}
       />
+
+      {/* 성공 알림 */}
+      <Alert
+        isOpen={isSuccessAlertOpen}
+        onClose={() => setIsSuccessAlertOpen(false)}
+        title="그룹 생성 완료"
+        message="그룹이 성공적으로 생성되었습니다!"
+        type="success"
+        onConfirm={() => {
+          // 페이지 새로고침으로 그룹 목록 업데이트
+          window.location.reload()
+        }}
+      />
+
+      {/* 그룹 나가기 알림 */}
+      <Alert
+        isOpen={isLeaveAlertOpen}
+        onClose={() => setIsLeaveAlertOpen(false)}
+        message={leaveAlertMessage}
+        onConfirm={() => {
+          if (leaveAlertMessage === '그룹에서 성공적으로 탈퇴했습니다.') {
+            // 성공 시에만 페이지 새로고침
+            window.location.reload()
+          }
+        }}
+      />
+
+      {/* 그룹 나가기 확인 */}
+      <Alert
+        isOpen={isLeaveConfirmOpen}
+        onClose={() => setIsLeaveConfirmOpen(false)}
+        message="정말로 이 그룹에서 나가시겠습니까?"
+        confirmText="확인"
+        cancelText="취소"
+        onConfirm={() => {
+          setIsLeaveConfirmOpen(false)
+          executeLeaveGroup()
+        }}
+        onCancel={() => setIsLeaveConfirmOpen(false)}
+      />
     </div>
   )
 }
@@ -2281,32 +2334,29 @@ const GroupTransactionItem = ({
   return (
     <div className="mb-4 flex w-full items-center justify-between">
       {/* 거래 타입 라벨 */}
-      <div
-        className="inline-flex flex-col items-center justify-center rounded-[10px] border-[3px] pt-[11px] pr-2 pb-2 pl-[9px] text-white"
-        style={{
-          borderColor: transactionColor,
-          backgroundColor: transactionColor,
-        }}
-      >
-        <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold">
+      <div className="inline-flex w-20 flex-col items-center justify-center">
+        <div
+          className="font-jalnan text-center text-[16px] leading-[140%] font-extrabold"
+          style={{ color: transactionColor }}
+        >
           {getTransactionLabel(transaction.type)}
         </div>
       </div>
 
       {/* 금액 */}
-      <div className="font-['NanumSquareRoundEB'] text-xl leading-[140%] font-extrabold text-gray-500">
+      <div className="font-nanum-square-round-eb text-xl leading-[140%] font-extrabold text-gray-500">
         {transaction.amount.toLocaleString()}P
       </div>
 
       {/* 멤버명 또는 그룹명 */}
       {transaction.memberName && (
-        <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ffc800]">
+        <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ffc800]">
           {transaction.memberName}
         </div>
       )}
 
       {/* 날짜 */}
-      <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
+      <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ccc]">
         {transaction.date}
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useUser } from '@/contexts/UserContext'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useSidebarStore } from '@/store/useSidebarStore'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -24,6 +25,19 @@ export default function Header() {
   const { user: customerUser, loading: customerLoading } = useUser()
 
   const { unreadCount } = useNotificationSystem()
+  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebarStore()
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 768)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
 
   // 로그인 상태 변경 감지를 위한 useEffect
   useEffect(() => {
@@ -137,28 +151,54 @@ export default function Header() {
   const logoutColor = isOwner ? '#76D2FE' : '#FCDB60'
 
   return (
-    <div className="flex h-[3.75rem] w-[412px] items-center justify-between px-4">
-      {/* 왼쪽: 뒤로가기 버튼 */}
+    <div className="mx-auto flex h-[3.75rem] w-full max-w-[412px] items-center justify-between px-4 md:h-[4.5rem] md:max-w-none md:px-8">
+      {/* 왼쪽: 뒤로가기 버튼 (모바일) / 메뉴 버튼 (데스크톱) */}
       <div className="flex w-[60px] justify-start">
         <button
-          onClick={() => router.back()}
+          onClick={() => {
+            if (isDesktop) {
+              toggleSidebar()
+            } else {
+              router.back()
+            }
+          }}
           className="flex items-center justify-center"
-          aria-label="뒤로가기"
+          aria-label={isDesktop ? '메뉴' : '뒤로가기'}
         >
-          <svg
-            width={25}
-            height={25}
-            viewBox="0 0 25 25"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M10.9 12.1095L15.5384 16.6708L14.1502 18.0825L8.10006 12.133L14.0495 6.0829L15.4612 7.47111L10.9 12.1095Z"
-              fill={backColor}
-              stroke={backStrokeColor}
-              strokeWidth={2}
-            />
-          </svg>
+          {isDesktop ? (
+            // 햄버거 메뉴 아이콘
+            <svg
+              width={25}
+              height={25}
+              viewBox="0 0 25 25"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 6H21M3 12H21M3 18H21"
+                stroke={backColor}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            // 뒤로가기 아이콘
+            <svg
+              width={25}
+              height={25}
+              viewBox="0 0 25 25"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10.9 12.1095L15.5384 16.6708L14.1502 18.0825L8.10006 12.133L14.0495 6.0829L15.4612 7.47111L10.9 12.1095Z"
+                fill={backColor}
+                stroke={backStrokeColor}
+                strokeWidth={2}
+              />
+            </svg>
+          )}
         </button>
       </div>
 
@@ -178,11 +218,11 @@ export default function Header() {
               alt="KEEPING"
               width={159}
               height={41}
-              className="h-[2.5625rem] w-[9.9375rem]"
+              className="h-[2.5625rem] w-[9.9375rem] md:h-[3rem] md:w-[12rem]"
             />
           ) : (
             <div
-              className={`h-[2.5625rem] w-[9.9375rem] bg-contain bg-no-repeat ${
+              className={`h-[2.5625rem] w-[9.9375rem] bg-contain bg-no-repeat md:h-[3rem] md:w-[12rem] ${
                 isOwner
                   ? "bg-[url('/common/logo_owner.svg')]"
                   : "bg-[url('/common/logo_customer.svg')]"

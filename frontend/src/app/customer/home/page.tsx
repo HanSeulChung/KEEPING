@@ -29,7 +29,7 @@ export default function Page() {
   }
 
   return (
-    <div className="mx-auto flex h-[629px] w-[392px] flex-shrink-0 flex-col items-center px-6 pt-8">
+    <div className="mx-auto flex h-[629px] w-[392px] flex-shrink-0 flex-col items-center px-6 pt-8 md:h-auto md:w-full md:max-w-4xl md:px-8 md:pt-12">
       {/* 검색바
       <div className="mb-4 h-14 w-full max-w-[720px] flex-shrink-0 items-center gap-1 rounded-[28px] bg-[#f6f8fc]">
         <div className="state-layer flex items-center self-stretch p-1">
@@ -60,14 +60,14 @@ export default function Page() {
       </div> */}
 
       {/* 메인 카드 */}
-      <div className="mb-8 h-[11.5625rem] w-full flex-shrink-0 rounded-[0.625rem] bg-yellow-50">
-        <div className="flex h-full items-center justify-between px-6">
-          <div className="font-jalnan text-lg leading-[140%] text-[#ffc800]">
+      <div className="mb-8 h-[11.5625rem] w-full flex-shrink-0 rounded-[0.625rem] bg-yellow-50 md:h-[13rem]">
+        <div className="flex h-full items-center justify-between px-6 md:px-8">
+          <div className="font-jalnan text-lg leading-[140%] text-[#ffc800] md:text-xl">
             똑똑한 선결제,
             <br />
             키핑으로 절약하세요 !
           </div>
-          <div className="h-28 w-28 bg-[url('/common/customer.svg')] bg-cover bg-center bg-no-repeat" />
+          <div className="h-28 w-28 bg-[url('/common/customer.svg')] bg-cover bg-center bg-no-repeat md:h-32 md:w-32" />
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export default function Page() {
       <div className="mb-6 flex w-full items-start">
         <button
           onClick={() => setIsFoodActive(true)}
-          className={`font-jalnan flex items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 text-xl leading-[140%] ${
+          className={`font-jalnan flex h-[2.5rem] w-[5.125rem] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 text-xl leading-[140%] md:text-2xl ${
             isFoodActive
               ? 'bg-[#fdda60] text-white'
               : 'border-t border-r border-b border-l border-[#fdda60] text-[#fdda60]'
@@ -85,7 +85,7 @@ export default function Page() {
         </button>
         <button
           onClick={() => setIsFoodActive(false)}
-          className={`font-jalnan flex w-[5.125rem] flex-shrink-0 items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 text-xl leading-[140%] ${
+          className={`font-jalnan flex h-[2.5rem] w-[5.125rem] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 text-xl leading-[140%] md:text-2xl ${
             !isFoodActive
               ? 'bg-[#fdda60] text-white'
               : 'border-t border-r border-b border-l border-[#fdda60] text-[#fdda60]'
@@ -96,61 +96,61 @@ export default function Page() {
       </div>
 
       {/* 카테고리 그리드 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 md:grid-cols-5 md:gap-4">
         {isFoodActive ? (
           <>
             {/* 한식 */}
             <button
               onClick={() => handleCategoryClick('한식')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/한식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/한식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 양식 */}
             <button
               onClick={() => handleCategoryClick('양식')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/양식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/양식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 아시안 */}
             <button
               onClick={() => handleCategoryClick('아시안')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/아시안.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/아시안.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 중식 */}
             <button
               onClick={() => handleCategoryClick('중식')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/중식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/중식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 분식 */}
             <button
               onClick={() => handleCategoryClick('분식')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/분식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/분식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 식료품 */}
             <button
               onClick={() => handleCategoryClick('식료품')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/식료품.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/식료품.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 일식 */}
             <button
               onClick={() => handleCategoryClick('일식')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/일식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/일식.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 패스트푸드 */}
             <button
               onClick={() => handleCategoryClick('패스트푸드')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/패스트푸드.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/패스트푸드.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             {/* 반찬 */}
             <button
               onClick={() => handleCategoryClick('반찬')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/반찬.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/food/반찬.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
           </>
         ) : (
@@ -158,47 +158,47 @@ export default function Page() {
             {/* LIFE 카테고리들 */}
             <button
               onClick={() => handleCategoryClick('주류')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/주류.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/주류.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('뷰티')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/뷰티.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/뷰티.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('헤어')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/헤어.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/헤어.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('클래스')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/클래스svg.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/클래스svg.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('엔터테인먼트')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/엔터테인먼트.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/엔터테인먼트.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('꽃')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/꽃.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/꽃.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('잡화')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/잡화.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/잡화.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('반려동물')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/반려동물.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/반려동물.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
 
             <button
               onClick={() => handleCategoryClick('스포츠')}
-              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/스포츠.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105"
+              className="h-[6.25rem] w-[6.25rem] bg-[url('/home/life/스포츠.svg')] bg-cover bg-center bg-no-repeat transition-transform hover:scale-105 md:h-[7.5rem] md:w-[7.5rem]"
             />
           </>
         )}

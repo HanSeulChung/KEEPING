@@ -243,8 +243,8 @@ export const PaymentModal = ({
 
           {/* 결제 완료 메시지 */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform text-center">
-            <div className="mb-4 font-['Jalnan2TTF'] text-xl leading-[140%] text-[#ffc800]">
-              결제가 완료되었습니다 !
+            <div className="font-jalnan mb-4 text-xl leading-[140%] whitespace-nowrap text-[#ffc800]">
+              결제가 완료되었습니다!
             </div>
 
             {/* 포인트 확인 버튼 */}
@@ -258,7 +258,7 @@ export const PaymentModal = ({
               }}
               className="inline-flex items-center justify-center rounded-[10px] bg-[#fdda60] p-1 pr-[21px] pl-[22px]"
             >
-              <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] text-white">
+              <div className="font-jalnan text-[15px] leading-[140%] text-white">
                 포인트 확인하러 가기
               </div>
             </button>
@@ -273,7 +273,7 @@ export const PaymentModal = ({
       <div className="relative h-[331px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-6">
-          <div className="font-['Jalnan2TTF'] text-xl leading-[140%] text-[#ffc800]">
+          <div className="font-jalnan text-xl leading-[140%] text-[#ffc800]">
             결제하기
           </div>
           <button
@@ -345,7 +345,7 @@ export const PaymentModal = ({
             }`}
           >
             <span
-              className={`font-['Jalnan2TTF'] text-lg font-bold ${
+              className={`font-jalnan text-lg font-bold ${
                 isProcessing || !selectedCard || cardsLoading
                   ? 'text-gray-500'
                   : 'text-white'

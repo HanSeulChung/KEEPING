@@ -366,9 +366,9 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   }
 
   return (
-    <div className="mx-auto h-[795px] w-[23.6875rem]">
-      {/* 검색바 */}
-      <div className="mb-4 flex h-14 w-[22.5rem] max-w-[720px] flex-shrink-0 items-center gap-1 rounded-[28px] bg-[#f6f8fc]">
+    <div className="mx-auto h-[795px] w-[23.6875rem] md:h-auto md:w-full md:max-w-4xl">
+      {/* 검색바
+      <div className="mb-4 flex h-14 w-[22.5rem] max-w-[720px] flex-shrink-0 items-center gap-1 rounded-[28px] bg-[#f6f8fc] md:w-full">
         <div className="state-layer flex items-center self-stretch p-1">
           <div className="content flex items-center gap-2.5 self-stretch px-5 py-0">
             <span className="font-nanum-square-round-eb text-base text-[#d9d9d9]">
@@ -396,7 +396,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 카테고리 드롭다운 */}
       <div className="relative mb-6">
@@ -453,7 +453,7 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
           stores.map((store, index) => (
             <div
               key={store.id}
-              className="flex h-[4.75rem] w-[23.75rem] flex-shrink-0 items-center rounded-[0.3125rem] bg-[#f8f8f8] p-4"
+              className="flex h-[4.75rem] w-[23.75rem] flex-shrink-0 items-center rounded-[0.3125rem] bg-[#f8f8f8] p-4 md:w-full"
             >
               {/* 가게 이미지 */}
               <div

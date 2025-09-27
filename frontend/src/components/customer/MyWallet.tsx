@@ -533,25 +533,22 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
   return (
     <div className="mb-4 flex w-full items-center justify-between">
       {/* 거래 타입 라벨 */}
-      <div
-        className="inline-flex flex-col items-center justify-center rounded-[10px] border-[3px] pt-[11px] pr-2 pb-2 pl-[9px] text-white"
-        style={{
-          borderColor: transactionColor,
-          backgroundColor: transactionColor,
-        }}
-      >
-        <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold">
+      <div className="inline-flex w-20 flex-col items-center justify-center">
+        <div
+          className="font-jalnan text-center text-[16px] leading-[140%] font-extrabold"
+          style={{ color: transactionColor }}
+        >
           {getTransactionTypeLabel(transaction.type)}
         </div>
       </div>
 
       {/* 금액 */}
-      <div className="font-['NanumSquareRoundEB'] text-xl leading-[140%] font-extrabold text-gray-500">
+      <div className="font-nanum-square-round-eb text-xl leading-[140%] font-extrabold text-gray-500">
         {transaction.amount.toLocaleString()}P
       </div>
 
       {/* 날짜 */}
-      <div className="font-['NanumSquareRoundEB'] text-[15px] leading-[140%] font-extrabold text-[#ccc]">
+      <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ccc]">
         {transaction.date}
       </div>
     </div>
@@ -580,15 +577,15 @@ const ChargeOption = ({
 }: ChargeOptionProps) => {
   return (
     <div
-      className={`flex h-16 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors md:h-14 ${
+      className={`flex h-12 w-full cursor-pointer items-center justify-between border border-black px-4 transition-colors ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
       onClick={onClick}
     >
-      <span className="text-base font-bold text-red-500 md:text-sm">
+      <span className="text-sm font-bold text-red-500">
         {bonusPercentage}% 보너스
       </span>
-      <span className="text-base font-bold text-black md:text-sm">
+      <span className="text-sm font-bold text-black">
         {chargeAmount.toLocaleString()}원
       </span>
     </div>
@@ -599,14 +596,12 @@ const ChargeOption = ({
 const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
   return (
     <div className="w-full">
-      <p className="mb-6 text-lg font-bold text-black md:text-[15px]">
+      <p className="mb-6 text-base font-bold text-black">
         "{selectedCard.name}" 포인트 환불받기
       </p>
 
       <div className="mb-6 flex items-center gap-4">
-        <p className="text-base font-bold text-black md:text-sm">
-          환불 가능 금액
-        </p>
+        <p className="text-sm font-bold text-black">환불 가능 금액</p>
         <div className="relative">
           <Image
             src="/wallet/inputbox.svg"
@@ -615,16 +610,14 @@ const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
             height={31}
             className="h-[31px] w-[165px]"
           />
-          <p className="absolute top-[6px] left-[60px] text-sm font-bold text-black md:text-[11px]">
+          <p className="absolute top-[6px] left-[60px] text-xs font-bold text-black">
             {selectedCard.amount.toLocaleString()} 원
           </p>
         </div>
       </div>
 
-      <button className="flex h-14 w-full items-center justify-center border border-black bg-black md:h-12">
-        <span className="text-base font-bold text-white md:text-sm">
-          환불받기
-        </span>
+      <button className="flex h-12 w-full items-center justify-center border border-black bg-black">
+        <span className="text-sm font-bold text-white">환불받기</span>
       </button>
     </div>
   )
@@ -671,7 +664,7 @@ const ChargeSection = ({
     <div className="mx-auto w-full max-w-md">
       {/* 제목 */}
       <div className="mb-6 text-left">
-        <h2 className="font-['NanumSquareRoundEB'] text-2xl font-bold text-gray-600">
+        <h2 className="font-jalnan text-xl font-bold text-gray-600">
           <span style={{ color: cardColor }}>{storeName}</span>에 충전하기
         </h2>
       </div>
@@ -686,17 +679,17 @@ const ChargeSection = ({
           chargeOptions.map((option, index) => (
             <div
               key={index}
-              className={`flex h-20 w-full cursor-pointer items-center justify-between rounded-lg border-2 px-6 transition-colors ${
+              className={`flex h-16 w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 transition-colors ${
                 selectedIndex === index
                   ? 'border-[#fdda60] bg-yellow-50'
                   : 'border-gray-300 bg-white hover:bg-yellow-50'
               }`}
               onClick={() => setSelectedIndex(index)}
             >
-              <div className="font-['NanumSquareRoundEB'] text-lg font-bold text-[#fdda60]">
+              <div className="font-nanum-square-round-eb text-base font-bold text-[#fdda60]">
                 {option.bonusPercentage}% 보너스
               </div>
-              <div className="font-['NanumSquareRoundEB'] text-3xl font-bold text-black">
+              <div className="font-nanum-square-round-eb text-xl font-bold text-black">
                 {option.chargeAmount.toLocaleString()}원
               </div>
             </div>
@@ -705,17 +698,17 @@ const ChargeSection = ({
       </div>
 
       {/* 결제 금액 */}
-      <div className="mb-8 rounded-lg bg-gray-50 p-6">
-        <div className="mb-3 font-['NanumSquareRoundEB'] text-lg font-bold text-gray-600">
+      <div className="mb-6 rounded-lg bg-gray-50 p-4">
+        <div className="font-jalnan mb-2 text-base font-bold text-gray-600">
           결제 금액
         </div>
-        <div className="font-['NanumSquareRoundEB'] text-3xl font-bold text-black">
+        <div className="font-nanum-square-round-eb text-lg font-bold text-black">
           {paymentAmount > 0
             ? `${paymentAmount.toLocaleString()}원`
             : '옵션을 선택해주세요'}
         </div>
         {chargeAmount > 0 && (
-          <div className="mt-3 font-['NanumSquareRoundEB'] text-xl font-bold text-[#fdda60]">
+          <div className="font-jalnan mt-2 text-lg font-bold text-[#fdda60]">
             충전 금액: {chargeAmount.toLocaleString()}원
           </div>
         )}
@@ -723,7 +716,7 @@ const ChargeSection = ({
 
       {/* 충전하기 버튼 */}
       <button
-        className={`mb-20 flex h-16 w-full items-center justify-center rounded-lg border-2 transition-colors ${
+        className={`mb-20 flex h-12 w-full items-center justify-center rounded-lg border-2 transition-colors ${
           selectedIndex !== null
             ? 'border-[#fdda60] bg-[#fdda60] hover:bg-[#f4d03f]'
             : 'cursor-not-allowed border-gray-300 bg-gray-300'
@@ -736,7 +729,7 @@ const ChargeSection = ({
         }}
       >
         <span
-          className={`font-['NanumSquareRoundEB'] text-2xl font-bold ${
+          className={`font-jalnan text-lg font-bold ${
             selectedIndex !== null ? 'text-white' : 'text-gray-500'
           }`}
         >
@@ -1214,7 +1207,7 @@ export const MyWallet = () => {
             fill="white"
           />
         </svg>
-        <div className="ml-2 font-['Jalnan2TTF'] text-lg leading-[140%] text-white">
+        <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
           내 지갑
         </div>
       </div>
@@ -1236,30 +1229,26 @@ export const MyWallet = () => {
 
       {/* 탭 네비게이션 */}
       <div className="mb-6 px-4">
-        <div className="flex w-52 items-start">
+        <div className="flex w-[240px] items-end">
           <button
             onClick={() => handleTabChange('history')}
-            className={`flex items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+            className={`flex w-[120px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
               activeTab === 'history'
                 ? 'bg-[#fdda60] text-white'
                 : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
             }`}
           >
-            <div className="font-['Jalnan2TTF'] text-xl leading-[140%]">
-              사용내역
-            </div>
+            <div className="font-jalnan text-xl leading-[140%]">사용내역</div>
           </button>
           <button
             onClick={() => handleTabChange('charge')}
-            className={`flex w-[104px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+            className={`flex w-[120px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
               activeTab === 'charge'
                 ? 'bg-[#fdda60] text-white'
                 : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
             }`}
           >
-            <div className="font-['Jalnan2TTF'] text-xl leading-[140%]">
-              충전하기
-            </div>
+            <div className="font-jalnan text-xl leading-[140%]">충전하기</div>
           </button>
         </div>
       </div>

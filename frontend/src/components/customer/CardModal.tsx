@@ -31,9 +31,14 @@ interface WalletData {
 interface CardModalProps {
   isOpen: boolean
   onClose: () => void
+  onCardClick?: (card: {
+    storeId: number
+    storeName: string
+    walletId: number
+  }) => void
 }
 
-const CardModal = ({ isOpen, onClose }: CardModalProps) => {
+const CardModal = ({ isOpen, onClose, onCardClick }: CardModalProps) => {
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,18 +118,28 @@ const CardModal = ({ isOpen, onClose }: CardModalProps) => {
 
   const getCardColor = (index: number) => {
     const colors = [
-      'bg-[#ff6f6f]',
-      'bg-[#ff8b68]',
-      'bg-[#a4e846]',
-      'bg-[#6caeff]',
-      'bg-[#ffd23c]',
-      'bg-[#e174ff]',
+      'bg-[#FF6F6F]',
+      'bg-[#FF8B68]',
+      'bg-[#FFD23C]',
+      'bg-[#A4E846]',
+      'bg-[#6CAEFF]',
+      'bg-[#E174FF]',
     ]
     return colors[index % colors.length]
   }
 
   const formatPoints = (points: number) => {
     return points.toLocaleString()
+  }
+
+  const handleCardClick = (store: StoreBalance, walletId: number) => {
+    if (onCardClick) {
+      onCardClick({
+        storeId: store.storeId,
+        storeName: store.storeName,
+        walletId: walletId,
+      })
+    }
   }
 
   if (!isOpen) return null
@@ -237,7 +252,13 @@ const CardModal = ({ isOpen, onClose }: CardModalProps) => {
                         (store, index) => (
                           <div
                             key={store.storeId}
-                            className={`flex flex-col items-center justify-center rounded-[0.625rem] pt-[1.3125rem] pr-[1.1875rem] pb-5 pl-[1.1875rem] ${getCardColor(index)}`}
+                            onClick={() =>
+                              handleCardClick(
+                                store,
+                                walletData.personalWallet.walletId
+                              )
+                            }
+                            className={`flex cursor-pointer flex-col items-center justify-center rounded-[0.625rem] pt-[1.3125rem] pr-[1.1875rem] pb-5 pl-[1.1875rem] transition-transform hover:scale-105 ${getCardColor(index)}`}
                           >
                             <div className="font-nanum-square-round-eb text-[.9375rem] leading-[140%] font-extrabold text-white">
                               {store.storeName}
@@ -295,7 +316,10 @@ const CardModal = ({ isOpen, onClose }: CardModalProps) => {
                         {group.storeBalances.map((store, index) => (
                           <div
                             key={store.storeId}
-                            className={`flex flex-col items-center justify-center rounded-[0.625rem] pt-[1.3125rem] pr-[1.1875rem] pb-5 pl-[1.1875rem] ${getCardColor(index)}`}
+                            onClick={() =>
+                              handleCardClick(store, group.walletId)
+                            }
+                            className={`flex cursor-pointer flex-col items-center justify-center rounded-[0.625rem] pt-[1.3125rem] pr-[1.1875rem] pb-5 pl-[1.1875rem] transition-transform hover:scale-105 ${getCardColor(index)}`}
                           >
                             <div className="font-nanum-square-round-eb text-[.9375rem] leading-[140%] font-extrabold text-white">
                               {store.storeName}
