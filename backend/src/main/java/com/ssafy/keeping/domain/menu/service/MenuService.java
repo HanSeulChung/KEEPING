@@ -92,7 +92,7 @@ public class MenuService {
                 saved.getMenuId(),
                 saved.getStore().getStoreId(), saved.getMenuName(), saved.getCategory().getCategoryId(),
                 saved.getCategory().getCategoryName(), saved.getDisplayOrder(), saved.isSoldOut(),
-                saved.getImgUrl(), saved.getDescription()
+                saved.getImgUrl(), saved.getDescription(), saved.getPrice()
         );
     }
 
@@ -130,7 +130,7 @@ public class MenuService {
                 menu.getMenuId(), storeId, menu.getMenuName(),
                 menu.getCategory().getCategoryId(), menu.getCategory().getCategoryName(),
                 menu.getDisplayOrder(), menu.isSoldOut(),
-                menu.getImgUrl(), menu.getDescription()
+                menu.getImgUrl(), menu.getDescription(), menu.getPrice()
         );
     }
 
