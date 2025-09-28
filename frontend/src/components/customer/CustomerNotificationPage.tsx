@@ -3,11 +3,12 @@
 import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const {
     notifications,
     markAsRead,
@@ -17,6 +18,26 @@ const CustomerNotificationPage = () => {
     hidePaymentApprovalModal,
   } = useNotificationSystem()
 
+  // URL 파라미터에서 모달 정보 확인
+  const modal = searchParams.get('modal')
+  const intentId = searchParams.get('intentId')
+  const customerName = searchParams.get('customerName')
+  const amount = searchParams.get('amount')
+  const storeName = searchParams.get('storeName')
+  const pointInfoStr = searchParams.get('pointInfo')
+
+  // 결제 승인 모달 데이터 구성
+  const paymentModalData =
+    modal === 'payment-request'
+      ? {
+          intentPublicId: intentId || undefined,
+          customerName: customerName || undefined,
+          amount: amount ? parseInt(amount) : undefined,
+          storeName: storeName || undefined,
+          pointInfo: pointInfoStr ? JSON.parse(pointInfoStr) : undefined,
+        }
+      : null
+
   // SSE에서 자동으로 결제 승인 모달이 처리되므로 이 함수는 더 이상 필요하지 않음
 
   // 알림 클릭 처리 (읽음 처리만)
@@ -24,7 +45,6 @@ const CustomerNotificationPage = () => {
     // SSE에서 자동으로 모달이 처리되므로 읽음 처리만 수행
     markAsRead(notification.id)
   }
-
 
   const [loading, setLoading] = useState(true)
   const [filteredNotifications, setFilteredNotifications] =
@@ -243,47 +263,47 @@ const CustomerNotificationPage = () => {
           <>
             <div className="space-y-2">
               {currentNotifications.map((notification, index) => (
-              <div
-                key={notification.id}
-                className={`rounded-lg border border-gray-200 p-4 transition-colors active:bg-gray-50 ${
-                  !notification.isRead
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'bg-white'
-                }`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="flex items-start gap-3">
-                  {/* 알림 아이콘 */}
-                  <div className="mt-1 flex-shrink-0">
-                    {getNotificationIconComponent(notification.type)}
-                  </div>
-
-                  {/* 알림 내용 */}
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-start justify-between gap-2">
-                      <h3 className="font-nanum-square-round-eb line-clamp-1 text-sm font-bold text-black">
-                        {notification.title}
-                      </h3>
-                      {!notification.isRead && (
-                        <div className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
-                      )}
+                <div
+                  key={notification.id}
+                  className={`rounded-lg border border-gray-200 p-4 transition-colors active:bg-gray-50 ${
+                    !notification.isRead
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'bg-white'
+                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* 알림 아이콘 */}
+                    <div className="mt-1 flex-shrink-0">
+                      {getNotificationIconComponent(notification.type)}
                     </div>
-                    <p className="font-nanum-square-round-eb mb-2 line-clamp-2 text-sm leading-relaxed text-gray-700">
-                      {notification.message}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="font-nanum-square-round-eb text-xs text-gray-400">
-                        {formatTime(notification.timestamp)}
+
+                    {/* 알림 내용 */}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <h3 className="font-nanum-square-round-eb line-clamp-1 text-sm font-bold text-black">
+                          {notification.title}
+                        </h3>
+                        {!notification.isRead && (
+                          <div className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
+                        )}
+                      </div>
+                      <p className="font-nanum-square-round-eb mb-2 line-clamp-2 text-sm leading-relaxed text-gray-700">
+                        {notification.message}
                       </p>
-                      {notification.data?.amount && (
-                        <span className="font-nanum-square-round-eb text-xs font-bold text-green-600">
-                          {notification.data.amount.toLocaleString()}원
-                        </span>
-                      )}
+                      <div className="flex items-center justify-between">
+                        <p className="font-nanum-square-round-eb text-xs text-gray-400">
+                          {formatTime(notification.timestamp)}
+                        </p>
+                        {notification.data?.amount && (
+                          <span className="font-nanum-square-round-eb text-xs font-bold text-green-600">
+                            {notification.data.amount.toLocaleString()}원
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
               ))}
             </div>
 
@@ -335,23 +355,40 @@ const CustomerNotificationPage = () => {
         )}
       </div>
 
-      {/* 결제 승인 모달 - SSE 알림으로 자동 팝업 */}
-      {paymentApprovalModal.isOpen && paymentApprovalModal.data && (
+      {/* 결제 승인 모달 - URL 파라미터 또는 SSE 알림으로 팝업 */}
+      {(paymentApprovalModal.isOpen && paymentApprovalModal.data) ||
+      paymentModalData ? (
         <PaymentApprovalModal
-          isOpen={paymentApprovalModal.isOpen}
-          onClose={hidePaymentApprovalModal}
-          intentPublicId={paymentApprovalModal.data.intentPublicId}
-          storeName={paymentApprovalModal.data.storeName}
-          amount={paymentApprovalModal.data.amount}
-          customerName={paymentApprovalModal.data.customerName}
+          isOpen={paymentApprovalModal.isOpen || !!paymentModalData}
+          onClose={() => {
+            hidePaymentApprovalModal()
+            // URL에서 모달 파라미터 제거
+            router.push('/customer/notification')
+          }}
+          intentPublicId={
+            paymentApprovalModal.data?.intentPublicId ||
+            paymentModalData?.intentPublicId
+          }
+          storeName={
+            paymentApprovalModal.data?.storeName || paymentModalData?.storeName
+          }
+          amount={paymentApprovalModal.data?.amount || paymentModalData?.amount}
+          customerName={
+            paymentApprovalModal.data?.customerName ||
+            paymentModalData?.customerName
+          }
           pointInfo={
-            paymentApprovalModal.data.pointInfo
+            paymentApprovalModal.data?.pointInfo || paymentModalData?.pointInfo
               ? {
                   currentPoints: 0,
                   usedPoints: 0,
                   remainingPoints: 0,
-                  ...(typeof paymentApprovalModal.data.pointInfo === 'object'
-                    ? paymentApprovalModal.data.pointInfo
+                  ...(typeof (
+                    paymentApprovalModal.data?.pointInfo ||
+                    paymentModalData?.pointInfo
+                  ) === 'object'
+                    ? paymentApprovalModal.data?.pointInfo ||
+                      paymentModalData?.pointInfo
                     : {}),
                 }
               : undefined
@@ -360,9 +397,11 @@ const CustomerNotificationPage = () => {
           onSuccess={() => {
             console.log('결제 승인 완료')
             hidePaymentApprovalModal()
+            // URL에서 모달 파라미터 제거
+            router.push('/customer/notification')
           }}
         />
-      )}
+      ) : null}
     </div>
   )
 }

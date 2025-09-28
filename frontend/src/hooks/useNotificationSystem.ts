@@ -866,6 +866,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       amount?: number
       storeName?: string
     }) => {
+      console.log('🚀 PaymentApprovalModal 열기:', data)
       setPaymentApprovalModal({
         isOpen: true,
         data,
@@ -942,34 +943,51 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     [removeToast]
   )
 
-  // 토스트 클릭 처리
+  // 토스트 클릭 처리 - URL 라우팅 방식
   const handleToastClick = useCallback(
     (notification: NotificationData) => {
+      console.log('🍞 토스트 클릭됨:', notification.type, notification)
+
       // 알림 읽음 처리
       markAsRead(notification.id)
 
-      // 특별한 알림 타입 처리
-      if (notification.type === 'PAYMENT_REQUEST') {
-        showPaymentApprovalModal({
-          intentPublicId: notification.data?.intentPublicId,
-          customerName: notification.data?.customerName,
-          pointInfo: notification.data?.pointInfo,
-          amount: notification.data?.amount,
-          storeName: notification.data?.storeName,
-        })
-      } else {
-        // 일반 알림은 알림 페이지로 이동
-        const userRole = getUserRole()
-        const target =
-          userRole === 'OWNER'
-            ? '/owner/notification'
-            : '/customer/notification'
-        if (typeof window !== 'undefined') {
-          window.location.href = target
+      // 알림 페이지로 이동 (모달은 URL 파라미터로 처리)
+      const userRole = getUserRole()
+      const basePath =
+        userRole === 'OWNER' ? '/owner/notification' : '/customer/notification'
+
+      if (typeof window !== 'undefined') {
+        if (notification.type === 'PAYMENT_REQUEST') {
+          // 결제 승인 모달을 위한 URL 파라미터 추가
+          const params = new URLSearchParams()
+          params.set('modal', 'payment-request')
+          if (notification.data?.intentPublicId) {
+            params.set('intentId', notification.data.intentPublicId)
+          }
+          if (notification.data?.customerName) {
+            params.set('customerName', notification.data.customerName)
+          }
+          if (notification.data?.amount) {
+            params.set('amount', notification.data.amount.toString())
+          }
+          if (notification.data?.storeName) {
+            params.set('storeName', notification.data.storeName)
+          }
+          if (notification.data?.pointInfo) {
+            params.set('pointInfo', JSON.stringify(notification.data.pointInfo))
+          }
+
+          const url = `${basePath}?${params.toString()}`
+          console.log('💰 결제 승인 모달 URL로 이동:', url)
+          window.location.href = url
+        } else {
+          // 일반 알림은 알림 페이지로 이동
+          console.log('📋 알림 페이지로 이동:', basePath)
+          window.location.href = basePath
         }
       }
     },
-    [markAsRead, showPaymentApprovalModal, getUserRole]
+    [markAsRead, getUserRole]
   )
 
   // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
