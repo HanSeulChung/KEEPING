@@ -6,8 +6,6 @@ import {
   deleteFCMToken,
   registerCustomerFCMToken,
   registerOwnerFCMToken,
-  generateCustomerFCMToken,
-  generateOwnerFCMToken,
 } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 import {
@@ -773,62 +771,53 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const hasPermission = await requestPermission()
       if (!hasPermission) return false
 
+      // Firebase SDK로 FCM 토큰 발급
+      const token = await getFcmToken()
+      if (!token) {
+        console.log('[FCM] Firebase에서 토큰을 가져올 수 없습니다.')
+        return false
+      }
+
       // 이미 등록된 토큰인지 확인 (성능 최적화)
       const storedToken = localStorage.getItem('fcmToken')
       const isTokenRegistered = localStorage.getItem(`fcmRegistered_${user.id}`)
 
-      if (storedToken && isTokenRegistered === 'true') {
+      if (storedToken === token && isTokenRegistered === 'true') {
         console.log('[FCM] 이미 등록된 토큰 - 건너뜀')
-        setFcmToken(storedToken)
+        setFcmToken(token)
         return true
+      }
+
+      // FCM 토큰을 state와 localStorage에 저장
+      setFcmToken(token)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fcmToken', token)
       }
 
       const isOwner = (user.role || 'OWNER') === 'OWNER'
       const ownerId = user.ownerId || user.id
       const customerId = user.userId || user.id
 
-      // 백엔드에서 FCM 토큰 발급 받기
-      let token: string
       try {
+        // 백엔드에 토큰 등록
         if (isOwner && ownerId) {
-          const result = await generateOwnerFCMToken(Number(ownerId))
-          token = result.token
+          await registerOwnerFCMToken(Number(ownerId), token)
         } else if (!isOwner && customerId) {
-          const result = await generateCustomerFCMToken(Number(customerId))
-          token = result.token
-        } else {
-          console.error('[FCM] 유효하지 않은 사용자 정보')
-          return false
-        }
-
-        console.log('[FCM] 백엔드에서 토큰 발급 성공:', token.substring(0, 20) + '...')
-
-        // FCM 토큰을 state와 localStorage에 저장
-        setFcmToken(token)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('fcmToken', token)
+          await registerCustomerFCMToken(Number(customerId), token)
         }
 
         // 등록 성공 시 플래그 저장
         localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-        return true
-
-      } catch (tokenError: any) {
-        console.error('[FCM] 백엔드 토큰 발급 실패:', tokenError)
-
-        // 500 에러는 백엔드 API 미구현 - 개발 중이므로 무시
-        if (tokenError?.response?.status === 500) {
-          console.warn('[FCM] 백엔드 API 미구현 - 개발 중이므로 건너뜀')
-          return false
+      } catch (registrationError: any) {
+        // 409 에러는 이미 등록된 상태이므로 성공으로 처리
+        if (registrationError?.response?.status === 409) {
+          console.log('이미 등록된 토큰 - 정상 처리')
+          localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
+        } else {
+          throw registrationError
         }
-
-        // 409 에러인 경우에도 실제 토큰이 있어야 성공 처리
-        if (tokenError?.response?.status === 409) {
-          console.log('[FCM] 이미 등록된 사용자 - 하지만 토큰이 없어서 실패')
-          return false
-        }
-        return false
       }
+      return true
     } catch (error) {
       console.error('[FCM] 등록 실패:', error)
       return false
