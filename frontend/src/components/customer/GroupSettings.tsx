@@ -960,6 +960,7 @@ export const GroupSettings = ({
       <Alert
         isOpen={isAlertOpen}
         onClose={() => setIsAlertOpen(false)}
+        title="알림"
         message={alertMessage}
         type={alertType}
         onConfirm={() => {
@@ -980,6 +981,7 @@ export const GroupSettings = ({
 
       {/* 멤버 내보내기 확인 */}
       <Alert
+        title="내보내기 확인"
         isOpen={isRemoveConfirmOpen}
         onClose={() => setIsRemoveConfirmOpen(false)}
         message={`"${memberToRemove?.name}"을/를 내보내시겠습니까?`}
@@ -994,6 +996,7 @@ export const GroupSettings = ({
 
       {/* 모임장 위임 확인 */}
       <Alert
+        title="위임 확인"
         isOpen={isTransferConfirmOpen}
         onClose={() => setIsTransferConfirmOpen(false)}
         message={`"${selectedMember}"에게 모임장을 위임하시겠습니까?`}
@@ -1008,6 +1011,7 @@ export const GroupSettings = ({
 
       {/* 모임 해체 확인 */}
       <Alert
+        title="모임 해체 확인"
         isOpen={isDisbandConfirmOpen}
         onClose={() => setIsDisbandConfirmOpen(false)}
         message="모임을 해체하시겠습니까? 이 작업은 되돌릴 수 없습니다."
