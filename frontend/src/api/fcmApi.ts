@@ -98,7 +98,7 @@ export const deleteFCMToken = async (token: string): Promise<FCMTokenResponse> =
   try {
     console.log('FCM 토큰 삭제 시작')
 
-    const response = await apiClient.delete<FCMTokenResponse>('/fcm/token', {
+    const response = await apiClient.delete<FCMTokenResponse>('/api/fcm/token', {
       data: { token }
     })
 
