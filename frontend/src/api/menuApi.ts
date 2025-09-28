@@ -69,7 +69,7 @@ export const createMenu = async (
       // 기본 이미지를 File 객체로 변환
       try {
         const response = await fetch(
-          'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/menuBasicImage.jpg'
+          'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/storeBasicImage.jpg'
         )
         const blob = await response.blob()
         imageFile = new File([blob], 'menuBasicImage.jpg', {
