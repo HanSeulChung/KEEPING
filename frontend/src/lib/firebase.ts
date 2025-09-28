@@ -186,7 +186,7 @@ export const getFcmToken = async (): Promise<string | null> => {
       attempts++
       try {
         token = await getToken(messaging, {
-          vapidKey: vapidKey,
+          vapidKey,
           serviceWorkerRegistration: registration,
         })
 
