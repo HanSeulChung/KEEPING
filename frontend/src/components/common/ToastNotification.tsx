@@ -1,6 +1,6 @@
 'use client'
 
-import { NotificationType, getNotificationIcon } from '@/types/notification'
+import { NotificationType } from '@/types/notification'
 import React, { useEffect, useState } from 'react'
 
 interface ToastNotificationProps {
@@ -52,27 +52,27 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
       case 'PAYMENT_REQUEST':
         return {
           iconColor: '#FFB800', // 주황색
-          icon: '💰'
+          icon: '💰',
         }
       case 'PAYMENT_COMPLETED':
         return {
           iconColor: '#22C55E', // 초록색
-          icon: '✅'
+          icon: '✅',
         }
       case 'PAYMENT_CANCELED':
         return {
           iconColor: '#EF4444', // 빨간색
-          icon: '❌'
+          icon: '❌',
         }
       case 'STORE_INFO_UPDATED':
         return {
           iconColor: '#76D4FF', // 파란색
-          icon: '🏪'
+          icon: '🏪',
         }
       default:
         return {
           iconColor: '#76D4FF',
-          icon: '🔔'
+          icon: '🔔',
         }
     }
   }
@@ -81,44 +81,56 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
 
   return (
     <div
-      className={`
-        fixed top-4 right-4 z-50 max-w-sm w-full
-        bg-[#F6FCFF]
-        rounded-[30px] shadow-lg p-6 cursor-pointer
-        transform transition-all duration-300 ease-in-out
-        ${isVisible && !isExiting ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
-        border border-[#76D4FF]
-      `}
+        className={`fixed top-1/2 left-1/2 z-50 w-auto max-w-sm transform -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-2xl bg-white p-4 shadow-2xl transition-all duration-300 ease-in-out ${isVisible && !isExiting ? 'scale-100 opacity-100' : 'scale-95 opacity-0'} border-2 border-blue-500 backdrop-blur-sm`}
       onClick={onClick}
+      style={{
+        boxShadow:
+          '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      }}
     >
-      <div className="flex items-start space-x-4">
+      <div className="flex items-center space-x-3">
         {/* 아이콘 */}
         <div className="flex-shrink-0">
-          <div className="w-9 h-9 rounded-full border-2 flex items-center justify-center" style={{borderColor: config.iconColor}}>
-            <span className="text-lg">{config.icon}</span>
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-white"
+            style={{ backgroundColor: config.iconColor }}
+          >
+            {config.icon}
           </div>
         </div>
 
         {/* 내용 */}
-        <div className="flex-1 min-w-0">
-          <div className="font-jalnan text-[#76D4FF] text-sm font-bold leading-[140%]">
+        <div className="min-w-0 flex-1">
+          <div className="text-base leading-tight font-bold text-gray-800">
             {title}
           </div>
-          <div className="font-jalnan text-[#76D4FF] text-xs mt-1 opacity-80 line-clamp-2 leading-[140%]">
+          <div className="mt-1 line-clamp-2 text-sm leading-relaxed text-gray-600">
             {message}
           </div>
         </div>
 
         {/* 닫기 버튼 */}
         <button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation()
             handleClose()
           }}
-          className="flex-shrink-0 text-[#76D4FF] hover:opacity-70 transition-opacity"
+          className="flex-shrink-0 p-1 text-gray-400 transition-colors hover:text-gray-600"
         >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            width={18}
+            height={18}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
       </div>
