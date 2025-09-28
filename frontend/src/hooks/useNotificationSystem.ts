@@ -25,18 +25,35 @@ import {
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+interface ModalNotificationState {
+  isOpen: boolean
+  type?: NotificationType
+  title?: string
+  message?: string
+  showConfirmButton?: boolean
+  showCancelButton?: boolean
+  confirmText?: string
+  cancelText?: string
+  onConfirm?: () => void
+  onCancel?: () => void
+  autoCloseTime?: number
+}
+
 interface UseNotificationSystemReturn {
   notifications: NotificationData[]
   unreadCount: number
   isConnected: boolean
   isPermissionGranted: boolean
   fcmToken: string | null
+  modalNotification: ModalNotificationState
   requestPermission: () => Promise<boolean>
   markAsRead: (id: number) => void
   markAllAsRead: () => void
   addNotification: (
     notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
   ) => void
+  showModalNotification: (notification: Omit<ModalNotificationState, 'isOpen'>) => void
+  hideModalNotification: () => void
   registerFCM: () => Promise<boolean>
   unregisterFCM: () => Promise<void>
   getNotificationCategory: (type: NotificationType) => NotificationCategory
@@ -46,8 +63,12 @@ interface UseNotificationSystemReturn {
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const { user } = useAuthStore()
   const [notifications, setNotifications] = useState<NotificationData[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [isPermissionGranted, setIsPermissionGranted] = useState(false)
+  const [modalNotification, setModalNotification] = useState<ModalNotificationState>({
+    isOpen: false,
+  })
   const [isOnline, setIsOnline] = useState(true)
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -275,6 +296,23 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const wasVisible = isVisibleRef.current
       isVisibleRef.current = !document.hidden
 
+      // 백그라운드에서 포그라운드로 돌아올 때
+      if (!wasVisible && isVisibleRef.current) {
+        // localStorage에서 백그라운드에서 업데이트된 읽지 않은 개수 동기화
+        try {
+          const storedCount = localStorage.getItem('unreadCount')
+          if (storedCount !== null) {
+            const count = parseInt(storedCount)
+            if (!isNaN(count) && count >= 0) {
+              setUnreadCount(count)
+              console.log(`[VISIBILITY] 읽지 않은 알림 개수 동기화: ${count}`)
+            }
+          }
+        } catch (error) {
+          console.warn('[VISIBILITY] 읽지 않은 알림 개수 동기화 실패:', error)
+        }
+      }
+
       // 가시성 변경 시 전략 재평가
       if (wasVisible !== isVisibleRef.current) {
         updateNotificationStrategy()
@@ -493,14 +531,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             const next = [notification, ...prev]
             return next.length > 200 ? next.slice(0, 200) : next
           })
+          // 새 알림이 오면 읽지 않은 개수 증가
+          setUnreadCount(prev => prev + 1)
 
-          // 백그라운드에서는 브라우저 알림 표시하지 않음 (FCM이 처리)
-          if (
-            isVisibleRef.current &&
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            showBrowserNotification(notification)
+          // 포그라운드에서는 모든 알림을 모달로 표시
+          if (isVisibleRef.current) {
+            // 모든 알림을 모달로 표시
+            showInPageModal(notification)
           }
         } catch (error) {
           console.warn('[SSE] message parsing error', error)
@@ -733,13 +770,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (!user?.id) return false
       const hasPermission = await requestPermission()
       if (!hasPermission) return false
+
+      // Firebase SDK로 FCM 토큰 발급
       const token = await getFcmToken()
       if (!token) {
-        console.log('[FCM] 토큰을 가져올 수 없습니다.')
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[FCM] 개발 환경: 토큰 없어도 계속 진행')
-          return true // 개발 환경에서는 토큰 없어도 true 반환
-        }
+        console.log('[FCM] Firebase에서 토큰을 가져올 수 없습니다.')
         return false
       }
 
@@ -758,11 +793,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('fcmToken', token)
       }
+
       const isOwner = (user.role || 'OWNER') === 'OWNER'
       const ownerId = user.ownerId || user.id
       const customerId = user.userId || user.id
 
       try {
+        // 백엔드에 토큰 등록
         if (isOwner && ownerId) {
           await registerOwnerFCMToken(Number(ownerId), token)
         } else if (!isOwner && customerId) {
@@ -781,7 +818,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         }
       }
       return true
-    } catch {
+    } catch (error) {
+      console.error('[FCM] 등록 실패:', error)
       return false
     }
   }
@@ -798,55 +836,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     } catch {}
   }
 
-  // PWA 서비스 워커 등록 (모바일 친화적)
-  const registerServiceWorker = async () => {
-    if (!('serviceWorker' in navigator)) {
-      console.log('이 브라우저는 서비스 워커를 지원하지 않습니다.')
-      return
-    }
-
-    // 개발 모드에서는 서비스 워커 등록 비활성화
-    if (process.env.NODE_ENV === 'development') {
-      console.log('개발 모드: Service Worker 등록 건너뜀')
-      return
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js')
-      console.log('서비스 워커 등록됨:', registration)
-
-      // iOS/Android PWA 지원을 위한 Push 구독
-      if ('PushManager' in window) {
-        try {
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-          })
-
-          // 서버에 구독 정보 전송 (모바일 최적화)
-          await fetch('/api/notifications/subscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: user?.id,
-              subscription: subscription,
-            }),
-          })
-
-          console.log('Web Push 구독 완료 (모바일 지원)')
-        } catch (pushError) {
-          console.log(
-            'Push 구독 실패 (일부 모바일 브라우저에서 정상):',
-            pushError
-          )
-        }
-      }
-    } catch (error) {
-      console.error('서비스 워커 등록 오류:', error)
-    }
-  }
+  // PWA 서비스 워커는 firebase-messaging-sw.js로 통합됨
+  // 중복 등록 방지를 위해 별도 등록 제거
   const markAsRead = useCallback(
     async (id: number) => {
       const userId = getUserNumericId()
@@ -854,11 +845,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const isOwner = getUserRole() === 'OWNER'
       if (isOwner) {
         await apiClient.put(
-          `/api/notifications/owner/${userId}/mark-read/${id}`
+          `/api/notifications/owner/${userId}/${id}/read`
         )
       } else {
         await apiClient.put(
-          `/api/notifications/customer/${userId}/mark-read/${id}`
+          `/api/notifications/customer/${userId}/${id}/read`
         )
       }
       setNotifications(prev =>
@@ -868,6 +859,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             : notification
         )
       )
+      // 읽음 처리 후 로컬 상태에서 개수 감소
+      setUnreadCount(prev => Math.max(0, prev - 1))
     },
     [getUserNumericId, getUserRole]
   )
@@ -894,16 +887,87 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       unreadNotifications.map(async notification => {
         if (isOwner) {
           await apiClient.put(
-            `/api/notifications/owner/${userId}/mark-read/${notification.id}`
+            `/api/notifications/owner/${userId}/${notification.id}/read`
           )
         } else {
           await apiClient.put(
-            `/api/notifications/customer/${userId}/mark-read/${notification.id}`
+            `/api/notifications/customer/${userId}/${notification.id}/read`
           )
         }
       })
     )
   }, [getUserNumericId, getUserRole, notifications])
+
+  // 모달 알림 관련 함수들
+  const showModalNotification = useCallback((notification: Omit<ModalNotificationState, 'isOpen'>) => {
+    setModalNotification({
+      ...notification,
+      isOpen: true,
+    })
+  }, [])
+
+  const hideModalNotification = useCallback(() => {
+    setModalNotification({
+      isOpen: false,
+    })
+  }, [])
+
+  // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
+  const showInPageModal = useCallback((notification: NotificationData) => {
+    const userRole = getUserRole()
+
+    // 알림 타입에 따른 기본 설정
+    const getModalConfig = (type: NotificationType) => {
+      switch (type) {
+        case 'PAYMENT_REQUEST':
+          return {
+            title: '결제 요청',
+            confirmText: '확인',
+            autoCloseTime: 8000,
+          }
+        case 'PAYMENT_COMPLETED':
+          return {
+            title: '결제 완료',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        case 'PAYMENT_CANCELED':
+          return {
+            title: '결제 취소',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        case 'STORE_INFO_UPDATED':
+          return {
+            title: '매장 정보 수정이 완료되었습니다!',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        default:
+          return {
+            title: notification.title,
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+      }
+    }
+
+    const modalConfig = getModalConfig(notification.type)
+
+    showModalNotification({
+      type: notification.type,
+      title: modalConfig.title,
+      message: notification.message,
+      showConfirmButton: true,
+      showCancelButton: false,
+      confirmText: modalConfig.confirmText,
+      autoCloseTime: modalConfig.autoCloseTime,
+      onConfirm: () => {
+        markAsRead(notification.id)
+        hideModalNotification()
+      },
+    })
+  }, [getUserRole, showModalNotification, markAsRead, hideModalNotification])
 
   const addNotification = useCallback(
     (
@@ -952,7 +1016,21 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     setNotifications(convertedNotifications)
   }
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const fetchUnreadCount = async () => {
+    const userId = getUserNumericId()
+    if (!userId) return
+    const isOwner = getUserRole() === 'OWNER'
+    try {
+      const count = isOwner
+        ? await notificationApi.owner.getUnreadCount(userId)
+        : await notificationApi.customer.getUnreadCount(userId)
+      setUnreadCount(count)
+    } catch (error) {
+      console.warn('읽지 않은 알림 개수 조회 실패:', error)
+      // 백업으로 로컬 state에서 계산
+      setUnreadCount(notifications.filter(n => !n.isRead).length)
+    }
+  }
 
   useEffect(() => {
     const initializeNotificationSystem = async () => {
@@ -967,16 +1045,29 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         } catch {}
 
         // 알림 목록 로드
-        fetchNotifications()
+        await fetchNotifications()
 
-        // SSE 연결 우선 시도
+        // 읽지 않은 알림 개수 초기 조회 (한 번만)
+        await fetchUnreadCount()
+
+        // SSE 연결 시도 (포그라운드 실시간 알림용)
         try {
           await connectSSE()
-          console.log('[NOTIFICATION] SSE 연결 성공')
+          console.log('[NOTIFICATION] SSE 연결 성공 (포그라운드용)')
         } catch (error) {
-          console.warn('[NOTIFICATION] SSE 연결 실패, FCM으로 백업')
-          // SSE 연결 실패시에만 FCM 등록
-          registerFCM()
+          console.warn('[NOTIFICATION] SSE 연결 실패:', error)
+        }
+
+        // FCM도 항상 등록 (백그라운드 알림용)
+        try {
+          const fcmSuccess = await registerFCM()
+          if (fcmSuccess) {
+            console.log('[NOTIFICATION] FCM 등록 성공 (백그라운드용)')
+          } else {
+            console.warn('[NOTIFICATION] FCM 등록 실패 - 토큰 발급 불가')
+          }
+        } catch (error) {
+          console.warn('[NOTIFICATION] FCM 등록 실패:', error)
         }
 
         // 포그라운드 메시지 리스너 설정
@@ -996,10 +1087,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     isConnected: isConnected && isOnline,
     isPermissionGranted,
     fcmToken,
+    modalNotification,
     requestPermission,
     markAsRead,
     markAllAsRead,
     addNotification,
+    showModalNotification,
+    hideModalNotification,
     registerFCM,
     unregisterFCM,
     getNotificationCategory,

@@ -758,7 +758,7 @@ export const MyPage = () => {
                   <div className="font-nanum-square-round-eb text-sm text-gray-600">
                     {creditCard.cardNo.replace(
                       /(\d{4})(\d{4})(\d{4})(\d{4})/,
-                      '$1-$2-$3-$4'
+                      '**** - **** - **** - $4'
                     )}
                   </div>
                 </div>

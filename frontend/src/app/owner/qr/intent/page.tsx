@@ -15,6 +15,7 @@ interface Menu {
   soldOut: boolean
   imgUrl: string
   description: string
+  price: number
 }
 
 interface SelectedMenu {
@@ -137,7 +138,7 @@ function QRIntentPageContent() {
       updatedMenus[existingIndex].quantity += 1
       setSelectedMenus(updatedMenus)
     } else {
-      // 새로운 메뉴 추가 (가격은 임시로 0으로 설정)
+      // 새로운 메뉴 추가
       setSelectedMenus([
         ...selectedMenus,
         {
@@ -145,7 +146,7 @@ function QRIntentPageContent() {
           menuName: menu.menuName,
           categoryName: menu.categoryName,
           quantity: 1,
-          price: 0, // 실제 가격은 백엔드에서 받아와야 함
+          price: typeof menu.price === 'number' ? menu.price : 0,
         },
       ])
     }
@@ -393,16 +394,21 @@ function QRIntentPageContent() {
                                 <div className="font-nanum-square-round-eb text-lg font-bold">
                                   {menu.menuName}
                                 </div>
-                                {/* 메뉴 설명은 일시적으로 숨김 - description 필드에 불필요한 데이터가 있음 */}
-                                {/* {menu.description && menu.description !== 'String' && (
-                                <div className="text-sm text-gray-500">{menu.description}</div>
-                              )} */}
+                                {/* 메뉴 설명은 일시적으로 숨김 */}
                               </div>
-                              {menu.soldOut && (
-                                <span className="font-nanum-square-round-eb text-sm text-red-500">
-                                  품절
-                                </span>
-                              )}
+                              <div className="text-right">
+                                <div className="font-nanum-square-round-eb text-base font-bold text-[#2563eb]">
+                                  {typeof menu.price === 'number' &&
+                                  menu.price > 0
+                                    ? `${menu.price.toLocaleString()}원`
+                                    : '-'}
+                                </div>
+                                {menu.soldOut && (
+                                  <span className="font-nanum-square-round-eb text-xs text-red-500">
+                                    품절
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </button>
                         ))}

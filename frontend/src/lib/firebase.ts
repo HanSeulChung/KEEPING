@@ -64,14 +64,53 @@ export const getFirebaseAnalytics = async () => {
   return analytics
 }
 
-// VAPID Key for FCM (두 환경변수 모두 지원)
+// VAPID Key for FCM (공개키이므로 하드코딩 가능)
 const VAPID_KEY =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_KEY
+  'BFqS2cYcLd7EkOb_vgyhAnkSKyTkWEs4XwDrphIaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0XOs8aKw0xLStpJgpU'
 
 // FCM 토큰 발급 함수 (개발 환경에서 에러 처리 개선)
 export const getFcmToken = async (): Promise<string | null> => {
   if (typeof window === 'undefined') {
     console.warn('브라우저 환경이 아님')
+    return null
+  }
+
+  // 기본 환경 체크
+  if (!('serviceWorker' in navigator)) {
+    console.warn('이 브라우저는 Service Worker를 지원하지 않습니다')
+    return null
+  }
+
+  // VAPID 키 가져오기 (환경 변수 우선, 없으면 하드코딩된 값 사용)
+  const vapidKey =
+    process.env.NEXT_PUBLIC_VAPID_KEY ||
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+    VAPID_KEY
+
+  if (!vapidKey) {
+    console.error('VAPID 키가 설정되지 않았습니다')
+    console.error('환경 변수 확인:', {
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        ? '설정됨'
+        : '없음',
+      NEXT_PUBLIC_VAPID_KEY: process.env.NEXT_PUBLIC_VAPID_KEY
+        ? '설정됨'
+        : '없음',
+    })
+    console.error(
+      '배포 환경에서는 서버 측 환경 변수가 올바르게 설정되어 있는지 확인하세요'
+    )
+    return null
+  }
+
+  // VAPID 키 형식 검증
+  if (vapidKey.length !== 88) {
+    console.error('잘못된 VAPID 키 형식:', {
+      length: vapidKey.length,
+      expected: 88,
+      preview: vapidKey.substring(0, 20) + '...',
+    })
+    console.error('올바른 VAPID Public Key를 Firebase 콘솔에서 확인하세요')
     return null
   }
 
@@ -87,28 +126,136 @@ export const getFcmToken = async (): Promise<string | null> => {
     }
 
     const { getToken } = await import('firebase/messaging')
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY })
 
-    if (token) {
-      console.log('FCM 토큰:', token)
-      return token
-    } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('개발 환경: FCM 토큰 없음 (무시됨)')
+    // 서비스워커 등록을 더 안정적으로 처리 (중복 등록 방지)
+    let registration: ServiceWorkerRegistration | undefined
+    try {
+      // 1. 모든 등록된 서비스워커 확인
+      const registrations = await navigator.serviceWorker.getRegistrations()
+
+      // 2. firebase-messaging-sw.js가 이미 등록되어 있는지 확인
+      const firebaseSW = registrations.find(
+        reg =>
+          reg.scope.includes('firebase-messaging-sw') ||
+          reg.active?.scriptURL.includes('firebase-messaging-sw.js')
+      )
+
+      if (firebaseSW) {
+        registration = firebaseSW
+        console.log('[FCM] 기존 firebase-messaging-sw.js 사용')
       } else {
-        console.warn('토큰을 가져올 수 없음 ❌ (VAPID_KEY 확인)')
+        // 3. 다른 서비스워커들 정리 (충돌 방지)
+        for (const reg of registrations) {
+          if (!reg.active?.scriptURL.includes('firebase-messaging-sw.js')) {
+            try {
+              await reg.unregister()
+              console.log('[FCM] 불필요한 서비스워커 해제:', reg.scope)
+            } catch {}
+          }
+        }
+
+        // 4. firebase-messaging-sw.js 새로 등록
+        try {
+          registration = await navigator.serviceWorker.register(
+            '/firebase-messaging-sw.js',
+            {
+              scope: '/',
+            }
+          )
+          await registration.update()
+          console.log('[FCM] firebase-messaging-sw.js 새로 등록됨')
+        } catch (registerError) {
+          console.warn(
+            '[FCM] firebase-messaging-sw.js 등록 실패:',
+            registerError
+          )
+          return null
+        }
       }
+    } catch (swError) {
+      console.warn('[FCM] Service Worker 처리 실패:', swError)
       return null
     }
+
+    // FCM 토큰 가져오기 (재시도 로직 포함)
+    let token: string | null = null
+    let attempts = 0
+    const maxAttempts = 3
+
+    while (!token && attempts < maxAttempts) {
+      attempts++
+      try {
+        token = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration: registration,
+        })
+
+        if (token) {
+          console.log(
+            `FCM 토큰 획득 성공 (${attempts}번째 시도):`,
+            token.substring(0, 20) + '...'
+          )
+          return token
+        } else {
+          console.warn(`FCM 토큰 가져오기 실패 (${attempts}번째 시도)`)
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)) // 지수 백오프
+          }
+        }
+      } catch (tokenError: any) {
+        console.warn(`FCM 토큰 요청 에러 (${attempts}번째 시도):`, tokenError)
+
+        // AbortError 특별 처리
+        if (
+          tokenError.name === 'AbortError' ||
+          tokenError.code === 'messaging/registration-window-not-found'
+        ) {
+          console.error(
+            'Push 구독 실패 - VAPID Key 또는 Service Worker 문제:',
+            {
+              errorName: tokenError.name,
+              errorCode: tokenError.code,
+              message: tokenError.message,
+              vapidKeyPreview: VAPID_KEY.substring(0, 20) + '...',
+            }
+          )
+
+          // Firebase 콘솔에서 VAPID Key 확인 안내
+          console.error('해결 방법:')
+          console.error(
+            '1. Firebase 콘솔 > 프로젝트 설정 > 클라우드 메시징에서 Web Push certificates 확인'
+          )
+          console.error(
+            '2. 새로운 Web Push certificate 생성 후 Public key 복사'
+          )
+          console.error(
+            '3. .env.local 파일에 NEXT_PUBLIC_VAPID_PUBLIC_KEY로 설정'
+          )
+          console.error('4. 브라우저 새로고침 후 재시도')
+
+          return null
+        }
+
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
+        }
+      }
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('개발 환경: FCM 토큰 없음 (무시됨)')
+    } else {
+      console.error(
+        'FCM 토큰을 가져올 수 없습니다. VAPID 키와 Service Worker를 확인하세요.'
+      )
+    }
+    return null
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (process.env.NODE_ENV === 'development') {
-      console.log(
-        '개발 환경: FCM 토큰 가져오기 실패 (무시됨):',
-        err instanceof Error ? err.message : String(err)
-      )
+      console.log('개발 환경: FCM 토큰 가져오기 실패 (무시됨):', message)
     } else {
-      console.error('토큰 가져오기 실패:', err)
+      console.error('FCM 토큰 가져오기 실패:', err)
     }
     return null
   }
@@ -152,10 +299,13 @@ export const setupForegroundMessageListener = async () => {
 
     const { onMessage } = await import('firebase/messaging')
     onMessage(messaging, payload => {
-      console.log('포그라운드 메시지 수신:', payload)
+      console.log(
+        '포그라운드 FCM 메시지 수신 (SSE와 중복이므로 무시):',
+        payload
+      )
 
-      // 포그라운드에서는 SSE로 처리하므로 여기서는 로그만 출력
-      // 필요시 추가 처리 로직 구현
+      // 포그라운드에서는 SSE로 처리하므로 FCM 메시지는 무시
+      // SSE가 더 빠르고 실시간성이 좋기 때문
     })
   } catch (error) {
     console.error('포그라운드 메시지 리스너 설정 실패:', error)

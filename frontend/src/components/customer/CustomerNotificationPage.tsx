@@ -1,5 +1,6 @@
 'use client'
 
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -11,14 +12,78 @@ const CustomerNotificationPage = () => {
   const { notifications, markAsRead, markAllAsRead, unreadCount } =
     useNotificationSystem()
 
-  // markAsRead 함수를 number 타입으로 사용
-  const handleMarkAsRead = (id: number) => {
-    markAsRead(id)
+  // 결제 승인 모달 띄우기 보조 함수 (알림 데이터 기반)
+  const openPaymentApprovalFromNotification = (notification: any) => {
+    if (!(notification.data?.intentPublicId || notification.data?.intentId))
+      return
+
+    const message = notification.message || ''
+    const customerNameMatch = message.match(/([가-힣]+)님의/)
+    const customerName = customerNameMatch
+      ? customerNameMatch[1] + '님'
+      : notification.data?.customerName
+
+    // 금액 파싱 (데이터가 없으면 메시지에서 1,000원 형식 추출)
+    const amountFromData = notification.data?.amount
+    let amountFromMessage: number | undefined
+    const amountMatch = message.match(/(\d{1,3}(?:,\d{3})*)원/)
+    if (amountMatch) {
+      amountFromMessage = parseInt(amountMatch[1].replace(/,/g, ''))
+    }
+
+    setPaymentModal({
+      isOpen: true,
+      intentPublicId: notification.data?.intentPublicId,
+      intentId: notification.data?.intentId,
+      storeName: notification.data?.storeName || accountName || undefined,
+      amount: amountFromData ?? amountFromMessage,
+      customerName,
+      pointInfo: notification.data?.points
+        ? {
+            currentPoints: notification.data.points.current,
+            usedPoints: notification.data.points.used,
+            remainingPoints: notification.data.points.remaining,
+          }
+        : undefined,
+      paymentType: 'PAYMENT',
+    })
+  }
+
+  // 알림 클릭 처리 (결제 알림의 경우 특별 처리)
+  const handleNotificationClick = (notification: any) => {
+    // 먼저 읽음 처리
+    markAsRead(notification.id)
+
+    if (notification.type === 'PAYMENT_REQUEST') {
+      openPaymentApprovalFromNotification(notification)
+    }
+    if (notification.type === 'PAYMENT_CANCELED') {
+      // 취소 알림은 모달을 열지 않음
+      return
+    }
   }
 
   const [loading, setLoading] = useState(true)
   const [filteredNotifications, setFilteredNotifications] =
     useState(notifications)
+
+  // 결제 승인 모달 상태
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    intentPublicId?: string
+    intentId?: string | number
+    storeName?: string
+    amount?: string | number
+    customerName?: string
+    pointInfo?: {
+      currentPoints?: number
+      usedPoints?: number
+      remainingPoints?: number
+    }
+    paymentType?: 'PAYMENT' | 'CANCEL'
+  }>({
+    isOpen: false,
+  })
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -212,7 +277,7 @@ const CustomerNotificationPage = () => {
                     ? 'border-blue-200 bg-blue-50'
                     : 'bg-white'
                 }`}
-                onClick={() => handleMarkAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-3">
                   {/* 알림 아이콘 */}
@@ -244,12 +309,45 @@ const CustomerNotificationPage = () => {
                       )}
                     </div>
                   </div>
+                  {/* 결제 요청 알림일 때 직접 승인 버튼 제공 (푸시 미수신 대비) */}
+                  {notification.type === 'PAYMENT_REQUEST' && (
+                    <div className="ml-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation()
+                          markAsRead(notification.id)
+                          openPaymentApprovalFromNotification(notification)
+                        }}
+                        className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                      >
+                        승인하기
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* 결제 승인 모달 */}
+      <PaymentApprovalModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal({ isOpen: false })}
+        intentPublicId={paymentModal.intentPublicId}
+        intentId={paymentModal.intentId}
+        storeName={paymentModal.storeName}
+        amount={paymentModal.amount}
+        customerName={paymentModal.customerName}
+        pointInfo={paymentModal.pointInfo}
+        paymentType={paymentModal.paymentType}
+        onSuccess={() => {
+          // 결제 승인 성공 시 알림 목록 새로고침 등 추가 로직
+          console.log('결제 승인 완료')
+        }}
+      />
     </div>
   )
 }

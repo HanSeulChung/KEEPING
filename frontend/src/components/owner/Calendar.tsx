@@ -3,7 +3,7 @@
 import apiClient from '@/api/axios'
 import { storeApi } from '@/api/storeApi'
 import { useStoreStore } from '@/store/useStoreStore'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 // 통계 API 타입 정의
 interface StatisticsRequestDto {
@@ -82,7 +82,11 @@ interface CalendarProps {
   onStoreChange?: (storeId: string) => void
 }
 
-const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = {}) => {
+const OwnerSalesCalendar = ({
+  storeId,
+  stores,
+  onStoreChange,
+}: CalendarProps = {}) => {
   const { selectedStore } = useStoreStore()
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -96,9 +100,10 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
   const [loading, setLoading] = useState(true)
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 })
-  const [activeStatsTab, setActiveStatsTab] = useState<'overall' | 'monthly'>(
-    'overall'
-  )
+  const [showSummary, setShowSummary] = useState(true)
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false)
+  const monthPickerRef = useRef<HTMLDivElement | null>(null)
+  //
 
   // API 호출 함수들
   const fetchSalesData = async () => {
@@ -125,7 +130,15 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
 
       const apiData = await storeApi.getSalesCalendar(storeId, year, month)
       console.log('매출 캘린더 조회 성공:', apiData)
-      const normalized: SalesData[] = (apiData || []).map((d: any) => ({
+      const list: any[] = Array.isArray(apiData)
+        ? apiData
+        : Array.isArray((apiData as any)?.data)
+          ? (apiData as any).data
+          : Array.isArray((apiData as any)?.content)
+            ? (apiData as any).content
+            : []
+
+      const normalized: SalesData[] = list.map((d: any) => ({
         date: d.date,
         amount: d.amount ?? d.paymentAmount ?? d.totalAmount ?? 0,
         orders: d.orders ?? d.transactionCount ?? d.totalOrders ?? 0,
@@ -387,24 +400,7 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
     today.getMonth() + 1 === month &&
     today.getDate() === day
 
-  // 월 변경 함수
-  const goToPreviousMonth = () => {
-    if (month === 1) {
-      setMonth(12)
-      setYear(year - 1)
-    } else {
-      setMonth(month - 1)
-    }
-  }
-
-  const goToNextMonth = () => {
-    if (month === 12) {
-      setMonth(1)
-      setYear(year + 1)
-    } else {
-      setMonth(month + 1)
-    }
-  }
+  //
 
   const monthNames = [
     '1월',
@@ -420,6 +416,50 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
     '11월',
     '12월',
   ]
+
+  // 달력 보조 계산 (디자인 요구: 이전/다음 달 날짜도 표시)
+  const flatWeeks = useMemo(() => weeks.flat(), [weeks])
+  const firstNonNullIndex = useMemo(
+    () => flatWeeks.findIndex(d => d !== null),
+    [flatWeeks]
+  )
+  const lastNonNullIndex = useMemo(
+    () =>
+      flatWeeks.length -
+      1 -
+      [...flatWeeks].reverse().findIndex(d => d !== null),
+    [flatWeeks]
+  )
+  const leadingNulls = firstNonNullIndex === -1 ? 0 : firstNonNullIndex
+  const prevMonthDays = useMemo(
+    () => new Date(year, month - 1, 0).getDate(),
+    [year, month]
+  )
+
+  // 월 선택 오버레이 토글
+  const toggleMonthPicker = () => setIsMonthPickerOpen(prev => !prev)
+
+  // 바깥 클릭 시 월 선택기 닫기
+  useEffect(() => {
+    if (!isMonthPickerOpen) return
+    const handleOutside = (e: MouseEvent) => {
+      if (!monthPickerRef.current) return
+      const target = e.target as Node
+      if (!monthPickerRef.current.contains(target)) {
+        setIsMonthPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [isMonthPickerOpen])
+
+  const handleSelectMonth = (m: number) => {
+    setMonth(m)
+    setIsMonthPickerOpen(false)
+  }
+
+  const handlePrevYear = () => setYear(y => y - 1)
+  const handleNextYear = () => setYear(y => y + 1)
 
   if (loading) {
     return (
@@ -444,348 +484,293 @@ const OwnerSalesCalendar = ({ storeId, stores, onStoreChange }: CalendarProps = 
 
   return (
     <div className="bg-keeping-beige min-h-screen">
-      {/* 월/년도 네비게이션 */}
-      <div className="w-full border-b border-black bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={goToPreviousMonth}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15 18L9 12L15 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-
-            <h2 className="font-['nanumsquare'] text-xl font-bold text-black">
-              {year}년 {monthNames[month - 1]}
-            </h2>
-
-            <button
-              onClick={goToNextMonth}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M9 18L15 12L9 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+      {/* 제목 바 (헤더 아래) */}
+      <div className="w-full bg-[#76d4ff]">
+        <div className="mx-auto max-w-4xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="font-['nanumsquare'] text-xl font-extrabold text-white">
+            매출 캘린더
           </div>
         </div>
       </div>
 
-      {/* 통계 섹션 */}
-      <div className="w-full border-b border-black bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-          {/* 탭 메뉴 */}
-          <div className="mb-6 flex justify-center">
-            <div className="flex rounded-lg border border-gray-300 bg-gray-50 p-1">
-              <button
-                onClick={() => setActiveStatsTab('overall')}
-                className={`rounded-md px-4 py-2 font-['nanumsquare'] text-sm font-medium transition-colors ${
-                  activeStatsTab === 'overall'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                전체 통계
-              </button>
-              <button
-                onClick={() => setActiveStatsTab('monthly')}
-                className={`rounded-md px-4 py-2 font-['nanumsquare'] text-sm font-medium transition-colors ${
-                  activeStatsTab === 'monthly'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {year}년 {monthNames[month - 1]}
-              </button>
-            </div>
-          </div>
-
-          {/* 통계 내용 */}
-          {activeStatsTab === 'overall' && overallStats && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-black">
-                  {(overallStats.totalPaymentAmount || 0).toLocaleString()}원
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 결제금액
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-blue-600">
-                  {(overallStats.totalChargePoints || 0).toLocaleString()}원
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 충전금액
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-green-600">
-                  {(overallStats.totalPointsUsed || 0).toLocaleString()}원
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 사용금액
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-gray-700">
-                  {(overallStats.totalTransactionCount || 0).toLocaleString()}건
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 거래건수
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-purple-600">
-                  {(overallStats.totalChargeCount || 0).toLocaleString()}건
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 충전건수
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-['nanumsquare'] text-lg font-bold text-orange-600">
-                  {(overallStats.totalUseCount || 0).toLocaleString()}건
-                </div>
-                <div className="mt-1 font-['nanumsquare'] text-xs text-gray-600">
-                  총 사용건수
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeStatsTab === 'monthly' && monthlyStats && (
-            <div className="space-y-6">
-              {/* 주요 지표 */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="text-center">
-                  <div className="font-['nanumsquare'] text-xl font-bold text-black">
-                    {(monthlyStats.monthlyPaymentAmount || 0).toLocaleString()}
-                    원
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    월 결제금액
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="font-['nanumsquare'] text-xl font-bold text-blue-600">
-                    {(
-                      monthlyStats.monthlyTotalChargePoints || 0
-                    ).toLocaleString()}
-                    원
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    월 충전금액
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="font-['nanumsquare'] text-xl font-bold text-green-600">
-                    {(monthlyStats.monthlyPointsUsed || 0).toLocaleString()}원
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    월 사용금액
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="font-['nanumsquare'] text-xl font-bold text-gray-700">
-                    {(
-                      monthlyStats.monthlyTransactionCount || 0
-                    ).toLocaleString()}
-                    건
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    월 거래건수
-                  </div>
-                </div>
-              </div>
-
-              {/* 일평균 지표 */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="font-['nanumsquare'] text-lg font-bold text-indigo-600">
-                    {(monthlyStats.averageDailyPayment || 0).toLocaleString()}원
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    일평균 결제금액
-                  </div>
-                </div>
-                <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <div className="font-['nanumsquare'] text-lg font-bold text-teal-600">
-                    {(
-                      monthlyStats.averageDailyPointsUsed || 0
-                    ).toLocaleString()}
-                    원
-                  </div>
-                  <div className="mt-1 font-['nanumsquare'] text-sm text-gray-600">
-                    일평균 포인트 사용
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 데이터가 없을 때 */}
-          {activeStatsTab === 'overall' && !overallStats && (
-            <div className="py-8 text-center font-['nanumsquare'] text-gray-500">
-              전체 통계 데이터를 불러오는 중...
-            </div>
-          )}
-
-          {activeStatsTab === 'monthly' && !monthlyStats && (
-            <div className="py-8 text-center font-['nanumsquare'] text-gray-500">
-              월별 통계 데이터를 불러오는 중...
-            </div>
-          )}
-        </div>
-      </div>
+      {/* 통계 상단 스위처 제거됨 (요청 반영) */}
 
       {/* 캘린더 그리드 */}
       <div className="w-full bg-white">
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-          {/* 색상 범례 */}
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-            <span className="font-['nanumsquare'] text-gray-600">
-              포인트 사용량:
-            </span>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-green-400 bg-green-200"></div>
-              <span className="font-['nanumsquare']">50만원+</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-green-300 bg-green-100"></div>
-              <span className="font-['nanumsquare']">20만원+</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-yellow-300 bg-yellow-100"></div>
-              <span className="font-['nanumsquare']">10만원+</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-orange-300 bg-orange-100"></div>
-              <span className="font-['nanumsquare']">5만원+</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-red-300 bg-red-100"></div>
-              <span className="font-['nanumsquare']">5만원 미만</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded border border-blue-500 bg-blue-500"></div>
-              <span className="font-['nanumsquare']">오늘</span>
-            </div>
+          {/* 월 표기 (배지 스타일) */}
+          <div className="relative mb-4" ref={monthPickerRef}>
+            <button
+              type="button"
+              onClick={toggleMonthPicker}
+              aria-haspopup="dialog"
+              aria-expanded={isMonthPickerOpen}
+              className="inline-flex items-center gap-2 rounded-full border-[3px] border-[#76d3ff] py-1 pr-[0.4375rem] pl-[1.9375rem]"
+            >
+              <span className="text-[.9375rem] leading-[140%] font-semibold text-[#76d2fe]">
+                {monthNames[month - 1]}
+              </span>
+              <svg
+                width="30"
+                height="30"
+                viewBox="0 0 30 30"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M15 18.75L8.75 12.5H21.25L15 18.75Z" fill="#77D3FF" />
+              </svg>
+            </button>
+
+            {isMonthPickerOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+                onClick={() => setIsMonthPickerOpen(false)}
+              >
+                <div
+                  className="w-[320px] rounded-xl bg-white p-4 shadow-2xl"
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handlePrevYear}
+                      className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
+                      aria-label="이전 연도"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M15 18L9 12L15 6"
+                          stroke="#4B5563"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <div className="font-['nanumsquare'] text-lg font-bold text-gray-800">
+                      {year}년
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleNextYear}
+                      className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
+                      aria-label="다음 연도"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M9 6L15 12L9 18"
+                          stroke="#4B5563"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {monthNames.map((label, idx) => {
+                      const m = idx + 1
+                      const isActive = m === month
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => handleSelectMonth(m)}
+                          className={
+                            'flex h-10 items-center justify-center rounded border text-sm font-medium ' +
+                            (isActive
+                              ? 'border-[#76d3ff] bg-[#76d3ff] text-white'
+                              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50')
+                          }
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsMonthPickerOpen(false)}
+                      className="rounded bg-gray-800 px-3 py-1 text-sm font-semibold text-white hover:bg-black"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* 색상 범례 제거 (간결한 하단 카드만 사용) */}
+
           <div className="grid grid-cols-7 gap-1">
-            {/* 요일 헤더 */}
-            {['월', '화', '수', '목', '금', '토', '일'].map(day => (
+            {/* 요일 헤더 (Mo~Su, 디자인 색상 적용) */}
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(label => (
               <div
-                key={day}
-                className="flex h-12 items-center justify-center border-b border-gray-200 font-['nanumsquare'] text-sm font-bold text-gray-700"
+                key={label}
+                className="flex h-11 w-[3.375rem] items-center justify-center font-['Lexend'] text-lg leading-[100%] font-medium text-[#4c97d6]"
               >
-                {day}
+                {label}
               </div>
             ))}
 
-            {/* 캘린더 날짜 */}
-            {weeks.flat().map((day, index) => {
-              if (day === null) {
-                return <div key={index} className="h-16" />
-              }
+            {/* 캘린더 날짜 (이전/다음 달 날짜 희미하게 표시) */}
+            {flatWeeks.map((cell, index) => {
+              const isCurrentMonth = cell !== null
+              const dayNum: number = isCurrentMonth
+                ? (cell as number)
+                : index < leadingNulls
+                  ? prevMonthDays - (leadingNulls - 1 - index)
+                  : index - lastNonNullIndex
 
-              const salesInfo = salesMap.get(day)
-              const dailyStatsInfo = dailyStatsMap.get(day)
-              const hasRevenue = salesInfo && salesInfo.amount > 0
-              const todayClass = isToday(day) ? 'bg-blue-500 text-white' : ''
+              const salesInfo = isCurrentMonth
+                ? salesMap.get(dayNum)
+                : undefined
+              const dailyStatsInfo = isCurrentMonth
+                ? dailyStatsMap.get(dayNum)
+                : undefined
 
-              // 포인트 사용량 기준 색상 구분
-              let revenueClass = ''
+              // 충전 vs 사용 비교 기반 색상
+              let bgClass = ''
               if (dailyStatsInfo) {
-                const pointsUsed = dailyStatsInfo.dailyPointsUsed || 0
-                if (pointsUsed >= 500000) {
-                  // 50만원 이상 사용: 진한 초록 (매우 활발)
-                  revenueClass = 'bg-green-200 border-green-400'
-                } else if (pointsUsed >= 200000) {
-                  // 20만원 이상 사용: 연한 초록 (활발)
-                  revenueClass = 'bg-green-100 border-green-300'
-                } else if (pointsUsed >= 100000) {
-                  // 10만원 이상 사용: 노란색 (보통)
-                  revenueClass = 'bg-yellow-100 border-yellow-300'
-                } else if (pointsUsed >= 50000) {
-                  // 5만원 이상 사용: 연한 주황 (적음)
-                  revenueClass = 'bg-orange-100 border-orange-300'
-                } else if (pointsUsed > 0) {
-                  // 5만원 미만 사용: 연한 빨강 (매우 적음)
-                  revenueClass = 'bg-red-100 border-red-300'
+                const used = dailyStatsInfo.dailyPointsUsed || 0
+                const charged = dailyStatsInfo.dailyTotalChargePoints || 0
+                if (charged === 0 && used === 0) {
+                  bgClass = ''
+                } else if (charged > used) {
+                  // 충전 > 사용 (흑자)
+                  bgClass = 'bg-green-100'
+                } else if (used > charged) {
+                  // 사용 > 충전 (적자)
+                  bgClass = 'bg-red-100'
+                } else {
+                  // 동일
+                  bgClass = 'bg-yellow-100'
                 }
-                // pointsUsed가 0이면 색상 없음 (기본 회색)
               }
+
+              const isTodayCell = isCurrentMonth && isToday(dayNum)
+              const isPrevOrNext = !isCurrentMonth
 
               return (
                 <div
                   key={index}
-                  className={`h-16 cursor-pointer border p-1 transition-all hover:shadow-md ${
-                    todayClass ||
-                    revenueClass ||
-                    'border-gray-200 hover:bg-gray-50'
-                  }`}
-                  onMouseEnter={e => handleMouseEnter(day, e)}
+                  className="flex h-11 w-[3.375rem] items-center justify-center"
+                  onMouseEnter={e =>
+                    isCurrentMonth && handleMouseEnter(dayNum, e)
+                  }
                   onMouseLeave={handleMouseLeave}
                 >
-                  <div className="flex h-full flex-col">
-                    <span
-                      className={`font-['nanumsquare'] text-sm font-medium ${
-                        isToday(day) ? 'text-white' : 'text-gray-900'
-                      }`}
+                  {isPrevOrNext ? (
+                    <div className="font-['Lexend'] text-lg leading-[100%] font-medium text-[#0c1c45]/70">
+                      {dayNum}
+                    </div>
+                  ) : (
+                    <div
+                      className={
+                        'flex h-11 w-[3.125rem] items-center justify-center rounded-xl text-center text-lg leading-[100%] font-medium shadow-none ring-0 outline-none ' +
+                        (isTodayCell
+                          ? ' border-2 border-[#4c97d6] bg-[#4c97d6] text-white'
+                          : `${bgClass ? ` ${bgClass} border-0 text-[#1f1f1f]` : ' border-0 bg-white text-[#1f1f1f]'}`)
+                      }
                     >
-                      {day}
-                    </span>
-                    {dailyStatsInfo &&
-                      (dailyStatsInfo.dailyPointsUsed > 0 ||
-                        dailyStatsInfo.dailyTotalChargePoints > 0) && (
-                        <div className="mt-1 text-xs">
-                          {dailyStatsInfo.dailyPointsUsed > 0 && (
-                            <div
-                              className={`font-['nanumsquare'] font-semibold ${
-                                dailyStatsInfo.dailyPointsUsed >= 200000
-                                  ? 'text-green-700'
-                                  : dailyStatsInfo.dailyPointsUsed >= 100000
-                                    ? 'text-yellow-700'
-                                    : dailyStatsInfo.dailyPointsUsed >= 50000
-                                      ? 'text-orange-700'
-                                      : 'text-red-600'
-                              }`}
-                            >
-                              사용{' '}
-                              {dailyStatsInfo.dailyPointsUsed.toLocaleString()}
-                              원
-                            </div>
-                          )}
-                          {dailyStatsInfo.dailyTotalChargePoints > 0 && (
-                            <div className="font-['nanumsquare'] text-xs text-blue-600">
-                              충전{' '}
-                              {dailyStatsInfo.dailyTotalChargePoints.toLocaleString()}
-                              원
-                            </div>
-                          )}
-                        </div>
-                      )}
-                  </div>
+                      {dayNum}
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
+        </div>
+      </div>
+
+      {/* 하단 요약 (접기/펼치기) */}
+      <div className="w-full bg-white">
+        <div className="mx-auto max-w-4xl px-4 pb-10 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="font-['nanumsquare'] text-sm text-gray-600">
+              월간 요약
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSummary(s => !s)}
+              className="inline-flex items-center gap-1 rounded border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {showSummary ? '접기' : '요약 보기'}
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={
+                  showSummary
+                    ? 'rotate-180 transition-transform'
+                    : 'transition-transform'
+                }
+              >
+                <path
+                  d="M6 9L12 15L18 9"
+                  stroke="#6b7280"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {showSummary && (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
+                <div className="text-xs text-[#569ee9]">월 결제금액</div>
+                <div className="text-base font-bold text-[#4b5563]">
+                  {(monthlyStats?.monthlyPaymentAmount || 0).toLocaleString()}원
+                </div>
+              </div>
+              <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
+                <div className="text-xs text-[#569ee9]">월 사용금액</div>
+                <div className="text-base font-bold text-[#4b5563]">
+                  {(monthlyStats?.monthlyPointsUsed || 0).toLocaleString()}원
+                </div>
+              </div>
+              <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
+                <div className="text-xs text-[#569ee9]">월 충전금액</div>
+                <div className="text-base font-bold text-[#4b5563]">
+                  {(
+                    monthlyStats?.monthlyTotalChargePoints || 0
+                  ).toLocaleString()}
+                  원
+                </div>
+              </div>
+              <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
+                <div className="text-xs text-[#569ee9]">월 거래건수</div>
+                <div className="text-base font-bold text-[#4b5563]">
+                  {(
+                    monthlyStats?.monthlyTransactionCount || 0
+                  ).toLocaleString()}
+                  건
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

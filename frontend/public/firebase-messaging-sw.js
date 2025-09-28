@@ -265,6 +265,16 @@ if (messaging) {
       return baseActions
     }
 
+    // 백그라운드에서 알림 받을 때 읽지 않은 개수 증가
+    try {
+      const currentCount = parseInt(localStorage.getItem('unreadCount') || '0')
+      const newCount = currentCount + 1
+      localStorage.setItem('unreadCount', newCount.toString())
+      console.log(`[FCM] 읽지 않은 알림 개수 업데이트: ${currentCount} → ${newCount}`)
+    } catch (error) {
+      console.warn('[FCM] 읽지 않은 알림 개수 업데이트 실패:', error)
+    }
+
     console.log('백그라운드 알림 표시:', {
       notificationTitle,
       notificationBody,
@@ -296,22 +306,59 @@ self.addEventListener('notificationclick', event => {
   // 특별한 액션 처리 (승인, 수락 등)
   if (event.action === 'approve' || event.action === 'accept') {
     console.log(`특별 액션 실행: ${event.action}`)
-    // 서버에 액션 결과 전송
-    event.waitUntil(
-      fetch('/api/notifications/action', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: event.action,
-          notificationId: notificationData.notificationId,
-          timestamp: Date.now(),
-        }),
-      }).catch(error => {
-        console.error('액션 처리 실패:', error)
-      })
-    )
+
+    // 결제 승인인 경우 PIN 입력 페이지로 이동
+    if (event.action === 'approve' && notificationData.intentId) {
+      const approveUrl = `/customer/payment-approve?intentId=${notificationData.intentId}&storeName=${encodeURIComponent(notificationData.storeName || '')}&amount=${notificationData.amount || ''}`
+
+      event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then(clientList => {
+            // 이미 열린 창이 있으면 해당 페이지로 이동
+            for (const client of clientList) {
+              if (client.url.includes(self.location.origin)) {
+                client.postMessage({
+                  type: 'PAYMENT_APPROVAL_REQUEST',
+                  intentId: notificationData.intentId,
+                  storeName: notificationData.storeName,
+                  amount: notificationData.amount,
+                  customerName: notificationData.customerName,
+                })
+                return client.focus().then(() => {
+                  if ('navigate' in client) {
+                    return client.navigate(approveUrl)
+                  }
+                })
+              }
+            }
+
+            // 새 창 열기
+            if (clients.openWindow) {
+              return clients.openWindow(approveUrl)
+            }
+          })
+          .catch(error => {
+            console.error('결제 승인 페이지 이동 실패:', error)
+          })
+      )
+    } else {
+      // 기타 액션 처리
+      event.waitUntil(
+        fetch('/api/notifications/action', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: event.action,
+            notificationId: notificationData.notificationId,
+            timestamp: Date.now(),
+          }),
+        }).catch(error => {
+          console.error('액션 처리 실패:', error)
+        })
+      )
+    }
   }
 
   if (
