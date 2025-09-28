@@ -138,7 +138,7 @@ export const notificationApi = {
       intentId: number | string,
       pin: string,
       idempotencyKey?: string
-    ): Promise<boolean> => {
+    ): Promise<{ success: boolean; data?: any; message?: string }> => {
       try {
         // idempotencyKey가 제공되지 않은 경우에만 생성
         const finalIdempotencyKey =
@@ -159,9 +159,24 @@ export const notificationApi = {
           { pin },
           { headers }
         )
-        return res.status >= 200 && res.status < 300
-      } catch (error) {
-        return false
+
+        if (res.status >= 200 && res.status < 300) {
+          return {
+            success: res.data?.success || true,
+            data: res.data?.data,
+            message: res.data?.message
+          }
+        } else {
+          return {
+            success: false,
+            message: res.data?.message || '결제 승인에 실패했습니다'
+          }
+        }
+      } catch (error: any) {
+        return {
+          success: false,
+          message: error.response?.data?.message || '결제 승인 중 오류가 발생했습니다'
+        }
       }
     },
 

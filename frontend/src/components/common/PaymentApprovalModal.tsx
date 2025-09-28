@@ -145,36 +145,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     await processPayment(actualIntentId, pin)
   }
 
-  // 결제 거절 처리
-  const handleReject = async () => {
-    // 이미 처리된 결제인지 확인
-    if (isFinalized) {
-      setError('이미 처리된 결제입니다.')
-      return
-    }
-
-    // 중복 요청 방지
-    if (isProcessing || requestInProgress) {
-      console.log('이미 처리 중인 요청입니다')
-      return
-    }
-
-    // 연속 클릭 방지 (1초 디바운싱)
-    const now = Date.now()
-    if (now - lastRequestTime < 1000) {
-      console.log('너무 빠른 연속 클릭입니다. 잠시 후 다시 시도해주세요.')
-      setError('너무 빠른 연속 클릭입니다. 잠시 후 다시 시도해주세요.')
-      return
-    }
-
-    const actualIntentId = paymentDetails?.intentId || intentId
-    if (!actualIntentId) {
-      setError('결제 정보가 없습니다')
-      return
-    }
-
-    await processRejection(actualIntentId)
-  }
 
   // 실제 결제 처리 함수
   const processPayment = async (
@@ -212,14 +182,14 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         idempotencyKey,
       })
 
-      const success = await notificationApi.customer.approvePayment(
+      const result = await notificationApi.customer.approvePayment(
         actualIntentId,
         pin,
         idempotencyKey
       )
 
-      if (success) {
-        console.log('결제 승인 성공')
+      if (result.success) {
+        console.log('결제 승인 성공:', result.data)
         setIsFinalized(true)
         setIsProcessing(false)
         setIsRetrying(false) // 재시도 플래그 초기화
@@ -236,6 +206,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                 amount: paymentDetails.totalAmount,
                 customerName: paymentDetails.customerName || '고객',
                 success: true, // 승인이므로 true
+                paymentData: result.data, // 결제 상세 정보 추가
               },
             })
             window.dispatchEvent(event)
@@ -245,12 +216,12 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         // 성공 콜백 호출
         onSuccess?.()
 
-        // 3초 후 모달 닫기 (성공 메시지를 볼 시간 제공)
+        // 바로 모달 닫기 (결제 성공 시)
         setTimeout(() => {
           onClose()
-        }, 3000)
+        }, 1000)
       } else {
-        console.log('결제 승인 실패')
+        console.log('결제 승인 실패:', result.message)
         const newAttempts = pinAttempts + 1
         setPinAttempts(newAttempts)
 
@@ -271,7 +242,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
           setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
         } else {
           setError(
-            `❌ PIN 번호가 올바르지 않습니다. 다시 입력해주세요 (${newAttempts}/5)`
+            result.message || `❌ PIN 번호가 올바르지 않습니다. 다시 입력해주세요 (${newAttempts}/5)`
           )
         }
 
@@ -285,6 +256,9 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         setIsProcessing(false)
         setIsRetrying(false) // 재시도 플래그 초기화
         setRequestInProgress(false) // 요청 진행 플래그 초기화
+
+        // PIN 입력 필드 초기화 (다시 입력할 수 있도록)
+        setPin('')
       }
     } catch (error) {
       console.error('결제 승인 오류:', error)
@@ -296,74 +270,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     }
   }
 
-  // 결제 거절 처리 함수
-  const processRejection = async (actualIntentId: string | number) => {
-    setRequestInProgress(true) // 요청 시작 시 플래그 설정
-    setLastRequestTime(Date.now()) // 요청 시간 기록
-    setIsProcessing(true)
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const userId = localStorage.getItem('userId') || 'anonymous'
-      const idempotencyKey = generateIdempotencyKey({
-        userId: userId,
-        action: 'payment_reject',
-        data: { intentId: String(actualIntentId) },
-      })
-
-      console.log('결제 거절 요청:', {
-        intentId: actualIntentId,
-        idempotencyKey,
-      })
-
-      const success = await notificationApi.customer.rejectPayment(
-        actualIntentId,
-        idempotencyKey
-      )
-
-      if (success) {
-        console.log('결제 거절 성공')
-        setIsFinalized(true)
-        setIsProcessing(false)
-        setRequestInProgress(false)
-
-        // 점주에게 거절 알림 전송
-        if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
-          // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
-          if (typeof window !== 'undefined') {
-            const event = new CustomEvent('notifyOwnerPaymentResult', {
-              detail: {
-                storeName: paymentDetails.storeName,
-                amount: paymentDetails.totalAmount,
-                customerName: paymentDetails.customerName || '고객',
-                success: false, // 거절이므로 false
-              },
-            })
-            window.dispatchEvent(event)
-          }
-        }
-
-        // 성공 콜백 호출
-        onSuccess?.()
-
-        // 바로 모달 닫기 (메시지 없이)
-        onClose()
-      } else {
-        console.log('결제 거절 실패')
-        setError('결제 거절에 실패했습니다. 다시 시도해주세요.')
-        setIsProcessing(false)
-        setRequestInProgress(false)
-      }
-    } catch (error) {
-      console.error('결제 거절 오류:', error)
-      setError('결제 거절 중 오류가 발생했습니다')
-      setIsProcessing(false)
-      setRequestInProgress(false)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleCancel = () => {
     setPin('')
@@ -622,17 +528,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                     className="font-nanum-square-round-eb h-10 flex-1 rounded-[0.625rem] border-[3px] border-gray-300 bg-gray-50 px-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-50"
                   >
                     취소
-                  </button>
-                  <button
-                    onClick={handleReject}
-                    disabled={isFinalized || isLoading}
-                    className="font-nanum-square-round-eb h-10 flex-1 rounded-[0.625rem] border-[3px] border-red-500 bg-red-600 px-3 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {isFinalized
-                      ? '처리됨'
-                      : isLoading || isProcessing
-                        ? '거절 중...'
-                        : '거절하기'}
                   </button>
                   <button
                     onClick={handleApprove}
