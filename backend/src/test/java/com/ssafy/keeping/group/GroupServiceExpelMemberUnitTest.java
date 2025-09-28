@@ -54,13 +54,13 @@ class GroupServiceExpelMemberUnitTest {
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(g));
         when(groupMemberRepository.existsLeader(groupId, leaderId)).thenReturn(true);
         when(groupMemberRepository.findGroupMember(groupId, targetId)).thenReturn(Optional.of(target));
-        when(walletService.getMemberSharedBalance(g, targetId)).thenReturn(100L);
+        when(walletService.getMemberSharedBalance(g.getGroupId(), targetId)).thenReturn(100L);
         when(groupMemberRepository.findMemberIdsByGroupId(groupId)).thenReturn(List.of(leaderId, 30L));
 
         // afterCommit은 테스트에서 트랜잭션 동기화가 없으므로 즉시 실행됨 → 바로 검증 가능
         groupService.expelMember(groupId, leaderId, targetId);
 
-        verify(walletService).settleShareToIndividual(g, targetId);
+        verify(walletService).settleShareToIndividual(g.getGroupId(), targetId);
         verify(groupMemberRepository).delete(target);
 
         verify(notificationService).sendToCustomer(targetId, NotificationType.MEMBER_EXPELLED, "모임에서 내보내졌습니다.");
@@ -79,7 +79,7 @@ class GroupServiceExpelMemberUnitTest {
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(g));
         when(groupMemberRepository.existsLeader(groupId, leaderId)).thenReturn(true);
         when(groupMemberRepository.findGroupMember(groupId, targetId)).thenReturn(Optional.of(target));
-        when(walletService.getMemberSharedBalance(g, targetId)).thenReturn(0L);
+        when(walletService.getMemberSharedBalance(g.getGroupId(), targetId)).thenReturn(0L);
         when(groupMemberRepository.findMemberIdsByGroupId(groupId)).thenReturn(List.of(leaderId));
 
         groupService.expelMember(groupId, leaderId, targetId);

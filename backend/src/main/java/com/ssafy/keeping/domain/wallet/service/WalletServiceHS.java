@@ -492,24 +492,19 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
 
     @Transactional(readOnly = true)
-    public long getMemberSharedBalance(Group group, Long customerId) {
-        Wallet groupWallet = validGroupWallet(group.getGroupId());
-
-        // 해당 사용자가 기여한 lot 중 아직 남아있는 양만 합산
+    public long getMemberSharedBalance(Long groupId, Long customerId) { // 시그니처 변경
+        Wallet groupWallet = validGroupWallet(groupId);
         List<WalletStoreLot> lots = lotRepository
                 .findActiveByWalletIdAndContributorCustomerId(groupWallet.getWalletId(), customerId);
-
-        return lots.stream()
-                .mapToLong(WalletStoreLot::getAmountRemaining)
-                .sum();
+        return lots.stream().mapToLong(WalletStoreLot::getAmountRemaining).sum();
     }
 
 
     @Transactional
-    public long settleShareToIndividual(Group group, Long customerId) {
-        Wallet groupWallet = validGroupWallet(group.getGroupId());
+    public long settleShareToIndividual(Long groupId, Long customerId) { // 시그니처 변경
+        Wallet groupWallet = validGroupWallet(groupId);
 
-        if (!groupMemberRepository.existsMember(group.getGroupId(), customerId)) {
+        if (!groupMemberRepository.existsMember(groupId, customerId)) {
             throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER);
         }
 
@@ -603,10 +598,10 @@ public class WalletServiceHS { // 충돌나는 것을 방지해 HS를 붙였으�
     }
 
     @Transactional
-    public Map<Long, Long> settleAllMembersShare(Group group, List<Long> memberIds) {
+    public Map<Long, Long> settleAllMembersShare(Long groupId, List<Long> memberIds) { // 시그니처 변경
         Map<Long, Long> refunded = new LinkedHashMap<>();
         for (Long memberId : memberIds) {
-            long amt = settleShareToIndividual(group, memberId); // 이미 구현됨
+            long amt = settleShareToIndividual(groupId, memberId); // 변경
             refunded.put(memberId, amt);
         }
         return refunded;

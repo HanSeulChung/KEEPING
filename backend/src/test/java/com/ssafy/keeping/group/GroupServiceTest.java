@@ -71,7 +71,7 @@ class GroupServiceTest {
 
         when(groupRepository.findById(gid)).thenReturn(Optional.of(group));
         when(groupMemberRepository.findGroupMember(gid, uid)).thenReturn(Optional.of(me));
-        when(walletService.settleShareToIndividual(group, uid)).thenReturn(300L);
+        when(walletService.settleShareToIndividual(group.getGroupId(), uid)).thenReturn(300L);
         when(walletService.getTotalIndividualBalance(uid)).thenReturn(1300L);
         when(groupMemberRepository.findMemberIdsByGroupId(gid)).thenReturn(List.of(20L, 30L));
 
@@ -121,7 +121,7 @@ class GroupServiceTest {
         refunded.put(99L, 100L);
         refunded.put(10L, 200L);
         refunded.put(20L, 300L);
-        when(walletService.settleAllMembersShare(eq(group), anyList())).thenReturn(refunded);
+        when(walletService.settleAllMembersShare(eq(group.getGroupId()), anyList())).thenReturn(refunded);
 
         when(balanceRepository.sumByWalletIdForUpdate(777L)).thenReturn(Optional.of(0L));
         when(lotRepository.existsActiveLotByWalletId(777L)).thenReturn(false);
@@ -170,7 +170,7 @@ class GroupServiceTest {
         when(walletRepository.findByGroupId(gid)).thenReturn(Optional.of(gw));
         when(groupMemberRepository.findMemberIdsByGroupId(gid)).thenReturn(List.of(99L));
 
-        when(walletService.settleAllMembersShare(eq(group), anyList()))
+        when(walletService.settleAllMembersShare(eq(group.getGroupId()), anyList()))
                 .thenReturn(Map.of(99L, 100L));
         when(balanceRepository.sumByWalletIdForUpdate(777L)).thenReturn(Optional.of(10L)); // 남아있음
 
