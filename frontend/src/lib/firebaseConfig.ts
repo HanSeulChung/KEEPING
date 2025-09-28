@@ -1,7 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { getAnalytics } from 'firebase/analytics'
 import { initializeApp } from 'firebase/app'
-import { getMessaging, getToken, onMessage } from 'firebase/messaging'
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -17,8 +15,31 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
-const analytics = getAnalytics(app)
-const messaging = getMessaging(app)
+
+// Firebase services initialized only in browser environment
+let analytics: any = null
+let messaging: any = null
+
+// Initialize Firebase services in browser only
+const initializeFirebaseServices = async () => {
+  if (typeof window === 'undefined') return
+
+  try {
+    if (!analytics) {
+      const { getAnalytics, isSupported } = await import('firebase/analytics')
+      if (await isSupported()) {
+        analytics = getAnalytics(app)
+      }
+    }
+
+    if (!messaging) {
+      const { getMessaging } = await import('firebase/messaging')
+      messaging = getMessaging(app)
+    }
+  } catch (error) {
+    console.error('Firebase services initialization failed:', error)
+  }
+}
 
 // VAPID 키 (88자로 수정)
 const VAPID_KEY =
@@ -26,7 +47,10 @@ const VAPID_KEY =
 
 // 알림 권한 요청
 export async function requestNotificationPermission(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+
   try {
+    await initializeFirebaseServices()
     const permission = await Notification.requestPermission()
     if (permission === 'granted') {
       console.log('알림 권한 허용됨 ✅')
@@ -43,7 +67,16 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 // FCM 토큰 발급
 export async function getFcmToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+
   try {
+    await initializeFirebaseServices()
+    if (!messaging) {
+      console.warn('Messaging service not initialized')
+      return null
+    }
+
+    const { getToken } = await import('firebase/messaging')
     const token = await getToken(messaging, { vapidKey: VAPID_KEY })
     if (token) {
       console.log('FCM 토큰 발급 성공:', token)
@@ -59,21 +92,34 @@ export async function getFcmToken(): Promise<string | null> {
 }
 
 // 포그라운드 메시지 리스너 설정
-export function setupForegroundMessageListener() {
-  onMessage(messaging, payload => {
-    console.log('포그라운드 메시지 수신:', payload)
+export async function setupForegroundMessageListener() {
+  if (typeof window === 'undefined') return
 
-    // 브라우저 알림 표시
-    if (payload.notification) {
-      new Notification(payload.notification.title || '알림', {
-        body: payload.notification.body,
-        icon: '/icons/logo_owner+cust.png',
-        badge: '/icons/logo_owner+cust.png',
-        tag: payload.data?.notificationId || 'default',
-        data: payload.data,
-      })
+  try {
+    await initializeFirebaseServices()
+    if (!messaging) {
+      console.warn('Messaging service not initialized')
+      return
     }
-  })
+
+    const { onMessage } = await import('firebase/messaging')
+    onMessage(messaging, payload => {
+      console.log('포그라운드 메시지 수신:', payload)
+
+      // 브라우저 알림 표시
+      if (payload.notification) {
+        new Notification(payload.notification.title || '알림', {
+          body: payload.notification.body,
+          icon: '/icons/logo_owner+cust.png',
+          badge: '/icons/logo_owner+cust.png',
+          tag: payload.data?.notificationId || 'default',
+          data: payload.data,
+        })
+      }
+    })
+  } catch (error) {
+    console.error('Foreground message listener setup failed:', error)
+  }
 }
 
 // Service Worker 등록
@@ -101,4 +147,15 @@ export async function registerServiceWorker(): Promise<boolean> {
   return false
 }
 
-export { analytics, app, messaging, VAPID_KEY }
+// Export getters for Firebase services
+export const getAnalytics = async () => {
+  await initializeFirebaseServices()
+  return analytics
+}
+
+export const getMessaging = async () => {
+  await initializeFirebaseServices()
+  return messaging
+}
+
+export { app, VAPID_KEY }
