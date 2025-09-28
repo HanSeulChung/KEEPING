@@ -46,6 +46,7 @@ interface UseNotificationSystemReturn {
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const { user } = useAuthStore()
   const [notifications, setNotifications] = useState<NotificationData[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [isPermissionGranted, setIsPermissionGranted] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
@@ -275,6 +276,23 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const wasVisible = isVisibleRef.current
       isVisibleRef.current = !document.hidden
 
+      // 백그라운드에서 포그라운드로 돌아올 때
+      if (!wasVisible && isVisibleRef.current) {
+        // localStorage에서 백그라운드에서 업데이트된 읽지 않은 개수 동기화
+        try {
+          const storedCount = localStorage.getItem('unreadCount')
+          if (storedCount !== null) {
+            const count = parseInt(storedCount)
+            if (!isNaN(count) && count >= 0) {
+              setUnreadCount(count)
+              console.log(`[VISIBILITY] 읽지 않은 알림 개수 동기화: ${count}`)
+            }
+          }
+        } catch (error) {
+          console.warn('[VISIBILITY] 읽지 않은 알림 개수 동기화 실패:', error)
+        }
+      }
+
       // 가시성 변경 시 전략 재평가
       if (wasVisible !== isVisibleRef.current) {
         updateNotificationStrategy()
@@ -493,6 +511,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             const next = [notification, ...prev]
             return next.length > 200 ? next.slice(0, 200) : next
           })
+          // 새 알림이 오면 읽지 않은 개수 증가
+          setUnreadCount(prev => prev + 1)
 
           // 백그라운드에서는 브라우저 알림 표시하지 않음 (FCM이 처리)
           if (
@@ -854,11 +874,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const isOwner = getUserRole() === 'OWNER'
       if (isOwner) {
         await apiClient.put(
-          `/api/notifications/owner/${userId}/mark-read/${id}`
+          `/api/notifications/owner/${userId}/${id}/read`
         )
       } else {
         await apiClient.put(
-          `/api/notifications/customer/${userId}/mark-read/${id}`
+          `/api/notifications/customer/${userId}/${id}/read`
         )
       }
       setNotifications(prev =>
@@ -868,6 +888,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             : notification
         )
       )
+      // 읽음 처리 후 로컬 상태에서 개수 감소
+      setUnreadCount(prev => Math.max(0, prev - 1))
     },
     [getUserNumericId, getUserRole]
   )
@@ -894,11 +916,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       unreadNotifications.map(async notification => {
         if (isOwner) {
           await apiClient.put(
-            `/api/notifications/owner/${userId}/mark-read/${notification.id}`
+            `/api/notifications/owner/${userId}/${notification.id}/read`
           )
         } else {
           await apiClient.put(
-            `/api/notifications/customer/${userId}/mark-read/${notification.id}`
+            `/api/notifications/customer/${userId}/${notification.id}/read`
           )
         }
       })
@@ -952,7 +974,21 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     setNotifications(convertedNotifications)
   }
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const fetchUnreadCount = async () => {
+    const userId = getUserNumericId()
+    if (!userId) return
+    const isOwner = getUserRole() === 'OWNER'
+    try {
+      const count = isOwner
+        ? await notificationApi.owner.getUnreadCount(userId)
+        : await notificationApi.customer.getUnreadCount(userId)
+      setUnreadCount(count)
+    } catch (error) {
+      console.warn('읽지 않은 알림 개수 조회 실패:', error)
+      // 백업으로 로컬 state에서 계산
+      setUnreadCount(notifications.filter(n => !n.isRead).length)
+    }
+  }
 
   useEffect(() => {
     const initializeNotificationSystem = async () => {
@@ -967,16 +1003,25 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         } catch {}
 
         // 알림 목록 로드
-        fetchNotifications()
+        await fetchNotifications()
 
-        // SSE 연결 우선 시도
+        // 읽지 않은 알림 개수 초기 조회 (한 번만)
+        await fetchUnreadCount()
+
+        // SSE 연결 시도 (포그라운드 실시간 알림용)
         try {
           await connectSSE()
-          console.log('[NOTIFICATION] SSE 연결 성공')
+          console.log('[NOTIFICATION] SSE 연결 성공 (포그라운드용)')
         } catch (error) {
-          console.warn('[NOTIFICATION] SSE 연결 실패, FCM으로 백업')
-          // SSE 연결 실패시에만 FCM 등록
-          registerFCM()
+          console.warn('[NOTIFICATION] SSE 연결 실패:', error)
+        }
+
+        // FCM도 항상 등록 (백그라운드 알림용)
+        try {
+          await registerFCM()
+          console.log('[NOTIFICATION] FCM 등록 성공 (백그라운드용)')
+        } catch (error) {
+          console.warn('[NOTIFICATION] FCM 등록 실패:', error)
         }
 
         // 포그라운드 메시지 리스너 설정
