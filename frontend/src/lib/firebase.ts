@@ -66,7 +66,7 @@ export const getFirebaseAnalytics = async () => {
 
 // VAPID Key for FCM (공개키이므로 하드코딩 가능)
 const VAPID_KEY =
-  'BFqS2cYcLd7EkOb_vgyhAnkSKyTkWEs4XwDrphIaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0XOs8aKw0xLStpJgpU'
+  'BFqS2cYcLd7EkOb_vgyhAnkSKyTkWEs4XwDrphIaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0XOs8aKw0xLStpJgpU='
 
 // FCM 토큰 발급 함수 (개발 환경에서 에러 처리 개선)
 export const getFcmToken = async (): Promise<string | null> => {
