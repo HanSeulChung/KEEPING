@@ -1,6 +1,7 @@
 'use client'
 
 import { authApi } from '@/api/authApi'
+import { apiConfig } from '@/api/config'
 import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -84,8 +85,7 @@ const CustomerPinSetup = () => {
 
       // 회원가입 후 사용자 정보 다시 조회하여 완전한 정보 가져오기
       try {
-        const meUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-        const meResponse = await fetch(`${meUrl}/auth/me`, {
+        const meResponse = await fetch(`${apiConfig.baseURL}/auth/me`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
