@@ -24,11 +24,13 @@ interface PaymentDetails {
   storeName: string
   totalAmount: number
   items: Array<{
-    menuId: number
-    name: string
+    menuId?: number
+    menuName?: string
+    name?: string
     unitPrice: number
     quantity: number
-    lineTotal: number
+    totalPrice?: number
+    lineTotal?: number
   }>
   pointInfo?: {
     [key: string]: unknown
@@ -46,7 +48,8 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   pointInfo,
   paymentType = 'PAYMENT',
 }) => {
-  const { updatePaymentStatus, clearPaymentIntent } = usePaymentState()
+  const { updatePaymentStatus, clearPaymentIntent, currentPayment } =
+    usePaymentState()
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -148,8 +151,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     await processPayment(actualIntentId, pin)
   }
 
-
-  // 실제 결제 처리 함수 (PIN 검증 없이 항상 성공)
+  // 실제 결제 처리 함수 (원래 방식 복구)
   const processPayment = async (
     actualIntentId: string | number,
     pin: string
@@ -161,52 +163,115 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     setError('')
 
     try {
-      console.log('결제 승인 요청 (테스트 모드 - 항상 성공):', {
-        intentId: actualIntentId,
-        pin: pin,
-      })
+      const userId = localStorage.getItem('userId') || 'anonymous'
+      let idempotencyKey: string
 
-      // 테스트를 위해 항상 성공 처리
-      console.log('결제 승인 성공 (테스트 모드)')
-      setIsFinalized(true)
-      setIsProcessing(false)
-      setIsRetrying(false) // 재시도 플래그 초기화
-      setRequestInProgress(false) // 요청 완료 시 플래그 초기화
-      setError('✅ 결제가 성공적으로 승인되었습니다!')
-
-      // 결제 상태를 APPROVED로 업데이트
-      updatePaymentStatus('APPROVED')
-
-      // 점주에게 승인 알림 전송
-      if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
-        // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
-        if (typeof window !== 'undefined') {
-          const event = new CustomEvent('notifyOwnerPaymentResult', {
-            detail: {
-              storeName: paymentDetails.storeName,
-              amount: paymentDetails.totalAmount,
-              customerName: paymentDetails.customerName || '고객',
-              success: true, // 승인이므로 true
-              paymentData: {
-                intentId: actualIntentId,
-                pin: pin,
-                timestamp: new Date().toISOString(),
-              }, // 테스트용 데이터
-            },
-          })
-          window.dispatchEvent(event)
-        }
+      if (isRetrying) {
+        // 의도적 재시도인 경우 완전히 새로운 UUID 키 생성
+        const uuid = crypto.randomUUID()
+        idempotencyKey = `retry_${actualIntentId}_${userId}_${uuid}`
+        console.log('의도적 재시도용 멱등성 키:', idempotencyKey)
+      } else {
+        // 일반적인 경우 데이터 기반 멱등성 키 생성
+        idempotencyKey = generateIdempotencyKey({
+          userId: userId,
+          action: 'payment_approve',
+          data: { intentId: String(actualIntentId), pin: pin },
+        })
+        console.log('데이터 기반 멱등성 키:', idempotencyKey)
       }
 
-      // 성공 콜백 호출
-      onSuccess?.()
+      console.log('결제 승인 요청:', {
+        intentId: actualIntentId,
+        pin: pin,
+        idempotencyKey,
+      })
 
-      // 바로 모달 닫기 (결제 성공 시)
-      setTimeout(() => {
-        // 결제 완료 후 상태 정리
-        clearPaymentIntent()
-        onClose()
-      }, 1000)
+      const result = await notificationApi.customer.approvePayment(
+        actualIntentId,
+        pin,
+        idempotencyKey
+      )
+
+      if (result.success) {
+        console.log('결제 승인 성공:', result.data)
+        setIsFinalized(true)
+        setIsProcessing(false)
+        setIsRetrying(false) // 재시도 플래그 초기화
+        setRequestInProgress(false) // 요청 완료 시 플래그 초기화
+        setError('✅ 결제가 성공적으로 승인되었습니다!')
+
+        // 결제 상태를 APPROVED로 업데이트
+        updatePaymentStatus('APPROVED')
+
+        // 점주에게 승인 알림 전송
+        if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
+          // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
+          if (typeof window !== 'undefined') {
+            const event = new CustomEvent('notifyOwnerPaymentResult', {
+              detail: {
+                storeName: paymentDetails.storeName,
+                amount: paymentDetails.totalAmount,
+                customerName: paymentDetails.customerName || '고객',
+                success: true, // 승인이므로 true
+                paymentData: result.data, // 결제 상세 정보 추가
+              },
+            })
+            window.dispatchEvent(event)
+          }
+        }
+
+        // 성공 콜백 호출
+        onSuccess?.()
+
+        // 바로 모달 닫기 (결제 성공 시)
+        setTimeout(() => {
+          // 결제 완료 후 상태 정리
+          clearPaymentIntent()
+          onClose()
+        }, 1000)
+      } else {
+        console.log('결제 승인 실패:', result.message)
+        const newAttempts = pinAttempts + 1
+        setPinAttempts(newAttempts)
+
+        // 로컬 스토리지에 시도 횟수 저장
+        try {
+          const key = getIntentKey()
+          if (key) {
+            localStorage.setItem(
+              `payment:attempts:${key}`,
+              newAttempts.toString()
+            )
+          }
+        } catch {}
+
+        // 5회 실패시 차단
+        if (newAttempts >= 5) {
+          setIsBlocked(true)
+          setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
+        } else {
+          setError(
+            result.message ||
+              `❌ PIN 번호가 올바르지 않습니다. 다시 입력해주세요 (${newAttempts}/5)`
+          )
+        }
+
+        // 실패 시에도 마지막 결제 데이터 저장 (의도적 재시도 확인용)
+        setLastPaymentData({
+          intentId: actualIntentId,
+          pin: pin,
+          timestamp: Date.now(),
+        })
+
+        setIsProcessing(false)
+        setIsRetrying(false) // 재시도 플래그 초기화
+        setRequestInProgress(false) // 요청 진행 플래그 초기화
+        setIsLoading(false) // 로딩 상태도 초기화
+
+        // PIN 입력 필드 초기화 (다시 입력할 수 있도록)
+        setPin('')
+      }
     } catch (error) {
       console.error('결제 승인 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
@@ -220,7 +285,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       setIsLoading(false)
     }
   }
-
 
   const handleCancel = () => {
     setPin('')
@@ -244,29 +308,70 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     return paymentDetails?.intentId || intentId
   }
 
-  // 결제 상세 정보 로드 (GET 요청 제거 - props 데이터만 사용)
+  // 결제 상세 정보 로드 (GET 요청 복구 + 폴백)
   useEffect(() => {
     if (isOpen && intentId) {
       setIsLoadingDetails(true)
       setError('')
 
-      // props로 전달받은 기본 정보만 사용
-      setTimeout(() => {
+      // GET 요청으로 주문 상세 정보 조회 시도
+      const loadPaymentDetails = async () => {
+        try {
+          console.log('🔍 결제 상세 정보 조회 시작:', intentId)
+
+          const paymentData = await notificationApi.customer.getPaymentIntent(intentId as string)
+
+          if (paymentData) {
+            console.log('✅ 결제 상세 정보 조회 성공:', paymentData)
+            setPaymentDetails({
+              intentId: paymentData.intentId, // 실제 intentId 사용
+              customerName: customerName || '고객',
+              storeName: storeName || '매장',
+              totalAmount: paymentData.amount || 0,
+              items: paymentData.items || [],
+              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+            })
+          } else {
+            console.warn('❌ 결제 정보를 불러올 수 없음, 폴백 데이터 사용')
+            fallbackToStoredData()
+          }
+        } catch (error) {
+          console.error('❌ 결제 정보 조회 실패:', error)
+          fallbackToStoredData()
+        } finally {
+          setIsLoadingDetails(false)
+        }
+      }
+
+      // 폴백: 저장된 데이터나 props 사용
+      const fallbackToStoredData = () => {
+        const storedPayment = currentPayment
+        const finalIntentId = storedPayment?.intentPublicId || intentId
+        const finalCustomerName = storedPayment?.storeInfo?.customerName || customerName || '고객'
+        const finalStoreName = storedPayment?.storeInfo?.storeName || storeName || '매장'
+        const finalAmount = storedPayment?.storeInfo?.amount ||
+          (typeof amount === 'string' ? parseInt(amount) : (amount as number)) || 0
+
+        console.log('🔄 폴백 데이터 사용:', {
+          stored: !!storedPayment,
+          intentId: finalIntentId,
+          storeName: finalStoreName,
+          amount: finalAmount
+        })
+
         setPaymentDetails({
-          intentId: intentId,
-          customerName: customerName || '고객',
-          storeName: storeName || '매장',
-          totalAmount:
-            typeof amount === 'string'
-              ? parseInt(amount)
-              : (amount as number) || 0,
-          items: [], // 주문 상세 없이 빈 배열
+          intentId: finalIntentId,
+          customerName: finalCustomerName,
+          storeName: finalStoreName,
+          totalAmount: finalAmount,
+          items: storedPayment?.storeInfo?.items || [],
           pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
         })
-        setIsLoadingDetails(false)
-      }, 500)
+      }
+
+      loadPaymentDetails()
     }
-  }, [isOpen, intentId, customerName, storeName, amount, pointInfo])
+  }, [isOpen, intentId, customerName, storeName, amount, pointInfo, currentPayment])
 
   // 모달이 열릴 때마다 상태 초기화
   useEffect(() => {
@@ -393,7 +498,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                         >
                           <div className="flex items-center space-x-3">
                             <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-black">
-                              {item.name}
+                              {item.name || item.menuName || '메뉴'}
                             </span>
                             <span className="font-nanum-square-round-eb text-[0.75rem] leading-[140%] font-extrabold text-gray-500">
                               {item.unitPrice.toLocaleString()}원 ×{' '}
@@ -401,7 +506,12 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                             </span>
                           </div>
                           <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-[#76d4ff]">
-                            {item.lineTotal.toLocaleString()}원
+                            {(
+                              item.lineTotal ||
+                              item.totalPrice ||
+                              item.unitPrice * item.quantity
+                            ).toLocaleString()}
+                            원
                           </span>
                         </div>
                       ))}
@@ -410,21 +520,23 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                 )}
 
                 {/* API에서 항목을 불러오지 못한 경우 */}
-                {paymentDetails && (!paymentDetails.items || paymentDetails.items.length === 0) && (
-                  <div className="mb-6">
-                    <div className="mb-4 h-[0.1875rem] w-full bg-[#76d4ff]" />
-                    <div className="space-y-3">
-                      <h4 className="font-nanum-square-round-eb mb-3 text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
-                        주문 내역
-                      </h4>
-                      <div className="flex h-8 w-full flex-shrink-0 items-center justify-center rounded-[0.625rem] border-[3px] border-gray-300 bg-gray-50 px-3">
-                        <span className="font-nanum-square-round-eb text-[0.75rem] leading-[140%] font-bold text-gray-500">
-                          주문 상세 정보를 불러올 수 없습니다
-                        </span>
+                {paymentDetails &&
+                  (!paymentDetails.items ||
+                    paymentDetails.items.length === 0) && (
+                    <div className="mb-6">
+                      <div className="mb-4 h-[0.1875rem] w-full bg-[#76d4ff]" />
+                      <div className="space-y-3">
+                        <h4 className="font-nanum-square-round-eb mb-3 text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
+                          주문 내역
+                        </h4>
+                        <div className="flex h-8 w-full flex-shrink-0 items-center justify-center rounded-[0.625rem] border-[3px] border-gray-300 bg-gray-50 px-3">
+                          <span className="font-nanum-square-round-eb text-[0.75rem] leading-[140%] font-bold text-gray-500">
+                            주문 상세 정보를 불러올 수 없습니다
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* 포인트 정보 */}
                 {(paymentDetails?.pointInfo || pointInfo) &&
