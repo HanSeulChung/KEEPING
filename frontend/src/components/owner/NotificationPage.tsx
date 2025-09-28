@@ -5,10 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { getNotificationIcon } from '@/types/notification'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import {
-  IoCheckmarkCircle,
-  IoNotifications
-} from 'react-icons/io5'
+import { IoNotifications } from 'react-icons/io5'
 
 type NotificationSetting = {
   id: string
@@ -95,11 +92,14 @@ const NotificationPage = () => {
     let message = ''
 
     if (userAgent.includes('chrome')) {
-      message = '1. 주소창 왼쪽의 자물쇠 아이콘 클릭\n2. "알림" 설정을 "허용"으로 변경\n3. 페이지 새로고침'
+      message =
+        '1. 주소창 왼쪽의 자물쇠 아이콘 클릭\n2. "알림" 설정을 "허용"으로 변경\n3. 페이지 새로고침'
     } else if (userAgent.includes('firefox')) {
-      message = '1. 주소창 왼쪽의 방패 아이콘 클릭\n2. "알림" 권한을 허용으로 변경\n3. 페이지 새로고침'
+      message =
+        '1. 주소창 왼쪽의 방패 아이콘 클릭\n2. "알림" 권한을 허용으로 변경\n3. 페이지 새로고침'
     } else if (userAgent.includes('safari')) {
-      message = '1. Safari 메뉴 > 환경설정 > 웹사이트\n2. 알림 탭에서 이 사이트 허용\n3. 페이지 새로고침'
+      message =
+        '1. Safari 메뉴 > 환경설정 > 웹사이트\n2. 알림 탭에서 이 사이트 허용\n3. 페이지 새로고침'
     } else {
       message = '브라우저 설정에서 이 사이트의 알림을 허용해주세요.'
     }
@@ -121,7 +121,7 @@ const NotificationPage = () => {
   const getNotificationIconComponent = (type: string) => {
     const iconEmoji = getNotificationIcon(type as any)
     return (
-      <div className="text-2xl flex items-center justify-center w-8 h-8">
+      <div className="flex h-8 w-8 items-center justify-center text-2xl">
         {iconEmoji}
       </div>
     )
@@ -164,20 +164,18 @@ const NotificationPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 모바일 네이티브 헤더 */}
-      <div className="safe-area-top sticky top-0 z-10 bg-white shadow-sm">
-        <div className="px-4 py-3">
-          <div className="flex h-11 items-center justify-center">
-            <h1 className="font-['nanumsquare'] text-lg font-bold text-black">
-              알림 설정
-            </h1>
-          </div>
+    <div className="min-h-screen bg-[#F6FCFF]">
+      {/* Owner 테마 헤더 */}
+      <div className="safe-area-top bg-[#76d4ff] shadow-sm">
+        <div className="flex w-full items-center px-4 py-3">
+          <h1 className="font-jalnan text-lg leading-[140%] text-white">
+            알림 설정
+          </h1>
         </div>
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="pb-safe">
+      <div className="pb-safe pt-6">
         {/* 알림 권한이 거부된 경우에만 작은 안내 표시 */}
         {notificationPermission === 'denied' && (
           <div className="mb-8 rounded-lg border border-orange-300 bg-orange-50 p-4">
@@ -196,25 +194,25 @@ const NotificationPage = () => {
         )}
 
         {/* 알림 통계 */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="bg-keeping-beige rounded-lg border border-black p-4 text-center">
-            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+        <div className="mb-8 grid grid-cols-1 gap-4 px-4 sm:grid-cols-3">
+          <div className="rounded-[20px] border border-[#76d4ff] bg-white p-4 text-center shadow-sm">
+            <div className="font-jalnan text-2xl font-extrabold text-[#76d4ff]">
               {unreadCount}
             </div>
-            <div className="font-['nanumsquare'] text-sm text-gray-600">
+            <div className="font-nanum-square-round-eb text-sm text-gray-600">
               읽지 않은 알림
             </div>
           </div>
-          <div className="rounded-lg border border-black bg-white p-4 text-center">
-            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+          <div className="rounded-[20px] border border-[#76d4ff] bg-white p-4 text-center shadow-sm">
+            <div className="font-jalnan text-2xl font-extrabold text-[#76d4ff]">
               {notifications.length}
             </div>
-            <div className="font-['nanumsquare'] text-sm text-gray-600">
+            <div className="font-nanum-square-round-eb text-sm text-gray-600">
               전체 알림
             </div>
           </div>
-          <div className="rounded-lg border border-black bg-white p-4 text-center">
-            <div className="font-['Tenada'] text-2xl font-extrabold text-black">
+          <div className="rounded-[20px] border border-[#76d4ff] bg-white p-4 text-center shadow-sm">
+            <div className="font-jalnan text-2xl font-extrabold text-[#76d4ff]">
               {
                 notifications.filter(n => {
                   const today = new Date()
@@ -225,21 +223,21 @@ const NotificationPage = () => {
                 }).length
               }
             </div>
-            <div className="font-['nanumsquare'] text-sm text-gray-600">
+            <div className="font-nanum-square-round-eb text-sm text-gray-600">
               오늘 알림
             </div>
           </div>
         </div>
 
         {/* 알림 목록 */}
-        <div className="mb-8 rounded-lg border border-black bg-white p-6">
+        <div className="mx-4 mb-8 rounded-[20px] border border-[#76d4ff] bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h3 className="font-['Tenada'] text-xl font-extrabold text-black">
+              <h3 className="font-jalnan text-xl font-extrabold text-[#76d4ff]">
                 알림 목록
               </h3>
               {notifications.length > 0 && (
-                <span className="font-['nanumsquare'] text-sm text-gray-500">
+                <span className="font-nanum-square-round-eb text-sm text-gray-500">
                   총 {notifications.length}개 ({currentPage + 1}/{totalPages}{' '}
                   페이지)
                 </span>
@@ -248,7 +246,7 @@ const NotificationPage = () => {
             {notifications.length > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-200"
+                className="font-nanum-square-round-eb rounded-[10px] border border-[#76d4ff] bg-[#76d4ff] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#5bb3e6]"
               >
                 모두 읽음
               </button>
@@ -260,7 +258,7 @@ const NotificationPage = () => {
               <div className="mb-4 text-4xl">
                 <IoNotifications className="mx-auto text-gray-300" />
               </div>
-              <div className="font-['nanumsquare'] text-gray-500">
+              <div className="font-nanum-square-round-eb text-gray-500">
                 알림이 없습니다
               </div>
             </div>
@@ -270,16 +268,19 @@ const NotificationPage = () => {
                 {currentNotifications.map(notification => (
                   <div
                     key={notification.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                    className={`flex cursor-pointer items-start gap-3 rounded-[15px] border p-4 transition-colors ${
                       notification.isRead
                         ? 'border-gray-200 bg-white'
-                        : 'border-blue-200 bg-blue-50'
+                        : 'border-[#76d4ff] bg-blue-50'
                     }`}
                     onClick={() => {
                       if (notification.id && !isNaN(Number(notification.id))) {
                         markAsRead(Number(notification.id))
                       } else {
-                        console.error('유효하지 않은 notification.id:', notification.id)
+                        console.error(
+                          '유효하지 않은 notification.id:',
+                          notification.id
+                        )
                       }
                     }}
                   >
@@ -288,21 +289,21 @@ const NotificationPage = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div
-                        className={`font-['nanumsquare'] text-sm font-bold ${
+                        className={`font-nanum-square-round-eb text-sm font-bold ${
                           notification.isRead ? 'text-gray-700' : 'text-black'
                         }`}
                       >
                         {notification.title}
                       </div>
-                      <div className="mt-1 font-['nanumsquare'] text-xs break-words text-gray-600">
+                      <div className="font-nanum-square-round-eb mt-1 text-xs break-words text-gray-600">
                         {notification.message}
                       </div>
-                      <div className="mt-2 font-['nanumsquare'] text-xs text-gray-400">
+                      <div className="font-nanum-square-round-eb mt-2 text-xs text-gray-400">
                         {formatTime(notification.timestamp)}
                       </div>
                     </div>
                     {!notification.isRead && (
-                      <div className="h-3 w-3 flex-shrink-0 rounded-full bg-blue-500"></div>
+                      <div className="h-3 w-3 flex-shrink-0 rounded-full bg-[#76d4ff]"></div>
                     )}
                   </div>
                 ))}
@@ -314,10 +315,10 @@ const NotificationPage = () => {
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 0}
-                    className={`rounded-lg border px-3 py-2 font-['nanumsquare'] text-sm font-bold transition-colors ${
+                    className={`font-nanum-square-round-eb rounded-[10px] border px-3 py-2 text-sm font-bold transition-colors ${
                       currentPage === 0
                         ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        : 'border-[#76d4ff] bg-white text-[#76d4ff] hover:bg-blue-50'
                     }`}
                   >
                     이전
@@ -328,10 +329,10 @@ const NotificationPage = () => {
                       <button
                         key={i}
                         onClick={() => setCurrentPage(i)}
-                        className={`h-10 w-10 rounded-lg font-['nanumsquare'] text-sm font-bold transition-colors ${
+                        className={`font-nanum-square-round-eb h-10 w-10 rounded-[10px] text-sm font-bold transition-colors ${
                           currentPage === i
-                            ? 'bg-black text-white'
-                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            ? 'bg-[#76d4ff] text-white'
+                            : 'border border-[#76d4ff] bg-white text-[#76d4ff] hover:bg-blue-50'
                         }`}
                       >
                         {i + 1}
@@ -342,10 +343,10 @@ const NotificationPage = () => {
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages - 1}
-                    className={`rounded-lg border px-3 py-2 font-['nanumsquare'] text-sm font-bold transition-colors ${
+                    className={`font-nanum-square-round-eb rounded-[10px] border px-3 py-2 text-sm font-bold transition-colors ${
                       currentPage === totalPages - 1
                         ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        : 'border-[#76d4ff] bg-white text-[#76d4ff] hover:bg-blue-50'
                     }`}
                   >
                     다음
@@ -357,11 +358,11 @@ const NotificationPage = () => {
         </div>
 
         {/* 알림 설정 */}
-        <div className="rounded-lg border border-black bg-white p-6">
-          <h3 className="mb-2 font-['Tenada'] text-xl font-extrabold text-black">
+        <div className="mx-4 rounded-[20px] border border-[#76d4ff] bg-white p-6 shadow-sm">
+          <h3 className="font-jalnan mb-2 text-xl font-extrabold text-[#76d4ff]">
             알림 설정
           </h3>
-          <p className="mb-4 font-['nanumsquare'] text-sm text-gray-600">
+          <p className="font-nanum-square-round-eb mb-4 text-sm text-gray-600">
             비활성화하면 브라우저 팝업 알림만 안 뜹니다. 목록에는 계속
             표시됩니다.
           </p>
@@ -370,13 +371,13 @@ const NotificationPage = () => {
             {settings.map(setting => (
               <div
                 key={setting.id}
-                className="flex items-center justify-between rounded-lg border border-gray-300 p-3"
+                className="flex items-center justify-between rounded-[15px] border border-[#76d4ff] p-3"
               >
                 <div className="flex-1">
-                  <span className="font-['nanumsquare'] text-sm font-bold text-black">
+                  <span className="font-nanum-square-round-eb text-sm font-bold text-black">
                     {setting.name}
                   </span>
-                  <div className="mt-1 font-['nanumsquare'] text-xs text-gray-500">
+                  <div className="font-nanum-square-round-eb mt-1 text-xs text-gray-500">
                     {setting.enabled
                       ? '팝업 알림 + 목록 표시'
                       : '목록에만 표시 (팝업 없음)'}
@@ -385,17 +386,17 @@ const NotificationPage = () => {
                 <div className="flex h-8 items-center">
                   <button
                     onClick={() => toggleSetting(setting.id)}
-                    className="flex h-8 overflow-hidden rounded-lg border-2 border-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex h-8 overflow-hidden rounded-[10px] border-2 border-[#76d4ff] bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     {/* OFF 버튼 */}
                     <div
                       className={`flex h-full w-12 items-center justify-center transition-all duration-200 ${
                         !setting.enabled
-                          ? 'bg-black text-white'
-                          : 'bg-white text-black hover:bg-gray-50'
+                          ? 'bg-[#76d4ff] text-white'
+                          : 'bg-white text-[#76d4ff] hover:bg-blue-50'
                       }`}
                     >
-                      <span className="font-['nanumsquare'] text-xs font-bold">
+                      <span className="font-nanum-square-round-eb text-xs font-bold">
                         OFF
                       </span>
                     </div>
@@ -404,11 +405,11 @@ const NotificationPage = () => {
                     <div
                       className={`flex h-full w-12 items-center justify-center transition-all duration-200 ${
                         setting.enabled
-                          ? 'bg-black text-white'
-                          : 'bg-white text-black hover:bg-gray-50'
+                          ? 'bg-[#76d4ff] text-white'
+                          : 'bg-white text-[#76d4ff] hover:bg-blue-50'
                       }`}
                     >
-                      <span className="font-['nanumsquare'] text-xs font-bold">
+                      <span className="font-nanum-square-round-eb text-xs font-bold">
                         ON
                       </span>
                     </div>
@@ -422,16 +423,16 @@ const NotificationPage = () => {
 
       {/* 알림 권한 요청 모달 */}
       {showPermissionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-md rounded-[30px] bg-[#F6FCFF] p-6 shadow-xl">
             <div className="mb-4 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <IoNotifications className="h-8 w-8 text-blue-600" />
+                <IoNotifications className="h-8 w-8 text-[#76d4ff]" />
               </div>
-              <h3 className="mb-2 font-['Tenada'] text-xl font-extrabold text-black">
+              <h3 className="font-jalnan mb-2 text-xl font-extrabold text-[#76d4ff]">
                 실시간 알림 받기
               </h3>
-              <p className="font-['nanumsquare'] text-sm text-gray-600">
+              <p className="font-nanum-square-round-eb text-sm text-gray-600">
                 주문, 결제 등 중요한 알림을 즉시 받아보세요.
                 <br />
                 언제든지 설정에서 변경할 수 있습니다.
@@ -441,20 +442,20 @@ const NotificationPage = () => {
             <div className="space-y-3">
               <button
                 onClick={requestNotificationPermission}
-                className="w-full rounded-lg bg-blue-600 px-4 py-3 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-blue-700"
+                className="font-jalnan w-full rounded-[15px] bg-[#76d4ff] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#5bb3e6]"
               >
                 알림 허용하기
               </button>
               <button
                 onClick={() => setShowPermissionModal(false)}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 font-['nanumsquare'] text-sm font-bold text-gray-700 transition-colors hover:bg-gray-100"
+                className="font-nanum-square-round-eb w-full rounded-[15px] border border-[#76d4ff] bg-white px-4 py-3 text-sm font-bold text-[#76d4ff] transition-colors hover:bg-blue-50"
               >
                 나중에
               </button>
             </div>
 
             <div className="mt-4 text-center">
-              <p className="font-['nanumsquare'] text-xs text-gray-500">
+              <p className="font-nanum-square-round-eb text-xs text-gray-500">
                 브라우저에서 알림을 허용해야 실시간 알림을 받을 수 있습니다
               </p>
             </div>

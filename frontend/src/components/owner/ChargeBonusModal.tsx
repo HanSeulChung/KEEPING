@@ -1,5 +1,6 @@
 'use client'
 
+import { Modal } from '@/components/ui/Modal'
 import { useEffect, useState } from 'react'
 
 interface ChargeBonusData {
@@ -74,7 +75,10 @@ const ChargeBonusModal = ({
     }
 
     // 수정 모드가 아닐 때만 보너스 퍼센트 검증
-    if (mode === 'add' && (formData.bonusPercentage < 1 || formData.bonusPercentage > 100)) {
+    if (
+      mode === 'add' &&
+      (formData.bonusPercentage < 1 || formData.bonusPercentage > 100)
+    ) {
       newErrors.bonusPercentage = '보너스 퍼센트는 1~100% 사이여야 합니다'
     }
 
@@ -89,7 +93,7 @@ const ChargeBonusModal = ({
       // expectedTotalPoints는 API에 전송하지 않음 (백엔드에서 계산)
       const dataToSave = {
         chargeAmount: formData.chargeAmount,
-        bonusPercentage: formData.bonusPercentage
+        bonusPercentage: formData.bonusPercentage,
       }
       onSave(dataToSave)
       onClose()
@@ -120,102 +124,104 @@ const ChargeBonusModal = ({
   if (!isOpen) return null
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
-      <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
-        <h3 className="mb-6 font-['nanumsquare'] text-xl font-bold">
-          {mode === 'edit' ? '충전 보너스 수정' : '충전 보너스 추가'}
-        </h3>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={mode === 'edit' ? '충전 보너스 수정' : '충전 보너스 추가'}
+      height="h-[500px]"
+      variant="owner"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 충전 금액 */}
+        <div>
+          <label className="font-nanum-square-round-eb mb-1 block text-sm leading-[140%] font-bold text-gray-700">
+            충전 금액 (원)
+          </label>
+          <input
+            type="number"
+            min="1000"
+            value={formData.chargeAmount || ''}
+            onChange={e => handleInputChange('chargeAmount', e.target.value)}
+            className={`font-nanum-square-round-eb w-full rounded-[10px] border px-3 py-2 ${
+              errors.chargeAmount ? 'border-red-500' : 'border-gray-300'
+            } focus:border-[#76d4ff] focus:outline-none`}
+            placeholder="최소 1,000원 이상 입력하세요"
+          />
+          {errors.chargeAmount && (
+            <p className="font-nanum-square-round-eb mt-1 text-xs leading-[140%] text-red-500">
+              {errors.chargeAmount}
+            </p>
+          )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 충전 금액 */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              충전 금액 (원)
-            </label>
+        {/* 보너스 퍼센트 */}
+        <div>
+          <label className="font-nanum-square-round-eb mb-1 block text-sm leading-[140%] font-bold text-gray-700">
+            보너스 퍼센트 (%)
+          </label>
+          {mode === 'edit' ? (
+            <div className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600">
+              {formData.bonusPercentage}%
+            </div>
+          ) : (
             <input
               type="number"
-              min="1000"
-              value={formData.chargeAmount || ''}
-              onChange={e => handleInputChange('chargeAmount', e.target.value)}
-              className={`w-full rounded-md border px-3 py-2 ${
-                errors.chargeAmount ? 'border-red-500' : 'border-gray-300'
-              } focus:border-blue-500 focus:outline-none`}
-              placeholder="최소 1,000원 이상 입력하세요"
+              min="1"
+              max="100"
+              step="0.1"
+              value={formData.bonusPercentage || ''}
+              onChange={e =>
+                handleInputChange('bonusPercentage', e.target.value)
+              }
+              className={`font-nanum-square-round-eb w-full rounded-[10px] border px-3 py-2 ${
+                errors.bonusPercentage ? 'border-red-500' : 'border-gray-300'
+              } focus:border-[#76d4ff] focus:outline-none`}
+              placeholder="1~100% 사이로 입력하세요"
             />
-            {errors.chargeAmount && (
-              <p className="mt-1 text-xs text-red-500">{errors.chargeAmount}</p>
-            )}
-          </div>
-
-          {/* 보너스 퍼센트 */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              보너스 퍼센트 (%)
-            </label>
-            {mode === 'edit' ? (
-              <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600">
-                {formData.bonusPercentage}%
-              </div>
-            ) : (
-              <input
-                type="number"
-                min="1"
-                max="100"
-                step="0.1"
-                value={formData.bonusPercentage || ''}
-                onChange={e =>
-                  handleInputChange('bonusPercentage', e.target.value)
-                }
-                className={`w-full rounded-md border px-3 py-2 ${
-                  errors.bonusPercentage ? 'border-red-500' : 'border-gray-300'
-                } focus:border-blue-500 focus:outline-none`}
-                placeholder="1~100% 사이로 입력하세요"
-              />
-            )}
-            {mode === 'edit' && (
-              <p className="mt-1 text-xs text-gray-500">
-                보너스 퍼센트는 수정할 수 없습니다
-              </p>
-            )}
-            {mode === 'add' && errors.bonusPercentage && (
-              <p className="mt-1 text-xs text-red-500">
-                {errors.bonusPercentage}
-              </p>
-            )}
-          </div>
-
-          {/* 예상 총 포인트 (읽기 전용) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              예상 총 포인트
-            </label>
-            <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600">
-              {Number(formData.expectedTotalPoints).toLocaleString()}P
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              충전 금액 + 보너스로 자동 계산됩니다
+          )}
+          {mode === 'edit' && (
+            <p className="font-nanum-square-round-eb mt-1 text-xs leading-[140%] text-gray-500">
+              보너스 퍼센트는 수정할 수 없습니다
             </p>
-          </div>
+          )}
+          {mode === 'add' && errors.bonusPercentage && (
+            <p className="font-nanum-square-round-eb mt-1 text-xs leading-[140%] text-red-500">
+              {errors.bonusPercentage}
+            </p>
+          )}
+        </div>
 
-          {/* 버튼 */}
-          <div className="flex justify-end gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md bg-gray-300 px-4 py-2 font-['nanumsquare'] font-bold hover:bg-gray-400"
-            >
-              취소
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-black px-4 py-2 font-['nanumsquare'] font-bold text-white hover:bg-gray-800"
-            >
-              {mode === 'edit' ? '수정' : '추가'}
-            </button>
+        {/* 예상 총 포인트 (읽기 전용) */}
+        <div>
+          <label className="font-nanum-square-round-eb mb-1 block text-sm leading-[140%] font-bold text-gray-700">
+            예상 총 포인트
+          </label>
+          <div className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600">
+            {Number(formData.expectedTotalPoints).toLocaleString()}P
           </div>
-        </form>
-      </div>
-    </div>
+          <p className="font-nanum-square-round-eb mt-1 text-xs leading-[140%] text-gray-500">
+            충전 금액 + 보너스로 자동 계산됩니다
+          </p>
+        </div>
+
+        {/* 버튼 */}
+        <div className="flex justify-end gap-2 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-nanum-square-round-eb rounded-[10px] bg-gray-200 px-4 py-2 leading-[140%] font-bold transition-colors hover:bg-gray-300"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            className="font-jalnan rounded-[10px] bg-[#76d4ff] px-4 py-2 leading-[140%] text-white transition-colors hover:bg-[#5bb3e6]"
+          >
+            {mode === 'edit' ? '수정' : '추가'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
