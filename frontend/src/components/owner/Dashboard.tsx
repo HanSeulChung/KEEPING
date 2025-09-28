@@ -5,8 +5,9 @@ import { notificationApi } from '@/api/notificationApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import type { Store } from '@/store/useStoreStore'
 import { useStoreStore } from '@/store/useStoreStore'
+import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
 
@@ -24,31 +25,15 @@ interface StoreOverallStatisticsResponseDto {
   totalCustomers: number
 }
 
-interface DailyStatisticsResponseDto {
-  date: string
-  sales: number
-  orders: number
-  customers: number
-}
-
-interface PeriodStatisticsResponseDto {
-  startDate: string
-  endDate: string
-  totalSales: number
-  totalOrders: number
-  averageOrderValue: number
-  dailyStatistics: DailyStatisticsResponseDto[]
-}
-
 export default function OwnerHome() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { user } = useAuthStore()
   const { stores, selectedStore, setSelectedStore, fetchStores, loading } =
     useStoreStore()
   const [unreadCount, setUnreadCount] = useState<number>(0)
   const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] =
     useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   // 통계 데이터 상태
   const [overallStats, setOverallStats] =
@@ -160,263 +145,219 @@ export default function OwnerHome() {
   // 가게 선택 시 전역 상태 업데이트
   const handleStoreSelect = (store: Store) => {
     setSelectedStore(store)
+    setIsDropdownOpen(false)
+  }
+
+  // 드롭다운 토글
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen)
   }
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-4xl px-4 py-6">
-        <div className="flex h-64 items-center justify-center">
-          <div className="text-lg">가게 목록을 불러오는 중...</div>
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          <p className="text-gray-600">로딩 중...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   // 가게가 없는 경우 샘플 가게 "SSAFY" 추가
-  const displayStores = stores.length === 0 && !loading ? [
-    {
-      storeId: -1,
-      storeName: "SSAFY",
-      address: "서울시 강남구 테헤란로 212",
-      phoneNumber: "02-1234-5678",
-      merchantId: -1,
-      category: "교육",
-      storeStatus: "ACTIVE" as const,
-      description: "샘플 매장입니다. 실제 매장을 등록해보세요!",
-      createdAt: new Date().toISOString(),
-      imgUrl: "",
-      id: "-1",
-      name: "SSAFY",
-      ownerId: "",
-      phone: "02-1234-5678"
-    }
-  ] : stores
+  const displayStores =
+    stores.length === 0 && !loading
+      ? [
+          {
+            storeId: -1,
+            storeName: 'SSAFY',
+            address: '서울시 강남구 테헤란로 212',
+            phoneNumber: '02-1234-5678',
+            merchantId: -1,
+            category: '교육',
+            storeStatus: 'ACTIVE' as const,
+            description: '샘플 매장입니다. 실제 매장을 등록해보세요!',
+            createdAt: new Date().toISOString(),
+            imgUrl: '',
+            id: '-1',
+            name: 'SSAFY',
+            ownerId: '',
+            phone: '02-1234-5678',
+          },
+        ]
+      : stores
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="mx-auto w-full max-w-[626px] px-4 py-8">
-        <div className="top-8 mb-6 flex justify-center sm:mb-8">
-          <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
-            {displayStores.map((s, index) => (
+    <div className="relative mx-auto min-h-screen w-full overflow-hidden bg-white">
+      {/* 배너 섹션 */}
+      <div className="flex h-[185px] w-full items-center justify-between rounded-b-[10px] bg-[#f2fbff] px-4">
+        <div className="flex flex-col">
+          <div className="font-jalnan text-xl leading-[140%] text-[#569ee9]">
+            단골 만들기의
+          </div>
+          <div className="font-jalnan text-xl leading-[140%] text-[#569ee9]">
+            새로운 방법, 키핑
+          </div>
+        </div>
+        <div className="relative h-[185px] w-[185px]">
+          <Image
+            src="/common/owner.svg"
+            alt="키핑 캐릭터"
+            width={185}
+            height={185}
+            className="object-contain"
+          />
+        </div>
+      </div>
+
+      {/* 드롭다운 섹션 */}
+      <div className="flex items-center px-4 py-4">
+        <div className="relative">
+          <button
+            onClick={toggleDropdown}
+            className="inline-flex items-center justify-end rounded-full border-[3px] border-[#76d3ff] bg-white py-1 pr-4 pl-[35px] hover:bg-gray-50"
+          >
+            <div className="font-jalnan text-[15px] leading-[140%] text-[#76d2fe]">
+              {selectedStore?.storeName || '눈농이네'}
+            </div>
+            <svg
+              width={30}
+              height={30}
+              viewBox="0 0 30 30"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            >
+              <path d="M15 18.75L8.75 12.5H21.25L15 18.75Z" fill="#77D3FF" />
+            </svg>
+          </button>
+
+          {/* 드롭다운 메뉴 */}
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 z-10 mt-2 w-full min-w-[200px] rounded-lg border border-gray-200 bg-white shadow-lg">
+              {/* 가게 추가 버튼 */}
               <button
-                key={s.storeId}
-                onClick={() => handleStoreSelect(s)}
-                className={[
-                  'flex h-24 w-24 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-full border border-black text-center transition-colors',
-                  selectedStore?.storeId === s.storeId
-                    ? 'bg-black text-white'
-                    : 'bg-keeping-beige text-black hover:bg-gray-100',
-                ].join(' ')}
+                onClick={() => {
+                  setIsStoreRegisterModalOpen(true)
+                  setIsDropdownOpen(false)
+                }}
+                className="w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50"
               >
-                <div className="px-2 text-[17px] leading-6 font-extrabold whitespace-pre-line">
-                  {s.storeName}
+                <div className="font-jalnan text-[15px] text-[#76d2fe]">
+                  + 가게 추가
                 </div>
               </button>
-            ))}
 
-            {/* 매장 추가 버튼 */}
-            <button
-              onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="bg-keeping-beige flex h-24 w-24 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-black transition-colors hover:bg-gray-100"
-            >
-              <svg
-                width={21}
-                height={20}
-                viewBox="0 0 21 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M4.6647 9.99805H16.3314"
-                  stroke="black"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M10.498 4.16504V15.8317"
-                  stroke="black"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
+              {/* 가게 목록 */}
+              {displayStores.map(store => (
+                <button
+                  key={store.storeId}
+                  onClick={() => handleStoreSelect(store)}
+                  className={`w-full px-4 py-3 text-left hover:bg-gray-50 ${
+                    selectedStore?.storeId === store.storeId
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700'
+                  }`}
+                >
+                  <div className="font-jalnan text-[15px]">
+                    {store.storeName}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 메인 카드 그리드 - 언발란스 레이아웃 */}
+      <div className="mx-auto flex max-w-4xl gap-4 px-4 pb-8">
+        {/* 왼쪽 열 */}
+        <div className="flex flex-1 flex-col gap-4">
+          {/* 매출 캘린더 (왼쪽 위) */}
+          <Link
+            href={`/owner/calendar?storeId=${selectedStore?.storeId || -1}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase() || 'ssafy'}`}
+            className="relative flex h-[249px] w-full flex-col justify-start rounded-[20px] bg-white p-4 shadow-lg transition-shadow hover:shadow-xl"
+          >
+            <div className="font-jalnan text-xl leading-[140%] text-black">
+              매출 캘린더
+            </div>
+            <div className="absolute right-4 bottom-4 h-[120px] w-[120px]">
+              <Image
+                src="/dashboard/calendar.svg"
+                alt="매출 캘린더"
+                width={120}
+                height={120}
+                className="object-contain"
+              />
+            </div>
+          </Link>
+
+          {/* QR 인식 (왼쪽 아래) */}
+          <Link
+            href={`/owner/scan?storeId=${selectedStore?.storeId || -1}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase() || 'ssafy'}`}
+            className="relative flex h-[233px] w-full flex-col justify-start rounded-[20px] bg-white p-4 shadow-lg transition-shadow hover:shadow-xl"
+          >
+            <div className="font-jalnan text-xl leading-[140%] text-black">
+              QR 인식
+            </div>
+            <div className="absolute right-4 bottom-4 h-[120px] w-[120px]">
+              <Image
+                src="/dashboard/qr.svg"
+                alt="QR 인식"
+                width={120}
+                height={120}
+                className="object-contain"
+              />
+            </div>
+          </Link>
         </div>
 
-        {/* 메인 컨텐츠 */}
-        <div className="flex w-full flex-col items-center justify-between">
-          <div className="h-[551px] self-stretch">
-            {/* 페이지 타이틀 */}
-            <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
-              {selectedStore?.storeName?.replace('\\n', ' ') ||
-                '매장을 선택해주세요'}
+        {/* 오른쪽 열 */}
+        <div className="flex flex-1 flex-col gap-4">
+          {/* 매장 관리 (오른쪽 위) */}
+          <Link
+            href={`/owner/manage?storeId=${selectedStore?.storeId || -1}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase() || 'ssafy'}`}
+            className="relative flex h-[301px] w-full flex-col justify-start rounded-[20px] bg-white p-4 shadow-lg transition-shadow hover:shadow-xl"
+          >
+            <div className="font-jalnan text-xl leading-[140%] text-black">
+              매장 관리
             </div>
+            <div className="absolute right-4 bottom-4 h-[80px] w-[80px]">
+              <Image
+                src="/dashboard/management.svg"
+                alt="매장 관리"
+                width={80}
+                height={80}
+                className="object-contain"
+              />
+            </div>
+          </Link>
 
-            {/* 선택된 매장이 있으면 카드 그리드 표시 */}
-            {selectedStore ? (
-              /* 두 열 레이아웃 */
-              <div className="grid w-full max-w-[620px] grid-cols-2 gap-6">
-                {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
-                <div className="flex h-full flex-col gap-6">
-                  {/* 매출 캘린더 */}
-                  <Link
-                    href={`/owner/calendar?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="bg-keeping-beige flex flex-1 cursor-pointer flex-col items-start border border-black p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                      매출
-                      <br />
-                      캘린더 &gt;
-                    </div>
-                    <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                      {statsLoading ? (
-                        '통계 로딩 중...'
-                      ) : (
-                        <>
-                          <div className="mb-4">
-                            <div className="mb-1 text-sm text-gray-600">
-                              전체 선결제 금액
-                            </div>
-                            <div className="text-xl font-bold">
-                              {(overallStats?.totalSales || 0).toLocaleString()}
-                              원
-                            </div>
-                            {/* 진행률 바 */}
-                            <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-                              <div
-                                className="h-2 rounded-full bg-blue-600 transition-all duration-300"
-                                style={{
-                                  width: `${Math.min(100, ((overallStats?.totalSales || 0) / 10000000) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </Link>
-
-                  {/* QR 인식하기 */}
-                  <Link
-                    href={`/owner/scan?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                      QR 인식하기
-                    </div>
-                  </Link>
-                </div>
-
-                {/* 2열: 나머지 3개 (세로 스택) */}
-                <div className="flex h-full flex-col gap-6">
-                  {/* 매장 관리 */}
-                  <Link
-                    href={`/owner/manage?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="relative flex min-w-0 flex-1 cursor-pointer flex-col items-start overflow-hidden border border-black bg-white p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="flex h-[68px] w-full flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                      매장 관리
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col justify-center text-[17px] leading-7 break-words whitespace-normal text-black">
-                      {statsLoading ? (
-                        '통계 로딩 중...'
-                      ) : (
-                        <>
-                          <div className="mb-2">
-                            <div className="text-sm text-gray-600">
-                              총 주문수
-                            </div>
-                            <div className="text-lg font-bold">
-                              {(
-                                overallStats?.totalOrders || 0
-                              ).toLocaleString()}
-                              건
-                            </div>
-                          </div>
-
-                          <div className="mb-2">
-                            <div className="text-sm text-gray-600">
-                              평균 주문금액
-                            </div>
-                            <div className="text-lg font-bold">
-                              {(
-                                overallStats?.averageOrderValue || 0
-                              ).toLocaleString()}
-                              원
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-600">
-                              총 고객수
-                            </div>
-                            <div className="text-lg font-bold">
-                              {(
-                                overallStats?.totalCustomers || 0
-                              ).toLocaleString()}
-                              명
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </Link>
-
-                  {/* 알림 */}
-                  <Link
-                    href={`/owner/notification?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="relative flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="flex w-full items-start justify-between">
-                      <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                        알림
-                      </div>
-                      <svg
-                        width={18}
-                        height={19}
-                        viewBox="0 0 18 19"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M7.55664 16.8867C7.70293 17.1401 7.91332 17.3504 8.16668 17.4967C8.42003 17.643 8.70743 17.72 8.99997 17.72C9.29252 17.72 9.57991 17.643 9.83327 17.4967C10.0866 17.3504 10.297 17.1401 10.4433 16.8867"
-                          stroke="black"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M1.71821 12.1587C1.60935 12.278 1.53751 12.4264 1.51143 12.5858C1.48534 12.7452 1.50615 12.9088 1.5713 13.0565C1.63646 13.2043 1.74316 13.33 1.87843 13.4183C2.01369 13.5065 2.1717 13.5536 2.33321 13.5537H15.6665C15.828 13.5538 15.9861 13.5069 16.1214 13.4188C16.2568 13.3307 16.3636 13.2052 16.429 13.0575C16.4943 12.9098 16.5153 12.7463 16.4894 12.5869C16.4635 12.4275 16.3919 12.279 16.2832 12.1595C15.1749 11.017 13.9999 9.80288 13.9999 6.05371C13.9999 4.72763 13.4731 3.45586 12.5354 2.51818C11.5977 1.5805 10.326 1.05371 8.99988 1.05371C7.6738 1.05371 6.40203 1.5805 5.46435 2.51818C4.52666 3.45586 3.99988 4.72763 3.99988 6.05371C3.99988 9.80288 2.82405 11.017 1.71821 12.1587Z"
-                          stroke="black"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                    <div className="mt-2 flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                      읽지 않은 알림
-                      <br />
-                      {unreadCount}건
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              /* 매장이 선택되지 않았을 때 표시할 메시지 */
-              <div className="flex h-64 w-full items-center justify-center">
-                <div className="text-center">
-                  <div className="text-lg text-gray-600">
-                    매장을 선택해주세요
-                  </div>
-                </div>
+          {/* 알림 (오른쪽 아래) */}
+          <Link
+            href={`/owner/notification?storeId=${selectedStore?.storeId || -1}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase() || 'ssafy'}`}
+            className="relative flex h-[185px] w-full flex-col justify-start rounded-[20px] bg-white p-4 shadow-lg transition-shadow hover:shadow-xl"
+          >
+            <div className="font-jalnan text-xl leading-[140%] text-black">
+              알림
+            </div>
+            <div className="absolute right-4 bottom-4 h-[80px] w-[80px]">
+              <Image
+                src="/dashboard/notification.svg"
+                alt="알림"
+                width={80}
+                height={80}
+                className="object-contain"
+              />
+            </div>
+            {unreadCount > 0 && (
+              <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                {unreadCount}
               </div>
             )}
-          </div>
+          </Link>
         </div>
-      </main>
+      </div>
 
       {/* 매장 등록 모달 */}
       <StoreRegisterModal

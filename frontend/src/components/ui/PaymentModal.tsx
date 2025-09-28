@@ -305,11 +305,11 @@ export const PaymentModal = ({
               <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] font-bold text-black">
                 {selectedCard.cardNo.replace(
                   /(\d{4})(\d{4})(\d{4})(\d{4})/,
-                  '$1 - $2 - $3 - $4'
+                  '**** - **** - **** - $4'
                 )}
               </div>
               <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] font-bold text-black">
-                {selectedCard.cvc}
+                ***
               </div>
             </div>
           ) : (
