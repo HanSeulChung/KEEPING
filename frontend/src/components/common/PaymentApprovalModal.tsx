@@ -14,7 +14,11 @@ interface PaymentApprovalModalProps {
   customerName?: string
   amount?: string | number
   storeName?: string
-  pointInfo?: string | { [key: string]: unknown }
+  items?: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
   paymentType?: 'PAYMENT' | 'CANCEL'
 }
 
@@ -32,9 +36,6 @@ interface PaymentDetails {
     totalPrice?: number
     lineTotal?: number
   }>
-  pointInfo?: {
-    [key: string]: unknown
-  }
 }
 
 const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
@@ -45,7 +46,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   customerName,
   amount,
   storeName,
-  pointInfo,
+  items = [],
   paymentType = 'PAYMENT',
 }) => {
   const { updatePaymentStatus, clearPaymentIntent, currentPayment } =
@@ -88,7 +89,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     const isSamePayment =
       lastPaymentData.intentId === actualIntentId && lastPaymentData.pin === pin
     const isRecentPayment =
-      Date.now() - lastPaymentData.timestamp < 5 * 60 * 1000 // 5분 이내
+      Date.now() - lastPaymentData.timestamp < 5 * 60 * 1000
     return isSamePayment && isRecentPayment
   }
 
@@ -199,7 +200,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         setIsProcessing(false)
         setIsRetrying(false) // 재시도 플래그 초기화
         setRequestInProgress(false) // 요청 완료 시 플래그 초기화
-        setError('✅ 결제가 성공적으로 승인되었습니다!')
+        setError('결제가 성공적으로 승인되었습니다!')
 
         // 결제 상태를 APPROVED로 업데이트
         updatePaymentStatus('APPROVED')
@@ -330,7 +331,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
               storeName: storeName || '매장',
               totalAmount: paymentData.amount || 0,
               items: paymentData.items || [],
-              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
             })
           } else {
             console.warn('❌ 결제 정보를 불러올 수 없음, 폴백 데이터 사용')
@@ -371,22 +371,29 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
           customerName: finalCustomerName,
           storeName: finalStoreName,
           totalAmount: finalAmount,
-          items: storedPayment?.storeInfo?.items || [],
-          pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+          items: (storedPayment?.storeInfo?.items || items || []).map(item => ({
+            menuId: (item as any).menuId,
+            menuName: (item as any).menuName || (item as any).name,
+            name: (item as any).name || (item as any).menuName,
+            unitPrice: (item as any).unitPrice || (item as any).price || 0,
+            quantity: item.quantity,
+            totalPrice:
+              (item as any).totalPrice ||
+              (item as any).lineTotal ||
+              ((item as any).unitPrice || (item as any).price || 0) *
+                item.quantity,
+            lineTotal:
+              (item as any).lineTotal ||
+              (item as any).totalPrice ||
+              ((item as any).unitPrice || (item as any).price || 0) *
+                item.quantity,
+          })),
         })
       }
 
       loadPaymentDetails()
     }
-  }, [
-    isOpen,
-    intentId,
-    customerName,
-    storeName,
-    amount,
-    pointInfo,
-    currentPayment,
-  ])
+  }, [isOpen, intentId, customerName, storeName, amount, currentPayment])
 
   // 모달이 열릴 때마다 상태 초기화
   useEffect(() => {
@@ -530,7 +537,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                       </div>
                     </div>
                   )}
-
 
                 {/* PIN 입력 */}
                 <div className="mb-6">

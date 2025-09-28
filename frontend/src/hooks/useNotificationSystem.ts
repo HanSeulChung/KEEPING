@@ -13,13 +13,13 @@ import { apiConfig, buildURL } from '@/api/config'
 // } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 // FCM 기능 활성화
+import { usePaymentState } from '@/hooks/usePaymentState'
 import {
   getFcmToken,
   registerServiceWorker,
   requestNotificationPermission,
   setupForegroundMessageListener,
 } from '@/lib/firebaseConfig'
-import { usePaymentState } from '@/hooks/usePaymentState'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   NotificationCategory,
@@ -73,9 +73,13 @@ interface UseNotificationSystemReturn {
   showPaymentApprovalModal: (data: {
     intentPublicId?: string
     customerName?: string
-    pointInfo?: string
-    amount?: number
+    amount: number
     storeName?: string
+    items: Array<{
+      name: string
+      quantity: number
+      price: number
+    }>
   }) => void
   hidePaymentApprovalModal: () => void
   notifyOwnerPaymentResult: (result: {
@@ -255,15 +259,19 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       timestamp: backendData.createdAt as string,
       isRead: backendData.isRead as boolean,
       data: {
-        receiverType: backendData.receiverType,
-        receiverId: backendData.receiverId,
-        receiverName: backendData.receiverName,
         // 결제 의도 식별자(public_id)
         intentId:
           backendData.publicId ||
           backendData.intentId ||
           backendData.paymentIntentId ||
           null,
+        intentPublicId:
+          backendData.publicId || backendData.intentPublicId || null,
+        customerName: backendData.customerName,
+        amount: backendData.amount,
+        storeName: backendData.storeName,
+        storeId: backendData.storeId,
+        items: backendData.items || [],
       },
     }
   }
@@ -671,18 +679,26 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           const notification: NotificationData = convertNotificationData(data)
 
           // 고객이고 결제 요청 알림인 경우 intentPublicId 저장
-          if (getUserRole() === 'CUSTOMER' && notification.type === 'PAYMENT_REQUEST') {
-            const intentPublicId = data.publicId || data.intentPublicId || data.intentId
+          if (
+            getUserRole() === 'CUSTOMER' &&
+            notification.type === 'PAYMENT_REQUEST'
+          ) {
+            const intentPublicId =
+              data.publicId || data.intentPublicId || data.intentId
 
             if (intentPublicId) {
               // 결제 상태 관리 훅에 저장
               setPaymentIntent(
                 intentPublicId,
                 {
-                  storeName: data.storeName || notification.data?.storeName || '매장',
+                  storeName:
+                    data.storeName || notification.data?.storeName || '매장',
                   amount: data.amount || notification.data?.amount || 0,
-                  customerName: data.customerName || notification.data?.customerName || '고객',
-                  items: data.items || [] // 주문 상세 정보가 있다면
+                  customerName:
+                    data.customerName ||
+                    notification.data?.customerName ||
+                    '고객',
+                  items: data.items || [], // 주문 상세 정보가 있다면
                 },
                 data.intentId // 실제 intentId가 별도로 있다면
               )
@@ -690,7 +706,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
               console.log('💳 결제 의도 저장됨:', {
                 intentPublicId,
                 storeName: data.storeName,
-                amount: data.amount
+                amount: data.amount,
               })
             }
           }
@@ -703,7 +719,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           setUnreadCount(prev => prev + 1)
 
           // 결제 요청은 항상 모달로 표시 (백그라운드에서도)
-          if (notification.type === 'PAYMENT_REQUEST' && getUserRole() === 'CUSTOMER') {
+          if (
+            notification.type === 'PAYMENT_REQUEST' &&
+            getUserRole() === 'CUSTOMER'
+          ) {
             console.log('🚨 결제 요청 모달 강제 표시')
             showInPageModal(notification)
           } else if (isVisibleRef.current) {
@@ -1162,9 +1181,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           if (notification.data?.storeName) {
             params.set('storeName', notification.data.storeName)
           }
-          if (notification.data?.pointInfo) {
-            params.set('pointInfo', JSON.stringify(notification.data.pointInfo))
-          }
+          // pointInfo 제거됨
 
           const url = `${basePath}?${params.toString()}`
           console.log('💰 결제 승인 모달 URL로 이동:', url)
@@ -1191,9 +1208,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           intentPublicId:
             notification.data?.intentPublicId || notification.data?.intentId,
           customerName: notification.data?.customerName || '고객',
-          pointInfo: notification.data?.pointInfo || '포인트 정보 없음',
           amount: notification.data?.amount || 0,
           storeName: notification.data?.storeName || '매장',
+          items: notification.data?.items || [],
         }
 
         // 결제 승인 모달만 열기 (토스트 없음)
@@ -1203,11 +1220,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         addToast(notification)
       }
     },
-    [
-      getUserRole,
-      addToast,
-      showPaymentApprovalModal,
-    ]
+    [getUserRole, addToast, showPaymentApprovalModal]
   )
 
   const addNotification = useCallback(

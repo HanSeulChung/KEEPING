@@ -22,7 +22,8 @@ export default function ConditionalLayout({
   const { isOpen } = useSidebarStore()
 
   // 알림 시스템 훅 (전역 결제 승인 모달용)
-  const { paymentApprovalModal, hidePaymentApprovalModal } = useNotificationSystem()
+  const { paymentApprovalModal, hidePaymentApprovalModal } =
+    useNotificationSystem()
 
   // 네비게이션을 숨겨야 하는 페이지들 (로그인 전 페이지들)
   const hideNavigationPages = ['/', '/owner/login', '/customer/login']
@@ -60,7 +61,6 @@ export default function ConditionalLayout({
           storeName={paymentApprovalModal.data.storeName}
           amount={paymentApprovalModal.data.amount}
           customerName={paymentApprovalModal.data.customerName}
-          pointInfo={paymentApprovalModal.data.pointInfo}
         />
       )}
 

@@ -22,6 +22,9 @@ const NotificationPage = () => {
     markAllAsRead,
     unreadCount,
     isConnected,
+    showPaymentApprovalModal,
+    paymentApprovalModal,
+    hidePaymentApprovalModal,
   } = useNotificationSystem()
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
@@ -35,7 +38,6 @@ const NotificationPage = () => {
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize] = useState(3) // 한 페이지당 3개 알림
   const [showPermissionModal, setShowPermissionModal] = useState(false)
-
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -162,13 +164,17 @@ const NotificationPage = () => {
     }
 
     // PAYMENT_REQUEST 타입이고 10분 이내인 경우 결제 모달 열기
-    if (notification.type === 'PAYMENT_REQUEST' && isPaymentValid(notification.timestamp)) {
+    if (
+      notification.type === 'PAYMENT_REQUEST' &&
+      isPaymentValid(notification.timestamp)
+    ) {
       showPaymentApprovalModal({
-        intentPublicId: notification.data?.intentId || notification.data?.intentPublicId,
+        intentPublicId:
+          notification.data?.intentId || notification.data?.intentPublicId,
         customerName: notification.data?.customerName || '고객',
         amount: notification.data?.amount || 0,
         storeName: notification.data?.storeName || '매장',
-        pointInfo: notification.data?.pointInfo,
+        items: notification.data?.items || [],
       })
     }
   }
@@ -319,43 +325,47 @@ const NotificationPage = () => {
             <>
               <div className="space-y-3">
                 {currentNotifications.map(notification => {
-                  const isPaymentExpired = notification.type === 'PAYMENT_REQUEST' && !isPaymentValid(notification.timestamp)
+                  const isPaymentExpired =
+                    notification.type === 'PAYMENT_REQUEST' &&
+                    !isPaymentValid(notification.timestamp)
 
                   return (
-                  <div
-                    key={notification.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-[15px] border p-4 transition-colors ${
-                      notification.isRead
-                        ? 'border-gray-200 bg-white'
-                        : 'border-[#76d4ff] bg-blue-50'
-                    } ${isPaymentExpired ? 'opacity-50' : ''}`}
-                    onClick={() => handleNotificationClick(notification)}
-                  >
-                    <div className="mt-1">
-                      {getNotificationIconComponent(notification.type)}
+                    <div
+                      key={notification.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-[15px] border p-4 transition-colors ${
+                        notification.isRead
+                          ? 'border-gray-200 bg-white'
+                          : 'border-[#76d4ff] bg-blue-50'
+                      } ${isPaymentExpired ? 'opacity-50' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="mt-1">
+                        {getNotificationIconComponent(notification.type)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className={`font-nanum-square-round-eb text-sm font-bold ${
+                            notification.isRead ? 'text-gray-700' : 'text-black'
+                          }`}
+                        >
+                          {notification.title}
+                        </div>
+                        <div className="font-nanum-square-round-eb mt-1 text-xs break-words text-gray-600">
+                          {notification.message}
+                          {isPaymentExpired && (
+                            <span className="ml-2 font-bold text-red-500">
+                              (만료됨)
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-nanum-square-round-eb mt-2 text-xs text-gray-400">
+                          {formatTime(notification.timestamp)}
+                        </div>
+                      </div>
+                      {!notification.isRead && (
+                        <div className="h-3 w-3 flex-shrink-0 rounded-full bg-[#76d4ff]"></div>
+                      )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className={`font-nanum-square-round-eb text-sm font-bold ${
-                          notification.isRead ? 'text-gray-700' : 'text-black'
-                        }`}
-                      >
-                        {notification.title}
-                      </div>
-                      <div className="font-nanum-square-round-eb mt-1 text-xs break-words text-gray-600">
-                        {notification.message}
-                        {isPaymentExpired && (
-                          <span className="ml-2 text-red-500 font-bold">(만료됨)</span>
-                        )}
-                      </div>
-                      <div className="font-nanum-square-round-eb mt-2 text-xs text-gray-400">
-                        {formatTime(notification.timestamp)}
-                      </div>
-                    </div>
-                    {!notification.isRead && (
-                      <div className="h-3 w-3 flex-shrink-0 rounded-full bg-[#76d4ff]"></div>
-                    )}
-                  </div>
                   )
                 })}
               </div>
@@ -512,23 +522,6 @@ const NotificationPage = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* 결제 승인 모달 */}
-      {paymentApprovalModal.isOpen && (
-        <PaymentApprovalModal
-          isOpen={paymentApprovalModal.isOpen}
-          onClose={hidePaymentApprovalModal}
-          onSuccess={() => {
-            hidePaymentApprovalModal()
-            // 알림 목록 새로고침하거나 성공 처리
-          }}
-          intentId={paymentApprovalModal.data?.intentPublicId}
-          customerName={paymentApprovalModal.data?.customerName}
-          amount={paymentApprovalModal.data?.amount}
-          storeName={paymentApprovalModal.data?.storeName}
-          pointInfo={paymentApprovalModal.data?.pointInfo}
-        />
       )}
     </div>
   )

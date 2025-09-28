@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
 
@@ -15,31 +14,7 @@ const CustomerNotificationPage = () => {
     markAsRead,
     markAllAsRead,
     unreadCount: _unreadCount,
-    paymentApprovalModal,
-    hidePaymentApprovalModal,
   } = useNotificationSystem()
-
-  // URL 파라미터에서 모달 정보 확인
-  const modal = searchParams.get('modal')
-  const intentId = searchParams.get('intentId')
-  const customerName = searchParams.get('customerName')
-  const amount = searchParams.get('amount')
-  const storeName = searchParams.get('storeName')
-  const pointInfoStr = searchParams.get('pointInfo')
-
-  // 결제 승인 모달 데이터 구성
-  const paymentModalData =
-    modal === 'payment-request'
-      ? {
-          intentPublicId: intentId || undefined,
-          customerName: customerName || undefined,
-          amount: amount ? parseInt(amount) : undefined,
-          storeName: storeName || undefined,
-          pointInfo: pointInfoStr ? JSON.parse(pointInfoStr) : undefined,
-        }
-      : null
-
-  // SSE에서 자동으로 결제 승인 모달이 처리되므로 이 함수는 더 이상 필요하지 않음
 
   // 알림 클릭 처리 (읽음 처리만)
   const handleNotificationClick = (notification: {
@@ -369,7 +344,6 @@ const CustomerNotificationPage = () => {
           </>
         )}
       </div>
-
     </div>
   )
 }

@@ -40,6 +40,24 @@ export type NotificationType =
 // 알림 카테고리 정의
 export type NotificationCategory = 'payment' | 'group' | 'point' | 'order'
 
+// 주문 아이템 타입
+export interface OrderItem {
+  name: string
+  quantity: number
+  price: number
+}
+
+// 알림 데이터 상세 정보 타입
+export interface NotificationPayload {
+  intentId?: string
+  intentPublicId?: string
+  customerName?: string
+  amount?: number
+  storeName?: string
+  storeId?: number
+  items?: OrderItem[]
+}
+
 export interface NotificationData {
   id: number
   type: NotificationType
@@ -47,7 +65,7 @@ export interface NotificationData {
   message: string
   timestamp: string
   isRead: boolean
-  data?: any
+  data?: NotificationPayload
 }
 
 // 알림 타입별 카테고리 매핑
