@@ -63,7 +63,7 @@ export const generateCustomerFCMToken = async (
     const response = await apiClient.post<{
       success: boolean
       data: { token: string }
-    }>(`/api/fcm/customer/${customerId}/generate`)
+    }>(`/api/fcm/customer/${customerId}/token`)
 
     console.log('고객 FCM 토큰 발급 성공:', response.data.data.token.substring(0, 20) + '...')
     return response.data.data
@@ -83,7 +83,7 @@ export const generateOwnerFCMToken = async (
     const response = await apiClient.post<{
       success: boolean
       data: { token: string }
-    }>(`/api/fcm/owner/${ownerId}/generate`)
+    }>(`/api/fcm/owner/${ownerId}/token`)
 
     console.log('점주 FCM 토큰 발급 성공:', response.data.data.token.substring(0, 20) + '...')
     return response.data.data

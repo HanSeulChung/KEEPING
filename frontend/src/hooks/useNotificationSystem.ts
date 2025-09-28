@@ -816,11 +816,16 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       } catch (tokenError: any) {
         console.error('[FCM] 백엔드 토큰 발급 실패:', tokenError)
 
-        // 409 에러는 이미 등록된 상태이므로 성공으로 처리
+        // 500 에러는 백엔드 API 미구현 - 개발 중이므로 무시
+        if (tokenError?.response?.status === 500) {
+          console.warn('[FCM] 백엔드 API 미구현 - 개발 중이므로 건너뜀')
+          return false
+        }
+
+        // 409 에러인 경우에도 실제 토큰이 있어야 성공 처리
         if (tokenError?.response?.status === 409) {
-          console.log('[FCM] 이미 등록된 사용자 - 정상 처리')
-          localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-          return true
+          console.log('[FCM] 이미 등록된 사용자 - 하지만 토큰이 없어서 실패')
+          return false
         }
         return false
       }
@@ -1113,8 +1118,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
         // FCM도 항상 등록 (백그라운드 알림용)
         try {
-          await registerFCM()
-          console.log('[NOTIFICATION] FCM 등록 성공 (백그라운드용)')
+          const fcmSuccess = await registerFCM()
+          if (fcmSuccess) {
+            console.log('[NOTIFICATION] FCM 등록 성공 (백그라운드용)')
+          } else {
+            console.warn('[NOTIFICATION] FCM 등록 실패 - 토큰 발급 불가')
+          }
         } catch (error) {
           console.warn('[NOTIFICATION] FCM 등록 실패:', error)
         }
