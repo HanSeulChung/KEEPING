@@ -912,10 +912,38 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }, [])
 
+  // 토스트 알림 표시 함수
+  const showToastNotification = useCallback(
+    (notification: NotificationData) => {
+      // window.showToast가 정의되어 있는지 확인
+      if (typeof window !== 'undefined' && (window as any).showToast) {
+        (window as any).showToast({
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          duration: notification.type === 'PAYMENT_REQUEST' ? 8000 : 5000,
+          onClick: () => {
+            // 토스트 클릭 시 알림 읽음 처리 및 알림 페이지로 이동
+            markAsRead(notification.id)
+            const userRole = getUserRole()
+            const target = userRole === 'OWNER' ? '/owner/notification' : '/customer/notification'
+            if (typeof window !== 'undefined') {
+              window.location.href = target
+            }
+          }
+        })
+      }
+    },
+    [markAsRead, getUserRole]
+  )
+
   // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
   const showInPageModal = useCallback(
     (notification: NotificationData) => {
       const userRole = getUserRole()
+
+      // 먼저 토스트 알림 표시
+      showToastNotification(notification)
 
       // 알림 타입에 따른 기본 설정
       const getModalConfig = (type: NotificationType) => {
@@ -971,31 +999,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         // 결제 승인 모달 열기
         showPaymentApprovalModal(paymentData)
       } else {
-        // 일반 알림 모달
-        showModalNotification({
-          type: notification.type,
-          title: modalConfig.title,
-          message: notification.message,
-          showConfirmButton: true,
-          showCancelButton: !!modalConfig.cancelText,
-          confirmText: modalConfig.confirmText,
-          cancelText: modalConfig.cancelText,
-          autoCloseTime: modalConfig.autoCloseTime,
-          onConfirm: () => {
-            markAsRead(notification.id)
-            hideModalNotification()
-          },
-          onCancel: modalConfig.cancelText
-            ? () => {
-                markAsRead(notification.id)
-                hideModalNotification()
-              }
-            : undefined,
-        })
+        // 일반 알림은 토스트만 표시 (모달 제거)
+        // 중요한 알림만 모달로 표시하고 싶다면 여기서 조건을 추가
       }
     },
     [
       getUserRole,
+      showToastNotification,
       showModalNotification,
       markAsRead,
       hideModalNotification,

@@ -25,24 +25,12 @@ const CustomerNotificationPage = () => {
     markAsRead(notification.id)
   }
 
-  // 테스트용 결제 요청 알림 생성 함수
-  const createTestPaymentNotification = () => {
-    const testData = {
-      intentPublicId: 'test-intent-' + Date.now(),
-      customerName: '고객님',
-      amount: 15000,
-      storeName: '정동수부동산',
-      pointInfo: '포인트 정보',
-    }
-
-    // useNotificationSystem의 showPaymentApprovalModal 직접 호출
-    const { showPaymentApprovalModal } = useNotificationSystem()
-    showPaymentApprovalModal(testData)
-  }
 
   const [loading, setLoading] = useState(true)
   const [filteredNotifications, setFilteredNotifications] =
     useState(notifications)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize] = useState(10) // 한 페이지당 10개 알림
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -62,6 +50,8 @@ const CustomerNotificationPage = () => {
     } else {
       setFilteredNotifications(notifications)
     }
+    // 필터링 후 현재 페이지 초기화
+    setCurrentPage(0)
     setLoading(false)
   }, [notifications, storeId, accountName])
 
@@ -117,6 +107,20 @@ const CustomerNotificationPage = () => {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredNotifications.length / pageSize)
+  const startIndex = currentPage * pageSize
+  const endIndex = startIndex + pageSize
+  const currentNotifications = filteredNotifications.slice(startIndex, endIndex)
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(0, prev - 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
   }
 
   if (loading) {
@@ -187,19 +191,19 @@ const CustomerNotificationPage = () => {
         {/* 알림 헤더 */}
         <div className="border-b border-gray-100 py-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-nanum-square-round-eb text-base font-bold text-black">
-              전체 알림{' '}
-              {filteredNotifications.length > 0 &&
-                `(${filteredNotifications.length})`}
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className="font-nanum-square-round-eb text-base font-bold text-black">
+                전체 알림{' '}
+                {filteredNotifications.length > 0 &&
+                  `(${filteredNotifications.length})`}
+              </h2>
+              {filteredNotifications.length > 0 && (
+                <span className="font-nanum-square-round-eb text-sm text-gray-500">
+                  {currentPage + 1}/{totalPages} 페이지
+                </span>
+              )}
+            </div>
             <div className="flex gap-2">
-              {/* 테스트용 결제 요청 버튼 */}
-              <button
-                onClick={createTestPaymentNotification}
-                className="font-nanum-square-round-eb rounded-lg bg-red-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-600"
-              >
-                테스트 결제 요청
-              </button>
               {filteredNotifications.some(n => !n.isRead) && (
                 <button
                   onClick={markAllAsRead}
@@ -236,8 +240,9 @@ const CustomerNotificationPage = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredNotifications.map((notification, index) => (
+          <>
+            <div className="space-y-2">
+              {currentNotifications.map((notification, index) => (
               <div
                 key={notification.id}
                 className={`rounded-lg border border-gray-200 p-4 transition-colors active:bg-gray-50 ${
@@ -277,26 +282,56 @@ const CustomerNotificationPage = () => {
                       )}
                     </div>
                   </div>
-                  {/* 결제 요청 알림일 때 직접 승인 버튼 제공 (푸시 미수신 대비) */}
-                  {notification.type === 'PAYMENT_REQUEST' && (
-                    <div className="ml-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation()
-                          markAsRead(notification.id)
-                          // SSE에서 자동으로 결제 승인 모달이 처리됨
-                        }}
-                        className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                      >
-                        승인하기
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 0}
+                  className={`font-nanum-square-round-eb rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    currentPage === 0
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                      : 'border-blue-200 bg-white text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  이전
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      className={`font-nanum-square-round-eb h-10 w-10 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === i
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-blue-200 bg-white text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages - 1}
+                  className={`font-nanum-square-round-eb rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    currentPage === totalPages - 1
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                      : 'border-blue-200 bg-white text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  다음
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

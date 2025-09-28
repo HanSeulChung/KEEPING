@@ -2,6 +2,7 @@
 
 import Header from '@/components/common/Header'
 import Navigation from '@/components/common/Navigation'
+import ToastContainer from '@/components/common/ToastContainer'
 import SWRegister from '@/providers/SWRegister'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePathname } from 'next/navigation'
@@ -41,10 +42,11 @@ export default function ConditionalLayout({
       >
         {children}
       </main>
-      <SWRegister />
 
-      {/* 개발용 테스트 버튼 */}
-      {/* <NotificationTestButton /> */}
+      {/* 토스트 알림 컨테이너 */}
+      <ToastContainer />
+
+      <SWRegister />
     </PwaProvider>
   )
 }

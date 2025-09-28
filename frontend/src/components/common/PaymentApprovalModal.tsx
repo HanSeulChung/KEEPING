@@ -60,6 +60,8 @@ export default function PaymentApprovalModal({
   const [isFinalized, setIsFinalized] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false) // 중복 요청 방지
   const [processedKeys, setProcessedKeys] = useState<Set<string>>(new Set()) // 처리된 키 추적
+  const [pinAttempts, setPinAttempts] = useState(0) // PIN 시도 횟수
+  const [isBlocked, setIsBlocked] = useState(false) // PIN 입력 차단 상태
 
   // intent 식별 키 생성 (publicId 우선, 없으면 intentId)
   const getIntentKey = () => {
@@ -104,18 +106,40 @@ export default function PaymentApprovalModal({
       } else {
         setIsFinalized(false)
       }
+
+      // PIN 시도 횟수 확인
+      const attempts = localStorage.getItem(`payment:attempts:${key}`)
+      const attemptCount = attempts ? parseInt(attempts) : 0
+      setPinAttempts(attemptCount)
+
+      // 5회 이상 시도시 차단
+      if (attemptCount >= 5) {
+        setIsBlocked(true)
+        setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
+      }
     } catch {}
   }, [isOpen, paymentDetails?.intentId, intentPublicId, intentId])
 
   const handlePinChange = (value: string) => {
+    // 차단된 상태면 입력 불가
+    if (isBlocked) return
+
     // 숫자만 입력 가능, 최대 6자리
     if (/^\d{0,6}$/.test(value)) {
       setPin(value)
-      setError('')
+      if (!isBlocked) {
+        setError('')
+      }
     }
   }
 
   const handleApprove = async () => {
+    // 차단 상태 확인
+    if (isBlocked) {
+      setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
+      return
+    }
+
     // 중복 요청 방지
     if (isFinalized || isProcessing || isLoading) {
       console.log('이미 처리 중이거나 완료된 요청입니다')
@@ -186,6 +210,14 @@ export default function PaymentApprovalModal({
         onClose()
         setPin('')
 
+        // 성공 시 시도 횟수 초기화
+        try {
+          const key = getIntentKey()
+          if (key) {
+            localStorage.removeItem(`payment:attempts:${key}`)
+          }
+        } catch {}
+
         // 성공 알림 표시
         const displayStoreName =
           paymentDetails?.storeName || storeName || '매장'
@@ -199,7 +231,24 @@ export default function PaymentApprovalModal({
           })
         }
       } else {
-        setError('결제 승인에 실패했습니다. PIN 번호를 확인해주세요')
+        // 실패 시 시도 횟수 증가
+        const newAttempts = pinAttempts + 1
+        setPinAttempts(newAttempts)
+
+        try {
+          const key = getIntentKey()
+          if (key) {
+            localStorage.setItem(`payment:attempts:${key}`, newAttempts.toString())
+          }
+        } catch {}
+
+        // 5회 실패시 차단
+        if (newAttempts >= 5) {
+          setIsBlocked(true)
+          setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
+        } else {
+          setError(`결제 승인에 실패했습니다. PIN 번호를 확인해주세요 (${newAttempts}/5)`)
+        }
         setIsProcessing(false)
       }
     } catch (error) {
@@ -214,6 +263,8 @@ export default function PaymentApprovalModal({
   const handleCancel = () => {
     setPin('')
     setError('')
+    setPinAttempts(0)
+    setIsBlocked(false)
     onClose()
   }
 
@@ -418,11 +469,16 @@ export default function PaymentApprovalModal({
             maxLength={6}
             inputMode="numeric"
             pattern="[0-9]*"
-            disabled={isLoading || isFinalized}
+            disabled={isLoading || isFinalized || isBlocked}
           />
-          {!isFinalized ? (
+          {!isFinalized && !isBlocked ? (
             <p className="mt-1 text-xs text-gray-500">
               결제 승인을 위해 6자리 PIN 번호를 입력해주세요
+              {pinAttempts > 0 && ` (${pinAttempts}/5)`}
+            </p>
+          ) : isBlocked ? (
+            <p className="mt-1 text-xs font-medium text-red-600">
+              PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.
             </p>
           ) : (
             <p className="mt-1 text-xs font-medium text-green-600">
@@ -450,15 +506,17 @@ export default function PaymentApprovalModal({
           <button
             onClick={handleApprove}
             disabled={
-              isLoading || isProcessing || pin.length !== 6 || isFinalized
+              isLoading || isProcessing || pin.length !== 6 || isFinalized || isBlocked
             }
             className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             {isFinalized
               ? '이미 승인됨'
-              : isLoading || isProcessing
-                ? '승인 중...'
-                : '승인하기'}
+              : isBlocked
+                ? '입력 차단됨'
+                : isLoading || isProcessing
+                  ? '승인 중...'
+                  : '승인하기'}
           </button>
         </div>
 
