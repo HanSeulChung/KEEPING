@@ -208,8 +208,11 @@ const StoreManage = () => {
               />
             </div>
             <button
-              onClick={() => setShowImageModal(true)}
-              className="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#76d4ff] text-white"
+              onClick={() => {
+                console.log('이미지 업로드 모달 열기')
+                setShowImageModal(true)
+              }}
+              className="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#76d4ff] text-white transition-colors hover:bg-[#5bb3e6]"
             >
               <svg
                 width={12}
