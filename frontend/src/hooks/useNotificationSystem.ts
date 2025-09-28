@@ -25,18 +25,35 @@ import {
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+interface ModalNotificationState {
+  isOpen: boolean
+  type?: NotificationType
+  title?: string
+  message?: string
+  showConfirmButton?: boolean
+  showCancelButton?: boolean
+  confirmText?: string
+  cancelText?: string
+  onConfirm?: () => void
+  onCancel?: () => void
+  autoCloseTime?: number
+}
+
 interface UseNotificationSystemReturn {
   notifications: NotificationData[]
   unreadCount: number
   isConnected: boolean
   isPermissionGranted: boolean
   fcmToken: string | null
+  modalNotification: ModalNotificationState
   requestPermission: () => Promise<boolean>
   markAsRead: (id: number) => void
   markAllAsRead: () => void
   addNotification: (
     notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
   ) => void
+  showModalNotification: (notification: Omit<ModalNotificationState, 'isOpen'>) => void
+  hideModalNotification: () => void
   registerFCM: () => Promise<boolean>
   unregisterFCM: () => Promise<void>
   getNotificationCategory: (type: NotificationType) => NotificationCategory
@@ -49,6 +66,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [isPermissionGranted, setIsPermissionGranted] = useState(false)
+  const [modalNotification, setModalNotification] = useState<ModalNotificationState>({
+    isOpen: false,
+  })
   const [isOnline, setIsOnline] = useState(true)
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -514,13 +534,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           // 새 알림이 오면 읽지 않은 개수 증가
           setUnreadCount(prev => prev + 1)
 
-          // 백그라운드에서는 브라우저 알림 표시하지 않음 (FCM이 처리)
-          if (
-            isVisibleRef.current &&
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            showBrowserNotification(notification)
+          // 포그라운드에서는 모든 알림을 모달로 표시
+          if (isVisibleRef.current) {
+            // 모든 알림을 모달로 표시
+            showInPageModal(notification)
           }
         } catch (error) {
           console.warn('[SSE] message parsing error', error)
@@ -927,6 +944,77 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     )
   }, [getUserNumericId, getUserRole, notifications])
 
+  // 모달 알림 관련 함수들
+  const showModalNotification = useCallback((notification: Omit<ModalNotificationState, 'isOpen'>) => {
+    setModalNotification({
+      ...notification,
+      isOpen: true,
+    })
+  }, [])
+
+  const hideModalNotification = useCallback(() => {
+    setModalNotification({
+      isOpen: false,
+    })
+  }, [])
+
+  // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
+  const showInPageModal = useCallback((notification: NotificationData) => {
+    const userRole = getUserRole()
+
+    // 알림 타입에 따른 기본 설정
+    const getModalConfig = (type: NotificationType) => {
+      switch (type) {
+        case 'PAYMENT_REQUEST':
+          return {
+            title: '결제 요청',
+            confirmText: '확인',
+            autoCloseTime: 8000,
+          }
+        case 'PAYMENT_COMPLETED':
+          return {
+            title: '결제 완료',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        case 'PAYMENT_CANCELED':
+          return {
+            title: '결제 취소',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        case 'STORE_INFO_UPDATED':
+          return {
+            title: '매장 정보 수정이 완료되었습니다!',
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+        default:
+          return {
+            title: notification.title,
+            confirmText: '확인',
+            autoCloseTime: 5000,
+          }
+      }
+    }
+
+    const modalConfig = getModalConfig(notification.type)
+
+    showModalNotification({
+      type: notification.type,
+      title: modalConfig.title,
+      message: notification.message,
+      showConfirmButton: true,
+      showCancelButton: false,
+      confirmText: modalConfig.confirmText,
+      autoCloseTime: modalConfig.autoCloseTime,
+      onConfirm: () => {
+        markAsRead(notification.id)
+        hideModalNotification()
+      },
+    })
+  }, [getUserRole, showModalNotification, markAsRead, hideModalNotification])
+
   const addNotification = useCallback(
     (
       notificationData: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
@@ -1041,10 +1129,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     isConnected: isConnected && isOnline,
     isPermissionGranted,
     fcmToken,
+    modalNotification,
     requestPermission,
     markAsRead,
     markAllAsRead,
     addNotification,
+    showModalNotification,
+    hideModalNotification,
     registerFCM,
     unregisterFCM,
     getNotificationCategory,

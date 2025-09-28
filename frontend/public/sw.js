@@ -1,6 +1,6 @@
 // KEEPING PWA Service Worker
-const CACHE_NAME = 'keeping-cache-v1'
-const STATIC_CACHE_NAME = 'keeping-static-v1'
+const CACHE_NAME = 'keeping-cache-v2'
+const STATIC_CACHE_NAME = 'keeping-static-v2'
 
 // 캐시할 정적 파일들
 const STATIC_FILES = [
@@ -13,6 +13,11 @@ const STATIC_FILES = [
   '/kakao-icon.png',
   '/customer.png',
   '/owner.png',
+  // Dashboard SVG 파일들
+  '/dashboard/QR.svg',
+  '/dashboard/calendar.svg',
+  '/dashboard/management.svg',
+  '/dashboard/notification.svg',
 ]
 
 // Service Worker 설치

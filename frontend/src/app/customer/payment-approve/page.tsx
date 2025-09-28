@@ -2,15 +2,16 @@
 
 import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
-export default function PaymentApprovePage() {
+function PaymentApproveInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // URL 파라미터에서 결제 정보 추출
-  const intentPublicId = searchParams.get('intentPublicId') || searchParams.get('intentId') // intentPublicId 우선
+  const intentPublicId =
+    searchParams.get('intentPublicId') || searchParams.get('intentId') // intentPublicId 우선
   const storeName = searchParams.get('storeName')
   const amount = searchParams.get('amount')
   const customerName = searchParams.get('customerName')
@@ -113,7 +114,9 @@ export default function PaymentApprovePage() {
             {storeName && (
               <div className="mb-2">
                 <span className="text-sm text-gray-600">매장: </span>
-                <span className="font-medium">{decodeURIComponent(storeName)}</span>
+                <span className="font-medium">
+                  {decodeURIComponent(storeName)}
+                </span>
               </div>
             )}
             {amount && (
@@ -127,14 +130,16 @@ export default function PaymentApprovePage() {
             {customerName && (
               <div>
                 <span className="text-sm text-gray-600">고객: </span>
-                <span className="font-medium">{decodeURIComponent(customerName)}</span>
+                <span className="font-medium">
+                  {decodeURIComponent(customerName)}
+                </span>
               </div>
             )}
           </div>
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white font-medium transition-colors hover:bg-blue-700"
+            className="w-full rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
           >
             PIN 입력하여 결제 승인
           </button>
@@ -148,9 +153,27 @@ export default function PaymentApprovePage() {
         intentPublicId={intentPublicId}
         storeName={storeName ? decodeURIComponent(storeName) : undefined}
         amount={amount ? parseInt(amount) : undefined}
-        customerName={customerName ? decodeURIComponent(customerName) : undefined}
+        customerName={
+          customerName ? decodeURIComponent(customerName) : undefined
+        }
         onSuccess={handleSuccess}
       />
     </div>
+  )
+}
+
+export default function PaymentApprovePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">결제 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <PaymentApproveInner />
+    </Suspense>
   )
 }
