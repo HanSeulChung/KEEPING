@@ -30,6 +30,7 @@ const NotificationPage = () => {
     { id: 'GROUP_CATEGORY', name: '모임 관련 알림', enabled: true },
   ])
   const [loading, setLoading] = useState(true)
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false)
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission>('default')
   const [currentPage, setCurrentPage] = useState(0)
@@ -59,6 +60,13 @@ const NotificationPage = () => {
 
     setLoading(false)
   }, [])
+
+  // 알림 데이터 로딩 감지
+  useEffect(() => {
+    if (notifications.length > 0 || !loading) {
+      setNotificationsLoaded(true)
+    }
+  }, [notifications, loading])
 
   // 알림 권한 요청
   const requestNotificationPermission = async () => {
@@ -253,7 +261,23 @@ const NotificationPage = () => {
             )}
           </div>
 
-          {notifications.length === 0 ? (
+          {!notificationsLoaded ? (
+            // 스켈레톤 로딩
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse rounded-[15px] border border-gray-200 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-gray-200"></div>
+                    <div className="flex-1">
+                      <div className="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
+                      <div className="mb-2 h-3 w-full rounded bg-gray-200"></div>
+                      <div className="h-3 w-1/2 rounded bg-gray-200"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="py-12 text-center">
               <div className="mb-4 text-4xl">
                 <IoNotifications className="mx-auto text-gray-300" />

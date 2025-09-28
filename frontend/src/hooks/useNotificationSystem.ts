@@ -6,6 +6,8 @@ import {
   deleteFCMToken,
   registerCustomerFCMToken,
   registerOwnerFCMToken,
+  generateCustomerFCMToken,
+  generateOwnerFCMToken,
 } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
 import {
@@ -770,55 +772,60 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (!user?.id) return false
       const hasPermission = await requestPermission()
       if (!hasPermission) return false
-      const token = await getFcmToken()
-      if (!token) {
-        console.log('[FCM] 토큰을 가져올 수 없습니다.')
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[FCM] 개발 환경: 토큰 없어도 계속 진행')
-          return true // 개발 환경에서는 토큰 없어도 true 반환
-        }
-        return false
-      }
 
       // 이미 등록된 토큰인지 확인 (성능 최적화)
       const storedToken = localStorage.getItem('fcmToken')
       const isTokenRegistered = localStorage.getItem(`fcmRegistered_${user.id}`)
 
-      if (storedToken === token && isTokenRegistered === 'true') {
+      if (storedToken && isTokenRegistered === 'true') {
         console.log('[FCM] 이미 등록된 토큰 - 건너뜀')
-        setFcmToken(token)
+        setFcmToken(storedToken)
         return true
       }
 
-      // FCM 토큰을 state와 localStorage에 저장
-      setFcmToken(token)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fcmToken', token)
-      }
       const isOwner = (user.role || 'OWNER') === 'OWNER'
       const ownerId = user.ownerId || user.id
       const customerId = user.userId || user.id
 
+      // 백엔드에서 FCM 토큰 발급 받기
+      let token: string
       try {
         if (isOwner && ownerId) {
-          await registerOwnerFCMToken(Number(ownerId), token)
+          const result = await generateOwnerFCMToken(Number(ownerId))
+          token = result.token
         } else if (!isOwner && customerId) {
-          await registerCustomerFCMToken(Number(customerId), token)
+          const result = await generateCustomerFCMToken(Number(customerId))
+          token = result.token
+        } else {
+          console.error('[FCM] 유효하지 않은 사용자 정보')
+          return false
+        }
+
+        console.log('[FCM] 백엔드에서 토큰 발급 성공:', token.substring(0, 20) + '...')
+
+        // FCM 토큰을 state와 localStorage에 저장
+        setFcmToken(token)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('fcmToken', token)
         }
 
         // 등록 성공 시 플래그 저장
         localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-      } catch (registrationError: any) {
+        return true
+
+      } catch (tokenError: any) {
+        console.error('[FCM] 백엔드 토큰 발급 실패:', tokenError)
+
         // 409 에러는 이미 등록된 상태이므로 성공으로 처리
-        if (registrationError?.response?.status === 409) {
-          console.log('이미 등록된 토큰 - 정상 처리')
+        if (tokenError?.response?.status === 409) {
+          console.log('[FCM] 이미 등록된 사용자 - 정상 처리')
           localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-        } else {
-          throw registrationError
+          return true
         }
+        return false
       }
-      return true
-    } catch {
+    } catch (error) {
+      console.error('[FCM] 등록 실패:', error)
       return false
     }
   }

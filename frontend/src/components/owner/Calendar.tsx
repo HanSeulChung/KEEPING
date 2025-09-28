@@ -100,7 +100,7 @@ const OwnerSalesCalendar = ({
   const [loading, setLoading] = useState(true)
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 })
-  const [showSummary, setShowSummary] = useState(false)
+  const [showSummary, setShowSummary] = useState(true)
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false)
   const monthPickerRef = useRef<HTMLDivElement | null>(null)
   //
@@ -705,7 +705,9 @@ const OwnerSalesCalendar = ({
       <div className="w-full bg-white">
         <div className="mx-auto max-w-4xl px-4 pb-10 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="font-['nanumsquare'] text-sm text-gray-600">월간 요약</div>
+            <div className="font-['nanumsquare'] text-sm text-gray-600">
+              월간 요약
+            </div>
             <button
               type="button"
               onClick={() => setShowSummary(s => !s)}
@@ -718,9 +720,19 @@ const OwnerSalesCalendar = ({
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className={showSummary ? 'rotate-180 transition-transform' : 'transition-transform'}
+                className={
+                  showSummary
+                    ? 'rotate-180 transition-transform'
+                    : 'transition-transform'
+                }
               >
-                <path d="M6 9L12 15L18 9" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M6 9L12 15L18 9"
+                  stroke="#6b7280"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -742,13 +754,19 @@ const OwnerSalesCalendar = ({
               <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
                 <div className="text-xs text-[#569ee9]">월 충전금액</div>
                 <div className="text-base font-bold text-[#4b5563]">
-                  {(monthlyStats?.monthlyTotalChargePoints || 0).toLocaleString()}원
+                  {(
+                    monthlyStats?.monthlyTotalChargePoints || 0
+                  ).toLocaleString()}
+                  원
                 </div>
               </div>
               <div className="rounded-lg bg-[#f2fbff] p-3 text-center">
                 <div className="text-xs text-[#569ee9]">월 거래건수</div>
                 <div className="text-base font-bold text-[#4b5563]">
-                  {(monthlyStats?.monthlyTransactionCount || 0).toLocaleString()}건
+                  {(
+                    monthlyStats?.monthlyTransactionCount || 0
+                  ).toLocaleString()}
+                  건
                 </div>
               </div>
             </div>

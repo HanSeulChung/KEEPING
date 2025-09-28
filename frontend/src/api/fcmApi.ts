@@ -53,6 +53,46 @@ export const registerOwnerFCMToken = async (
   }
 }
 
+// 백엔드에서 FCM 토큰 발급 요청 (고객용)
+export const generateCustomerFCMToken = async (
+  customerId: number
+): Promise<{ token: string }> => {
+  try {
+    console.log('고객 FCM 토큰 발급 요청 - customerId:', customerId)
+
+    const response = await apiClient.post<{
+      success: boolean
+      data: { token: string }
+    }>(`/api/fcm/customer/${customerId}/generate`)
+
+    console.log('고객 FCM 토큰 발급 성공:', response.data.data.token.substring(0, 20) + '...')
+    return response.data.data
+  } catch (error) {
+    console.error('고객 FCM 토큰 발급 실패:', error)
+    throw error
+  }
+}
+
+// 백엔드에서 FCM 토큰 발급 요청 (점주용)
+export const generateOwnerFCMToken = async (
+  ownerId: number
+): Promise<{ token: string }> => {
+  try {
+    console.log('점주 FCM 토큰 발급 요청 - ownerId:', ownerId)
+
+    const response = await apiClient.post<{
+      success: boolean
+      data: { token: string }
+    }>(`/api/fcm/owner/${ownerId}/generate`)
+
+    console.log('점주 FCM 토큰 발급 성공:', response.data.data.token.substring(0, 20) + '...')
+    return response.data.data
+  } catch (error) {
+    console.error('점주 FCM 토큰 발급 실패:', error)
+    throw error
+  }
+}
+
 // FCM 토큰 삭제
 export const deleteFCMToken = async (token: string): Promise<FCMTokenResponse> => {
   try {
