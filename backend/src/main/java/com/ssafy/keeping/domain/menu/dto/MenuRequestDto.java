@@ -1,5 +1,6 @@
 package com.ssafy.keeping.domain.menu.dto;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,6 @@ public class MenuRequestDto {
     @Min(1000)
     private int price;
     private String description;
-    @Null
+    @Nullable
     private MultipartFile imgFile;
 }

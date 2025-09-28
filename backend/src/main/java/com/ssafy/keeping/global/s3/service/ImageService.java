@@ -60,7 +60,7 @@ public class ImageService {
 
     public String uploadImage(MultipartFile image, String kindOfImage) {
         // 파일이 없을때 기본 basic 이미지 url로 반환
-        if (image.isEmpty() || image == null) {
+        if (image == null || image.isEmpty()) {
 
             String basicImageFileName =
                     "store".equals(kindOfImage.toLowerCase()) ?
