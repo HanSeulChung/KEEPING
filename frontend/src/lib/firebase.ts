@@ -189,7 +189,7 @@ export const getFcmToken = async (): Promise<string | null> => {
       attempts++
       try {
         token = await getToken(messaging, {
-          vapidKey: vapidKeyString,
+          vapidKey: "BFqS2cYcLd7EkOb_vgyhAnKSkyTkWEs4XwDrphlaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0X0s8aKw0xLStpJgpU=",
           serviceWorkerRegistration: registration,
         })
 
