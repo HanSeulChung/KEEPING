@@ -4,6 +4,7 @@ import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
@@ -11,14 +12,63 @@ const CustomerNotificationPage = () => {
   const { notifications, markAsRead, markAllAsRead, unreadCount } =
     useNotificationSystem()
 
-  // markAsRead 함수를 number 타입으로 사용
-  const handleMarkAsRead = (id: number) => {
-    markAsRead(id)
+  // 알림 클릭 처리 (결제 알림의 경우 특별 처리)
+  const handleNotificationClick = (notification: any) => {
+    // 먼저 읽음 처리
+    markAsRead(notification.id)
+
+    // 결제 요청/취소 알림인 경우 PIN 입력 모달 표시
+    if ((notification.type === 'PAYMENT_REQUEST' || notification.type === 'PAYMENT_CANCELED') &&
+        (notification.data?.intentPublicId || notification.data?.intentId)) {
+
+      // 알림 메시지에서 정보 추출
+      const message = notification.message || ''
+
+      // 고객명 추출 (예: "김철수님의 결제 요청")
+      const customerNameMatch = message.match(/([가-힣]+)님의/)
+      const customerName = customerNameMatch ? customerNameMatch[1] + '님' : notification.data?.customerName
+
+      // 포인트 정보 추출 (알림 데이터에서)
+      const pointInfo = notification.data?.points ? {
+        currentPoints: notification.data.points.current,
+        usedPoints: notification.data.points.used,
+        remainingPoints: notification.data.points.remaining,
+      } : undefined
+
+      setPaymentModal({
+        isOpen: true,
+        intentPublicId: notification.data?.intentPublicId, // 우선 사용
+        intentId: notification.data?.intentId, // 백업용
+        storeName: notification.data?.storeName || accountName,
+        amount: notification.data?.amount,
+        customerName: customerName,
+        pointInfo: pointInfo,
+        paymentType: notification.type === 'PAYMENT_CANCELED' ? 'CANCEL' : 'PAYMENT',
+      })
+    }
   }
 
   const [loading, setLoading] = useState(true)
   const [filteredNotifications, setFilteredNotifications] =
     useState(notifications)
+
+  // 결제 승인 모달 상태
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    intentPublicId?: string
+    intentId?: string | number
+    storeName?: string
+    amount?: string | number
+    customerName?: string
+    pointInfo?: {
+      currentPoints?: number
+      usedPoints?: number
+      remainingPoints?: number
+    }
+    paymentType?: 'PAYMENT' | 'CANCEL'
+  }>({
+    isOpen: false,
+  })
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -212,7 +262,7 @@ const CustomerNotificationPage = () => {
                     ? 'border-blue-200 bg-blue-50'
                     : 'bg-white'
                 }`}
-                onClick={() => handleMarkAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-3">
                   {/* 알림 아이콘 */}
@@ -250,6 +300,23 @@ const CustomerNotificationPage = () => {
           </div>
         )}
       </div>
+
+      {/* 결제 승인 모달 */}
+      <PaymentApprovalModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal({ isOpen: false })}
+        intentPublicId={paymentModal.intentPublicId}
+        intentId={paymentModal.intentId}
+        storeName={paymentModal.storeName}
+        amount={paymentModal.amount}
+        customerName={paymentModal.customerName}
+        pointInfo={paymentModal.pointInfo}
+        paymentType={paymentModal.paymentType}
+        onSuccess={() => {
+          // 결제 승인 성공 시 알림 목록 새로고침 등 추가 로직
+          console.log('결제 승인 완료')
+        }}
+      />
     </div>
   )
 }

@@ -111,6 +111,29 @@ export const notificationApi = {
       return eventSource
     },
 
+    // 결제 상세 정보 조회 (public API - 인증 불필요)
+    getPaymentIntent: async (
+      intentPublicId: string
+    ): Promise<any | null> => {
+      try {
+        const response = await fetch(`/api/payments/intent/${intentPublicId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          return data.data || data
+        }
+        return null
+      } catch (error) {
+        console.error('결제 정보 조회 실패:', error)
+        return null
+      }
+    },
+
     // 결제 요청 승인
     approvePayment: async (
       intentId: number | string,

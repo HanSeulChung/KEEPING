@@ -9,6 +9,8 @@ import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import CustomerNotificationModal from './CustomerNotificationModal'
+import OwnerNotificationModal from './OwnerNotificationModal'
 
 interface HeaderProps {
   title?: string
@@ -30,7 +32,7 @@ export default function Header({ title }: HeaderProps = {}) {
   // 고객/점주 공통 인증 상태 (일원화)
   const { user: customerUser } = useAuthStore()
 
-  const { unreadCount } = useNotificationSystem()
+  const { unreadCount, modalNotification, hideModalNotification } = useNotificationSystem()
   const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebarStore()
   const [isDesktop, setIsDesktop] = useState(false)
 
@@ -336,6 +338,39 @@ export default function Header({ title }: HeaderProps = {}) {
           </Link>
         )}
       </div>
+
+      {/* 모달 알림 - 고객/점주 구분해서 표시 */}
+      {isCustomerPage ? (
+        <CustomerNotificationModal
+          isOpen={modalNotification.isOpen}
+          onClose={hideModalNotification}
+          type={modalNotification.type}
+          title={modalNotification.title}
+          message={modalNotification.message}
+          showConfirmButton={modalNotification.showConfirmButton}
+          showCancelButton={modalNotification.showCancelButton}
+          confirmText={modalNotification.confirmText}
+          cancelText={modalNotification.cancelText}
+          onConfirm={modalNotification.onConfirm}
+          onCancel={modalNotification.onCancel}
+          autoCloseTime={modalNotification.autoCloseTime}
+        />
+      ) : (
+        <OwnerNotificationModal
+          isOpen={modalNotification.isOpen}
+          onClose={hideModalNotification}
+          type={modalNotification.type}
+          title={modalNotification.title}
+          message={modalNotification.message}
+          showConfirmButton={modalNotification.showConfirmButton}
+          showCancelButton={modalNotification.showCancelButton}
+          confirmText={modalNotification.confirmText}
+          cancelText={modalNotification.cancelText}
+          onConfirm={modalNotification.onConfirm}
+          onCancel={modalNotification.onCancel}
+          autoCloseTime={modalNotification.autoCloseTime}
+        />
+      )}
     </div>
   )
 }
