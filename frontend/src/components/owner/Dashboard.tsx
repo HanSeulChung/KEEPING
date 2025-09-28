@@ -302,7 +302,7 @@ export default function OwnerHome() {
             </div>
             <div className="absolute right-4 bottom-4 h-[120px] w-[120px]">
               <Image
-                src="/dashboard/qr.svg"
+                src="/dashboard/QR.svg"
                 alt="QR 인식"
                 width={120}
                 height={120}
