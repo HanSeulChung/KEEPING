@@ -20,6 +20,8 @@ import com.ssafy.keeping.domain.group.repository.GroupMemberRepository;
 import com.ssafy.keeping.domain.group.repository.GroupRepository;
 import com.ssafy.keeping.global.exception.CustomException;
 import com.ssafy.keeping.global.exception.constants.ErrorCode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,6 +37,8 @@ import static com.ssafy.keeping.global.util.TxUtils.afterCommit;
 @RequiredArgsConstructor
 public class GroupService {
     private static final int MAX_RETRY = 5;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final WalletServiceHS walletService;
     private final CustomerRepository customerRepository;
@@ -426,7 +430,12 @@ public class GroupService {
         balanceRepository.deleteByWalletId(gw.getWalletId());
         groupMemberRepository.deleteByGroupId(groupId);
         walletRepository.deleteById(walletId);
-        groupRepository.deleteById(groupId);
+
+        entityManager.flush();
+        entityManager.clear(); // 1차 캐시 비우기
+
+        Group group = groupRepository.getReferenceById(groupId);
+        groupRepository.delete(group);
 
         afterCommit(() -> refundedByMember.forEach((cid, amt) ->
                 notificationService.sendToCustomer(
