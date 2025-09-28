@@ -1,3 +1,4 @@
+import { apiConfig } from '@/api/config'
 import { StoreRequestDto } from '@/api/storeApi'
 import AddressInput from '@/components/common/AddressInput'
 import { useStoreManagement } from '@/hooks/useStoreManagement'
@@ -92,7 +93,7 @@ const StoreRegisterModal = ({
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('http://localhost:8080/ocr/biz-license', {
+      const response = await fetch(`${apiConfig.baseURL}/ocr/biz-license`, {
         method: 'POST',
         body: formData,
       })
