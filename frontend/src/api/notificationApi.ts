@@ -113,7 +113,26 @@ export const notificationApi = {
     },
 
     // 결제 상세 정보 조회 (public API - 인증 불필요)
-    getPaymentIntent: async (intentPublicId: string): Promise<any | null> => {
+    getPaymentIntent: async (intentPublicId: string): Promise<{
+      intentId: string
+      storeId: number
+      customerId: number
+      amount: number
+      status: string
+      createdAt: string
+      expiresAt: string
+      approvedAt?: string
+      declinedAt?: string
+      canceledAt?: string
+      completedAt?: string
+      items: Array<{
+        menuId: number
+        name: string
+        unitPrice: number
+        quantity: number
+        lineTotal: number
+      }>
+    } | null> => {
       try {
         const response = await fetch(`/api/payments/intent/${intentPublicId}`, {
           method: 'GET',
@@ -123,8 +142,10 @@ export const notificationApi = {
         })
 
         if (response.ok) {
-          const data = await response.json()
-          return data.data || data
+          const result = await response.json()
+          if (result.success && result.data) {
+            return result.data
+          }
         }
         return null
       } catch (error) {

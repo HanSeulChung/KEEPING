@@ -1179,49 +1179,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     (notification: NotificationData) => {
       const _userRole = getUserRole()
 
-      // 먼저 토스트 알림 표시
-      addToast(notification)
-
-      // 알림 타입에 따른 기본 설정
-      const getModalConfig = (type: NotificationType) => {
-        switch (type) {
-          case 'PAYMENT_REQUEST':
-            return {
-              title: '결제 요청',
-              confirmText: '승인하기',
-              cancelText: '거절',
-              autoCloseTime: 8000,
-            }
-          case 'PAYMENT_COMPLETED':
-            return {
-              title: '결제 완료',
-              confirmText: '확인',
-              autoCloseTime: 5000,
-            }
-          case 'PAYMENT_CANCELED':
-            return {
-              title: '결제 취소',
-              confirmText: '확인',
-              autoCloseTime: 5000,
-            }
-          case 'STORE_INFO_UPDATED':
-            return {
-              title: '매장 정보 수정이 완료되었습니다!',
-              confirmText: '확인',
-              autoCloseTime: 5000,
-            }
-          default:
-            return {
-              title: notification.title,
-              confirmText: '확인',
-              autoCloseTime: 5000,
-            }
-        }
-      }
-
-      const _modalConfig = getModalConfig(notification.type)
-
-      // PAYMENT_REQUEST인 경우 결제 승인 모달 열기
+      // PAYMENT_REQUEST인 경우 PaymentApprovalModal만 표시 (토스트 없음)
       if (notification.type === 'PAYMENT_REQUEST') {
         // 결제 승인 모달을 위한 데이터 추출
         const paymentData = {
@@ -1233,19 +1191,16 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           storeName: notification.data?.storeName || '매장',
         }
 
-        // 결제 승인 모달 열기
+        // 결제 승인 모달만 열기 (토스트 없음)
         showPaymentApprovalModal(paymentData)
       } else {
-        // 일반 알림은 토스트만 표시 (모달 제거)
-        // 중요한 알림만 모달로 표시하고 싶다면 여기서 조건을 추가
+        // 일반 알림은 토스트만 표시
+        addToast(notification)
       }
     },
     [
       getUserRole,
       addToast,
-      showModalNotification,
-      markAsRead,
-      hideModalNotification,
       showPaymentApprovalModal,
     ]
   )

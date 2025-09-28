@@ -24,10 +24,11 @@ interface PaymentDetails {
   storeName: string
   totalAmount: number
   items: Array<{
-    menuName: string
+    menuId: number
+    name: string
     unitPrice: number
     quantity: number
-    totalPrice: number
+    lineTotal: number
   }>
   pointInfo?: {
     [key: string]: unknown
@@ -263,6 +264,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         setIsProcessing(false)
         setIsRetrying(false) // 재시도 플래그 초기화
         setRequestInProgress(false) // 요청 진행 플래그 초기화
+        setIsLoading(false) // 로딩 상태도 초기화
 
         // PIN 입력 필드 초기화 (다시 입력할 수 있도록)
         setPin('')
@@ -271,7 +273,11 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       console.error('결제 승인 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
       setIsProcessing(false)
+      setIsRetrying(false)
       setRequestInProgress(false) // 요청 진행 플래그 초기화
+
+      // 에러 발생 시에도 PIN 필드를 다시 사용할 수 있도록 초기화
+      setPin('')
     } finally {
       setIsLoading(false)
     }
@@ -302,25 +308,63 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
 
   // 결제 상세 정보 로드
   useEffect(() => {
-    if (isOpen && intentId) {
-      setIsLoadingDetails(true)
-      // 여기서 실제 API 호출로 결제 상세 정보를 가져올 수 있습니다
-      // 현재는 props로 전달된 정보를 사용
-      setTimeout(() => {
-        setPaymentDetails({
-          intentId: intentId,
-          customerName: customerName || '고객',
-          storeName: storeName || '매장',
-          totalAmount:
-            typeof amount === 'string'
-              ? parseInt(amount)
-              : (amount as number) || 0,
-          items: [], // 실제로는 API에서 가져와야 함
-          pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
-        })
-        setIsLoadingDetails(false)
-      }, 500)
+    const loadPaymentDetails = async () => {
+      if (isOpen && intentId) {
+        setIsLoadingDetails(true)
+        setError('')
+
+        try {
+          // intentId가 intentPublicId인 경우 API 호출
+          const intentPublicId = String(intentId)
+          const apiResult = await notificationApi.customer.getPaymentIntent(intentPublicId)
+
+          if (apiResult) {
+            // API에서 가져온 데이터 사용
+            setPaymentDetails({
+              intentId: apiResult.intentId,
+              customerName: customerName || '고객',
+              storeName: storeName || '매장',
+              totalAmount: apiResult.amount,
+              items: apiResult.items,
+              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+            })
+          } else {
+            // API 호출 실패 시 props 데이터 사용
+            setPaymentDetails({
+              intentId: intentId,
+              customerName: customerName || '고객',
+              storeName: storeName || '매장',
+              totalAmount:
+                typeof amount === 'string'
+                  ? parseInt(amount)
+                  : (amount as number) || 0,
+              items: [], // API 실패 시 빈 배열
+              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+            })
+            setError('주문 상세 정보를 불러올 수 없습니다')
+          }
+        } catch (error) {
+          console.error('결제 상세 정보 로드 실패:', error)
+          // 에러 발생 시 props 데이터 사용
+          setPaymentDetails({
+            intentId: intentId,
+            customerName: customerName || '고객',
+            storeName: storeName || '매장',
+            totalAmount:
+              typeof amount === 'string'
+                ? parseInt(amount)
+                : (amount as number) || 0,
+            items: [],
+            pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+          })
+          setError('주문 상세 정보를 불러오는 중 오류가 발생했습니다')
+        } finally {
+          setIsLoadingDetails(false)
+        }
+      }
     }
+
+    loadPaymentDetails()
   }, [isOpen, intentId, customerName, storeName, amount, pointInfo])
 
   // 모달이 열릴 때마다 상태 초기화
@@ -377,8 +421,11 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
             {/* 로딩 중일 때 */}
             {isLoadingDetails && (
               <div className="flex h-32 items-center justify-center">
-                <div className="text-sm text-gray-600">
-                  결제 정보를 불러오는 중...
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#76d4ff] border-t-transparent"></div>
+                  <div className="font-nanum-square-round-eb text-sm text-gray-600">
+                    주문 정보를 불러오는 중...
+                  </div>
                 </div>
               </div>
             )}
@@ -440,12 +487,12 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                       </h4>
                       {paymentDetails.items.map((item, index) => (
                         <div
-                          key={index}
+                          key={item.menuId || index}
                           className="flex h-8 w-full flex-shrink-0 items-center justify-between rounded-[0.625rem] border-[3px] border-[#76d4ff] bg-white px-3"
                         >
                           <div className="flex items-center space-x-3">
                             <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-black">
-                              {item.menuName}
+                              {item.name}
                             </span>
                             <span className="font-nanum-square-round-eb text-[0.75rem] leading-[140%] font-extrabold text-gray-500">
                               {item.unitPrice.toLocaleString()}원 ×{' '}
@@ -453,10 +500,27 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                             </span>
                           </div>
                           <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-[#76d4ff]">
-                            {item.totalPrice.toLocaleString()}원
+                            {item.lineTotal.toLocaleString()}원
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* API에서 항목을 불러오지 못한 경우 */}
+                {paymentDetails && (!paymentDetails.items || paymentDetails.items.length === 0) && (
+                  <div className="mb-6">
+                    <div className="mb-4 h-[0.1875rem] w-full bg-[#76d4ff]" />
+                    <div className="space-y-3">
+                      <h4 className="font-nanum-square-round-eb mb-3 text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
+                        주문 내역
+                      </h4>
+                      <div className="flex h-8 w-full flex-shrink-0 items-center justify-center rounded-[0.625rem] border-[3px] border-gray-300 bg-gray-50 px-3">
+                        <span className="font-nanum-square-round-eb text-[0.75rem] leading-[140%] font-bold text-gray-500">
+                          주문 상세 정보를 불러올 수 없습니다
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -501,7 +565,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                       maxLength={6}
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      disabled={isLoading || isFinalized || isBlocked}
+                      disabled={isFinalized || isBlocked}
                     />
                   </div>
 
