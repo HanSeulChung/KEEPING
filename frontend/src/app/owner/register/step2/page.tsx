@@ -95,13 +95,14 @@ const BusinessRegistration = () => {
     setIsLoading(true)
     setVerificationResult(null)
 
-    try {
-      const businessData: BusinessVerificationRequest = {
-        b_no: formData.businessNumber.replace(/[^0-9]/g, ''),
-        start_dt: formData.openingDate.replace(/[^0-9]/g, ''),
-        p_nm: formData.representativeName.trim(),
-      }
+    const businessData: BusinessVerificationRequest = {
+      b_no: formData.businessNumber.replace(/[^0-9]/g, ''),
+      start_dt: formData.openingDate.replace(/[^0-9]/g, ''),
+      p_nm: formData.representativeName.trim(),
+    }
 
+    try {
+      // 진위확인 시도
       const result = await verifyBusinessRegistration(businessData)
 
       if (result.status_code === 'OK' && result.valid_cnt === 1) {
@@ -125,7 +126,7 @@ const BusinessRegistration = () => {
             data: businessInfo,
           })
 
-          // 사업자 정보를 Context에 저장
+          // 사업자 정보를 Context에 저장 (검증 성공)
           const verifiedBusinessInfo: BusinessInfo = {
             businessNumber: businessData.b_no,
             openingDate: businessData.start_dt,
@@ -136,22 +137,56 @@ const BusinessRegistration = () => {
 
           setBusinessInfo(verifiedBusinessInfo)
         } else {
+          // 검증 실패 - 값만 저장하고 넘어가기
+          const verifiedBusinessInfo: BusinessInfo = {
+            businessNumber: businessData.b_no,
+            openingDate: businessData.start_dt,
+            representativeName: businessData.p_nm,
+            verified: false,
+            verificationData: null,
+          }
+
+          setBusinessInfo(verifiedBusinessInfo)
+          
           setVerificationResult({
-            success: false,
-            message: '등록되지 않은 사업자이거나 정보가 일치하지 않습니다.',
+            success: true,
+            message: '사업자 정보가 저장되었습니다. (확인 필요)',
           })
         }
       } else {
+        // API 응답 오류 - 값만 저장하고 넘어가기
+        const verifiedBusinessInfo: BusinessInfo = {
+          businessNumber: businessData.b_no,
+          openingDate: businessData.start_dt,
+          representativeName: businessData.p_nm,
+          verified: false,
+          verificationData: null,
+        }
+
+        setBusinessInfo(verifiedBusinessInfo)
+        
         setVerificationResult({
-          success: false,
-          message: '사업자 정보를 확인할 수 없습니다.',
+          success: true,
+          message: '사업자 정보가 저장되었습니다. (진위확인 실패)',
         })
       }
     } catch (error) {
       console.error('사업자 검증 오류:', error)
+      
+      // API 호출 실패 - 값만 저장하고 넘어가기
+      const verifiedBusinessInfo: BusinessInfo = {
+        businessNumber: businessData.b_no,
+        openingDate: businessData.start_dt,
+        representativeName: businessData.p_nm,
+        verified: false,
+        verificationData: null,
+      }
+
+      setBusinessInfo(verifiedBusinessInfo)
+      
       setVerificationResult({
-        success: false,
-        message: '검증 중 오류가 발생했습니다. 다시 시도해주세요.',
+        success: true,
+        message: '사업자 정보가 저장되었습니다. (진위확인 실패)',
       })
     } finally {
       setIsLoading(false)
