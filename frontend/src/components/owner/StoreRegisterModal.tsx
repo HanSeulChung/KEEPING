@@ -23,8 +23,8 @@ const StoreRegisterModal = ({
     address: '',
     phoneNumber: '',
     category: '',
-    taxIdNumber: '',
-    bankAccount: '',
+    taxIdNumber: '000-00-00000', // 기본값 설정
+    bankAccount: '000-000-000000', // 기본값 설정
     imgFile: undefined as unknown as File,
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -47,8 +47,8 @@ const StoreRegisterModal = ({
       address: '',
       phoneNumber: '',
       category: '',
-      taxIdNumber: '',
-      bankAccount: '',
+      taxIdNumber: '000-00-00000', // 기본값 설정
+      bankAccount: '000-000-000000', // 기본값 설정
       imgFile: undefined as unknown as File,
     })
     setSelectedImage(null)
@@ -69,6 +69,11 @@ const StoreRegisterModal = ({
   if (!isOpen) return null
 
   const handleInputChange = (field: keyof StoreRequestDto, value: string) => {
+    // bankAccount와 taxIdNumber는 항상 빈 문자열로 고정
+    if (field === 'bankAccount' || field === 'taxIdNumber') {
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -120,8 +125,7 @@ const StoreRegisterModal = ({
       !formData.description ||
       !formData.address ||
       !formData.phoneNumber ||
-      !formData.category ||
-      !formData.bankAccount
+      !formData.category
     ) {
       alert('모든 필수 항목을 입력해주세요.')
       return
@@ -248,21 +252,6 @@ const StoreRegisterModal = ({
           />
         </div>
 
-        {/* 계좌번호 */}
-        <div className="mb-4">
-          <div className="mb-2 flex items-center">
-            <span className="rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black">
-              계좌번호
-            </span>
-          </div>
-          <input
-            type="text"
-            className="h-10 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
-            placeholder="계좌번호를 입력하세요 (예: 123-456-789012)"
-            value={formData.bankAccount}
-            onChange={e => handleInputChange('bankAccount', e.target.value)}
-          />
-        </div>
 
         {/* 가게 소개 */}
         <div className="mb-4">
