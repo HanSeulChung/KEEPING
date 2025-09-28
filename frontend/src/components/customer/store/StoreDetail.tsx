@@ -26,13 +26,6 @@ interface ChargeOptionData {
   expectedTotalPoints: number
 }
 
-interface MenuItemData {
-  name: string
-  description: string
-  price: number
-  imageUrl?: string
-}
-
 interface CategoryData {
   categoryId: number
   storeId: number

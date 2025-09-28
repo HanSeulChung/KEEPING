@@ -43,7 +43,7 @@ const StoreManage = () => {
     ? decodeURIComponent(searchParams.get('accountName') as string)
     : null
 
-  const { selectedStore } = useStoreStore()
+  const { selectedStore, fetchStores } = useStoreStore()
   const [activeTab, setActiveTab] = useState<'menu' | 'charge'>('menu')
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -127,6 +127,34 @@ const StoreManage = () => {
     setIsImageUploading(true)
     try {
       console.log('이미지 업로드:', selectedImage)
+
+      // 실제 API 호출
+      const formData = new FormData()
+      formData.append('images', selectedImage)
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/stores/${storeId}`,
+        {
+          method: 'PATCH',
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('이미지 업로드 성공:', result)
+
+      // 매장 정보 다시 불러오기
+      if (storeId) {
+        fetchStores()
+      }
+
       alert('이미지 업로드가 완료되었습니다.')
       setShowImageModal(false)
       setSelectedImage(null)
@@ -354,9 +382,16 @@ const StoreManage = () => {
                       <h3 className="font-jalnan mb-1 text-base leading-[140%] text-black">
                         {item.menuName}
                       </h3>
-                      <span className="font-nanum-square-round-eb rounded-[10px] bg-[#f0f0f0] px-2 py-1 text-xs leading-[140%] font-bold text-gray-600">
-                        {item.categoryName}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-nanum-square-round-eb rounded-[10px] bg-[#f0f0f0] px-2 py-1 text-xs leading-[140%] font-bold text-gray-600">
+                          {item.categoryName}
+                        </span>
+                        <span className="font-nanum-square-round-eb text-sm leading-[140%] text-[#2563eb]">
+                          {Number(item.price) > 0
+                            ? `${Number(item.price).toLocaleString()}원`
+                            : '-'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* 버튼들 */}
@@ -1262,7 +1297,7 @@ const MenuEditModal = ({
   const [editedMenu, setEditedMenu] = useState({
     menuName: menu.menuName || '',
     categoryId: menu.categoryId || 0,
-    price: 0, // 백엔드에서 price 필드가 없으므로 기본값 사용
+    price: Number(menu.price) || 0, // 메뉴의 실제 가격 사용
     description: menu.description || '',
     imgFile: null as File | null,
   })
@@ -1340,8 +1375,8 @@ const MenuEditModal = ({
   }
 
   return (
-    <div className="h-full w-full">
-      <div className="space-y-4">
+    <div className="flex h-full w-full flex-col">
+      <div className="max-h-[60vh] space-y-4 overflow-auto px-1">
         <div>
           <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
             메뉴명 *
@@ -1437,7 +1472,7 @@ const MenuEditModal = ({
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2 pt-6">
+      <div className="flex flex-shrink-0 justify-end gap-2 pt-6">
         <button
           onClick={onClose}
           className="font-nanum-square-round-eb rounded-[10px] bg-gray-200 px-4 py-2 text-sm leading-[140%] font-bold transition-colors hover:bg-gray-300"

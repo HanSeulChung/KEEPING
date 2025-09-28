@@ -1,10 +1,10 @@
 'use client'
 
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
@@ -12,39 +12,54 @@ const CustomerNotificationPage = () => {
   const { notifications, markAsRead, markAllAsRead, unreadCount } =
     useNotificationSystem()
 
+  // 결제 승인 모달 띄우기 보조 함수 (알림 데이터 기반)
+  const openPaymentApprovalFromNotification = (notification: any) => {
+    if (!(notification.data?.intentPublicId || notification.data?.intentId))
+      return
+
+    const message = notification.message || ''
+    const customerNameMatch = message.match(/([가-힣]+)님의/)
+    const customerName = customerNameMatch
+      ? customerNameMatch[1] + '님'
+      : notification.data?.customerName
+
+    // 금액 파싱 (데이터가 없으면 메시지에서 1,000원 형식 추출)
+    const amountFromData = notification.data?.amount
+    let amountFromMessage: number | undefined
+    const amountMatch = message.match(/(\d{1,3}(?:,\d{3})*)원/)
+    if (amountMatch) {
+      amountFromMessage = parseInt(amountMatch[1].replace(/,/g, ''))
+    }
+
+    setPaymentModal({
+      isOpen: true,
+      intentPublicId: notification.data?.intentPublicId,
+      intentId: notification.data?.intentId,
+      storeName: notification.data?.storeName || accountName || undefined,
+      amount: amountFromData ?? amountFromMessage,
+      customerName,
+      pointInfo: notification.data?.points
+        ? {
+            currentPoints: notification.data.points.current,
+            usedPoints: notification.data.points.used,
+            remainingPoints: notification.data.points.remaining,
+          }
+        : undefined,
+      paymentType: 'PAYMENT',
+    })
+  }
+
   // 알림 클릭 처리 (결제 알림의 경우 특별 처리)
   const handleNotificationClick = (notification: any) => {
     // 먼저 읽음 처리
     markAsRead(notification.id)
 
-    // 결제 요청/취소 알림인 경우 PIN 입력 모달 표시
-    if ((notification.type === 'PAYMENT_REQUEST' || notification.type === 'PAYMENT_CANCELED') &&
-        (notification.data?.intentPublicId || notification.data?.intentId)) {
-
-      // 알림 메시지에서 정보 추출
-      const message = notification.message || ''
-
-      // 고객명 추출 (예: "김철수님의 결제 요청")
-      const customerNameMatch = message.match(/([가-힣]+)님의/)
-      const customerName = customerNameMatch ? customerNameMatch[1] + '님' : notification.data?.customerName
-
-      // 포인트 정보 추출 (알림 데이터에서)
-      const pointInfo = notification.data?.points ? {
-        currentPoints: notification.data.points.current,
-        usedPoints: notification.data.points.used,
-        remainingPoints: notification.data.points.remaining,
-      } : undefined
-
-      setPaymentModal({
-        isOpen: true,
-        intentPublicId: notification.data?.intentPublicId, // 우선 사용
-        intentId: notification.data?.intentId, // 백업용
-        storeName: notification.data?.storeName || accountName,
-        amount: notification.data?.amount,
-        customerName: customerName,
-        pointInfo: pointInfo,
-        paymentType: notification.type === 'PAYMENT_CANCELED' ? 'CANCEL' : 'PAYMENT',
-      })
+    if (notification.type === 'PAYMENT_REQUEST') {
+      openPaymentApprovalFromNotification(notification)
+    }
+    if (notification.type === 'PAYMENT_CANCELED') {
+      // 취소 알림은 모달을 열지 않음
+      return
     }
   }
 
@@ -294,6 +309,22 @@ const CustomerNotificationPage = () => {
                       )}
                     </div>
                   </div>
+                  {/* 결제 요청 알림일 때 직접 승인 버튼 제공 (푸시 미수신 대비) */}
+                  {notification.type === 'PAYMENT_REQUEST' && (
+                    <div className="ml-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation()
+                          markAsRead(notification.id)
+                          openPaymentApprovalFromNotification(notification)
+                        }}
+                        className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                      >
+                        승인하기
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
