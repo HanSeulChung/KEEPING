@@ -2,6 +2,7 @@ import { NotificationAPI } from '@/types/api'
 import { generateIdempotencyKey } from '@/utils/idempotency'
 
 import apiClient from './axios'
+import { endpoints } from './config'
 
 // 알림 관련 API 함수들
 export const notificationApi = {
@@ -113,7 +114,9 @@ export const notificationApi = {
     },
 
     // 결제 상세 정보 조회
-    getPaymentIntent: async (intentPublicId: string): Promise<{
+    getPaymentIntent: async (
+      intentPublicId: string
+    ): Promise<{
       intentId: string
       storeId: number
       customerId: number
@@ -185,18 +188,19 @@ export const notificationApi = {
           return {
             success: res.data?.success || true,
             data: res.data?.data,
-            message: res.data?.message
+            message: res.data?.message,
           }
         } else {
           return {
             success: false,
-            message: res.data?.message || '결제 승인에 실패했습니다'
+            message: res.data?.message || '결제 승인에 실패했습니다',
           }
         }
       } catch (error: any) {
         return {
           success: false,
-          message: error.response?.data?.message || '결제 승인 중 오류가 발생했습니다'
+          message:
+            error.response?.data?.message || '결제 승인 중 오류가 발생했습니다',
         }
       }
     },
@@ -416,6 +420,29 @@ export const notificationApi = {
       } catch (error) {
         console.error('FCM 토큰 해제 실패:', error)
         return false
+      }
+    },
+
+    // 결제 의도 조회
+    getPaymentIntent: async (intentPublicId: string) => {
+      try {
+        console.log('🔍 결제 의도 조회 요청:', intentPublicId)
+        const url = endpoints.payments.intent.replace(
+          '{intentPublicId}',
+          intentPublicId
+        )
+        const response = await apiClient.get(url)
+
+        if (response.data?.success && response.data?.data) {
+          console.log('✅ 결제 의도 조회 성공:', response.data.data)
+          return response.data.data
+        } else {
+          console.warn('❌ 결제 의도 조회 실패:', response.data?.message)
+          return null
+        }
+      } catch (error) {
+        console.error('❌ 결제 의도 조회 에러:', error)
+        return null
       }
     },
   },

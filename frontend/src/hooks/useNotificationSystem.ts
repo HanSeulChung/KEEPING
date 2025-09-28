@@ -702,10 +702,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           // 새 알림이 오면 읽지 않은 개수 증가
           setUnreadCount(prev => prev + 1)
 
-          // 포그라운드에서는 모든 알림을 모달로 표시
-          if (isVisibleRef.current) {
-            // 모든 알림을 모달로 표시
+          // 결제 요청은 항상 모달로 표시 (백그라운드에서도)
+          if (notification.type === 'PAYMENT_REQUEST' && getUserRole() === 'CUSTOMER') {
+            console.log('🚨 결제 요청 모달 강제 표시')
             showInPageModal(notification)
+          } else if (isVisibleRef.current) {
+            // 일반 알림은 포그라운드에서만 모달로 표시
+            showInPageModal(notification)
+          } else {
+            console.log('📱 백그라운드 상태 - 일반 알림 모달 스킵')
           }
         } catch (error) {
           console.warn('[SSE] message parsing error', error)

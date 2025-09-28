@@ -287,12 +287,11 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   }
 
   const handleCancel = () => {
+    // 단순히 모달 닫기
     setPin('')
     setError('')
     setPinAttempts(0)
     setIsBlocked(false)
-
-    // 취소 시에도 결제 상태 정리
     clearPaymentIntent()
     onClose()
   }
@@ -455,30 +454,8 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
             {/* 결제 정보 */}
             {!isLoadingDetails && (
               <div className="px-6 py-4">
-                {/* 기본 정보 */}
+                {/* 총 금액만 표시 */}
                 <div className="mb-6 space-y-3">
-                  {(paymentDetails?.customerName || customerName) && (
-                    <div className="flex items-center justify-between py-2">
-                      <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
-                        고객명
-                      </span>
-                      <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-black">
-                        {paymentDetails?.customerName || customerName}
-                      </span>
-                    </div>
-                  )}
-
-                  {(paymentDetails?.storeName || storeName) && (
-                    <div className="flex items-center justify-between py-2">
-                      <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
-                        매장명
-                      </span>
-                      <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-black">
-                        {paymentDetails?.storeName || storeName}
-                      </span>
-                    </div>
-                  )}
-
                   {(paymentDetails?.totalAmount || amount) && (
                     <div className="flex items-center justify-between py-2">
                       <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
@@ -554,27 +531,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                     </div>
                   )}
 
-                {/* 포인트 정보 */}
-                {(paymentDetails?.pointInfo || pointInfo) &&
-                  paymentType === 'PAYMENT' && (
-                    <>
-                      <div className="mb-4 h-[0.1875rem] w-full bg-[#76d4ff]" />
-                      <div className="space-y-2">
-                        <h4 className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
-                          포인트 정보
-                        </h4>
-                        <div className="flex h-8 w-full flex-shrink-0 items-center rounded-[0.625rem] border-[3px] border-[#76d4ff] bg-white px-3">
-                          <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-bold text-black">
-                            {typeof paymentDetails?.pointInfo === 'object'
-                              ? JSON.stringify(paymentDetails.pointInfo)
-                              : String(
-                                  paymentDetails?.pointInfo || pointInfo || ''
-                                )}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  )}
 
                 {/* PIN 입력 */}
                 <div className="mb-6">

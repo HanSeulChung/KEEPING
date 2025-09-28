@@ -6,7 +6,6 @@ import { getNotificationIcon } from '@/types/notification'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { IoNotifications } from 'react-icons/io5'
-import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 
 type NotificationSetting = {
   id: string
@@ -23,9 +22,6 @@ const NotificationPage = () => {
     markAllAsRead,
     unreadCount,
     isConnected,
-    showPaymentApprovalModal,
-    paymentApprovalModal,
-    hidePaymentApprovalModal
   } = useNotificationSystem()
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
