@@ -4,12 +4,12 @@ import { NotificationType } from '@/types/notification'
 import React, { useEffect, useState } from 'react'
 
 interface ToastNotificationProps {
-  id: string
+  id: number
   type: NotificationType
   title: string
   message: string
   duration?: number
-  onClose: (id: string) => void
+  onClose: (id: number) => void
   onClick?: () => void
 }
 
@@ -81,12 +81,8 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({
 
   return (
     <div
-        className={`fixed top-1/2 left-1/2 z-50 w-auto max-w-sm transform -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-2xl bg-white p-4 shadow-2xl transition-all duration-300 ease-in-out ${isVisible && !isExiting ? 'scale-100 opacity-100' : 'scale-95 opacity-0'} border-2 border-blue-500 backdrop-blur-sm`}
+      className={`relative w-80 max-w-sm transform cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg transition-all duration-300 ease-in-out ${isVisible && !isExiting ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} `}
       onClick={onClick}
-      style={{
-        boxShadow:
-          '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      }}
     >
       <div className="flex items-center space-x-3">
         {/* 아이콘 */}
