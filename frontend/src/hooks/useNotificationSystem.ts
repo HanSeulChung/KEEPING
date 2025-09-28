@@ -836,55 +836,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     } catch {}
   }
 
-  // PWA 서비스 워커 등록 (모바일 친화적)
-  const registerServiceWorker = async () => {
-    if (!('serviceWorker' in navigator)) {
-      console.log('이 브라우저는 서비스 워커를 지원하지 않습니다.')
-      return
-    }
-
-    // 개발 모드에서는 서비스 워커 등록 비활성화
-    if (process.env.NODE_ENV === 'development') {
-      console.log('개발 모드: Service Worker 등록 건너뜀')
-      return
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js')
-      console.log('서비스 워커 등록됨:', registration)
-
-      // iOS/Android PWA 지원을 위한 Push 구독
-      if ('PushManager' in window) {
-        try {
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-          })
-
-          // 서버에 구독 정보 전송 (모바일 최적화)
-          await fetch('/api/notifications/subscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: user?.id,
-              subscription: subscription,
-            }),
-          })
-
-          console.log('Web Push 구독 완료 (모바일 지원)')
-        } catch (pushError) {
-          console.log(
-            'Push 구독 실패 (일부 모바일 브라우저에서 정상):',
-            pushError
-          )
-        }
-      }
-    } catch (error) {
-      console.error('서비스 워커 등록 오류:', error)
-    }
-  }
+  // PWA 서비스 워커는 firebase-messaging-sw.js로 통합됨
+  // 중복 등록 방지를 위해 별도 등록 제거
   const markAsRead = useCallback(
     async (id: number) => {
       const userId = getUserNumericId()
