@@ -1,6 +1,6 @@
 // KEEPING PWA Service Worker
-const CACHE_NAME = 'keeping-cache-v2'
-const STATIC_CACHE_NAME = 'keeping-static-v2'
+const CACHE_NAME = 'keeping-cache-v3'
+const STATIC_CACHE_NAME = 'keeping-static-v3'
 
 // 캐시할 정적 파일들
 const STATIC_FILES = [
