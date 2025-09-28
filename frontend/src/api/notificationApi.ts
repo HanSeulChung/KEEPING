@@ -1,5 +1,6 @@
 import { NotificationAPI } from '@/types/api'
 import { generateIdempotencyKey } from '@/utils/idempotency'
+
 import apiClient from './axios'
 
 // 알림 관련 API 함수들
@@ -330,6 +331,57 @@ export const notificationApi = {
 
   subscribeNotifications: (ownerId: number): EventSource => {
     return notificationApi.owner.subscribeNotifications(ownerId)
+  },
+
+  // FCM 토큰 관리
+  fcm: {
+    // FCM 토큰 등록 (점주)
+    registerOwnerToken: async (
+      ownerId: number,
+      token: string
+    ): Promise<boolean> => {
+      try {
+        const res = await apiClient.post(`/api/fcm/owner/${ownerId}/token`, {
+          token,
+        })
+        return res.status >= 200 && res.status < 300
+      } catch (error) {
+        console.error('점주 FCM 토큰 등록 실패:', error)
+        return false
+      }
+    },
+
+    // FCM 토큰 등록 (고객)
+    registerCustomerToken: async (
+      customerId: number,
+      token: string
+    ): Promise<boolean> => {
+      try {
+        const res = await apiClient.post(
+          `/api/fcm/customer/${customerId}/token`,
+          {
+            token,
+          }
+        )
+        return res.status >= 200 && res.status < 300
+      } catch (error) {
+        console.error('고객 FCM 토큰 등록 실패:', error)
+        return false
+      }
+    },
+
+    // FCM 토큰 해제
+    unregisterToken: async (token: string): Promise<boolean> => {
+      try {
+        const res = await apiClient.delete('/api/fcm/token', {
+          data: { token },
+        })
+        return res.status >= 200 && res.status < 300
+      } catch (error) {
+        console.error('FCM 토큰 해제 실패:', error)
+        return false
+      }
+    },
   },
 }
 

@@ -1,5 +1,8 @@
 'use client'
 
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import apiClient from '@/api/axios'
 import { apiConfig, buildURL } from '@/api/config'
 // FCM API 비활성화 - SSE만 사용
@@ -9,12 +12,13 @@ import { apiConfig, buildURL } from '@/api/config'
 //   registerOwnerFCMToken,
 // } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
-// FCM 기능 비활성화 - SSE만 사용
-// import {
-//   getFcmToken,
-//   requestNotificationPermission,
-//   setupForegroundMessageListener,
-// } from '@/lib/firebase'
+// FCM 기능 활성화
+import {
+  getFcmToken,
+  registerServiceWorker,
+  requestNotificationPermission,
+  setupForegroundMessageListener,
+} from '@/lib/firebaseConfig'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   NotificationCategory,
@@ -24,8 +28,6 @@ import {
   getNotificationIcon,
   getNotificationTitle,
 } from '@/types/notification'
-import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface ModalNotificationState {
   isOpen: boolean
@@ -88,6 +90,11 @@ interface UseNotificationSystemReturn {
   handleToastClick: (notification: NotificationData) => void
   getNotificationCategory: (type: NotificationType) => NotificationCategory
   getNotificationIcon: (type: NotificationType) => string
+  fcmToken: string | null
+  isFcmInitialized: boolean
+  initializeFCM: () => Promise<boolean>
+  registerFCMToken: () => Promise<boolean>
+  unregisterFCMToken: () => Promise<boolean>
 }
 
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
@@ -101,22 +108,25 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       isOpen: false,
     })
   const [isOnline, setIsOnline] = useState(true)
-  // FCM 토큰 제거 - SSE만 사용
+  const [fcmToken, setFcmToken] = useState<string | null>(null)
+  const [isFcmInitialized, setIsFcmInitialized] = useState(false)
   const sseAbortControllerRef = useRef<AbortController | null>(null)
   const sseConnectingRef = useRef(false)
   const isVisibleRef = useRef(true)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
-  const maxReconnectAttempts = 5
+  const _maxReconnectAttempts = 5
   const seenEventKeysRef = useRef<Set<string>>(new Set())
 
   // SSE만 사용 - FCM 제거
-  const [notificationStrategy, setNotificationStrategy] = useState<'SSE'>('SSE')
+  const [notificationStrategy, setNotificationStrategy] = useState<
+    'SSE' | 'FCM'
+  >('SSE')
   const sseFailureCountRef = useRef(0)
-  const maxSSEFailures = 3
+  const _maxSSEFailures = 3
 
   // 디바이스 타입 감지
-  const getDeviceType = useCallback((): 'mobile' | 'desktop' => {
+  const _getDeviceType = useCallback((): 'mobile' | 'desktop' => {
     if (typeof window === 'undefined') return 'desktop'
     return window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent)
       ? 'mobile'
@@ -124,9 +134,48 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }, [])
 
   // SSE만 사용 - 전략 결정 로직 단순화
-  const determineNotificationStrategy = useCallback((): 'SSE' => {
-    // 항상 SSE 사용
-    return 'SSE'
+  const determineNotificationStrategy = useCallback((): 'SSE' | 'FCM' => {
+    // FCM이 초기화되었으면 FCM 사용, 아니면 SSE 사용
+    return isFcmInitialized ? 'FCM' : 'SSE'
+  }, [isFcmInitialized])
+
+  // FCM 초기화
+  const initializeFCM = useCallback(async (): Promise<boolean> => {
+    try {
+      // Service Worker 등록
+      const swRegistered = await registerServiceWorker()
+      if (!swRegistered) {
+        console.warn('Service Worker 등록 실패, FCM 비활성화')
+        return false
+      }
+
+      // 알림 권한 요청
+      const permissionGranted = await requestNotificationPermission()
+      if (!permissionGranted) {
+        console.warn('알림 권한 거부, FCM 비활성화')
+        return false
+      }
+
+      // FCM 토큰 발급
+      const token = await getFcmToken()
+      if (!token) {
+        console.warn('FCM 토큰 발급 실패')
+        return false
+      }
+
+      setFcmToken(token)
+      setIsFcmInitialized(true)
+      setIsPermissionGranted(true)
+
+      // 포그라운드 메시지 리스너 설정
+      setupForegroundMessageListener()
+
+      console.log('FCM 초기화 성공 ✅')
+      return true
+    } catch (error) {
+      console.error('FCM 초기화 실패:', error)
+      return false
+    }
   }, [])
 
   // 역할/식별자 보조 함수들 (숫자 id 강제)
@@ -138,20 +187,71 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   const getUserNumericId = useCallback((): number | null => {
     const raw =
-      (user as any)?.ownerId ?? (user as any)?.userId ?? (user as any)?.id
+      (user as { ownerId?: number; userId?: number; id?: number })?.ownerId ??
+      (user as { ownerId?: number; userId?: number; id?: number })?.userId ??
+      (user as { ownerId?: number; userId?: number; id?: number })?.id
     const num = Number(raw)
     if (!Number.isFinite(num) || num <= 0) return null
     return num
   }, [user?.ownerId, user?.userId, user?.id])
 
+  // FCM 토큰 등록
+  const registerFCMToken = useCallback(async (): Promise<boolean> => {
+    if (!fcmToken || !user?.id) return false
+
+    try {
+      const userId = getUserNumericId()
+      if (!userId) return false
+
+      const isOwner = getUserRole() === 'OWNER'
+      const success = isOwner
+        ? await notificationApi.fcm.registerOwnerToken(userId, fcmToken)
+        : await notificationApi.fcm.registerCustomerToken(userId, fcmToken)
+
+      if (success) {
+        console.log('FCM 토큰 등록 성공 ✅')
+      } else {
+        console.warn('FCM 토큰 등록 실패 ❌')
+      }
+
+      return success
+    } catch (error) {
+      console.error('FCM 토큰 등록 오류:', error)
+      return false
+    }
+  }, [fcmToken, user?.id, getUserNumericId, getUserRole])
+
+  // FCM 토큰 해제
+  const unregisterFCMToken = useCallback(async (): Promise<boolean> => {
+    if (!fcmToken) return true
+
+    try {
+      const success = await notificationApi.fcm.unregisterToken(fcmToken)
+      if (success) {
+        console.log('FCM 토큰 해제 성공 ✅')
+        setFcmToken(null)
+        setIsFcmInitialized(false)
+      } else {
+        console.warn('FCM 토큰 해제 실패 ❌')
+      }
+
+      return success
+    } catch (error) {
+      console.error('FCM 토큰 해제 오류:', error)
+      return false
+    }
+  }, [fcmToken])
+
   const convertNotificationData = (backendData: any): NotificationData => {
     return {
-      id: backendData.notificationId,
-      type: backendData.notificationType,
-      title: getNotificationTitle(backendData.notificationType),
-      message: backendData.content,
-      timestamp: backendData.createdAt,
-      isRead: backendData.isRead,
+      id: backendData.notificationId as number,
+      type: backendData.notificationType as NotificationType,
+      title: getNotificationTitle(
+        backendData.notificationType as NotificationType
+      ),
+      message: backendData.content as string,
+      timestamp: backendData.createdAt as string,
+      isRead: backendData.isRead as boolean,
       data: {
         receiverType: backendData.receiverType,
         receiverId: backendData.receiverId,
@@ -403,7 +503,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             : null,
           timestamp: new Date().toISOString(),
         }
-        ;(window as any).__KEEPING_SSE_DEBUG__ = debug
+        ;(window as { __KEEPING_SSE_DEBUG__?: unknown }).__KEEPING_SSE_DEBUG__ =
+          debug
         localStorage.setItem('sse:url', sseUrl)
         localStorage.setItem('sse:hasAuth', String(debug.hasAuthorization))
         if (debug.authorizationPreview) {
@@ -486,7 +587,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
                 const maybeJson = rawText.slice(firstBrace)
                 try {
                   data = JSON.parse(maybeJson)
-                } catch (e) {
+                } catch (_e) {
                   console.warn('[SSE] JSON parse failed:', rawText)
                   return
                 }
@@ -587,7 +688,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   // 알림 타입별 아이콘 및 설정 가져오기 (강화된 분류)
   const getNotificationConfig = (type: NotificationType) => {
     const category = getNotificationCategory(type)
-    const icon = getNotificationIcon(type)
+    const _icon = getNotificationIcon(type)
 
     // 상세한 카테고리별 설정
     const configs = {
@@ -659,9 +760,18 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       },
     }
 
-    return (
-      (specificConfigs as any)[type] || configs[category] || configs.default
-    )
+    return ((specificConfigs as Record<string, unknown>)[type] ||
+      (configs[category] as Record<string, unknown>) ||
+      (configs.default as Record<string, unknown>)) as {
+      emoji: string
+      icon: string
+      category: string
+      requireInteraction: boolean
+      priority: 'high' | 'normal' | 'low'
+      color: string
+      vibrate: number[]
+      duration: number
+    }
   }
 
   // 민감한 정보 마스킹 함수
@@ -689,7 +799,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }
 
   // 브라우저 알림 표시 (민감한 정보 보호)
-  const showBrowserNotification = (notification: NotificationData) => {
+  const _showBrowserNotification = (notification: NotificationData) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       const config = getNotificationConfig(notification.type)
 
@@ -745,7 +855,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         ) {
           // 진동은 사용자 제스처 이후 컨텍스트에서만 동작할 수 있음(브라우저별)
           // 실패해도 앱 흐름에 영향 없도록 try/catch 유지
-          ;(navigator as any).vibrate(config.vibrate)
+          ;(
+            navigator as { vibrate?: (pattern: number | number[]) => void }
+          ).vibrate?.(config.vibrate)
         }
       } catch {}
 
@@ -968,9 +1080,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       markAsRead(notification.id)
 
       // 알림 페이지로 이동 (모달은 URL 파라미터로 처리)
-      const userRole = getUserRole()
+      const _userRole = getUserRole()
       const basePath =
-        userRole === 'OWNER' ? '/owner/notification' : '/customer/notification'
+        _userRole === 'OWNER' ? '/owner/notification' : '/customer/notification'
 
       if (typeof window !== 'undefined') {
         if (notification.type === 'PAYMENT_REQUEST') {
@@ -1009,7 +1121,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
   const showInPageModal = useCallback(
     (notification: NotificationData) => {
-      const userRole = getUserRole()
+      const _userRole = getUserRole()
 
       // 먼저 토스트 알림 표시
       addToast(notification)
@@ -1051,7 +1163,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         }
       }
 
-      const modalConfig = getModalConfig(notification.type)
+      const _modalConfig = getModalConfig(notification.type)
 
       // PAYMENT_REQUEST인 경우 결제 승인 모달 열기
       if (notification.type === 'PAYMENT_REQUEST') {
@@ -1149,29 +1261,39 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   useEffect(() => {
     const handleOwnerPaymentResult = (event: CustomEvent) => {
       const { storeName, amount, customerName, success } = event.detail
-      
+
       // notifyOwnerPaymentResult 함수 호출 (객체 형태로 전달)
       notifyOwnerPaymentResult({
         intentPublicId: '', // 거절 시에는 intentPublicId가 없을 수 있음
         storeName,
         customerName,
         amount,
-        isApproved: success
+        isApproved: success,
       })
     }
 
-    window.addEventListener('notifyOwnerPaymentResult', handleOwnerPaymentResult as EventListener)
-    
+    window.addEventListener(
+      'notifyOwnerPaymentResult',
+      handleOwnerPaymentResult as EventListener
+    )
+
     return () => {
-      window.removeEventListener('notifyOwnerPaymentResult', handleOwnerPaymentResult as EventListener)
+      window.removeEventListener(
+        'notifyOwnerPaymentResult',
+        handleOwnerPaymentResult as EventListener
+      )
     }
   }, [])
 
   useEffect(() => {
     const initializeNotificationSystem = async () => {
       if (typeof window !== 'undefined' && user?.id && isOnline) {
-        if ('Notification' in window) {
-          setIsPermissionGranted(Notification.permission === 'granted')
+        // FCM 초기화 시도
+        const fcmInitialized = await initializeFCM()
+
+        if (fcmInitialized) {
+          // FCM 토큰 등록
+          await registerFCMToken()
         }
 
         // 알림 목록 로드
@@ -1180,20 +1302,35 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         // 읽지 않은 알림 개수 초기 조회 (한 번만)
         await fetchUnreadCount()
 
-        // SSE 연결 시도 (실시간 알림용)
-        try {
-          await connectSSE()
-          console.log('[NOTIFICATION] SSE 연결 성공')
-        } catch (error) {
-          console.warn('[NOTIFICATION] SSE 연결 실패:', error)
+        // 알림 전략에 따라 연결
+        const strategy = determineNotificationStrategy()
+        if (strategy === 'SSE') {
+          try {
+            await connectSSE()
+            console.log('[NOTIFICATION] SSE 연결 성공')
+          } catch (error) {
+            console.warn('[NOTIFICATION] SSE 연결 실패:', error)
+          }
+        } else {
+          console.log('[NOTIFICATION] FCM 모드 활성화')
         }
       }
     }
     initializeNotificationSystem()
     return () => {
       disconnectSSE()
+      unregisterFCMToken()
     }
-  }, [user?.id, isOnline, connectSSE, disconnectSSE])
+  }, [
+    user?.id,
+    isOnline,
+    connectSSE,
+    disconnectSSE,
+    initializeFCM,
+    registerFCMToken,
+    unregisterFCMToken,
+    determineNotificationStrategy,
+  ])
 
   return {
     notifications,
@@ -1203,6 +1340,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     modalNotification,
     paymentApprovalModal,
     toasts,
+    fcmToken,
+    isFcmInitialized,
     requestPermission,
     markAsRead,
     markAllAsRead,
@@ -1217,5 +1356,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     handleToastClick,
     getNotificationCategory,
     getNotificationIcon,
+    initializeFCM,
+    registerFCMToken,
+    unregisterFCMToken,
   }
 }

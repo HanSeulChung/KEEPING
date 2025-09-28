@@ -224,6 +224,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         setIsProcessing(false)
         setIsRetrying(false) // 재시도 플래그 초기화
         setRequestInProgress(false) // 요청 완료 시 플래그 초기화
+        setError('✅ 결제가 성공적으로 승인되었습니다!')
 
         // 점주에게 승인 알림 전송
         if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
@@ -244,10 +245,10 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         // 성공 콜백 호출
         onSuccess?.()
 
-        // 2초 후 모달 닫기
+        // 3초 후 모달 닫기 (성공 메시지를 볼 시간 제공)
         setTimeout(() => {
           onClose()
-        }, 2000)
+        }, 3000)
       } else {
         console.log('결제 승인 실패')
         const newAttempts = pinAttempts + 1
@@ -270,7 +271,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
           setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
         } else {
           setError(
-            `결제 승인에 실패했습니다. PIN 번호를 확인해주세요 (${newAttempts}/5)`
+            `❌ PIN 번호가 올바르지 않습니다. 다시 입력해주세요 (${newAttempts}/5)`
           )
         }
 
@@ -346,10 +347,8 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         // 성공 콜백 호출
         onSuccess?.()
 
-        // 2초 후 모달 닫기
-        setTimeout(() => {
-          onClose()
-        }, 2000)
+        // 바로 모달 닫기 (메시지 없이)
+        onClose()
       } else {
         console.log('결제 거절 실패')
         setError('결제 거절에 실패했습니다. 다시 시도해주세요.')
@@ -626,13 +625,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                   </button>
                   <button
                     onClick={handleReject}
-                    disabled={
-                      isLoading ||
-                      isProcessing ||
-                      requestInProgress ||
-                      isFinalized ||
-                      isBlocked
-                    }
+                    disabled={isFinalized || isLoading}
                     className="font-nanum-square-round-eb h-10 flex-1 rounded-[0.625rem] border-[3px] border-red-500 bg-red-600 px-3 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                   >
                     {isFinalized

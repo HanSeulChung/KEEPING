@@ -6,6 +6,7 @@ import { getNotificationIcon } from '@/types/notification'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { IoNotifications } from 'react-icons/io5'
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 
 type NotificationSetting = {
   id: string
@@ -16,8 +17,16 @@ type NotificationSetting = {
 const NotificationPage = () => {
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  const { notifications, markAsRead, markAllAsRead, unreadCount, isConnected } =
-    useNotificationSystem()
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    unreadCount,
+    isConnected,
+    showPaymentApprovalModal,
+    paymentApprovalModal,
+    hidePaymentApprovalModal
+  } = useNotificationSystem()
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
     { id: 'PAYMENT_CATEGORY', name: '결제/정산 알림', enabled: true },
@@ -30,6 +39,7 @@ const NotificationPage = () => {
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize] = useState(3) // 한 페이지당 3개 알림
   const [showPermissionModal, setShowPermissionModal] = useState(false)
+
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -139,6 +149,32 @@ const NotificationPage = () => {
     if (diff < 60) return `${diff}분 전`
     if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`
     return `${Math.floor(diff / 1440)}일 전`
+  }
+
+  // 결제 알림이 10분 이내인지 확인
+  const isPaymentValid = (timestamp: string) => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diff = Math.floor((now.getTime() - time.getTime()) / (1000 * 60)) // 분 단위
+    return diff <= 10 // 10분 이내
+  }
+
+  // 알림 클릭 처리
+  const handleNotificationClick = (notification: any) => {
+    if (notification.id && !isNaN(Number(notification.id))) {
+      markAsRead(Number(notification.id))
+    }
+
+    // PAYMENT_REQUEST 타입이고 10분 이내인 경우 결제 모달 열기
+    if (notification.type === 'PAYMENT_REQUEST' && isPaymentValid(notification.timestamp)) {
+      showPaymentApprovalModal({
+        intentPublicId: notification.data?.intentId || notification.data?.intentPublicId,
+        customerName: notification.data?.customerName || '고객',
+        amount: notification.data?.amount || 0,
+        storeName: notification.data?.storeName || '매장',
+        pointInfo: notification.data?.pointInfo,
+      })
+    }
   }
 
   // 페이지네이션 계산
@@ -286,24 +322,18 @@ const NotificationPage = () => {
           ) : (
             <>
               <div className="space-y-3">
-                {currentNotifications.map(notification => (
+                {currentNotifications.map(notification => {
+                  const isPaymentExpired = notification.type === 'PAYMENT_REQUEST' && !isPaymentValid(notification.timestamp)
+
+                  return (
                   <div
                     key={notification.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-[15px] border p-4 transition-colors ${
                       notification.isRead
                         ? 'border-gray-200 bg-white'
                         : 'border-[#76d4ff] bg-blue-50'
-                    }`}
-                    onClick={() => {
-                      if (notification.id && !isNaN(Number(notification.id))) {
-                        markAsRead(Number(notification.id))
-                      } else {
-                        console.error(
-                          '유효하지 않은 notification.id:',
-                          notification.id
-                        )
-                      }
-                    }}
+                    } ${isPaymentExpired ? 'opacity-50' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="mt-1">
                       {getNotificationIconComponent(notification.type)}
@@ -318,6 +348,9 @@ const NotificationPage = () => {
                       </div>
                       <div className="font-nanum-square-round-eb mt-1 text-xs break-words text-gray-600">
                         {notification.message}
+                        {isPaymentExpired && (
+                          <span className="ml-2 text-red-500 font-bold">(만료됨)</span>
+                        )}
                       </div>
                       <div className="font-nanum-square-round-eb mt-2 text-xs text-gray-400">
                         {formatTime(notification.timestamp)}
@@ -327,7 +360,8 @@ const NotificationPage = () => {
                       <div className="h-3 w-3 flex-shrink-0 rounded-full bg-[#76d4ff]"></div>
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* 페이지네이션 */}
@@ -482,6 +516,23 @@ const NotificationPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 결제 승인 모달 */}
+      {paymentApprovalModal.isOpen && (
+        <PaymentApprovalModal
+          isOpen={paymentApprovalModal.isOpen}
+          onClose={hidePaymentApprovalModal}
+          onSuccess={() => {
+            hidePaymentApprovalModal()
+            // 알림 목록 새로고침하거나 성공 처리
+          }}
+          intentId={paymentApprovalModal.data?.intentPublicId}
+          customerName={paymentApprovalModal.data?.customerName}
+          amount={paymentApprovalModal.data?.amount}
+          storeName={paymentApprovalModal.data?.storeName}
+          pointInfo={paymentApprovalModal.data?.pointInfo}
+        />
       )}
     </div>
   )
