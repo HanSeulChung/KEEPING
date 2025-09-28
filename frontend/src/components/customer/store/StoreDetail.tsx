@@ -2,7 +2,6 @@
 
 import { apiConfig, buildURL } from '@/api/config'
 import { useAuthStore } from '@/store/useAuthStore'
-import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { PaymentModal } from '../../ui/PaymentModal'
@@ -135,13 +134,17 @@ const MenuItem = ({ menu }: { menu: MenuItemData }) => {
   return (
     <div className="mb-4 flex h-[70px] w-full max-w-[380px] items-center rounded-[5px] bg-[#f8f8f8] p-3 md:max-w-none">
       <div className="mr-3 h-[54px] w-[54px] flex-shrink-0 rounded bg-gray-300">
-        <Image
-          src={menu.imgUrl || '/common/customer.svg'}
-          alt={menu.menuName}
-          width={54}
-          height={54}
-          className="h-full w-full rounded object-cover"
-        />
+        {menu.imgUrl ? (
+          <img
+            src={menu.imgUrl}
+            alt={menu.menuName}
+            className="h-full w-full rounded object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
+            이미지 없음
+          </div>
+        )}
       </div>
       <div className="flex-1">
         <div className="flex items-center justify-between">
@@ -177,13 +180,19 @@ const StoreImageAndInfo = ({
     <div className="relative mb-6 pt-4">
       {/* 가게 사진 */}
       <div className="relative h-[200px] w-full overflow-hidden rounded-lg">
-        <Image
-          src={storeData.imageUrl || '/common/customer.svg'}
-          alt={storeData.storeName}
-          fill
-          className="object-cover"
-          sizes="(max-width: 412px) 100vw, 412px"
-        />
+        {storeData.imageUrl ? (
+          <img
+            src={storeData.imageUrl}
+            alt={storeData.storeName}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-200">
+            <div className="text-center text-gray-500">
+              <div className="font-jalnan text-lg">이미지 없음</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 가게 정보 카드 (사진 아래에 배치) */}
@@ -564,7 +573,8 @@ export const StoreDetailPage = () => {
           address: data.address || data.location,
           category: data.category || data.businessType,
           storeStatus: data.storeStatus || 'ACTIVE',
-          imageUrl: data.imageUrl || data.image || data.storeImage,
+          imageUrl:
+            data.imgUrl || data.imageUrl || data.image || data.storeImage,
           phoneNumber: data.phoneNumber || data.phone,
           likes: data.likes || data.likeCount || 0,
           isLiked: data.isLiked || false,

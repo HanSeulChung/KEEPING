@@ -1,5 +1,6 @@
 import { StoreRequestDto } from '@/api/storeApi'
 import AddressInput from '@/components/common/AddressInput'
+import { Modal } from '@/components/ui/Modal'
 import { useStoreManagement } from '@/hooks/useStoreManagement'
 import { formatAddress } from '@/lib/addressUtils'
 import type { AddressData } from '@/types/address'
@@ -141,38 +142,18 @@ const StoreRegisterModal = ({
   }
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
-      <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-8">
-        {/* 헤더 */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-['Tenada'] text-4xl font-extrabold text-black">
-            매장 등록
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M18 6L6 18M6 6L18 18"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="매장 등록"
+      variant="owner"
+      height="h-[90vh]"
+      width="w-[500px]"
+    >
+      <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
         {/* 이미지 업로드 */}
         <div className="mb-6">
-          <div className="group relative h-48 w-full overflow-hidden rounded-lg border border-gray-300 bg-gray-50">
+          <div className="group relative h-48 w-full overflow-hidden rounded-[15px] border border-[#76d4ff] bg-gray-50">
             {selectedImage ? (
               <div className="flex h-full w-full items-center justify-center p-4">
                 <img
@@ -189,7 +170,7 @@ const StoreRegisterModal = ({
                   ×
                 </button>
                 {/* 마우스 호버 시 교체 버튼 */}
-                <label className="absolute right-2 bottom-2 cursor-pointer rounded bg-blue-500 px-3 py-1 text-xs font-bold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-blue-600">
+                <label className="absolute right-2 bottom-2 cursor-pointer rounded-[10px] bg-[#76d4ff] px-3 py-1 text-xs font-bold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-[#5bb3e6]">
                   교체
                   <input
                     type="file"
@@ -201,7 +182,7 @@ const StoreRegisterModal = ({
               </div>
             ) : (
               <div className="flex h-full w-full items-center justify-center">
-                <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
+                <label className="font-nanum-square-round-eb cursor-pointer rounded-[10px] border border-[#76d4ff] bg-white px-4 py-2 text-xs font-bold text-[#76d4ff] transition-colors hover:bg-blue-50">
                   이미지 업로드
                   <input
                     type="file"
@@ -223,13 +204,13 @@ const StoreRegisterModal = ({
         {/* 매장 이름 */}
         <div className="mb-4">
           <div className="mb-2 flex items-center">
-            <span className="rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black">
+            <span className="font-nanum-square-round-eb text-sm font-bold text-gray-700">
               매장 이름
             </span>
           </div>
           <input
             type="text"
-            className="h-10 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
+            className="font-nanum-square-round-eb h-10 w-full rounded-[10px] border border-[#76d4ff] p-2 text-black focus:border-[#5bb3e6] focus:outline-none"
             placeholder="매장 이름을 입력하세요"
             value={formData.storeName}
             onChange={e => handleInputChange('storeName', e.target.value)}
@@ -239,29 +220,28 @@ const StoreRegisterModal = ({
         {/* 매장 번호 */}
         <div className="mb-4">
           <div className="mb-2 flex items-center">
-            <span className="rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black">
+            <span className="font-nanum-square-round-eb text-sm font-bold text-gray-700">
               매장 번호
             </span>
           </div>
           <input
             type="tel"
-            className="h-10 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
+            className="font-nanum-square-round-eb h-10 w-full rounded-[10px] border border-[#76d4ff] p-2 text-black focus:border-[#5bb3e6] focus:outline-none"
             placeholder="매장 전화번호를 입력하세요 (예: 02-1234-5678)"
             value={formData.phoneNumber}
             onChange={e => handleInputChange('phoneNumber', e.target.value)}
           />
         </div>
 
-
         {/* 가게 소개 */}
         <div className="mb-4">
           <div className="mb-2 flex items-center">
-            <span className="rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black">
+            <span className="font-nanum-square-round-eb text-sm font-bold text-gray-700">
               가게 소개
             </span>
           </div>
           <textarea
-            className="h-20 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
+            className="font-nanum-square-round-eb h-20 w-full rounded-[10px] border border-[#76d4ff] p-2 text-black focus:border-[#5bb3e6] focus:outline-none"
             placeholder="가게 소개 입력"
             value={formData.description}
             onChange={e => handleInputChange('description', e.target.value)}
@@ -271,10 +251,12 @@ const StoreRegisterModal = ({
         {/* 업종 선택 */}
         <div className="mb-4">
           <div className="mb-2 flex items-center">
-            <span className="font-['Inter'] text-xs text-gray-500">업종</span>
+            <span className="font-nanum-square-round-eb text-sm font-bold text-gray-700">
+              업종
+            </span>
           </div>
           <select
-            className="h-10 w-full rounded-md border border-gray-300 p-2 font-['Inter'] text-black"
+            className="font-nanum-square-round-eb h-10 w-full rounded-[10px] border border-[#76d4ff] p-2 text-black focus:border-[#5bb3e6] focus:outline-none"
             value={formData.category}
             onChange={e => handleInputChange('category', e.target.value)}
           >
@@ -305,7 +287,7 @@ const StoreRegisterModal = ({
         {/* 주소 */}
         <div className="mb-6">
           <div className="mb-2 flex items-center">
-            <span className="rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black">
+            <span className="font-nanum-square-round-eb text-sm font-bold text-gray-700">
               주소
             </span>
           </div>
@@ -319,10 +301,14 @@ const StoreRegisterModal = ({
               detailAddress: '상세 주소 (선택)',
             }}
             className={{
-              zipCodeInput: 'h-10 font-["Inter"] text-gray-800',
-              searchButton: 'h-10 font-["Inter"] text-xs',
-              addressInput: 'h-10 font-["Inter"] text-gray-800',
-              detailAddressInput: 'h-10 font-["Inter"] text-black',
+              zipCodeInput:
+                'font-nanum-square-round-eb h-10 rounded-[10px] border border-[#76d4ff] text-gray-800 focus:border-[#5bb3e6] focus:outline-none',
+              searchButton:
+                'font-nanum-square-round-eb h-10 rounded-[10px] bg-[#76d4ff] text-xs text-white hover:bg-[#5bb3e6]',
+              addressInput:
+                'font-nanum-square-round-eb h-10 rounded-[10px] border border-[#76d4ff] text-gray-800 focus:border-[#5bb3e6] focus:outline-none',
+              detailAddressInput:
+                'font-nanum-square-round-eb h-10 rounded-[10px] border border-[#76d4ff] text-black focus:border-[#5bb3e6] focus:outline-none',
             }}
             validation={{
               address: { required: true, message: '기본주소를 입력해주세요.' },
@@ -331,15 +317,15 @@ const StoreRegisterModal = ({
         </div>
 
         {/* 등록하기 버튼 */}
-        <div className="flex justify-center">
+        <div className="flex justify-center pb-4">
           <button
             type="submit"
             onClick={handleSubmit}
             disabled={loading || !selectedImage}
-            className={`rounded px-6 py-2 font-['nanumsquare'] text-xs font-bold transition-colors ${
+            className={`font-jalnan rounded-[15px] px-6 py-3 text-base font-bold transition-colors ${
               loading || !selectedImage
                 ? 'cursor-not-allowed bg-gray-400 text-white'
-                : 'bg-gray-800 text-white hover:bg-gray-700'
+                : 'bg-[#76d4ff] text-white hover:bg-[#5bb3e6]'
             }`}
           >
             {loading
@@ -350,7 +336,7 @@ const StoreRegisterModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

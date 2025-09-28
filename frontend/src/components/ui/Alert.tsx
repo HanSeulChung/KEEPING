@@ -12,6 +12,7 @@ interface AlertProps {
   onConfirm?: () => void
   onCancel?: () => void
   type?: 'info' | 'success' | 'warning' | 'error'
+  variant?: 'customer' | 'owner'
 }
 
 export const Alert = ({
@@ -25,19 +26,22 @@ export const Alert = ({
   onConfirm,
   onCancel,
   type = 'info',
+  variant = 'customer',
 }: AlertProps) => {
   if (!isOpen) return null
+
+  const isOwner = variant === 'owner'
 
   const getTypeColor = () => {
     switch (type) {
       case 'success':
-        return 'text-[#ffc800]'
+        return isOwner ? 'text-[#76d4ff]' : 'text-[#ffc800]'
       case 'warning':
         return 'text-yellow-600'
       case 'error':
         return 'text-red-600'
       default:
-        return 'text-[#ffc800]'
+        return isOwner ? 'text-[#76d4ff]' : 'text-[#ffc800]'
     }
   }
 
@@ -57,7 +61,9 @@ export const Alert = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative h-[180px] w-[350px] rounded-[30px] bg-[#fbf9f5]">
+      <div
+        className={`relative h-[180px] w-[350px] rounded-[30px] ${isOwner ? 'bg-[#F6FCFF]' : 'bg-[#fbf9f5]'}`}
+      >
         {/* 닫기 버튼 */}
         <div className="absolute top-4 right-4">
           <button onClick={onClose}>
@@ -70,7 +76,7 @@ export const Alert = ({
             >
               <path
                 d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
-                stroke="#FFC800"
+                stroke={isOwner ? '#76d4ff' : '#FFC800'}
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -83,7 +89,9 @@ export const Alert = ({
         <div className="flex h-full flex-col justify-start px-4 pt-12 pb-4">
           <div className="flex flex-1 items-center justify-center">
             {message && (
-              <div className="font-jalnan text-center text-base text-[#ffc800]">
+              <div
+                className={`font-jalnan text-center text-base ${getTypeColor()}`}
+              >
                 {message}
               </div>
             )}
@@ -95,7 +103,11 @@ export const Alert = ({
             {onCancel && (
               <button
                 onClick={handleCancel}
-                className="font-jalnan flex-1 rounded-[10px] border-2 border-[#fdda60] bg-white px-4 py-2 text-[#fdda60] transition-colors hover:bg-yellow-50"
+                className={`font-jalnan flex-1 rounded-[10px] border-2 bg-white px-4 py-2 transition-colors ${
+                  isOwner
+                    ? 'border-[#76d4ff] text-[#76d4ff] hover:bg-blue-50'
+                    : 'border-[#fdda60] text-[#fdda60] hover:bg-yellow-50'
+                }`}
               >
                 {cancelText}
               </button>
@@ -104,8 +116,12 @@ export const Alert = ({
               onClick={handleConfirm}
               className={`font-jalnan flex-1 rounded-[10px] px-4 py-2 text-white transition-colors ${
                 onCancel
-                  ? 'bg-[#fdda60] hover:bg-[#f4d03f]'
-                  : 'w-full bg-[#fdda60] hover:bg-[#f4d03f]'
+                  ? isOwner
+                    ? 'bg-[#76d4ff] hover:bg-[#5bb3e6]'
+                    : 'bg-[#fdda60] hover:bg-[#f4d03f]'
+                  : isOwner
+                    ? 'w-full bg-[#76d4ff] hover:bg-[#5bb3e6]'
+                    : 'w-full bg-[#fdda60] hover:bg-[#f4d03f]'
               }`}
             >
               {confirmText}
