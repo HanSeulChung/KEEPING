@@ -38,6 +38,7 @@ export const PaymentModal = ({
   const [cardsLoading, setCardsLoading] = useState(false)
   const [cardsError, setCardsError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isPaymentComplete, setIsPaymentComplete] = useState(false)
 
   const { user, loading, error } = useAuthStore()
 
@@ -199,15 +200,8 @@ export const PaymentModal = ({
       const result = await response.json()
       console.log('결제 성공:', result)
 
-      // 성공 시 세션 키 제거 (재사용 방지)
-      sessionStorage.removeItem(sessionKey)
-
-      // 성공 시 알림 표시
-      alert('충전되었습니다.')
-
-      // 성공 시 콜백 호출 및 모달 닫기
-      onPayment()
-      onClose()
+      // 성공 시 결제 완료 상태로 변경
+      setIsPaymentComplete(true)
     } catch (error) {
       console.error('결제 실패:', error)
       alert(
@@ -220,35 +214,89 @@ export const PaymentModal = ({
     }
   }
 
+  // 결제 완료 화면
+  if (isPaymentComplete) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="relative h-[147px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
+          {/* 닫기 버튼 */}
+          <div className="flex items-center justify-end pt-[25px] pr-[29px] pb-[86px] pl-[347px]">
+            <button
+              onClick={() => {
+                setIsPaymentComplete(false)
+                onPayment()
+                onClose()
+              }}
+              className="flex items-center justify-center"
+            >
+              <svg
+                width={36}
+                height={36}
+                viewBox="0 0 36 36"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* 결제 완료 메시지 */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform text-center">
+            <div className="font-jalnan mb-4 text-xl leading-[140%] whitespace-nowrap text-[#ffc800]">
+              결제가 완료되었습니다!
+            </div>
+
+            {/* 포인트 확인 버튼 */}
+            <button
+              onClick={() => {
+                setIsPaymentComplete(false)
+                onPayment()
+                onClose()
+                // 포인트 확인 페이지로 이동
+                window.location.href = '/customer/myWallet'
+              }}
+              className="inline-flex items-center justify-center rounded-[10px] bg-[#fdda60] p-1 pr-[21px] pl-[22px]"
+            >
+              <div className="font-jalnan text-[15px] leading-[140%] text-white">
+                포인트 확인하러 가기
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
-      <div
-        className="relative h-auto max-h-[90vh] w-full max-w-md overflow-hidden rounded-[10px] bg-white"
-        style={{ boxShadow: '0px 4px 4px 0 rgba(0,0,0,0.25)' }}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="relative h-[331px] w-[412px] rounded-[30px] bg-[#fbf9f5]">
         {/* 헤더 */}
-        <div className="flex items-start justify-between p-4">
-          <div>
-            <p className="mb-2 text-xl font-bold text-black">카드 결제</p>
-            <p className="text-xs text-black">
-              본인 명의의 카드 정보를 입력해주세요.
-            </p>
+        <div className="flex items-center justify-between p-6">
+          <div className="font-jalnan text-xl leading-[140%] text-[#ffc800]">
+            결제하기
           </div>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+            className="flex items-center justify-center"
           >
             <svg
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
+              width={36}
+              height={36}
+              viewBox="0 0 36 36"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
             >
               <path
-                d="M15 9L9 15M9 9L15 15M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z"
-                stroke="#1E1E1E"
+                d="M22.5 13.5L13.5 22.5M13.5 13.5L22.5 22.5M33 18C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3C26.2843 3 33 9.71573 33 18Z"
+                stroke="#FFC800"
+                strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -257,10 +305,10 @@ export const PaymentModal = ({
         </div>
 
         {/* 구분선 */}
-        <div className="mx-4 h-px w-full bg-gray-300"></div>
+        <div className="h-[3px] w-full bg-[#ffc800]" />
 
         {/* 카드 정보 표시 */}
-        <div className="space-y-6 p-4">
+        <div className="px-4 pt-6 pb-6">
           {cardsLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-gray-500">카드 정보를 불러오는 중...</div>
@@ -270,23 +318,18 @@ export const PaymentModal = ({
               <div className="text-red-500">{cardsError}</div>
             </div>
           ) : selectedCard ? (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">카드명:</span>
-                  <span className="text-sm font-medium text-black">
-                    {selectedCard.cardName}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">카드번호:</span>
-                  <span className="text-sm font-medium text-black">
-                    {selectedCard.cardNo.replace(
-                      /(\d{4})(\d{4})(\d{4})(\d{4})/,
-                      '$1-****-****-$4'
-                    )}
-                  </span>
-                </div>
+            <div className="flex flex-col space-y-2 rounded-[10px] border-2 border-[#ccc] bg-white p-4">
+              <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] font-bold text-black">
+                {selectedCard.cardName}
+              </div>
+              <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] font-bold text-black">
+                {selectedCard.cardNo.replace(
+                  /(\d{4})(\d{4})(\d{4})(\d{4})/,
+                  '$1 - $2 - $3 - $4'
+                )}
+              </div>
+              <div className="font-['Jalnan2TTF'] text-[15px] leading-[140%] font-bold text-black">
+                {selectedCard.cvc}
               </div>
             </div>
           ) : (
@@ -297,23 +340,31 @@ export const PaymentModal = ({
         </div>
 
         {/* 결제 버튼 */}
-        <div className="p-4">
+        <div className="px-4 pb-6">
           <button
             onClick={handlePayment}
             disabled={isProcessing || !selectedCard || cardsLoading}
-            className={`h-12 w-full rounded-md bg-black text-base font-bold text-white transition-colors ${
+            className={`flex h-[45px] w-[380px] items-center justify-center rounded-[10px] px-0 pt-1 pb-1 transition-colors ${
               isProcessing || !selectedCard || cardsLoading
                 ? 'cursor-not-allowed bg-gray-400'
-                : 'hover:bg-gray-800'
+                : 'bg-[#fdda60] hover:bg-[#f4d03f]'
             }`}
           >
-            {isProcessing
-              ? '결제 처리 중...'
-              : cardsLoading
-                ? '카드 정보 로딩 중...'
-                : !selectedCard
-                  ? '카드 정보를 불러올 수 없습니다'
-                  : '결제하기'}
+            <span
+              className={`font-jalnan text-lg font-bold ${
+                isProcessing || !selectedCard || cardsLoading
+                  ? 'text-gray-500'
+                  : 'text-white'
+              }`}
+            >
+              {isProcessing
+                ? '결제 처리 중...'
+                : cardsLoading
+                  ? '카드 정보 로딩 중...'
+                  : !selectedCard
+                    ? '카드 정보를 불러올 수 없습니다'
+                    : '결제하기'}
+            </span>
           </button>
         </div>
       </div>

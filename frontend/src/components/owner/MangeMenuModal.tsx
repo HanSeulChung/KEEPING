@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { BaseComponentProps } from '@/types'
+import { useState } from 'react'
 
 // 메뉴 타입 정의
 export interface Menu {
@@ -45,7 +45,10 @@ export default function MangeMenuModal({
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+  const handleInputChange = (
+    field: string,
+    value: string | number | boolean
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     // 에러 메시지 제거
     if (errors[field]) {
@@ -55,20 +58,20 @@ export default function MangeMenuModal({
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
-    
+
     if (!formData.name.trim()) newErrors.name = '메뉴명은 필수입니다.'
     if (formData.price <= 0) newErrors.price = '가격은 0보다 커야 합니다.'
     if (!formData.category.trim()) newErrors.category = '카테고리는 필수입니다.'
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
-    
+
     onSave(formData)
     onClose()
   }
@@ -83,8 +86,10 @@ export default function MangeMenuModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className={`w-full max-w-md rounded-lg bg-white p-6 shadow-lg ${className}`}>
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+      <div
+        className={`w-full max-w-md rounded-lg bg-white p-6 shadow-lg ${className}`}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold">
             {mode === 'create' ? '메뉴 추가' : '메뉴 수정'}
@@ -107,7 +112,7 @@ export default function MangeMenuModal({
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              onChange={e => handleInputChange('name', e.target.value)}
               className={`mt-1 w-full rounded border px-3 py-2 ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -126,7 +131,7 @@ export default function MangeMenuModal({
             <input
               type="number"
               value={formData.price}
-              onChange={(e) => handleInputChange('price', Number(e.target.value))}
+              onChange={e => handleInputChange('price', Number(e.target.value))}
               className={`mt-1 w-full rounded border px-3 py-2 ${
                 errors.price ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -145,13 +150,13 @@ export default function MangeMenuModal({
             </label>
             <select
               value={formData.category}
-              onChange={(e) => handleInputChange('category', e.target.value)}
+              onChange={e => handleInputChange('category', e.target.value)}
               className={`mt-1 w-full rounded border px-3 py-2 ${
                 errors.category ? 'border-red-500' : 'border-gray-300'
               }`}
             >
               <option value="">카테고리를 선택하세요</option>
-              {categories.map((category) => (
+              {categories.map(category => (
                 <option key={category.id} value={category.name}>
                   {category.name}
                 </option>
@@ -169,7 +174,7 @@ export default function MangeMenuModal({
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={e => handleInputChange('description', e.target.value)}
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
               placeholder="메뉴 설명을 입력하세요"
               rows={3}
@@ -184,7 +189,7 @@ export default function MangeMenuModal({
             <input
               type="url"
               value={formData.imageUrl}
-              onChange={(e) => handleInputChange('imageUrl', e.target.value)}
+              onChange={e => handleInputChange('imageUrl', e.target.value)}
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
               placeholder="https://example.com/image.jpg"
             />
@@ -196,8 +201,8 @@ export default function MangeMenuModal({
               type="checkbox"
               id="isAvailable"
               checked={formData.isAvailable}
-              onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              onChange={e => handleInputChange('isAvailable', e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="isAvailable" className="ml-2 text-sm text-gray-700">
               판매 중

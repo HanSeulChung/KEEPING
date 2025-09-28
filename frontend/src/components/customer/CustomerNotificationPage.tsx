@@ -8,15 +8,17 @@ import { useEffect, useState } from 'react'
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { notifications, markAsRead, markAllAsRead, unreadCount } = useNotificationSystem()
-  
+  const { notifications, markAsRead, markAllAsRead, unreadCount } =
+    useNotificationSystem()
+
   // markAsRead 함수를 number 타입으로 사용
   const handleMarkAsRead = (id: number) => {
     markAsRead(id)
   }
-  
+
   const [loading, setLoading] = useState(true)
-  const [filteredNotifications, setFilteredNotifications] = useState(notifications)
+  const [filteredNotifications, setFilteredNotifications] =
+    useState(notifications)
 
   // URL 파라미터에서 가게 정보 가져오기
   const storeId = searchParams.get('storeId')
@@ -26,10 +28,11 @@ const CustomerNotificationPage = () => {
   useEffect(() => {
     if (storeId) {
       // 가게 ID에 해당하는 알림만 필터링
-      const filtered = notifications.filter(notification => 
-        notification.data?.storeId === parseInt(storeId) || 
-        notification.message.includes(accountName || '') ||
-        !notification.data?.storeId // 가게별 필터링이 없는 알림은 모두 표시
+      const filtered = notifications.filter(
+        notification =>
+          notification.data?.storeId === parseInt(storeId) ||
+          notification.message.includes(accountName || '') ||
+          !notification.data?.storeId // 가게별 필터링이 없는 알림은 모두 표시
       )
       setFilteredNotifications(filtered)
     } else {
@@ -44,16 +47,27 @@ const CustomerNotificationPage = () => {
 
     // 타입별 배경색 설정
     let bgColor = 'bg-gray-100'
-    if (['PAYMENT_APPROVED', 'PAYMENT_REQUEST', 'PAYMENT_CANCELED', 'SETTLEMENT_COMPLETED'].includes(type)) {
+    if (
+      [
+        'PAYMENT_APPROVED',
+        'PAYMENT_REQUEST',
+        'PAYMENT_CANCELED',
+        'SETTLEMENT_COMPLETED',
+      ].includes(type)
+    ) {
       bgColor = 'bg-green-100'
-    } else if (['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(type)) {
+    } else if (
+      ['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(type)
+    ) {
       bgColor = 'bg-blue-100'
     } else if (type.includes('GROUP_')) {
       bgColor = 'bg-yellow-100'
     }
 
     return (
-      <div className={`w-8 h-8 ${bgColor} rounded-full flex items-center justify-center`}>
+      <div
+        className={`h-8 w-8 ${bgColor} flex items-center justify-center rounded-full`}
+      >
         <span className="text-sm">{iconEmoji}</span>
       </div>
     )
@@ -63,134 +77,168 @@ const CustomerNotificationPage = () => {
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    )
+
     if (diffInMinutes < 1) return '방금 전'
     if (diffInMinutes < 60) return `${diffInMinutes}분 전`
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}시간 전`
     if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}일 전`
-    
+
     return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg font-['nanumsquare']">알림을 불러오는 중...</div>
+      <div className="w-full">
+        {/* 헤더 */}
+        <div className="flex w-full items-center bg-[#fddb5f] px-4 py-3">
+          <svg
+            width={24}
+            height={24}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M4 19V17H6V10C6 8.61667 6.41667 7.39167 7.25 6.325C8.08333 5.24167 9.16667 4.53333 10.5 4.2V3.5C10.5 3.08333 10.6417 2.73333 10.925 2.45C11.225 2.15 11.5833 2 12 2C12.4167 2 12.7667 2.15 13.05 2.45C13.35 2.73333 13.5 3.08333 13.5 3.5V4.2C14.8333 4.53333 15.9167 5.24167 16.75 6.325C17.5833 7.39167 18 8.61667 18 10V17H20V19H4ZM12 22C11.45 22 10.975 21.8083 10.575 21.425C10.1917 21.025 10 20.55 10 20H14C14 20.55 13.8 21.025 13.4 21.425C13.0167 21.8083 12.55 22 12 22ZM8 17H16V10C16 8.9 15.6083 7.95833 14.825 7.175C14.0417 6.39167 13.1 6 12 6C10.9 6 9.95833 6.39167 9.175 7.175C8.39167 7.95833 8 8.9 8 10V17Z"
+              fill="white"
+            />
+          </svg>
+          <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
+            알림
+          </div>
+        </div>
+        <div className="flex h-64 items-center justify-center">
+          <div className="font-nanum-square-round-eb text-lg">
+            알림을 불러오는 중...
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 모바일 네이티브 헤더 */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm safe-area-top">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between h-11">
-            <button
-              onClick={() => router.back()}
-              className="p-2 -ml-2 rounded-full active:bg-gray-100 transition-colors"
-            >
-              <svg width={24} height={24} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <h1 className="text-lg font-['nanumsquare'] font-bold text-black">
-              알림
-            </h1>
-            <div className="w-10"></div> {/* 공간 맞추기 */}
-          </div>
+    <div className="w-full">
+      {/* 헤더 */}
+      <div className="flex w-full items-center bg-[#fddb5f] px-4 py-3">
+        <svg
+          width={24}
+          height={24}
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M4 19V17H6V10C6 8.61667 6.41667 7.39167 7.25 6.325C8.08333 5.24167 9.16667 4.53333 10.5 4.2V3.5C10.5 3.08333 10.6417 2.73333 10.925 2.45C11.225 2.15 11.5833 2 12 2C12.4167 2 12.7667 2.15 13.05 2.45C13.35 2.73333 13.5 3.08333 13.5 3.5V4.2C14.8333 4.53333 15.9167 5.24167 16.75 6.325C17.5833 7.39167 18 8.61667 18 10V17H20V19H4ZM12 22C11.45 22 10.975 21.8083 10.575 21.425C10.1917 21.025 10 20.55 10 20H14C14 20.55 13.8 21.025 13.4 21.425C13.0167 21.8083 12.55 22 12 22ZM8 17H16V10C16 8.9 15.6083 7.95833 14.825 7.175C14.0417 6.39167 13.1 6 12 6C10.9 6 9.95833 6.39167 9.175 7.175C8.39167 7.95833 8 8.9 8 10V17Z"
+            fill="white"
+          />
+        </svg>
+        <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
+          알림
         </div>
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="pb-safe">
+      <div className="w-full space-y-4">
         {/* 가게 정보 표시 */}
         {accountName && (
-          <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <h2 className="text-base font-['nanumsquare'] font-bold text-black mb-1">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <h2 className="font-nanum-square-round-eb mb-1 text-base font-bold text-black">
               {accountName} 알림
             </h2>
-            <p className="text-sm text-gray-600 font-['nanumsquare']">
+            <p className="font-nanum-square-round-eb text-sm text-gray-600">
               이 가게와 관련된 알림만 표시됩니다
             </p>
           </div>
         )}
 
         {/* 알림 헤더 */}
-        <div className="px-4 py-3 bg-white border-b border-gray-100">
+        <div className="border-b border-gray-100 py-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-['nanumsquare'] font-bold text-black">
-              전체 알림 {filteredNotifications.length > 0 && `(${filteredNotifications.length})`}
+            <h2 className="font-nanum-square-round-eb text-base font-bold text-black">
+              전체 알림{' '}
+              {filteredNotifications.length > 0 &&
+                `(${filteredNotifications.length})`}
             </h2>
             {filteredNotifications.some(n => !n.isRead) && (
               <button
                 onClick={markAllAsRead}
-                className="px-3 py-1.5 text-sm text-blue-600 font-['nanumsquare'] font-medium active:bg-blue-50 rounded-lg transition-colors"
+                className="font-nanum-square-round-eb rounded-lg px-3 py-1.5 text-sm font-medium text-blue-600 transition-colors active:bg-blue-50"
               >
                 모두 읽음
               </button>
             )}
           </div>
         </div>
-          
+
         {filteredNotifications.length === 0 ? (
-          <div className="bg-white">
-            <div className="text-center py-16 px-4">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg width={24} height={24} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#9CA3AF"/>
-                </svg>
-              </div>
-              <p className="text-gray-500 font-['nanumsquare'] text-base font-medium">알림이 없습니다</p>
-              <p className="text-gray-400 font-['nanumsquare'] text-sm mt-2">
-                새로운 알림이 오면 여기에 표시됩니다
-              </p>
+          <div className="py-16 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+              <svg
+                width={24}
+                height={24}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+                  fill="#9CA3AF"
+                />
+              </svg>
             </div>
+            <p className="font-nanum-square-round-eb text-base font-medium text-gray-500">
+              알림이 없습니다
+            </p>
+            <p className="font-nanum-square-round-eb mt-2 text-sm text-gray-400">
+              새로운 알림이 오면 여기에 표시됩니다
+            </p>
           </div>
         ) : (
-          <div className="bg-white">
+          <div className="space-y-2">
             {filteredNotifications.map((notification, index) => (
               <div
                 key={notification.id}
-                className={`border-b border-gray-100 last:border-b-0 active:bg-gray-50 transition-colors ${
-                  !notification.isRead ? 'bg-blue-50' : 'bg-white'
+                className={`rounded-lg border border-gray-200 p-4 transition-colors active:bg-gray-50 ${
+                  !notification.isRead
+                    ? 'border-blue-200 bg-blue-50'
+                    : 'bg-white'
                 }`}
                 onClick={() => handleMarkAsRead(notification.id)}
               >
-                <div className="px-4 py-4 flex items-start gap-3">
+                <div className="flex items-start gap-3">
                   {/* 알림 아이콘 */}
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="mt-1 flex-shrink-0">
                     {getNotificationIconComponent(notification.type)}
                   </div>
 
                   {/* 알림 내용 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="text-sm font-['nanumsquare'] font-bold text-black line-clamp-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <h3 className="font-nanum-square-round-eb line-clamp-1 text-sm font-bold text-black">
                         {notification.title}
                       </h3>
                       {!notification.isRead && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                        <div className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-700 font-['nanumsquare'] leading-relaxed mb-2 line-clamp-2">
+                    <p className="font-nanum-square-round-eb mb-2 line-clamp-2 text-sm leading-relaxed text-gray-700">
                       {notification.message}
                     </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400 font-['nanumsquare']">
+                      <p className="font-nanum-square-round-eb text-xs text-gray-400">
                         {formatTime(notification.timestamp)}
                       </p>
                       {notification.data?.amount && (
-                        <span className="text-xs font-['nanumsquare'] font-bold text-green-600">
+                        <span className="font-nanum-square-round-eb text-xs font-bold text-green-600">
                           {notification.data.amount.toLocaleString()}원
                         </span>
                       )}

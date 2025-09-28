@@ -1,387 +1,375 @@
 'use client'
 
+import CardModal from '@/components/customer/CardModal'
+import QRModal from '@/components/customer/home/QRmodal'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React from 'react'
-
-interface NavigationItem {
-  id: string
-  label: string
-  href: string
-  icon: React.ReactNode
-  activeIcon?: React.ReactNode
-}
+import { useState } from 'react'
 
 const Navigation = () => {
   const pathname = usePathname()
   const { isOpen, toggle } = useSidebarStore()
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false)
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<{
+    storeId: number
+    storeName: string
+    walletId: number
+  } | null>(null)
 
-  const navigationItems: NavigationItem[] = [
-    {
-      id: 'home',
-      label: '홈',
-      href: '/customer/home',
-      icon: (
-        <svg
-          width={20}
-          height={21}
-          viewBox="0 0 20 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.4922 18.4844V11.8177C12.4922 11.5967 12.4044 11.3847 12.2481 11.2285C12.0918 11.0722 11.8799 10.9844 11.6589 10.9844H8.32552C8.10451 10.9844 7.89255 11.0722 7.73627 11.2285C7.57999 11.3847 7.49219 11.5967 7.49219 11.8177V18.4844"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M2.49219 9.3176C2.49213 9.07516 2.54497 8.83562 2.64701 8.6157C2.74906 8.39577 2.89785 8.20076 3.08302 8.04427L8.91635 3.0451C9.21718 2.79086 9.59832 2.65137 9.99219 2.65137C10.3861 2.65137 10.7672 2.79086 11.068 3.0451L16.9014 8.04427C17.0865 8.20076 17.2353 8.39577 17.3374 8.6157C17.4394 8.83562 17.4922 9.07516 17.4922 9.3176V16.8176C17.4922 17.2596 17.3166 17.6836 17.004 17.9961C16.6915 18.3087 16.2675 18.4843 15.8255 18.4843H4.15885C3.71683 18.4843 3.2929 18.3087 2.98034 17.9961C2.66778 17.6836 2.49219 17.2596 2.49219 16.8176V9.3176Z"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-      activeIcon: (
-        <svg
-          width={20}
-          height={21}
-          viewBox="0 0 20 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.4922 18.4844V11.8177C12.4922 11.5967 12.4044 11.3847 12.2481 11.2285C12.0918 11.0722 11.8799 10.9844 11.6589 10.9844H8.32552C8.10451 10.9844 7.89255 11.0722 7.73627 11.2285C7.57999 11.3847 7.49219 11.5967 7.49219 11.8177V18.4844"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M2.49219 9.3176C2.49213 9.07516 2.54497 8.83562 2.64701 8.6157C2.74906 8.39577 2.89785 8.20076 3.08302 8.04427L8.91635 3.0451C9.21718 2.79086 9.59832 2.65137 9.99219 2.65137C10.3861 2.65137 10.7672 2.79086 11.068 3.0451L16.9014 8.04427C17.0865 8.20076 17.2353 8.39577 17.3374 8.6157C17.4394 8.83562 17.4922 9.07516 17.4922 9.3176V16.8176C17.4922 17.2596 17.3166 17.6836 17.004 17.9961C16.6915 18.3087 16.2675 18.4843 15.8255 18.4843H4.15885C3.71683 18.4843 3.2929 18.3087 2.98034 17.9961C2.66778 17.6836 2.49219 17.2596 2.49219 16.8176V9.3176Z"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: 'personal-wallet',
-      label: '내지갑',
-      href: '/customer/myWallet',
-      icon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M17.1592 5.15137H3.82585C2.90537 5.15137 2.15918 5.89756 2.15918 6.81803V15.1514C2.15918 16.0718 2.90537 16.818 3.82585 16.818H17.1592C18.0797 16.818 18.8258 16.0718 18.8258 15.1514V6.81803C18.8258 5.89756 18.0797 5.15137 17.1592 5.15137Z"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M2.15918 9.31738H18.8258"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-      activeIcon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M17.1592 5.15137H3.82585C2.90537 5.15137 2.15918 5.89756 2.15918 6.81803V15.1514C2.15918 16.0718 2.90537 16.818 3.82585 16.818H17.1592C18.0797 16.818 18.8258 16.0718 18.8258 15.1514V6.81803C18.8258 5.89756 18.0797 5.15137 17.1592 5.15137Z"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M2.15918 9.31738H18.8258"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: 'group-wallet',
-      label: '모임지갑',
-      href: '/customer/groupWallet',
-      icon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <g clipPath="url(#clip0_762_2308)">
-            <path
-              d="M14.0758 18.4844V16.8177C14.0758 15.9337 13.7247 15.0858 13.0995 14.4607C12.4744 13.8356 11.6266 13.4844 10.7425 13.4844H5.74251C4.85846 13.4844 4.01061 13.8356 3.38549 14.4607C2.76037 15.0858 2.40918 15.9337 2.40918 16.8177V18.4844"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M14.0752 3.59082C14.79 3.77613 15.423 4.19354 15.8749 4.77754C16.3268 5.36154 16.572 6.07906 16.572 6.81749C16.572 7.55591 16.3268 8.27344 15.8749 8.85743C15.423 9.44143 14.79 9.85884 14.0752 10.0442"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M19.0752 18.4844V16.8178C19.0746 16.0792 18.8288 15.3618 18.3763 14.778C17.9238 14.1943 17.2903 13.7774 16.5752 13.5928"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.24251 10.151C10.0835 10.151 11.5758 8.65866 11.5758 6.81771C11.5758 4.97676 10.0835 3.48438 8.24251 3.48438C6.40156 3.48438 4.90918 4.97676 4.90918 6.81771C4.90918 8.65866 6.40156 10.151 8.24251 10.151Z"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-          <defs>
-            <clipPath id="clip0_762_2308">
-              <rect
-                width={20}
-                height={20}
-                fill="white"
-                transform="translate(0.742188 0.984375)"
-              />
-            </clipPath>
-          </defs>
-        </svg>
-      ),
-      activeIcon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <g clipPath="url(#clip0_762_2308)">
-            <path
-              d="M14.0758 18.4844V16.8177C14.0758 15.9337 13.7247 15.0858 13.0995 14.4607C12.4744 13.8356 11.6266 13.4844 10.7425 13.4844H5.74251C4.85846 13.4844 4.01061 13.8356 3.38549 14.4607C2.76037 15.0858 2.40918 15.9337 2.40918 16.8177V18.4844"
-              stroke="#4C97D6"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M14.0752 3.59082C14.79 3.77613 15.423 4.19354 15.8749 4.77754C16.3268 5.36154 16.572 6.07906 16.572 6.81749C16.572 7.55591 16.3268 8.27344 15.8749 8.85743C15.423 9.44143 14.79 9.85884 14.0752 10.0442"
-              stroke="#4C97D6"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M19.0752 18.4844V16.8178C19.0746 16.0792 18.8288 15.3618 18.3763 14.778C17.9238 14.1943 17.2903 13.7774 16.5752 13.5928"
-              stroke="#4C97D6"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.24251 10.151C10.0835 10.151 11.5758 8.65866 11.5758 6.81771C11.5758 4.97676 10.0835 3.48438 8.24251 3.48438C6.40156 3.48438 4.90918 4.97676 4.90918 6.81771C4.90918 8.65866 6.40156 10.151 8.24251 10.151Z"
-              stroke="#4C97D6"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-          <defs>
-            <clipPath id="clip0_762_2308">
-              <rect
-                width={20}
-                height={20}
-                fill="white"
-                transform="translate(0.742188 0.984375)"
-              />
-            </clipPath>
-          </defs>
-        </svg>
-      ),
-    },
-    {
-      id: 'mypage',
-      label: '마이페이지',
-      href: '/customer/myPage',
-      icon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M16.0758 18.4844V16.8177C16.0758 15.9337 15.7247 15.0858 15.0995 14.4607C14.4744 13.8356 13.6266 13.4844 12.7425 13.4844H7.74251C6.85846 13.4844 6.01061 13.8356 5.38549 14.4607C4.76037 15.0858 4.40918 15.9337 4.40918 16.8177V18.4844"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M10.2425 10.151C12.0835 10.151 13.5758 8.65866 13.5758 6.81771C13.5758 4.97676 12.0835 3.48438 10.2425 3.48438C8.40156 3.48438 6.90918 4.97676 6.90918 6.81771C6.90918 8.65866 8.40156 10.151 10.2425 10.151Z"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-      activeIcon: (
-        <svg
-          width={21}
-          height={21}
-          viewBox="0 0 21 21"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M16.0758 18.4844V16.8177C16.0758 15.9337 15.7247 15.0858 15.0995 14.4607C14.4744 13.8356 13.6266 13.4844 12.7425 13.4844H7.74251C6.85846 13.4844 6.01061 13.8356 5.38549 14.4607C4.76037 15.0858 4.40918 15.9337 4.40918 16.8177V18.4844"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M10.2425 10.151C12.0835 10.151 13.5758 8.65866 13.5758 6.81771C13.5758 4.97676 12.0835 3.48438 10.2425 3.48438C8.40156 3.48438 6.90918 4.97676 6.90918 6.81771C6.90918 8.65866 8.40156 10.151 10.2425 10.151Z"
-            stroke="#4C97D6"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-    },
-  ]
+  const handleCloseModal = () => {
+    setIsCardModalOpen(false)
+  }
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/')
+  const handleCardClick = (card: {
+    storeId: number
+    storeName: string
+    walletId: number
+  }) => {
+    setSelectedCard(card)
+    setIsQRModalOpen(true)
   }
 
   return (
     <>
       {/* 모바일 하단 탭 */}
-      <div className="fixed right-0 bottom-0 left-0 z-50 md:hidden">
-        <div className="flex h-[2.9375rem] w-full items-start border-t border-gray-200 bg-white">
-          {navigationItems.map(item => {
-            const active = isActive(item.href)
-            const currentIcon = active ? item.activeIcon : item.icon
+      <div className="fixed bottom-0 left-1/2 z-50 h-[4.5rem] w-full max-w-[412px] -translate-x-1/2 transform bg-white md:hidden">
+        {/* 상단 노란색 선 */}
+        <div className="h-[3px] w-full bg-[#ffc800]"></div>
 
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={`flex min-h-[2.9375rem] flex-1 flex-col items-center justify-center px-3 py-2 transition-colors ${
-                  active ? 'text-[#4C97D6]' : 'text-black'
-                }`}
-              >
-                <div className="mb-1 flex items-center justify-center">
-                  {currentIcon}
-                </div>
-                <span
-                  className={`text-xs leading-3 font-extrabold ${
-                    active ? 'text-[#4C97D6]' : 'text-black'
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            )
-          })}
+        {/* 하단 탭 컨테이너 */}
+        <div className="relative flex h-full items-center justify-between px-4 py-2">
+          {/* 홈 아이콘 */}
+          <Link href="/customer/home" className="flex flex-col items-center">
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9 22V12H15V22"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+
+          {/* 개인 아이콘 */}
+          <Link
+            href="/customer/myWallet"
+            className="flex flex-col items-center"
+          >
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="12"
+                cy="7"
+                r="4"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+
+          {/* 카드 버튼 (중앙, 활성화됨) - 노란 선에 걸쳐있고 더 큰 크기 */}
+          <button
+            onClick={() => setIsCardModalOpen(!isCardModalOpen)}
+            className="absolute top-0 left-1/2 z-[60] flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ffc800] transition-colors hover:bg-[#ffb800]"
+          >
+            <svg
+              width={40}
+              height={40}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect
+                x="1"
+                y="4"
+                width="22"
+                height="16"
+                rx="2"
+                ry="2"
+                stroke="white"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <line
+                x1="1"
+                y1="10"
+                x2="23"
+                y2="10"
+                stroke="white"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {/* 그룹 아이콘 */}
+          <Link
+            href="/customer/groupWallet"
+            className="flex flex-col items-center"
+          >
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="9"
+                cy="7"
+                r="4"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M23 21V19C23 18.1645 22.7155 17.3541 22.2094 16.6977C21.7033 16.0413 20.9999 15.5754 20.2 15.3669"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88"
+                stroke="#FFC800"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+
+          {/* My 텍스트 */}
+          <Link href="/customer/myPage" className="flex flex-col items-center">
+            <div className="font-jalnan text-lg text-[#ffc800]">My</div>
+          </Link>
         </div>
+
+        {/* 카드 모달 */}
+        <CardModal
+          isOpen={isCardModalOpen}
+          onClose={handleCloseModal}
+          onCardClick={handleCardClick}
+        />
       </div>
 
-      {/* 웹 사이드바 */}
+      {/* 웹용 사이드바 */}
       <div
-        className={`fixed top-0 left-0 z-40 hidden h-full border-r border-gray-200 bg-white transition-all duration-300 md:block ${
-          isOpen ? 'w-64' : 'w-16'
-        }`}
+        className={`fixed top-16 left-0 z-40 hidden h-[calc(100vh-4rem)] w-[200px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 md:block ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="p-6">
-          <div className="mb-8 flex items-center justify-between">
-            {isOpen && (
-              <h1 className="text-xl font-extrabold text-black">KEEPING</h1>
-            )}
-            <button
-              onClick={toggle}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
-              aria-label={isOpen ? '사이드바 닫기' : '사이드바 열기'}
+        {/* 로고 */}
+        <div className="flex h-16 items-center justify-center border-b border-gray-200">
+          <div className="font-jalnan text-xl text-[#ffc800]">KEEPING</div>
+        </div>
+
+        {/* 네비게이션 메뉴 */}
+        <nav className="flex-1 py-4">
+          <div className="space-y-2 px-4">
+            <Link
+              href="/customer/home"
+              className="flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-yellow-50"
             >
-              <svg
-                width={20}
-                height={20}
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-gray-600"
-              >
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                 <path
-                  d={isOpen ? 'M15 18L9 12L15 6' : 'M9 18L15 12L9 6'}
-                  stroke="currentColor"
+                  d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 22V12H15V22"
+                  stroke="#FFC800"
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
+              <span className="font-jalnan">홈</span>
+            </Link>
+
+            <Link
+              href="/customer/myWallet"
+              className="flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-yellow-50"
+            >
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan">개인지갑</span>
+            </Link>
+
+            <Link
+              href="/customer/groupWallet"
+              className="flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-yellow-50"
+            >
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="9"
+                  cy="7"
+                  r="4"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M23 21V19C23 18.1645 22.7155 17.3541 22.2094 16.6977C21.7033 16.0413 20.9999 15.5754 20.2 15.3669"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan">그룹지갑</span>
+            </Link>
+
+            <Link
+              href="/customer/myPage"
+              className="flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-yellow-50"
+            >
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan">My</span>
+            </Link>
+
+            {/* 카드 버튼 */}
+            <button
+              onClick={() => setIsCardModalOpen(!isCardModalOpen)}
+              className="flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-yellow-50"
+            >
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="1"
+                  y="4"
+                  width="22"
+                  height="16"
+                  rx="2"
+                  ry="2"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line
+                  x1="1"
+                  y1="10"
+                  x2="23"
+                  y2="10"
+                  stroke="#FFC800"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan">카드</span>
             </button>
           </div>
-
-          <nav className="space-y-2">
-            {navigationItems.map(item => {
-              const active = isActive(item.href)
-              const currentIcon = active ? item.activeIcon : item.icon
-
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`flex items-center rounded-lg px-4 py-3 transition-colors ${
-                    isOpen ? 'space-x-3' : 'justify-center'
-                  } ${
-                    active
-                      ? 'bg-[#4C97D6]/10 text-[#4C97D6]'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title={!isOpen ? item.label : undefined}
-                >
-                  <div className="flex-shrink-0">{currentIcon}</div>
-                  {isOpen && <span className="font-medium">{item.label}</span>}
-                </Link>
-              )
-            })}
-          </nav>
-        </div>
+        </nav>
       </div>
+
+      {/* 카드 모달 - 사이드바 밖에 위치 */}
+      <CardModal
+        isOpen={isCardModalOpen}
+        onClose={handleCloseModal}
+        onCardClick={handleCardClick}
+      />
+
+      {/* QR 모달 */}
+      <QRModal
+        cardName={selectedCard?.storeName || ''}
+        walletId={selectedCard?.walletId}
+        storeId={selectedCard?.storeId}
+        isOpen={isQRModalOpen}
+        onClose={() => {
+          setIsQRModalOpen(false)
+          setSelectedCard(null)
+        }}
+      />
     </>
   )
 }

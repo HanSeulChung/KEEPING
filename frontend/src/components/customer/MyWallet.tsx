@@ -477,38 +477,35 @@ const WalletCard = ({
   card: WalletCard
   onClick: () => void
 }) => {
+  const getCardColor = (index: number) => {
+    const colors = ['#ff6f6f', '#ff8b68', '#ffd23c']
+    return colors[index % colors.length]
+  }
+
+  const cardColor = getCardColor(card.id - 1)
+
   return (
     <div
-      className={`relative h-44 w-44 cursor-pointer border border-black transition-colors md:h-40 md:w-40 ${
-        card.isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-gray-50'
+      className={`inline-flex cursor-pointer flex-col items-center justify-center rounded-[10px] border-2 pt-[21px] pr-[19px] pb-5 pl-[19px] transition-colors ${
+        card.isSelected ? 'bg-white' : 'bg-white hover:bg-gray-50'
       }`}
+      style={{
+        borderColor: cardColor,
+        backgroundColor: card.isSelected ? cardColor : 'white',
+      }}
       onClick={onClick}
     >
-      {/* 아쭈맛나 텍스트 */}
-      <div className="absolute top-4 left-4 text-base font-normal text-black md:text-sm">
+      <div
+        className="text-[15px] leading-[140%] font-extrabold"
+        style={{ color: card.isSelected ? 'white' : cardColor }}
+      >
         {card.name}
       </div>
-
-      {/* 01 텍스트 */}
-      <div className="absolute top-4 right-4 text-sm font-normal text-black md:text-xs">
-        {card.id.toString().padStart(2, '0')}
-      </div>
-
-      {/* 선 */}
-      <div className="absolute top-12 right-4 left-4 h-px bg-black"></div>
-
-      {/* 금액 */}
-      <div className="absolute top-18 left-1/2 -translate-x-1/2 text-base font-extrabold text-black md:text-sm">
-        {card.amount.toLocaleString()}원
-      </div>
-
-      {/* 결제하기 버튼 */}
-      <div className="absolute top-32 left-1/2 -translate-x-1/2 md:top-28">
-        <div className="flex h-6 w-16 items-center justify-center border-2 border-blue-500 bg-white md:h-5 md:w-15">
-          <span className="text-sm font-bold text-blue-500 md:text-xs">
-            결제하기
-          </span>
-        </div>
+      <div
+        className="text-[15px] leading-[140%] font-extrabold"
+        style={{ color: card.isSelected ? 'white' : cardColor }}
+      >
+        {card.amount.toLocaleString()} P
       </div>
     </div>
   )
@@ -516,27 +513,44 @@ const WalletCard = ({
 
 // 거래 내역 아이템 컴포넌트
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'use':
+        return '#ff6f6f'
+      case 'charge':
+        return '#6caeff'
+      case 'transfer-in':
+        return '#e174ff'
+      case 'transfer-out':
+        return '#a4e846'
+      default:
+        return '#ff6f6f'
+    }
+  }
+
+  const transactionColor = getTransactionColor(transaction.type)
+
   return (
-    <div className="relative h-16 w-full">
+    <div className="mb-4 flex w-full items-center justify-between">
       {/* 거래 타입 라벨 */}
-      <div
-        className={`absolute top-4 left-4 flex h-6 w-13 items-center justify-center border text-sm font-extrabold ${getTransactionTypeStyle(transaction.type)}`}
-      >
-        {getTransactionTypeLabel(transaction.type)}
+      <div className="inline-flex w-20 flex-col items-center justify-center">
+        <div
+          className="font-jalnan text-center text-[16px] leading-[140%] font-extrabold"
+          style={{ color: transactionColor }}
+        >
+          {getTransactionTypeLabel(transaction.type)}
+        </div>
       </div>
 
       {/* 금액 */}
-      <div className="absolute top-4 left-20 text-sm font-extrabold text-black">
-        {transaction.amount.toLocaleString()}원
+      <div className="font-nanum-square-round-eb text-xl leading-[140%] font-extrabold text-gray-500">
+        {transaction.amount.toLocaleString()}P
       </div>
 
       {/* 날짜 */}
-      <div className="absolute top-5 left-44 text-xs font-extrabold text-gray-400">
+      <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ccc]">
         {transaction.date}
       </div>
-
-      {/* 구분선 */}
-      <div className="absolute right-3 bottom-4 left-3 h-px bg-gray-300"></div>
     </div>
   )
 }
@@ -563,15 +577,15 @@ const ChargeOption = ({
 }: ChargeOptionProps) => {
   return (
     <div
-      className={`flex h-16 w-full cursor-pointer items-center justify-between border border-black px-5 transition-colors md:h-14 ${
+      className={`flex h-12 w-full cursor-pointer items-center justify-between border border-black px-4 transition-colors ${
         isSelected ? 'bg-yellow-50' : 'bg-white hover:bg-yellow-50'
       }`}
       onClick={onClick}
     >
-      <span className="text-base font-bold text-red-500 md:text-sm">
+      <span className="text-sm font-bold text-red-500">
         {bonusPercentage}% 보너스
       </span>
-      <span className="text-base font-bold text-black md:text-sm">
+      <span className="text-sm font-bold text-black">
         {chargeAmount.toLocaleString()}원
       </span>
     </div>
@@ -582,14 +596,12 @@ const ChargeOption = ({
 const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
   return (
     <div className="w-full">
-      <p className="mb-6 text-lg font-bold text-black md:text-[15px]">
+      <p className="mb-6 text-base font-bold text-black">
         "{selectedCard.name}" 포인트 환불받기
       </p>
 
       <div className="mb-6 flex items-center gap-4">
-        <p className="text-base font-bold text-black md:text-sm">
-          환불 가능 금액
-        </p>
+        <p className="text-sm font-bold text-black">환불 가능 금액</p>
         <div className="relative">
           <Image
             src="/wallet/inputbox.svg"
@@ -598,16 +610,14 @@ const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
             height={31}
             className="h-[31px] w-[165px]"
           />
-          <p className="absolute top-[6px] left-[60px] text-sm font-bold text-black md:text-[11px]">
+          <p className="absolute top-[6px] left-[60px] text-xs font-bold text-black">
             {selectedCard.amount.toLocaleString()} 원
           </p>
         </div>
       </div>
 
-      <button className="flex h-14 w-full items-center justify-center border border-black bg-black md:h-12">
-        <span className="text-base font-bold text-white md:text-sm">
-          환불받기
-        </span>
+      <button className="flex h-12 w-full items-center justify-center border border-black bg-black">
+        <span className="text-sm font-bold text-white">환불받기</span>
       </button>
     </div>
   )
@@ -617,9 +627,13 @@ const RefundSection = ({ selectedCard }: { selectedCard: WalletCard }) => {
 const ChargeSection = ({
   chargeOptions,
   storeId,
+  storeName,
+  cardColor,
 }: {
   chargeOptions: ChargeOptionData[]
   storeId: string
+  storeName: string
+  cardColor: string
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
@@ -648,36 +662,53 @@ const ChargeSection = ({
 
   return (
     <div className="mx-auto w-full max-w-md">
+      {/* 제목 */}
+      <div className="mb-6 text-left">
+        <h2 className="font-jalnan text-xl font-bold text-gray-600">
+          <span style={{ color: cardColor }}>{storeName}</span>에 충전하기
+        </h2>
+      </div>
+
       {/* 충전 옵션들 */}
-      <div className="mb-6 space-y-2">
+      <div className="mb-8 space-y-3">
         {chargeOptions.length === 0 ? (
           <div className="py-8 text-center text-gray-500">
             충전 옵션을 불러오는 중...
           </div>
         ) : (
           chargeOptions.map((option, index) => (
-            <ChargeOption
+            <div
               key={index}
-              chargeAmount={option.chargeAmount}
-              bonusPercentage={option.bonusPercentage}
-              expectedTotalPoints={option.expectedTotalPoints}
-              isSelected={selectedIndex === index}
+              className={`flex h-16 w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 transition-colors ${
+                selectedIndex === index
+                  ? 'border-[#fdda60] bg-yellow-50'
+                  : 'border-gray-300 bg-white hover:bg-yellow-50'
+              }`}
               onClick={() => setSelectedIndex(index)}
-            />
+            >
+              <div className="font-nanum-square-round-eb text-base font-bold text-[#fdda60]">
+                {option.bonusPercentage}% 보너스
+              </div>
+              <div className="font-nanum-square-round-eb text-xl font-bold text-black">
+                {option.chargeAmount.toLocaleString()}원
+              </div>
+            </div>
           ))
         )}
       </div>
 
       {/* 결제 금액 */}
       <div className="mb-6 rounded-lg bg-gray-50 p-4">
-        <div className="mb-1 text-sm text-gray-600">결제 금액</div>
-        <div className="text-xl font-bold text-black">
+        <div className="font-jalnan mb-2 text-base font-bold text-gray-600">
+          결제 금액
+        </div>
+        <div className="font-nanum-square-round-eb text-lg font-bold text-black">
           {paymentAmount > 0
             ? `${paymentAmount.toLocaleString()}원`
             : '옵션을 선택해주세요'}
         </div>
         {chargeAmount > 0 && (
-          <div className="mt-2 text-sm font-medium text-blue-600">
+          <div className="font-jalnan mt-2 text-lg font-bold text-[#fdda60]">
             충전 금액: {chargeAmount.toLocaleString()}원
           </div>
         )}
@@ -685,10 +716,10 @@ const ChargeSection = ({
 
       {/* 충전하기 버튼 */}
       <button
-        className={`flex h-14 w-full items-center justify-center border border-black transition-colors ${
+        className={`mb-20 flex h-12 w-full items-center justify-center rounded-lg border-2 transition-colors ${
           selectedIndex !== null
-            ? 'bg-black hover:bg-gray-800'
-            : 'cursor-not-allowed bg-gray-300'
+            ? 'border-[#fdda60] bg-[#fdda60] hover:bg-[#f4d03f]'
+            : 'cursor-not-allowed border-gray-300 bg-gray-300'
         }`}
         disabled={selectedIndex === null}
         onClick={() => {
@@ -698,7 +729,7 @@ const ChargeSection = ({
         }}
       >
         <span
-          className={`text-sm font-bold ${
+          className={`font-jalnan text-lg font-bold ${
             selectedIndex !== null ? 'text-white' : 'text-gray-500'
           }`}
         >
@@ -999,6 +1030,8 @@ export const MyWallet = () => {
 
   const handleCardSelect = (cardId: number) => {
     setSelectedCard(cardId)
+    // 카드 선택 시 사용내역 탭으로 자동 전환
+    setActiveTab('history')
   }
 
   // 결제 취소 목록 로드 함수
@@ -1137,20 +1170,34 @@ export const MyWallet = () => {
   // 카드가 없는 경우 처리
   if (cardsWithSelection.length === 0) {
     return (
-      <div className="min-h-screen bg-white p-4">
-        <div className="mx-auto max-w-md">
-          <div className="mb-6">
-            <h1
-              className="text-2xl font-bold text-black md:text-xl"
-              style={{ fontFamily: 'Tenada' }}
-            >
-              내 지갑
-            </h1>
+      <div className="w-full">
+        {/* 헤더 */}
+        <div className="flex w-full items-center bg-[#fddb5f] px-4 py-3">
+          <svg
+            width={24}
+            height={24}
+            viewBox="0 0 35 33"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M17.4997 15.5002C15.8955 15.5002 14.5222 14.929 13.3799 13.7866C12.2375 12.6443 11.6663 11.271 11.6663 9.66683C11.6663 8.06266 12.2375 6.6894 13.3799 5.54704C14.5222 4.40468 15.8955 3.8335 17.4997 3.8335C19.1038 3.8335 20.4771 4.40468 21.6195 5.54704C22.7618 6.6894 23.333 8.06266 23.333 9.66683C23.333 11.271 22.7618 12.6443 21.6195 13.7866C20.4771 14.929 19.1038 15.5002 17.4997 15.5002ZM5.83301 27.1668V23.0835C5.83301 22.2571 6.04568 21.4976 6.47103 20.8048C6.89638 20.1121 7.46148 19.5835 8.16634 19.2189C9.67329 18.4654 11.2045 17.9003 12.7601 17.5236C14.3156 17.1469 15.8955 16.9585 17.4997 16.9585C19.1038 16.9585 20.6837 17.1469 22.2393 17.5236C23.7948 17.9003 25.3261 18.4654 26.833 19.2189C27.5379 19.5835 28.103 20.1121 28.5283 20.8048C28.9537 21.4976 29.1663 22.2571 29.1663 23.0835V27.1668H5.83301ZM8.74967 24.2502H26.2497V23.0835C26.2497 22.8161 26.1828 22.5731 26.0492 22.3543C25.9155 22.1356 25.7393 21.9654 25.5205 21.8439C24.208 21.1877 22.8834 20.6955 21.5465 20.3674C20.2097 20.0392 18.8608 19.8752 17.4997 19.8752C16.1386 19.8752 14.7896 20.0392 13.4528 20.3674C12.116 20.6955 10.7913 21.1877 9.47884 21.8439C9.26009 21.9654 9.08388 22.1356 8.9502 22.3543C8.81651 22.5731 8.74967 22.8161 8.74967 23.0835V24.2502ZM17.4997 12.5835C18.3018 12.5835 18.9884 12.2979 19.5596 11.7267C20.1308 11.1555 20.4163 10.4689 20.4163 9.66683C20.4163 8.86475 20.1308 8.17811 19.5596 7.60693C18.9884 7.03575 18.3018 6.75016 17.4997 6.75016C16.6976 6.75016 16.011 7.03575 15.4398 7.60693C14.8686 8.17811 14.583 8.86475 14.583 9.66683C14.583 10.4689 14.8686 11.1555 15.4398 11.7267C16.011 12.2979 16.6976 12.5835 17.4997 12.5835Z"
+              fill="white"
+            />
+          </svg>
+          <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
+            내 지갑
           </div>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500">
-              {' '}
-              등록된 카드가 없습니다. 가게 목록에서 포인트를 충전해보세요!
+        </div>
+
+        {/* 빈 상태 메시지 */}
+        <div className="px-4 py-16">
+          <div className="text-center">
+            <div className="font-nanum-square-round-eb text-lg text-gray-500">
+              등록된 카드가 없습니다.
+            </div>
+            <div className="font-nanum-square-round-eb mt-2 text-sm text-gray-400">
+              가게 목록에서 포인트를 충전해보세요!
             </div>
           </div>
         </div>
@@ -1159,136 +1206,158 @@ export const MyWallet = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4">
-      <div className="mx-auto max-w-md">
-        {/* 헤더 */}
-        <div className="mb-6">
-          <h1
-            className="text-2xl font-bold text-black md:text-xl"
-            style={{ fontFamily: 'Tenada' }}
-          >
-            내 지갑
-          </h1>
+    <div className="w-full">
+      {/* 헤더 */}
+      <div className="flex w-full items-center bg-[#fddb5f] px-4 py-3">
+        <svg
+          width={24}
+          height={24}
+          viewBox="0 0 35 33"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17.4997 15.5002C15.8955 15.5002 14.5222 14.929 13.3799 13.7866C12.2375 12.6443 11.6663 11.271 11.6663 9.66683C11.6663 8.06266 12.2375 6.6894 13.3799 5.54704C14.5222 4.40468 15.8955 3.8335 17.4997 3.8335C19.1038 3.8335 20.4771 4.40468 21.6195 5.54704C22.7618 6.6894 23.333 8.06266 23.333 9.66683C23.333 11.271 22.7618 12.6443 21.6195 13.7866C20.4771 14.929 19.1038 15.5002 17.4997 15.5002ZM5.83301 27.1668V23.0835C5.83301 22.2571 6.04568 21.4976 6.47103 20.8048C6.89638 20.1121 7.46148 19.5835 8.16634 19.2189C9.67329 18.4654 11.2045 17.9003 12.7601 17.5236C14.3156 17.1469 15.8955 16.9585 17.4997 16.9585C19.1038 16.9585 20.6837 17.1469 22.2393 17.5236C23.7948 17.9003 25.3261 18.4654 26.833 19.2189C27.5379 19.5835 28.103 20.1121 28.5283 20.8048C28.9537 21.4976 29.1663 22.2571 29.1663 23.0835V27.1668H5.83301ZM8.74967 24.2502H26.2497V23.0835C26.2497 22.8161 26.1828 22.5731 26.0492 22.3543C25.9155 22.1356 25.7393 21.9654 25.5205 21.8439C24.208 21.1877 22.8834 20.6955 21.5465 20.3674C20.2097 20.0392 18.8608 19.8752 17.4997 19.8752C16.1386 19.8752 14.7896 20.0392 13.4528 20.3674C12.116 20.6955 10.7913 21.1877 9.47884 21.8439C9.26009 21.9654 9.08388 22.1356 8.9502 22.3543C8.81651 22.5731 8.74967 22.8161 8.74967 23.0835V24.2502ZM17.4997 12.5835C18.3018 12.5835 18.9884 12.2979 19.5596 11.7267C20.1308 11.1555 20.4163 10.4689 20.4163 9.66683C20.4163 8.86475 20.1308 8.17811 19.5596 7.60693C18.9884 7.03575 18.3018 6.75016 17.4997 6.75016C16.6976 6.75016 16.011 7.03575 15.4398 7.60693C14.8686 8.17811 14.583 8.86475 14.583 9.66683C14.583 10.4689 14.8686 11.1555 15.4398 11.7267C16.011 12.2979 16.6976 12.5835 17.4997 12.5835Z"
+            fill="white"
+          />
+        </svg>
+        <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
+          내 지갑
         </div>
+      </div>
 
-        {/* 지갑 카드 캐러셀 */}
-        <div className="mb-6 w-full">
-          <div className="scrollbar-hide overflow-x-auto">
-            <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
-              {cardsWithSelection.map(card => (
-                <WalletCard
-                  key={card.id}
-                  card={card}
-                  onClick={() => handleCardSelect(card.id)}
-                />
+      {/* 지갑 카드 캐러셀 */}
+      <div className="px-4 py-6">
+        <div className="scrollbar-hide overflow-x-auto">
+          <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
+            {cardsWithSelection.map(card => (
+              <WalletCard
+                key={card.id}
+                card={card}
+                onClick={() => handleCardSelect(card.id)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="mb-6 px-4">
+        <div className="flex w-[240px] items-end">
+          <button
+            onClick={() => handleTabChange('history')}
+            className={`flex w-[120px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+              activeTab === 'history'
+                ? 'bg-[#fdda60] text-white'
+                : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
+            }`}
+          >
+            <div className="font-jalnan text-xl leading-[140%]">사용내역</div>
+          </button>
+          <button
+            onClick={() => handleTabChange('charge')}
+            className={`flex w-[120px] items-center justify-center rounded-tl-lg rounded-tr-lg px-3 py-1 ${
+              activeTab === 'charge'
+                ? 'bg-[#fdda60] text-white'
+                : 'border-t border-r border-b border-l border-[#fdda60] bg-white text-[#fdda60]'
+            }`}
+          >
+            <div className="font-jalnan text-xl leading-[140%]">충전하기</div>
+          </button>
+        </div>
+      </div>
+
+      {/* 탭 내용 */}
+      {activeTab === 'history' && (
+        <div className="mb-6 px-4">
+          {transactionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">거래 내역을 불러오는 중...</div>
+            </div>
+          ) : transactionsError ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-red-500">{transactionsError}</div>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">거래 내역이 없습니다.</div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((transaction, index) => (
+                <div key={transaction.id}>
+                  <TransactionItem transaction={transaction} />
+                  {index < transactions.length - 1 && (
+                    <div className="my-2 h-[3px] w-full bg-neutral-100" />
+                  )}
+                </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
+      )}
 
-        {/* 탭 네비게이션 */}
-        <div className="relative mb-6 h-16 w-full md:h-13">
-          {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
-            <div key={tabKey} className="relative">
-              <button
-                onClick={() =>
-                  handleTabChange(tabKey as keyof typeof TAB_CONFIG)
-                }
-                className={`absolute h-10 w-24 border border-black text-sm font-normal transition-colors md:h-8 md:w-22 md:text-xs ${
-                  activeTab === tabKey
-                    ? 'bg-[#efefef] text-black'
-                    : 'bg-white text-black hover:bg-[#efefef]'
-                }`}
-                style={{
-                  left: `${7 + index * 100}px`,
-                  top: '11px',
-                }}
-              >
-                <div className="flex h-full items-center justify-center">
-                  {tabLabel}
-                </div>
-              </button>
+      {activeTab === 'charge' && (
+        <div className="mb-6 px-4">
+          {chargeOptionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">충전 옵션을 불러오는 중...</div>
             </div>
-          ))}
-        </div>
-
-        {/* 탭 내용 */}
-        {activeTab === 'history' && (
-          <div className="mb-6">
-            {transactionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">거래 내역을 불러오는 중...</div>
-              </div>
-            ) : transactionsError ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-red-500">{transactionsError}</div>
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">거래 내역이 없습니다.</div>
-              </div>
-            ) : (
-              transactions.map(transaction => (
-                <TransactionItem
-                  key={transaction.id}
-                  transaction={transaction}
-                />
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === 'charge' && (
-          <div className="mb-6">
-            {chargeOptionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">충전 옵션을 불러오는 중...</div>
-              </div>
-            ) : chargeOptionsError ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-red-500">{chargeOptionsError}</div>
-              </div>
-            ) : (
-              <ChargeSection
-                chargeOptions={chargeOptions}
-                storeId={
-                  cardsWithSelection
-                    .find(card => card.isSelected)
-                    ?.storeId?.toString() || '0'
-                }
-              />
-            )}
-          </div>
-        )}
-
-        {activeTab === 'cancel' && (
-          <div className="mb-6">
-            <CancelSection
-              cancelTransactions={cancelTransactions}
-              cancelLoading={cancelLoading}
-              cancelError={cancelError}
-              onCancelClick={transaction => {
-                setSelectedTransaction(transaction)
-                setIsCancelModalOpen(true)
-              }}
+          ) : chargeOptionsError ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-red-500">{chargeOptionsError}</div>
+            </div>
+          ) : (
+            <ChargeSection
+              chargeOptions={chargeOptions}
+              storeId={
+                cardsWithSelection
+                  .find(card => card.isSelected)
+                  ?.storeId?.toString() || '0'
+              }
+              storeName={
+                cardsWithSelection.find(card => card.isSelected)?.name || '가게'
+              }
+              cardColor={(() => {
+                const selectedCard = cardsWithSelection.find(
+                  card => card.isSelected
+                )
+                if (!selectedCard) return '#ff6f6f'
+                const colors = ['#ff6f6f', '#ff8b68', '#ffd23c']
+                return colors[(selectedCard.id - 1) % colors.length]
+              })()}
             />
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* 결제 취소 모달 */}
-        <CancelModal
-          isOpen={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false)
-            setSelectedTransaction(null)
-            setCardNo('')
-            setCvc('')
-          }}
-          transaction={selectedTransaction}
-          onConfirm={handleCancelConfirm}
-          loading={cancelProcessing}
-        />
-      </div>
+      {activeTab === 'cancel' && (
+        <div className="mb-6 px-4">
+          <CancelSection
+            cancelTransactions={cancelTransactions}
+            cancelLoading={cancelLoading}
+            cancelError={cancelError}
+            onCancelClick={transaction => {
+              setSelectedTransaction(transaction)
+              setIsCancelModalOpen(true)
+            }}
+          />
+        </div>
+      )}
+
+      {/* 결제 취소 모달 */}
+      <CancelModal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          setIsCancelModalOpen(false)
+          setSelectedTransaction(null)
+          setCardNo('')
+          setCvc('')
+        }}
+        transaction={selectedTransaction}
+        onConfirm={handleCancelConfirm}
+        loading={cancelProcessing}
+      />
     </div>
   )
 }

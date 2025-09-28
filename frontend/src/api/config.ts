@@ -126,7 +126,8 @@ export const endpoints = {
     ownerMarkAllAsRead: '/api/notifications/owner/{ownerId}/mark-all-read',
     // 고객 알림
     customerList: '/api/notifications/customer/{customerId}',
-    customerUnreadCount: '/api/notifications/customer/{customerId}/unread-count',
+    customerUnreadCount:
+      '/api/notifications/customer/{customerId}/unread-count',
     customerMarkAsRead:
       '/api/notifications/customer/{customerId}/mark-read/{notificationId}',
     // 알림 설정

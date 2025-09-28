@@ -13,7 +13,7 @@ module.exports = {
         'keeping-blue': '#4c97d6',
         'keeping-yellow': '#ffda69',
         'keeping-charcoal': '#333333',
-        
+
         // 의미 기반 색상
         primary: '#000000',
         'primary-fg': '#ffffff',
@@ -23,15 +23,27 @@ module.exports = {
         border: '#000000',
         text: '#000000',
         'text-muted': '#cccccc',
-        
+
         // 상태 색상
         success: '#22c55e',
         warning: '#ffda69',
         danger: '#ef4444',
       },
       fontFamily: {
-        sans: ['var(--font-nanum-square-neo)', 'Arial', 'Helvetica', 'sans-serif'],
+        sans: [
+          'var(--font-nanum-square-neo)',
+          'Arial',
+          'Helvetica',
+          'sans-serif',
+        ],
         display: ['var(--font-tenada)', 'Arial', 'Helvetica', 'sans-serif'],
+        'nanum-square-round-eb': [
+          'var(--font-nanum-square-round-eb)',
+          'Arial',
+          'Helvetica',
+          'sans-serif',
+        ],
+        jalnan: ['var(--font-jalnan)', 'Arial', 'Helvetica', 'sans-serif'],
       },
     },
   },

@@ -1,12 +1,50 @@
 'use client'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { Alert } from '../ui/Alert'
 import { GroupCreateModal } from '../ui/GroupCreateModal'
 import FindGroup from './findGroup'
 import QRModal from './home/QRmodal'
+import PointManagementModal from './PointManagementModal'
 
 import { buildURL } from '@/api/config'
 import { useAuthStore } from '@/store/useAuthStore'
+
+// 타입 정의
+interface Group {
+  id: number
+  name: string
+  isSelected?: boolean
+  isLeader?: boolean
+  memberCount?: number
+  totalPoints?: number
+}
+
+interface GroupCard {
+  id: number
+  name: string
+  amount: number
+  isSelected?: boolean
+  storeId?: number
+}
+
+interface GroupTransactionDisplay {
+  id: number
+  type:
+    | 'use'
+    | 'charge'
+    | 'transfer-in'
+    | 'transfer-out'
+    | 'share'
+    | 'collect'
+    | 'cancel-charge'
+    | 'cancel-use'
+    | 'unknown'
+  amount: number
+  date: string
+  memberName?: string
+  groupName?: string
+}
 
 const createGroup = async (groupData: {
   groupName: string
@@ -856,7 +894,9 @@ const ShareModal = ({
     <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="mx-auto w-full max-w-md rounded-lg bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-black">포인트 공유</h2>
+          <h2 className="font-jalnan text-lg font-bold text-black">
+            포인트 공유
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -868,7 +908,7 @@ const ShareModal = ({
         <div className="mb-6">
           {/* 개인 카드 선택 드롭다운 */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="font-nanum-square-round-eb mb-2 block text-sm font-medium text-gray-700">
               공유할 개인 카드 선택
             </label>
             <select
@@ -1156,7 +1196,9 @@ const MemberListModal = ({
 
         {/* 제목 */}
         <div className="mb-6 text-center">
-          <h2 className="text-lg font-bold text-black">그룹원 목록</h2>
+          <h2 className="font-jalnan text-lg font-bold text-black">
+            그룹원 목록
+          </h2>
         </div>
 
         {/* 멤버 목록 */}
@@ -1244,6 +1286,8 @@ export const GroupWallet = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [selectedCardForShare, setSelectedCardForShare] =
     useState<WalletCard | null>(null)
+  const [isPointManagementModalOpen, setIsPointManagementModalOpen] =
+    useState(false)
   const [groupWalletCards, setGroupWalletCards] = useState<GroupWalletCard[]>(
     []
   )
@@ -1272,6 +1316,11 @@ export const GroupWallet = () => {
 
   // 현재 사용자가 리더인지 확인하는 상태
   const [isCurrentUserLeader, setIsCurrentUserLeader] = useState(false)
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false)
+  const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false)
+  const [isLeaveAlertOpen, setIsLeaveAlertOpen] = useState(false)
+  const [leaveAlertMessage, setLeaveAlertMessage] = useState('')
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false)
 
   // 사용자 그룹 목록 로드 함수
   const loadUserGroups = async () => {
@@ -1456,10 +1505,12 @@ export const GroupWallet = () => {
       if (result.success && result.data) {
         // walletId 추출하여 groupInfo 업데이트
         if (result.data.walletId && groupInfo) {
-          setGroupInfo(prev => prev ? { ...prev, walletId: result.data.walletId } : null)
+          setGroupInfo(prev =>
+            prev ? { ...prev, walletId: result.data.walletId } : null
+          )
           console.log('그룹 walletId 업데이트:', result.data.walletId)
         }
-        
+
         // 백엔드에서 페이징을 제거했다면 직접 배열을 반환할 것
         const storeBalances =
           result.data.storeBalances?.content || result.data.storeBalances || []
@@ -1630,18 +1681,18 @@ export const GroupWallet = () => {
     }
   }
 
-  // 그룹 탈퇴 함수
-  const handleLeaveGroup = async () => {
+  // 그룹 탈퇴 확인 함수
+  const handleLeaveGroup = () => {
     if (!selectedGroup) {
-      alert('그룹 정보가 없습니다.')
+      setLeaveAlertMessage('그룹 정보가 없습니다.')
+      setIsLeaveAlertOpen(true)
       return
     }
+    setIsLeaveConfirmOpen(true)
+  }
 
-    const confirmMessage = `정말로 이 그룹에서 탈퇴하시겠습니까?`
-    if (!confirm(confirmMessage)) {
-      return
-    }
-
+  // 실제 그룹 탈퇴 실행 함수
+  const executeLeaveGroup = async () => {
     try {
       const url = buildURL(`/groups/${selectedGroup}/group-member`)
 
@@ -1689,23 +1740,22 @@ export const GroupWallet = () => {
         }
 
         console.log('그룹 탈퇴 실패 - 최종 에러 메시지:', errorMessage)
-        alert(errorMessage)
+        setLeaveAlertMessage(errorMessage)
+        setIsLeaveAlertOpen(true)
         return
       }
 
       const result = await response.json()
       console.log('그룹 탈퇴 성공 응답:', result)
-
-      alert('그룹에서 성공적으로 탈퇴했습니다.')
+      setLeaveAlertMessage('그룹에서 성공적으로 탈퇴했습니다.')
+      setIsLeaveAlertOpen(true)
 
       // 그룹 목록 새로고침
       await loadUserGroups()
-
-      // 페이지 새로고침으로 UI 업데이트
-      window.location.reload()
     } catch (error) {
       console.error('그룹 탈퇴 실패:', error)
-      alert('그룹 탈퇴 중 오류가 발생했습니다.')
+      setLeaveAlertMessage('그룹 탈퇴 중 오류가 발생했습니다.')
+      setIsLeaveAlertOpen(true)
     }
   }
 
@@ -1741,12 +1791,8 @@ export const GroupWallet = () => {
 
       // 모달 닫기
       setIsGroupCreateModalOpen(false)
-
-      // 성공 알림
-      alert('그룹이 성공적으로 생성되었습니다!')
-
-      // 페이지 새로고침으로 그룹 목록 업데이트
-      window.location.reload()
+      // 성공 알림 표시
+      setIsSuccessAlertOpen(true)
     } catch (error) {
       console.error('그룹 생성 에러:', error)
 
@@ -1775,489 +1821,545 @@ export const GroupWallet = () => {
     isSelected: card.storeId === selectedCard,
   }))
 
-  // 그룹 데이터 (사용자가 속한 그룹 + 추가 버튼)
+  // 그룹 데이터 (사용자가 속한 그룹)
   const groups = [
     ...userGroupIds.map(groupId => ({
       id: groupId,
       name: groupNames[groupId] || `그룹 ${groupId}`,
       isSelected: selectedGroup === groupId,
     })),
-    { id: -1, name: '+', isAddButton: true as const },
   ]
 
   // 모임원 데이터
 
   return (
-    <div className="min-h-screen bg-white p-4">
-      <div className="mx-auto max-w-md">
-        {/* 헤더 */}
-        <div className="mb-4 flex items-center justify-between">
-          <h1
-            className="text-xl font-bold text-black md:text-lg"
-            style={{ fontFamily: 'Tenada' }}
-          >
-            모임 지갑
-          </h1>
-
-          {/* 검색 버튼 */}
-          <button
-            onClick={() => setIsFindGroupOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
-          >
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-gray-600"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-          </button>
+    <div className="min-h-screen w-full pb-20">
+      {/* 헤더 */}
+      <div className="flex w-full items-center bg-[#fddb5f] px-4 py-3">
+        <svg
+          width={24}
+          height={24}
+          viewBox="0 0 40 34"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0 27V24.375C0 23.1806 0.611111 22.2083 1.83333 21.4583C3.05556 20.7083 4.66667 20.3333 6.66667 20.3333C7.02778 20.3333 7.375 20.3403 7.70833 20.3542C8.04167 20.3681 8.36111 20.4028 8.66667 20.4583C8.27778 21.0417 7.98611 21.6528 7.79167 22.2917C7.59722 22.9306 7.5 23.5972 7.5 24.2917V27H0ZM10 27V24.2917C10 23.4028 10.2431 22.5903 10.7292 21.8542C11.2153 21.1181 11.9028 20.4722 12.7917 19.9167C13.6806 19.3611 14.7431 18.9444 15.9792 18.6667C17.2153 18.3889 18.5556 18.25 20 18.25C21.4722 18.25 22.8264 18.3889 24.0625 18.6667C25.2986 18.9444 26.3611 19.3611 27.25 19.9167C28.1389 20.4722 28.8194 21.1181 29.2917 21.8542C29.7639 22.5903 30 23.4028 30 24.2917V27H10ZM32.5 27V24.2917C32.5 23.5694 32.4097 22.8889 32.2292 22.25C32.0486 21.6111 31.7778 21.0139 31.4167 20.4583C31.7222 20.4028 32.0347 20.3681 32.3542 20.3542C32.6736 20.3403 33 20.3333 33.3333 20.3333C35.3333 20.3333 36.9444 20.7014 38.1667 21.4375C39.3889 22.1736 40 23.1528 40 24.375V27H32.5ZM13.5417 23.6667H26.5C26.2222 23.1111 25.4514 22.625 24.1875 22.2083C22.9236 21.7917 21.5278 21.5833 20 21.5833C18.4722 21.5833 17.0764 21.7917 15.8125 22.2083C14.5486 22.625 13.7917 23.1111 13.5417 23.6667ZM6.66667 18.6667C5.75 18.6667 4.96528 18.3403 4.3125 17.6875C3.65972 17.0347 3.33333 16.25 3.33333 15.3333C3.33333 14.3889 3.65972 13.5972 4.3125 12.9583C4.96528 12.3194 5.75 12 6.66667 12C7.61111 12 8.40278 12.3194 9.04167 12.9583C9.68056 13.5972 10 14.3889 10 15.3333C10 16.25 9.68056 17.0347 9.04167 17.6875C8.40278 18.3403 7.61111 18.6667 6.66667 18.6667ZM33.3333 18.6667C32.4167 18.6667 31.6319 18.3403 30.9792 17.6875C30.3264 17.0347 30 16.25 30 15.3333C30 14.3889 30.3264 13.5972 30.9792 12.9583C31.6319 12.3194 32.4167 12 33.3333 12C34.2778 12 35.0694 12.3194 35.7083 12.9583C36.3472 13.5972 36.6667 14.3889 36.6667 15.3333C36.6667 16.25 36.3472 17.0347 35.7083 17.6875C35.0694 18.3403 34.2778 18.6667 33.3333 18.6667ZM20 17C18.6111 17 17.4306 16.5139 16.4583 15.5417C15.4861 14.5694 15 13.3889 15 12C15 10.5833 15.4861 9.39583 16.4583 8.4375C17.4306 7.47917 18.6111 7 20 7C21.4167 7 22.6042 7.47917 23.5625 8.4375C24.5208 9.39583 25 10.5833 25 12C25 13.3889 24.5208 14.5694 23.5625 15.5417C22.6042 16.5139 21.4167 17 20 17ZM20 13.6667C20.4722 13.6667 20.8681 13.5069 21.1875 13.1875C21.5069 12.8681 21.6667 12.4722 21.6667 12C21.6667 11.5278 21.5069 11.1319 21.1875 10.8125C20.8681 10.4931 20.4722 10.3333 20 10.3333C19.5278 10.3333 19.1319 10.4931 18.8125 10.8125C18.4931 11.1319 18.3333 11.5278 18.3333 12C18.3333 12.4722 18.4931 12.8681 18.8125 13.1875C19.1319 13.5069 19.5278 13.6667 20 13.6667Z"
+            fill="white"
+          />
+        </svg>
+        <div className="font-jalnan ml-2 text-lg leading-[140%] text-white">
+          그룹 지갑
         </div>
+      </div>
 
-        {/* 그룹 선택 원형 버튼들 */}
-        <div className="mb-4 w-full">
-          <div className="scrollbar-hide overflow-x-auto">
-            <div className="flex gap-3 pb-2" style={{ width: 'max-content' }}>
-              {groups.map(group => (
-                <div key={group.id} className="flex-shrink-0">
-                  {'isAddButton' in group && group.isAddButton ? (
-                    <div
-                      className="flex h-[70px] w-[70px] cursor-pointer items-center justify-center rounded-full border border-black bg-[#D8D8D8] transition-colors hover:bg-[#C8C8C8] md:h-[60px] md:w-[60px]"
-                      onClick={() => setIsGroupCreateModalOpen(true)}
-                    >
-                      <span className="text-sm font-bold text-black md:text-xs">
-                        +
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      className="relative h-[70px] w-[70px] cursor-pointer transition-colors md:h-[60px] md:w-[60px]"
-                      onClick={() => handleGroupSelect(group.id)}
-                    >
-                      <svg
-                        width="70"
-                        height="70"
-                        viewBox="0 0 90 91"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="group h-[70px] w-[70px] md:h-[60px] md:w-[60px]"
-                      >
-                        <path
-                          d="M44.9902 1.09766C69.5669 1.09766 89.4902 21.021 89.4902 45.5977C89.4902 70.1743 69.5669 90.0977 44.9902 90.0977C20.4136 90.0977 0.490234 70.1743 0.490234 45.5977C0.490234 21.021 20.4136 1.09766 44.9902 1.09766Z"
-                          stroke="black"
-                        />
-                        <path
-                          d="M48.4902 2.59766C72.9832 2.59766 89.4902 24.9291 89.4902 49.5977C89.4902 74.0881 68.1619 89.5977 43.4902 89.5977C31.1698 89.5977 21.0539 85.7208 14.0205 78.8105C6.98839 71.9013 2.99023 61.913 2.99023 49.5977C2.99023 25.0002 23.9339 2.59766 48.4902 2.59766Z"
-                          fill={
-                            selectedGroup === group.id ? '#FFDB69' : 'white'
-                          }
-                          stroke="black"
-                          className="transition-colors group-hover:fill-[#FFDB69]"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-sm font-bold text-black md:text-xs">
-                          {group.name}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+      {/* 검색 및 추가 버튼 */}
+      <div className="flex items-center gap-3 px-4 py-4">
+        {/* 검색 버튼 */}
+        <button
+          onClick={() => setIsFindGroupOpen(true)}
+          className="flex h-[40px] w-[50px] items-center justify-center rounded-[10px] bg-[#ccc]"
+        >
+          <svg
+            width={17}
+            height={17}
+            viewBox="0 0 17 17"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M14.875 14.875L11.7938 11.7938M13.4583 7.79167C13.4583 10.9213 10.9213 13.4583 7.79167 13.4583C4.66205 13.4583 2.125 10.9213 2.125 7.79167C2.125 4.66205 4.66205 2.125 7.79167 2.125C10.9213 2.125 13.4583 4.66205 13.4583 7.79167Z"
+              stroke="white"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {/* 그룹 생성 버튼 */}
+        <button
+          onClick={() => setIsGroupCreateModalOpen(true)}
+          className="flex h-[40px] w-[50px] items-center justify-center rounded-[10px] bg-[#fdda60]"
+        >
+          <svg
+            width={17}
+            height={17}
+            viewBox="0 0 17 17"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M8.5 2.125V13.4583M2.125 7.79167H14.875"
+              stroke="white"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {/* 그룹 리스트 */}
+        <div className="flex-1 overflow-x-auto pb-2">
+          <div className="flex gap-2" style={{ width: 'max-content' }}>
+            {groups.map(group => (
+              <button
+                key={group.id}
+                onClick={() => handleGroupSelect(group.id)}
+                className={`flex h-[40px] items-center justify-center rounded-[10px] border-2 px-3 whitespace-nowrap transition-colors ${
+                  selectedGroup === group.id
+                    ? 'border-[#fddb5f] bg-[#fddb5f] text-white'
+                    : 'border-[#ccc] bg-white text-[#ccc]'
+                }`}
+              >
+                <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold">
+                  {group.name}
                 </div>
-              ))}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 그룹 선택 상태에 따른 내용 표시 */}
+      {selectedGroup === null ? (
+        /* 그룹이 선택되지 않았을 때 */
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <div className="text-center">
+            <div className="mb-4 text-lg text-gray-500">
+              모임을 생성하거나 모임을 선택해주세요
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsGroupCreateModalOpen(true)}
+                className="rounded-lg bg-[#fdda60] px-6 py-3 font-['Jalnan2TTF'] text-white"
+              >
+                모임 생성
+              </button>
+              <button
+                onClick={() => setIsFindGroupOpen(true)}
+                className="rounded-lg border-2 border-[#fdda60] px-6 py-3 font-['Jalnan2TTF'] text-[#fdda60]"
+              >
+                모임 찾기
+              </button>
             </div>
           </div>
         </div>
-
-        {/* 그룹 정보 섹션 */}
-        <div className="mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-[80px] w-[60px] items-center justify-center md:h-[70px] md:w-[50px]">
-              <Image
-                src="/wallet/groupIntro.svg"
-                alt="Group character"
-                width={60}
-                height={80}
-                className="h-[80px] w-[60px] md:h-[70px] md:w-[50px]"
-              />
-            </div>
-            <div className="flex-1">
-              <div className="mb-2 flex items-center gap-2">
-                <h2 className="text-xl font-bold text-black md:text-lg">
-                  {loading
-                    ? '로딩중...'
-                    : userGroupIds.length === 0
-                      ? '그룹이 없습니다'
-                      : groupInfo?.groupName || 'A509'}
-                </h2>
-                {/* 그룹원 목록 버튼 */}
+      ) : (
+        /* 그룹이 선택되었을 때 */
+        <>
+          {/* 그룹명 및 드롭다운 */}
+          <div className="mb-4 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="font-jalnan text-xl leading-[140%] text-[#99a1af]">
+                  {groupInfo?.groupName || '눈농팀'}
+                </div>
                 <button
-                  onClick={() => setIsMemberListModalOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
-                  title="그룹원 목록"
+                  onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
+                  className="flex items-center justify-center"
                 >
                   <svg
-                    width="16"
-                    height="16"
+                    width={24}
+                    height={24}
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-gray-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`transition-transform ${isGroupDropdownOpen ? 'rotate-180' : ''}`}
                   >
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    <path
+                      d="M6 9L12 15L18 9"
+                      stroke="#99a1af"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
-
-                {/* 설정 버튼 (리더만 표시) */}
-                {isCurrentUserLeader && (
-                  <button
-                    onClick={() =>
-                      (window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`)
-                    }
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 transition-colors hover:bg-blue-200"
-                    title="그룹 설정"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-blue-600"
-                    >
-                      <circle cx="12" cy="12" r="3"></circle>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                  </button>
-                )}
-
-                {/* 그룹 탈퇴 버튼 (리더가 아닌 사용자만 표시) */}
-                {!isCurrentUserLeader && (
-                  <button
-                    onClick={handleLeaveGroup}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 transition-colors hover:bg-red-200"
-                    title="그룹 탈퇴"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-red-600"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                      <polyline points="16,17 21,12 16,7"></polyline>
-                      <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                  </button>
-                )}
               </div>
+            </div>
 
-              {/* 그룹 코드 */}
-              {groupInfo?.groupCode && (
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">
-                    그룹 코드: {groupInfo.groupCode}
-                  </span>
+            {/* 드롭다운 메뉴 */}
+            {isGroupDropdownOpen && (
+              <div className="mt-2">
+                {/* 그룹 코드 및 복사 버튼 */}
+                <div className="mb-2 flex items-center justify-between rounded-lg bg-gray-50 p-2">
+                  <div className="font-nanum-square-round-eb text-sm font-medium text-gray-500">
+                    그룹 코드: {groupInfo?.groupCode || selectedGroup}
+                  </div>
                   <button
                     onClick={copyGroupCode}
-                    className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-400 bg-white hover:bg-gray-50"
-                    title="그룹 코드 복사"
+                    className="flex items-center justify-center rounded-lg bg-[#ffc800] px-2 py-1"
                   >
                     <svg
-                      width="10"
-                      height="10"
+                      width={16}
+                      height={16}
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-gray-600"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      <rect
-                        x="9"
-                        y="9"
-                        width="13"
-                        height="13"
-                        rx="2"
-                        ry="2"
-                      ></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      <path
+                        d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
+                        fill="white"
+                      />
                     </svg>
                   </button>
                 </div>
-              )}
-
-              {/* 그룹 설명 */}
-              <div className="flex h-[50px] w-full items-center justify-center rounded-[15px] bg-yellow-50 md:h-[40px]">
-                <p className="text-center text-sm text-black md:text-xs">
-                  {loading
-                    ? '로딩중...'
-                    : userGroupIds.length === 0
-                      ? '+ 버튼을 눌러 그룹을 만들거나 돋보기 버튼을 눌러 그룹을 찾아보세요'
-                      : groupInfo?.groupDescription ||
-                        'SSAFY 특화 프로젝트 A509 입니다 ~'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 지갑 카드 캐러셀 */}
-        <div className="mb-6 w-full">
-          <div className="scrollbar-hide overflow-x-auto">
-            <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
-              {walletLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="text-sm text-gray-500">카드 로딩 중...</div>
-                </div>
-              ) : cardsWithSelection.length > 0 ? (
-                cardsWithSelection.map(card => (
-                  <WalletCard
-                    key={card.id}
-                    card={card}
-                    onClick={() => handleCardSelect(card.id)}
-                    onPaymentClick={() => setIsQRModalOpen(true)}
-                  />
-                ))
-              ) : (
-                <div className="flex items-center justify-center py-4">
-                  <div className="text-sm text-gray-500">
-                    등록된 카드가 없습니다
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 버튼 네비게이션 - 그룹이 있을 때만 표시 */}
-        {userGroupIds.length > 0 && (
-          <div className="relative mb-4 h-12 w-full">
-            {/* 카드가 있을 때: 사용내역, 회수, 공유 */}
-            {cardsWithSelection.length > 0 ? (
-              <>
-                {Object.entries(TAB_CONFIG).map(([tabKey, tabLabel], index) => (
-                  <div key={tabKey} className="relative">
-                    <button
-                      onClick={() => {
-                        setActiveTab(tabKey as keyof typeof TAB_CONFIG)
-                        // 사용내역 탭으로 변경 시 거래 내역 조회
-                        if (
-                          tabKey === 'history' &&
-                          selectedCard &&
-                          selectedGroup !== null
-                        ) {
-                          fetchTransactions(selectedGroup, selectedCard, 0) // 첫 페이지로 리셋
-                        }
-                      }}
-                      className={`absolute h-8 w-20 border border-black text-xs font-normal transition-colors ${
-                        activeTab === tabKey
-                          ? 'bg-[#efefef] text-black'
-                          : 'bg-white text-black hover:bg-[#efefef]'
-                      }`}
-                      style={{
-                        left: `${5 + index * 85}px`,
-                        top: '8px',
-                      }}
-                    >
-                      <div className="flex h-full items-center justify-center">
-                        {tabLabel}
-                      </div>
-                    </button>
-                  </div>
-                ))}
-
-                {/* 공유 버튼 (회수 버튼 옆) */}
-                <div className="relative">
+                <div className="flex gap-2">
                   <button
-                    onClick={() =>
-                      handleShareClick(
-                        cardsWithSelection.find(card => card.isSelected) ||
-                          cardsWithSelection[0] || {
-                            id: 0,
-                            name: '기본 카드',
-                            amount: 0,
-                          }
-                      )
-                    }
-                    className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
-                    style={{
-                      left: `${5 + Object.keys(TAB_CONFIG).length * 85}px`,
-                      top: '8px',
+                    onClick={() => {
+                      setIsMemberListModalOpen(true)
+                      setIsGroupDropdownOpen(false)
                     }}
+                    className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
                   >
-                    <div className="flex h-full items-center justify-center">
-                      공유
+                    <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                      멤버 보기
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setIsPointManagementModalOpen(true)
+                      setIsGroupDropdownOpen(false)
+                    }}
+                    className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
+                  >
+                    <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                      포인트 관리
+                    </div>
+                  </button>
+
+                  {isCurrentUserLeader ? (
+                    <button
+                      onClick={() => {
+                        window.location.href = `/customer/groupSettings?groupId=${selectedGroup}`
+                        setIsGroupDropdownOpen(false)
+                      }}
+                      className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
+                    >
+                      <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                        그룹 설정
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleLeaveGroup()
+                        setIsGroupDropdownOpen(false)
+                      }}
+                      className="flex h-[35px] flex-1 items-center justify-center rounded-[10px] border-2 border-[#ccc] bg-white px-2"
+                    >
+                      <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#ccc]">
+                        그룹 나가기
+                      </div>
+                    </button>
+                  )}
                 </div>
-              </>
-            ) : (
-              /* 카드가 없을 때: 공유 버튼만 사용내역 자리에 */
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    handleShareClick({
-                      id: 0,
-                      name: '기본 카드',
-                      amount: 0,
-                    })
-                  }
-                  className="absolute h-8 w-20 border border-blue-500 bg-blue-500 text-xs font-normal text-white transition-colors hover:bg-blue-600"
-                  style={{
-                    left: '5px',
-                    top: '8px',
-                  }}
-                >
-                  <div className="flex h-full items-center justify-center">
-                    공유
+              </div>
+            )}
+          </div>
+
+          {/* 지갑 카드 캐러셀 */}
+          <div className="px-4 py-2">
+            <div className="scrollbar-hide overflow-x-auto">
+              <div className="flex gap-2 pb-2" style={{ width: 'max-content' }}>
+                {walletLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="text-sm text-gray-500">카드 로딩 중...</div>
                   </div>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 탭 내용 - 카드가 있을 때만 표시 */}
-        {cardsWithSelection.length > 0 && activeTab === 'history' && (
-          <div className="mb-6">
-            {transactionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">
-                  거래 내역 로딩 중...
-                </div>
-              </div>
-            ) : transactions && transactions.length > 0 ? (
-              transactions.map(transaction => (
-                <TransactionItem
-                  key={transaction.transactionId}
-                  transaction={{
-                    id: transaction.transactionId,
-                    type: getTransactionDisplayInfo(transaction.transactionType)
-                      .type as Transaction['type'],
-                    amount: transaction.amount,
-                    date: new Date(transaction.createdAt).toLocaleDateString(
-                      'ko-KR'
-                    ),
-                    by: transaction.customer,
-                  }}
-                  cardName={
-                    cardsWithSelection.find(card => card.isSelected)?.name ||
-                    cardsWithSelection[0]?.name ||
-                    'QR'
-                  }
-                />
-              ))
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">
-                  거래 내역이 없습니다
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 카드가 없을 때 메시지 */}
-        {cardsWithSelection.length === 0 && (
-          <div className="mb-6 flex items-center justify-center py-8">
-            <div className="text-center">
-              <div className="mb-2 text-gray-500">등록된 카드가 없습니다</div>
-              <div className="text-sm text-gray-400">
-                그룹에 카드를 추가해주세요
+                ) : cardsWithSelection.length > 0 ? (
+                  cardsWithSelection.map(card => (
+                    <GroupWalletCard
+                      key={card.id}
+                      card={card}
+                      onClick={() => handleCardSelect(card.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="text-sm text-gray-500">
+                      등록된 카드가 없습니다
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
 
-        {/* 페이지네이션 - 사용내역 탭에서만 표시 */}
-        {cardsWithSelection.length > 0 && activeTab === 'history' && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        )}
-
-        {activeTab === 'withdrawal' && cardsWithSelection.length > 0 && (
-          <div className="mb-4">
-            <WithdrawalSection
-              selectedCard={
-                cardsWithSelection.find(card => card.isSelected) ||
-                cardsWithSelection[0]
-              }
-              availableReclaimAmount={availableReclaimAmount}
-              reclaimAmountInput={reclaimAmountInput}
-              setReclaimAmountInput={setReclaimAmountInput}
-              handleReclaim={handleReclaim}
-              isReclaiming={isReclaiming}
-              reclaimLoading={reclaimLoading}
-            />
+          {/* 사용내역 탭 */}
+          <div className="mb-6 px-4">
+            <div className="flex w-52 items-start">
+              <button
+                onClick={() => setActiveTab('history')}
+                className="flex items-center justify-center rounded-tl-lg rounded-tr-lg bg-[#fdda60] px-3 py-1 text-white"
+              >
+                <div className="font-jalnan text-xl leading-[140%]">
+                  사용내역
+                </div>
+              </button>
+            </div>
           </div>
-        )}
 
-        {activeTab === 'withdrawal' && cardsWithSelection.length === 0 && (
-          <div className="mb-4 text-center text-gray-500">
-            사용 가능한 카드가 없습니다.
+          {/* 사용내역 내용 */}
+          <div className="mb-6 px-4">
+            {transactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">거래 내역을 불러오는 중...</div>
+              </div>
+            ) : transactions && transactions.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">거래 내역이 없습니다.</div>
+              </div>
+            ) : transactions && transactions.length > 0 ? (
+              <div className="space-y-4">
+                {transactions.map((transaction, index) => {
+                  const displayInfo = getTransactionDisplayInfo(
+                    transaction.transactionType
+                  )
+                  return (
+                    <div key={transaction.transactionId}>
+                      <GroupTransactionItem
+                        transaction={{
+                          id: transaction.transactionId,
+                          type: displayInfo.type as GroupTransactionDisplay['type'],
+                          amount: transaction.amount,
+                          date: new Date(
+                            transaction.createdAt
+                          ).toLocaleDateString('ko-KR'),
+                          memberName: transaction.customer,
+                          groupName: groupInfo?.groupName,
+                        }}
+                      />
+                      {index < transactions.length - 1 && (
+                        <div className="my-2 h-[3px] w-full bg-neutral-100" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
           </div>
-        )}
+        </>
+      )}
 
-        {/* 그룹 생성 모달 */}
-        <GroupCreateModal
-          isOpen={isGroupCreateModalOpen}
-          onClose={() => setIsGroupCreateModalOpen(false)}
-          onCreateGroup={handleCreateGroup}
-        />
+      {/* 모달들 */}
+      <GroupCreateModal
+        isOpen={isGroupCreateModalOpen}
+        onClose={() => setIsGroupCreateModalOpen(false)}
+        onCreateGroup={handleCreateGroup}
+      />
 
-        {/* 그룹 검색 모달 */}
-        <FindGroup
-          isOpen={isFindGroupOpen}
-          onClose={() => setIsFindGroupOpen(false)}
-        />
+      <FindGroup
+        isOpen={isFindGroupOpen}
+        onClose={() => setIsFindGroupOpen(false)}
+      />
 
-        {/* QR 결제 모달 */}
-        <QRModal
-          isOpen={isQRModalOpen}
-          onClose={() => setIsQRModalOpen(false)}
-          cardName={
-            (groupWalletCards || []).find(card => card.storeId === selectedCard)
-              ?.storeName || 'QR'
+      <QRModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        cardName={
+          (groupWalletCards || []).find(card => card.storeId === selectedCard)
+            ?.storeName || 'QR'
+        }
+        cardId={selectedCard}
+        walletId={groupInfo?.walletId}
+      />
+
+      <MemberListModal
+        isOpen={isMemberListModalOpen}
+        onClose={() => setIsMemberListModalOpen(false)}
+        members={groupMembers}
+        loading={membersLoading}
+      />
+
+      <PointManagementModal
+        isOpen={isPointManagementModalOpen}
+        onClose={() => setIsPointManagementModalOpen(false)}
+        groupName={groupInfo?.groupName || '그룹'}
+        groupId={selectedGroup || 0}
+        groupWalletId={groupInfo?.walletId || 0}
+        individualWalletId={individualWalletId}
+        individualBalance={individualBalance}
+        onShareSuccess={() => {
+          // 공유 성공 시 데이터 새로고침
+          if (selectedGroup) {
+            fetchWalletCards(selectedGroup)
+            fetchIndividualBalanceData()
           }
-          cardId={selectedCard}
-          walletId={groupInfo?.walletId}
-          storeId={selectedCard}
-        />
+        }}
+        onReclaimSuccess={() => {
+          // 회수 성공 시 데이터 새로고침
+          if (selectedGroup) {
+            fetchWalletCards(selectedGroup)
+            fetchIndividualBalanceData()
+          }
+        }}
+      />
 
-        {/* 공유 모달 */}
-        <ShareModal
-          isOpen={isShareModalOpen}
-          onClose={handleShareModalClose}
-          selectedCard={selectedCardForShare}
-          individualBalance={individualBalance}
-          selectedGroup={selectedGroup || 0}
-          individualWalletId={individualWalletId}
-          groupInfo={groupInfo}
-        />
+      {/* 성공 알림 */}
+      <Alert
+        isOpen={isSuccessAlertOpen}
+        onClose={() => setIsSuccessAlertOpen(false)}
+        title="그룹 생성 완료"
+        message="그룹이 성공적으로 생성되었습니다!"
+        type="success"
+        onConfirm={() => {
+          // 페이지 새로고침으로 그룹 목록 업데이트
+          window.location.reload()
+        }}
+      />
 
-        {/* 그룹원 목록 모달 */}
-        <MemberListModal
-          isOpen={isMemberListModalOpen}
-          onClose={() => setIsMemberListModalOpen(false)}
-          members={groupMembers}
-          loading={membersLoading}
-        />
+      {/* 그룹 나가기 알림 */}
+      <Alert
+        isOpen={isLeaveAlertOpen}
+        onClose={() => setIsLeaveAlertOpen(false)}
+        message={leaveAlertMessage}
+        title=""
+        onConfirm={() => {
+          if (leaveAlertMessage === '그룹에서 성공적으로 탈퇴했습니다.') {
+            // 성공 시에만 페이지 새로고침
+            window.location.reload()
+          }
+        }}
+      />
+
+      {/* 그룹 나가기 확인 */}
+      <Alert
+        isOpen={isLeaveConfirmOpen}
+        title=""
+        onClose={() => setIsLeaveConfirmOpen(false)}
+        message="정말로 이 그룹에서 나가시겠습니까?"
+        confirmText="확인"
+        cancelText="취소"
+        onConfirm={() => {
+          setIsLeaveConfirmOpen(false)
+          executeLeaveGroup()
+        }}
+        onCancel={() => setIsLeaveConfirmOpen(false)}
+      />
+    </div>
+  )
+}
+
+// 그룹 지갑 카드 컴포넌트
+const GroupWalletCard = ({
+  card,
+  onClick,
+}: {
+  card: GroupCard
+  onClick: () => void
+}) => {
+  const getCardColor = (index: number) => {
+    const colors = ['#ff6f6f', '#ff8b68', '#ffd23c']
+    return colors[index % colors.length]
+  }
+
+  const cardColor = getCardColor(card.id - 1)
+
+  return (
+    <div
+      className={`inline-flex cursor-pointer flex-col items-center justify-center rounded-[10px] border-2 pt-[21px] pr-[19px] pb-5 pl-[19px] transition-colors ${
+        card.isSelected ? 'bg-white' : 'bg-white hover:bg-gray-50'
+      }`}
+      style={{
+        borderColor: cardColor,
+        backgroundColor: card.isSelected ? cardColor : 'white',
+      }}
+      onClick={onClick}
+    >
+      <div
+        className="text-[15px] leading-[140%] font-extrabold"
+        style={{ color: card.isSelected ? 'white' : cardColor }}
+      >
+        {card.name}
+      </div>
+      <div
+        className="text-[15px] leading-[140%] font-extrabold"
+        style={{ color: card.isSelected ? 'white' : cardColor }}
+      >
+        {card.amount.toLocaleString()} P
       </div>
     </div>
   )
 }
+
+// 그룹 거래 내역 아이템 컴포넌트
+const GroupTransactionItem = ({
+  transaction,
+}: {
+  transaction: GroupTransactionDisplay
+}) => {
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'use':
+        return '#ff6f6f'
+      case 'charge':
+        return '#6caeff'
+      case 'transfer-in':
+        return '#a4e846'
+      case 'transfer-out':
+        return '#e174ff'
+      case 'share':
+        return '#a4e846'
+      case 'collect':
+        return '#e174ff'
+      default:
+        return '#ff6f6f'
+    }
+  }
+
+  const getTransactionLabel = (type: string) => {
+    switch (type) {
+      case 'use':
+        return '사용'
+      case 'charge':
+        return '충전'
+      case 'transfer-in':
+        return '공유'
+      case 'transfer-out':
+        return '회수'
+      case 'share':
+        return '공유'
+      case 'collect':
+        return '회수'
+      default:
+        return '알 수 없음'
+    }
+  }
+
+  const transactionColor = getTransactionColor(transaction.type)
+
+  return (
+    <div className="mb-4 flex w-full items-center justify-between">
+      {/* 거래 타입 라벨 */}
+      <div className="inline-flex w-20 flex-col items-center justify-center">
+        <div
+          className="font-jalnan text-center text-[16px] leading-[140%] font-extrabold"
+          style={{ color: transactionColor }}
+        >
+          {getTransactionLabel(transaction.type)}
+        </div>
+      </div>
+
+      {/* 금액 */}
+      <div className="font-nanum-square-round-eb text-xl leading-[140%] font-extrabold text-gray-500">
+        {transaction.amount.toLocaleString()}P
+      </div>
+
+      {/* 멤버명 또는 그룹명 */}
+      {transaction.memberName && (
+        <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ffc800]">
+          {transaction.memberName}
+        </div>
+      )}
+
+      {/* 날짜 */}
+      <div className="font-nanum-square-round-eb text-[15px] leading-[140%] font-extrabold text-[#ccc]">
+        {transaction.date}
+      </div>
+    </div>
+  )
+}
+
+export default GroupWallet
