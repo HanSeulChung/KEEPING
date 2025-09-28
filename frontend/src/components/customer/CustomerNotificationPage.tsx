@@ -1,6 +1,7 @@
 'use client'
 
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
+import { getNotificationIcon } from '@/types/notification'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -37,50 +38,25 @@ const CustomerNotificationPage = () => {
     setLoading(false)
   }, [notifications, storeId, accountName])
 
-  // 알림 타입별 아이콘 반환
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'payment':
-        return (
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#10B981"/>
-            </svg>
-          </div>
-        )
-      case 'order':
-        return (
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z" fill="#3B82F6"/>
-            </svg>
-          </div>
-        )
-      case 'review':
-        return (
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#F59E0B"/>
-            </svg>
-          </div>
-        )
-      case 'system':
-        return (
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#6B7280"/>
-            </svg>
-          </div>
-        )
-      default:
-        return (
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#6B7280"/>
-            </svg>
-          </div>
-        )
+  // 알림 타입별 UI 아이콘 컴포넌트 (이모지 대신 UI 아이콘 사용)
+  const getNotificationIconComponent = (type: string) => {
+    const iconEmoji = getNotificationIcon(type as any)
+
+    // 타입별 배경색 설정
+    let bgColor = 'bg-gray-100'
+    if (['PAYMENT_APPROVED', 'PAYMENT_REQUEST', 'PAYMENT_CANCELED', 'SETTLEMENT_COMPLETED'].includes(type)) {
+      bgColor = 'bg-green-100'
+    } else if (['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(type)) {
+      bgColor = 'bg-blue-100'
+    } else if (type.includes('GROUP_')) {
+      bgColor = 'bg-yellow-100'
     }
+
+    return (
+      <div className={`w-8 h-8 ${bgColor} rounded-full flex items-center justify-center`}>
+        <span className="text-sm">{iconEmoji}</span>
+      </div>
+    )
   }
 
   // 시간 포맷팅 함수
@@ -114,25 +90,33 @@ const CustomerNotificationPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 헤더 */}
-      <div className="w-full bg-white border-b border-black">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl sm:text-3xl font-['Tenada'] font-extrabold text-black">
+    <div className="min-h-screen bg-gray-50">
+      {/* 모바일 네이티브 헤더 */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm safe-area-top">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between h-11">
+            <button
+              onClick={() => router.back()}
+              className="p-2 -ml-2 rounded-full active:bg-gray-100 transition-colors"
+            >
+              <svg width={24} height={24} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <h1 className="text-lg font-['nanumsquare'] font-bold text-black">
               알림
             </h1>
-            <div className="w-20"></div> {/* 공간 맞추기 */}
+            <div className="w-10"></div> {/* 공간 맞추기 */}
           </div>
         </div>
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="pb-safe">
         {/* 가게 정보 표시 */}
         {accountName && (
-          <div className="mb-6 p-4 bg-keeping-beige border border-black rounded-lg text-center">
-            <h2 className="text-lg font-['nanumsquare'] font-bold text-black mb-1">
+          <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <h2 className="text-base font-['nanumsquare'] font-bold text-black mb-1">
               {accountName} 알림
             </h2>
             <p className="text-sm text-gray-600 font-['nanumsquare']">
@@ -141,78 +125,82 @@ const CustomerNotificationPage = () => {
           </div>
         )}
 
-        {/* 알림 목록 */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-['nanumsquare'] font-bold text-black">
-              전체 알림 ({filteredNotifications.length}개)
+        {/* 알림 헤더 */}
+        <div className="px-4 py-3 bg-white border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-['nanumsquare'] font-bold text-black">
+              전체 알림 {filteredNotifications.length > 0 && `(${filteredNotifications.length})`}
             </h2>
             {filteredNotifications.some(n => !n.isRead) && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800 font-['nanumsquare'] underline"
+                className="px-3 py-1.5 text-sm text-blue-600 font-['nanumsquare'] font-medium active:bg-blue-50 rounded-lg transition-colors"
               >
-                모두 읽음 처리
+                모두 읽음
               </button>
             )}
           </div>
+        </div>
           
-          {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12">
+        {filteredNotifications.length === 0 ? (
+          <div className="bg-white">
+            <div className="text-center py-16 px-4">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg width={24} height={24} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#9CA3AF"/>
                 </svg>
               </div>
-              <p className="text-gray-500 font-['nanumsquare'] text-lg">알림이 없습니다</p>
+              <p className="text-gray-500 font-['nanumsquare'] text-base font-medium">알림이 없습니다</p>
               <p className="text-gray-400 font-['nanumsquare'] text-sm mt-2">
                 새로운 알림이 오면 여기에 표시됩니다
               </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border border-black bg-white rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !notification.isRead ? 'ring-2 ring-blue-200 bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleMarkAsRead(notification.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* 알림 아이콘 */}
-                    {getNotificationIcon(notification.type)}
-                    
-                    {/* 알림 내용 */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-sm font-['nanumsquare'] font-bold text-black">
-                          {notification.title}
-                        </h3>
-                        {!notification.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-700 font-['nanumsquare'] leading-relaxed mb-2">
-                        {notification.message}
+          </div>
+        ) : (
+          <div className="bg-white">
+            {filteredNotifications.map((notification, index) => (
+              <div
+                key={notification.id}
+                className={`border-b border-gray-100 last:border-b-0 active:bg-gray-50 transition-colors ${
+                  !notification.isRead ? 'bg-blue-50' : 'bg-white'
+                }`}
+                onClick={() => handleMarkAsRead(notification.id)}
+              >
+                <div className="px-4 py-4 flex items-start gap-3">
+                  {/* 알림 아이콘 */}
+                  <div className="flex-shrink-0 mt-1">
+                    {getNotificationIconComponent(notification.type)}
+                  </div>
+
+                  {/* 알림 내용 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="text-sm font-['nanumsquare'] font-bold text-black line-clamp-1">
+                        {notification.title}
+                      </h3>
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700 font-['nanumsquare'] leading-relaxed mb-2 line-clamp-2">
+                      {notification.message}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400 font-['nanumsquare']">
+                        {formatTime(notification.timestamp)}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400 font-['nanumsquare']">
-                          {formatTime(notification.timestamp)}
-                        </p>
-                        {notification.data?.amount && (
-                          <span className="text-xs font-['nanumsquare'] font-bold text-green-600">
-                            {notification.data.amount.toLocaleString()}원
-                          </span>
-                        )}
-                      </div>
+                      {notification.data?.amount && (
+                        <span className="text-xs font-['nanumsquare'] font-bold text-green-600">
+                          {notification.data.amount.toLocaleString()}원
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

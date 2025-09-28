@@ -1,18 +1,24 @@
 'use client'
 
-import { useUser } from '@/contexts/UserContext'
-import { useNotificationSystem } from '@/hooks/useNotificationSystem'
-import { useAuthStore } from '@/store/useAuthStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import Image from 'next/image'
 import Link from 'next/link'
+
+// UserContext 제거: 고객/점주 모두 useAuthStore 사용
+import { useNotificationSystem } from '@/hooks/useNotificationSystem'
+import { useAuthStore } from '@/store/useAuthStore'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-export default function Header() {
+interface HeaderProps {
+  title?: string
+}
+
+export default function Header({ title }: HeaderProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const [forceUpdate, setForceUpdate] = useState(0)
+  const [mounted, setMounted] = useState(false)
 
   // 점주용 인증 상태
   const {
@@ -21,8 +27,8 @@ export default function Header() {
     logout: ownerLogout,
   } = useAuthStore()
 
-  // 고객용 인증 상태
-  const { user: customerUser, loading: customerLoading } = useUser()
+  // 고객/점주 공통 인증 상태 (일원화)
+  const { user: customerUser } = useAuthStore()
 
   const { unreadCount } = useNotificationSystem()
   const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebarStore()
@@ -39,8 +45,15 @@ export default function Header() {
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
 
+  // 클라이언트 마운트 확인
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // 로그인 상태 변경 감지를 위한 useEffect
   useEffect(() => {
+    if (!mounted) return
+
     const checkLoginStatus = () => {
       setForceUpdate(prev => prev + 1)
     }
@@ -55,7 +68,7 @@ export default function Header() {
 
       return () => clearInterval(interval)
     }
-  }, [pathname, customerUser, ownerLoggedIn])
+  }, [pathname, customerUser, ownerLoggedIn, mounted])
 
   // 현재 페이지가 고객 페이지인지 점주 페이지인지 확인
   const isCustomerPage = pathname.startsWith('/customer')
@@ -107,6 +120,7 @@ export default function Header() {
   useEffect(() => {
     setIsLoggedIn(checkLoginStatus())
   }, [forceUpdate])
+
   const user = isCustomerPage ? customerUser : ownerUser
 
   // 홈페이지인지 확인

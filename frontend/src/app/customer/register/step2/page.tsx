@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 const CustomerPinSetup = () => {
   const router = useRouter()
+
   const [pinNumber, setPinNumber] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,9 +49,8 @@ const CustomerPinSetup = () => {
 
     setIsSubmitting(true)
     try {
-      // 세션에서 regSessionId 가져오기
-      const sessionInfo = await authApi.getSessionInfo()
-      const regSessionId = sessionInfo.data
+      // localStorage에서 regSessionId 가져오기
+      const regSessionId = localStorage.getItem('regSessionId')
 
       if (!regSessionId) {
         alert('세션 정보를 찾을 수 없습니다. 다시 로그인해주세요.')
@@ -58,7 +58,7 @@ const CustomerPinSetup = () => {
         return
       }
 
-      // 회원가입 완료 API 호출
+      // 회원가입 완료 API 호출 (fetch 사용)
       const signupData = {
         regSessionId: regSessionId,
         paymentPin: pinNumber,
@@ -67,12 +67,42 @@ const CustomerPinSetup = () => {
       console.log('회원가입 요청 데이터:', signupData)
 
       const result = await authApi.completeCustomerSignup(signupData)
+
       console.log('회원가입 완료:', result)
 
       // 회원가입 성공 시 토큰 저장
-      if (result.accessToken) {
-        localStorage.setItem('accessToken', result.accessToken)
-        localStorage.setItem('user', JSON.stringify(result.user))
+      const accessToken = result?.accessToken
+      const userObj = result?.user
+      if (accessToken) {
+        localStorage.setItem('accessToken', accessToken)
+      }
+      if (userObj) {
+        localStorage.setItem('user', JSON.stringify(userObj))
+      }
+
+      // 회원가입 후 사용자 정보 다시 조회하여 완전한 정보 가져오기
+      try {
+        const meUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+        const meResponse = await fetch(`${meUrl}/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        })
+
+        if (meResponse.ok) {
+          const meData = await meResponse.json()
+          console.log('사용자 정보 재조회 완료:', meData)
+
+          // 완전한 사용자 정보로 업데이트
+          if (meData.data) {
+            localStorage.setItem('user', JSON.stringify(meData.data))
+          }
+        }
+      } catch (meError) {
+        console.warn('사용자 정보 재조회 실패:', meError)
       }
 
       alert('회원가입이 완료되었습니다!')
@@ -170,7 +200,6 @@ const CustomerPinSetup = () => {
             {isSubmitting ? '회원가입 중...' : 'PIN 번호 설정 완료'}
           </span>
         </button>
-
         <button
           onClick={handleBack}
           disabled={isSubmitting}

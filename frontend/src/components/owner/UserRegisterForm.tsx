@@ -1,9 +1,9 @@
 'use client'
 
-import { authApi } from '@/api/authApi'
+import { buildURL } from '@/api/config'
 import OtpVerificationModal from '@/components/common/OtpVerificationModal'
 import { AuthForm } from '@/types'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface UserRegisterFormProps {
   onNext?: () => void
@@ -12,6 +12,7 @@ interface UserRegisterFormProps {
 export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [isAuthCompleted, setIsAuthCompleted] = useState(false)
+  const [isSessionInfoLoaded, setIsSessionInfoLoaded] = useState(false)
   const [authForm, setAuthForm] = useState<AuthForm>({
     name: '',
     residentNumber: '',
@@ -20,33 +21,65 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     genderCode: '',
   })
 
+  useEffect(() => {
+    // 이미 로드되었거나 로딩 중이면 중복 실행 방지
+    if (isSessionInfoLoaded) return
+
+    // auth/session-info에서 regSessionId 확인
+    const checkRegSessionId = async () => {
+      try {
+        const response = await fetch(buildURL('/auth/session-info'), {
+          method: 'GET',
+          credentials: 'include',
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          const regSessionId = result?.data
+
+          if (regSessionId) {
+            // localStorage에 저장
+            localStorage.setItem('regSessionId', regSessionId)
+            console.log('auth/session-info에서 가져온 regSessionId를 localStorage에 저장:', regSessionId)
+          } else {
+            console.log('auth/session-info에서 regSessionId를 찾을 수 없습니다.')
+          }
+        } else {
+          console.log('auth/session-info 호출 실패:', response.status)
+        }
+      } catch (error) {
+        console.error('auth/session-info 호출 실패:', error)
+      } finally {
+        setIsSessionInfoLoaded(true)
+      }
+    }
+
+    checkRegSessionId()
+  }, [isSessionInfoLoaded])
+
   const handlePassAuth = () => {
+    // 전화번호가 입력되어 있는지 확인
     if (!authForm.phoneNumber) {
       alert('전화번호를 먼저 입력해주세요.')
       return
     }
+
+    // localStorage에서 regSessionId 확인
+    const regSessionId = localStorage.getItem('regSessionId')
+
+    if (!regSessionId) {
+      alert('세션 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    // OTP 인증 모달 열기
     setIsOtpModalOpen(true)
   }
 
-  const handleOtpSuccess = async () => {
+  const handleOtpSuccess = () => {
     console.log('OTP 인증 성공 콜백 호출됨')
-
     setIsOtpModalOpen(false)
     setIsAuthCompleted(true)
-
-    // 세션에서 regSessionId 가져와서 localStorage에 저장 (다음 단계에서 사용)
-    try {
-      const sessionInfo = await authApi.getSessionInfo()
-      const regSessionId = sessionInfo.data
-      
-      if (regSessionId) {
-        localStorage.setItem('regSessionId', regSessionId)
-        console.log('세션에서 가져온 regSessionId 저장:', regSessionId)
-      }
-    } catch (error) {
-      console.error('세션 정보 조회 실패:', error)
-    }
-
     console.log('인증 완료 상태로 변경, 다음 단계 버튼 활성화')
   }
 
@@ -61,7 +94,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
   }
 
-  const handleResidentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResidentNumberChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const input = e.target.value.replace(/\D/g, '')
 
     if (input.length <= 7) {
@@ -95,7 +130,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
       {/* 입력 폼 */}
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">이름</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            이름
+          </label>
           <input
             type="text"
             value={authForm.name}
@@ -106,7 +143,9 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">주민등록번호</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            주민등록번호
+          </label>
           <input
             type="text"
             value={authForm.residentNumber}
@@ -118,11 +157,15 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">전화번호</label>
+          <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-black">
+            전화번호
+          </label>
           <input
             type="tel"
             value={authForm.phoneNumber}
-            onChange={e => handleFormChange('phoneNumber', formatPhoneNumber(e.target.value))}
+            onChange={e =>
+              handleFormChange('phoneNumber', formatPhoneNumber(e.target.value))
+            }
             className="w-full rounded-lg border border-gray-300 p-3 font-['nanumsquare'] focus:border-black focus:outline-none"
             placeholder="010-1234-5678"
             maxLength={13}
@@ -136,9 +179,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
           type="button"
           onClick={handlePassAuth}
           disabled={
-            !authForm.name ||
-            !authForm.residentNumber ||
-            !authForm.phoneNumber
+            !authForm.name || !authForm.residentNumber || !authForm.phoneNumber || !authForm.genderCode
           }
           className="w-full rounded-lg bg-black py-3 font-['nanumsquare'] font-bold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -167,9 +208,7 @@ export default function UserRegisterForm({ onNext }: UserRegisterFormProps) {
         onClose={() => setIsOtpModalOpen(false)}
         phoneNumber={authForm.phoneNumber.replace(/\D/g, '')}
         name={authForm.name}
-        birth={authForm.birthDate && authForm.birthDate.length === 6 
-          ? `20${authForm.birthDate.slice(0, 2)}-${authForm.birthDate.slice(2, 4)}-${authForm.birthDate.slice(4, 6)}`
-          : authForm.birthDate}
+        birth={authForm.birthDate}
         genderDigit={authForm.genderCode}
         userRole="OWNER"
         onSuccess={handleOtpSuccess}

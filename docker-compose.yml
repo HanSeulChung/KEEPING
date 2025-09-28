@@ -17,6 +17,8 @@ services:
       - appnet
     environment:
       - TZ=Asia/Seoul
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   backend:
     image: keeping/myapp-backend:${BACKEND_TAG}

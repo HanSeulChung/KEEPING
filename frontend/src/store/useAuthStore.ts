@@ -1,170 +1,325 @@
+import { buildURL } from '@/api/config'
 import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 
-// Cookie 읽기 유틸리티 함수
+// ------------------------------------------------------------
+// In-memory access token to avoid frequent localStorage reads
+// ------------------------------------------------------------
+let memoryAccessToken: string | null = null
+
+// ------------------------------------------------------------
+// Cookie helpers
+// ------------------------------------------------------------
 const getCookie = (name: string): string | null => {
   if (typeof document === 'undefined') return null
-
   const value = `; ${document.cookie}`
   const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null
-  }
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null
   return null
 }
 
-// 메모리 기반 토큰 저장소
-let memoryAccessToken: string | null = null
-
-interface AuthState {
-  isLoggedIn: boolean
-  user: {
-    id: string
-    name: string
-    email: string
-  } | null
-  isLoggingOut: boolean
-  login: (user: { id: string; name: string; email: string }, accessToken?: string) => void
-  logout: () => Promise<void>
-  initializeAuth: () => void
-  checkAuthStatus: () => boolean
-  getAccessToken: () => string | null
-  setAccessToken: (token: string) => void
+const deleteCookie = (name: string) => {
+  if (typeof document === 'undefined') return
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.p.ssafy.io;`
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=j13a509.p.ssafy.io;`
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
-  isLoggedIn: false,
-  user: null,
-  isLoggingOut: false,
-  login: (user, accessToken) => {
-    if (accessToken) {
-      memoryAccessToken = accessToken
-      // localStorage에도 저장
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('user', JSON.stringify(user))
-      }
-    }
-    set({ isLoggedIn: true, user })
-  },
-  logout: async () => {
-    set({ isLoggingOut: true })
-    
-    try {
-      // authApi를 통해 로그아웃 처리
-      const { authApi } = await import('@/api/authApi')
-      const result = await authApi.logout()
-      
-      // 메모리 정리
-      memoryAccessToken = null
-      
-      // localStorage 정리
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('userInfo')
-        // 다른 관련 데이터도 정리
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('auth_') || key.startsWith('user_')) {
-            localStorage.removeItem(key)
-          }
-        })
-      }
-      
-      // 상태 초기화
-      set({ isLoggedIn: false, user: null, isLoggingOut: false })
-      
-      // 카카오 로그아웃 URL이 있으면 리디렉트
-      if (result.kakaoLogoutUrl) {
-        window.location.href = result.kakaoLogoutUrl
-      } else {
-        // 없으면 홈페이지로
-        window.location.href = '/'
-      }
-      
-    } catch (error) {
-      console.error('로그아웃 에러:', error)
-      
-      // 에러 발생해도 로컬 정리
-      memoryAccessToken = null
-      if (typeof window !== 'undefined') {
-        localStorage.clear()
-      }
-      
-      set({ isLoggedIn: false, user: null, isLoggingOut: false })
-      window.location.href = '/'
-    }
-  },
-  getAccessToken: () => {
-    return memoryAccessToken
-  },
-  setAccessToken: (token: string) => {
-    memoryAccessToken = token
-  },
-  initializeAuth: () => {
-    // localStorage에서 accessToken 확인
-    if (typeof window !== 'undefined') {
-      const accessToken = localStorage.getItem('accessToken')
-      const userStr = localStorage.getItem('user')
-      
-      if (accessToken) {
-        memoryAccessToken = accessToken
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
+export type AuthUser = {
+  id?: number | string
+  userId?: number
+  ownerId?: number
+  name?: string
+  email?: string
+  role?: 'OWNER' | 'CUSTOMER'
+  [key: string]: any
+}
+
+interface AuthState {
+  // state
+  isLoggedIn: boolean
+  user: AuthUser | null
+  isLoggingOut: boolean
+  loading: boolean
+  error: string | null
+
+  // actions
+  login: (user: AuthUser, accessToken?: string) => void
+  logout: () => Promise<void>
+  logoutAll: () => Promise<void>
+  initializeAuth: () => void
+  checkAuthStatus: () => boolean
+  fetchCurrentUser: () => Promise<void>
+  refreshAccessToken: () => Promise<void>
+  clearAuth: () => void
+
+  // token helpers
+  getAccessToken: () => string | null
+  setAccessToken: (token: string) => void
+  clearAccessToken: () => void
+}
+
+// ------------------------------------------------------------
+// Store
+// ------------------------------------------------------------
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      isLoggedIn: false,
+      user: null,
+      isLoggingOut: false,
+      loading: false,
+      error: null,
+
+      // --------------------------------------------------------
+      // Token helpers
+      // --------------------------------------------------------
+      getAccessToken: () => {
+        if (memoryAccessToken) return memoryAccessToken
         try {
-          const user = userStr ? JSON.parse(userStr) : null
-          set({ isLoggedIn: true, user })
-          return
-        } catch {
-          // JSON 파싱 실패시 로그아웃 처리
-          localStorage.clear()
-          set({ isLoggedIn: false, user: null })
-          return
+          if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('accessToken')
+            if (token) memoryAccessToken = token
+            return token
+          }
+        } catch {}
+        return null
+      },
+
+      setAccessToken: (token: string) => {
+        memoryAccessToken = token
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', token)
+          }
+        } catch {}
+      },
+
+      clearAccessToken: () => {
+        memoryAccessToken = null
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken')
+          }
+        } catch {}
+      },
+
+      clearAuth: () => {
+        memoryAccessToken = null
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('user')
+            localStorage.removeItem('userInfo')
+            deleteCookie('refreshToken')
+            deleteCookie('refresh_token')
+            deleteCookie('REFRESH_TOKEN')
+          }
+        } catch {}
+        set({ isLoggedIn: false, user: null })
+      },
+
+      // --------------------------------------------------------
+      // Auth flows
+      // --------------------------------------------------------
+      login: (user: AuthUser, accessToken?: string) => {
+        if (accessToken) {
+          get().setAccessToken(accessToken)
         }
-      }
-    }
-    
-    // fallback으로 Cookie에서 토큰 확인하여 로그인 상태 초기화
-    const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
-    let token = null
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(user))
+          }
+        } catch {}
+        set({ isLoggedIn: true, user })
+      },
 
-    for (const name of possibleTokenNames) {
-      token = getCookie(name)
-      if (token) break
-    }
+      logout: async () => {
+        set({ isLoggingOut: true })
+        try {
+          const { authApi } = await import('@/api/authApi')
+          const result = await authApi.logout()
 
-    if (token) {
-      memoryAccessToken = token
-      set({ isLoggedIn: true, user: null })
-    } else {
-      set({ isLoggedIn: false, user: null })
-    }
-  },
-  checkAuthStatus: () => {
-    // localStorage accessToken 우선 확인
-    if (typeof window !== 'undefined') {
-      const accessToken = localStorage.getItem('accessToken')
-      if (accessToken) {
-        memoryAccessToken = accessToken
-        set({ isLoggedIn: true, user: get().user })
-        return true
-      }
-    }
+          get().clearAuth()
+          set({ isLoggingOut: false })
 
-    // fallback으로 Cookie 확인 (기존 로직)
-    const possibleTokenNames = ['accessToken', 'access_token', 'token', 'authToken', 'jwt']
-    let token = null
+          if (result?.kakaoLogoutUrl) {
+            window.location.href = result.kakaoLogoutUrl
+          } else {
+            window.location.href = '/'
+          }
+        } catch (error) {
+          console.error('로그아웃 에러:', error)
+          get().clearAuth()
+          set({ isLoggingOut: false })
+          window.location.href = '/'
+        }
+      },
 
-    for (const name of possibleTokenNames) {
-      token = getCookie(name)
-      if (token) break
-    }
+      logoutAll: async () => {
+        try {
+          await fetch(buildURL('/auth/logout'), {
+            method: 'GET',
+            credentials: 'include',
+          })
+        } catch {}
+        await get().logout()
+      },
 
-    if (token) {
-      memoryAccessToken = token
-      set({ isLoggedIn: true, user: get().user })
-      return true
-    } else {
-      memoryAccessToken = null
-      set({ isLoggedIn: false, user: null })
-      return false
+      initializeAuth: () => {
+        try {
+          // Restore user
+          let savedUser: AuthUser | null = null
+          if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('user')
+            if (saved) {
+              try {
+                savedUser = JSON.parse(saved)
+              } catch {
+                localStorage.removeItem('user')
+              }
+            }
+          }
+
+          // Find token from cookies first
+          const candidates = [
+            'accessToken',
+            'access_token',
+            'token',
+            'authToken',
+            'jwt',
+          ]
+          let token: string | null = null
+          for (const name of candidates) {
+            token = getCookie(name)
+            if (token) break
+          }
+          if (!token && typeof window !== 'undefined') {
+            try {
+              token = localStorage.getItem('accessToken')
+            } catch {}
+          }
+
+          if (token) {
+            memoryAccessToken = token
+            set({ isLoggedIn: true, user: savedUser })
+            // non-blocking validation and user sync
+            get()
+              .refreshAccessToken()
+              .then(() => get().fetchCurrentUser())
+              .catch(() => {
+                console.warn('Token validation failed during initialization')
+                get().logout()
+              })
+          } else {
+            set({ isLoggedIn: false, user: null })
+          }
+        } catch (error) {
+          console.error('Auth initialization failed:', error)
+          set({ isLoggedIn: false, user: null })
+        }
+      },
+
+      checkAuthStatus: () => {
+        const candidates = [
+          'accessToken',
+          'access_token',
+          'token',
+          'authToken',
+          'jwt',
+        ]
+        let token: string | null = null
+        for (const name of candidates) {
+          token = getCookie(name)
+          if (token) break
+        }
+        if (!token && typeof window !== 'undefined') {
+          try {
+            token = localStorage.getItem('accessToken')
+          } catch {}
+        }
+        if (token) {
+          set({ isLoggedIn: true })
+          return true
+        }
+        set({ isLoggedIn: false, user: null })
+        return false
+      },
+
+      fetchCurrentUser: async () => {
+        set({ loading: true, error: null })
+        try {
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          }
+          const token = get().getAccessToken()
+          if (token) headers.Authorization = `Bearer ${token}`
+
+          const res = await fetch(buildURL('/auth/me'), {
+            method: 'GET',
+            credentials: 'include',
+            headers,
+          })
+          if (!res.ok) {
+            if (res.status === 401) {
+              console.warn('Token expired, but keeping login state')
+              set({ loading: false, error: 'Token expired' })
+              return
+            }
+            throw new Error(`HTTP ${res.status}`)
+          }
+          const json = await res.json()
+          const data = json?.data ?? json
+          set({
+            user: data ?? null,
+            isLoggedIn: true,
+            loading: false,
+            error: null,
+          })
+        } catch (err: any) {
+          const message = err?.message || '사용자 정보 조회 실패'
+          console.warn('fetchCurrentUser failed:', message)
+          set({ loading: false, error: message })
+        }
+      },
+
+      refreshAccessToken: async () => {
+        try {
+          const res = await fetch(buildURL('/auth/refresh'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const json = await res.json()
+          const newToken = json?.data?.accessToken
+          if (newToken) get().setAccessToken(newToken)
+        } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('개발 환경: 토큰 갱신 실패 (백엔드 서버 확인 필요)')
+          } else {
+            console.error('Token refresh failed:', error)
+          }
+          get().clearAuth()
+        }
+      },
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => {
+        if (typeof window === 'undefined') {
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          } as unknown as Storage
+        }
+        return localStorage
+      }),
+      partialize: state => ({ isLoggedIn: state.isLoggedIn, user: state.user }),
     }
-  },
-}))
+  )
+)

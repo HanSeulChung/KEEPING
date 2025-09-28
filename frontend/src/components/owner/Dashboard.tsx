@@ -1,129 +1,165 @@
 'use client'
 
-import { apiConfig } from '@/api/config'
+import apiClient from '@/api/axios'
+import { notificationApi } from '@/api/notificationApi'
 import { useAuthStore } from '@/store/useAuthStore'
+import type { Store } from '@/store/useStoreStore'
+import { useStoreStore } from '@/store/useStoreStore'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StoreRegisterModal from './StoreRegisterModal'
 
-interface Store {
-  storeId: number
-  storeName: string
-  address: string
-  phoneNumber: string
-  merchantId: number
-  category: string
-  storeStatus: string
-  description: string
-  createdAt: string
-  imgUrl: string
+// 통계 API 타입 정의
+interface StatisticsRequestDto {
+  date?: string
+  startDate?: string
+  endDate?: string
 }
 
-interface OwnerHomeProps {
-  currentStore?: Store
-  stores?: Store[]
-  unreadCount?: number
+interface StoreOverallStatisticsResponseDto {
+  totalSales: number
+  totalOrders: number
+  averageOrderValue: number
+  totalCustomers: number
 }
 
-export default function OwnerHome({
-  currentStore,
-  stores: initialStores,
-  unreadCount: initialUnreadCount,
-}: OwnerHomeProps) {
+interface DailyStatisticsResponseDto {
+  date: string
+  sales: number
+  orders: number
+  customers: number
+}
+
+interface PeriodStatisticsResponseDto {
+  startDate: string
+  endDate: string
+  totalSales: number
+  totalOrders: number
+  averageOrderValue: number
+  dailyStatistics: DailyStatisticsResponseDto[]
+}
+
+export default function OwnerHome() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  const [selected, setSelected] = useState<Store | null>(null)
-  const [stores, setStores] = useState<Store[]>(initialStores || [])
-  const [unreadCount, setUnreadCount] = useState<number>(
-    initialUnreadCount || 3
-  )
-  const [loading, setLoading] = useState(true)
-  const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] = useState(false)
+  const { stores, selectedStore, setSelectedStore, fetchStores, loading } =
+    useStoreStore()
+  const [unreadCount, setUnreadCount] = useState<number>(0)
+  const [isStoreRegisterModalOpen, setIsStoreRegisterModalOpen] =
+    useState(false)
 
-  // 가게 목록 가져오기
-  const fetchStores = async () => {
+  // 통계 데이터 상태
+  const [overallStats, setOverallStats] =
+    useState<StoreOverallStatisticsResponseDto | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  // 통계 API 함수들
+  const fetchOverallStatistics = async (storeId: number) => {
     try {
-      setLoading(true)
-      
-      console.log('가게 목록 API 호출 시작...')
-      
-      // @AuthenticationPrincipal을 사용하므로 ownerId 파라미터 없이 호출
-      const response = await fetch(`${apiConfig.baseURL}/owners/stores`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        credentials: 'include'
-      })
+      setStatsLoading(true)
 
-      console.log('API 응답 상태:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API 오류 응답:', errorText)
-        throw new Error(`가게 목록을 가져오는데 실패했습니다: ${response.status}`)
+      // 샘플 가게인 경우 샘플 데이터 반환
+      if (storeId === -1) {
+        console.log('샘플 가게 SSAFY 통계 데이터 설정')
+        setOverallStats({
+          totalSales: 1500000,
+          totalOrders: 150,
+          averageOrderValue: 10000,
+          totalCustomers: 120,
+        })
+        setStatsLoading(false)
+        return
       }
 
-      const data = await response.json()
-      console.log('API 응답 데이터:', data)
-      
-      // 응답 데이터 구조에 따라 적절히 처리
-      const storesData = data.data || data || []
-      setStores(storesData)
-    } catch (error) {
-      console.error('가게 목록 조회 오류:', error)
-      // 에러 시 빈 배열로 설정
-      setStores([])
+      console.log('전체 통계 조회 시작:', storeId)
+      console.log('통계 API 호출 시작...')
+
+      const requestData: StatisticsRequestDto = {}
+      const response = await apiClient.post(
+        `/stores/${storeId}/statistics/overall`,
+        requestData
+      )
+
+      console.log('전체 통계 응답:', response.data)
+      if (response.data.success) {
+        setOverallStats(response.data.data)
+      }
+    } catch (error: any) {
+      console.error('전체 통계 조회 실패:', error)
+      console.error('에러 상태:', error.response?.status)
+      console.error('에러 응답:', error.response?.data)
+
+      // 임시 더미 데이터 설정 (백엔드 오류 시)
+      setOverallStats({
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        totalCustomers: 0,
+      })
     } finally {
-      setLoading(false)
+      setStatsLoading(false)
     }
   }
 
-  // 컴포넌트 마운트 시 가게 목록 가져오기 (클라이언트에서만)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !initialStores) {
-      fetchStores()
-    } else if (initialStores && initialStores.length > 0) {
-      // initialStores가 있으면 로딩 완료로 설정
-      setLoading(false)
+  // 읽지 않은 알림 개수 가져오기
+  const fetchUnreadCount = async () => {
+    if (!user?.ownerId && !user?.userId && !user?.id) {
+      console.warn('사용자 ID를 찾을 수 없습니다')
+      return
     }
-  }, [initialStores])
 
-  // 가게가 없을 때 자동으로 등록 모달 띄우기 (제거 - 사용자가 직접 버튼을 눌러야 함)
-  // useEffect(() => {
-  //   if (!loading && stores.length === 0) {
-  //     setIsStoreRegisterModalOpen(true)
-  //   }
-  // }, [loading, stores.length])
+    try {
+      // OWNER 역할인 경우 ownerId 사용, 그 외는 userId 또는 id 사용
+      let ownerId: number
+      if (user.role === 'OWNER' && user.ownerId) {
+        ownerId = Number(user.ownerId)
+      } else if (user.userId) {
+        ownerId = Number(user.userId)
+      } else {
+        ownerId = Number(user.id)
+      }
 
-  // URL 파라미터에서 storeId 가져와서 자동 선택
-  useEffect(() => {
-    const urlStoreId = searchParams.get('storeId')
-    const urlAccountName = searchParams.get('accountName')
-    
-    // URL에 storeId와 accountName이 모두 있는 경우에만 가게 선택
-    if (urlStoreId && urlAccountName && stores.length > 0) {
-      const foundStore = stores.find(store => store.storeId.toString() === urlStoreId)
-      if (foundStore) {
-        setSelected(foundStore)
+      if (isNaN(ownerId) || ownerId <= 0) {
+        console.error('유효하지 않은 ownerId')
         return
       }
-    }
-    
-    // URL에 파라미터가 없는 경우 selected를 null로 설정 (카드 그리드 숨김)
-    setSelected(null)
-  }, [stores, searchParams])
 
-  // 가게 선택 시 해당 가게의 대시보드로 이동
+      const count = await notificationApi.getUnreadCount(ownerId)
+      setUnreadCount(count)
+    } catch (error) {
+      console.error('읽지 않은 알림 개수 조회 실패:', error)
+      setUnreadCount(0)
+    }
+  }
+
+  // 컴포넌트 마운트 시 가게 목록 가져오기 (한 번만 실행)
+  useEffect(() => {
+    // 가게 목록이 없고, 로딩 중이 아닐 때만 fetch
+    if (stores.length === 0 && !loading) {
+      console.log('가게 목록을 가져오는 중...')
+      fetchStores()
+    }
+  }, []) // 빈 의존성 배열로 마운트 시에만 실행
+
+  // 사용자 정보가 있을 때 알림 개수 가져오기 (한 번만 실행)
+  useEffect(() => {
+    if (user && (user.ownerId || user.id)) {
+      fetchUnreadCount()
+    }
+  }, [user?.ownerId, user?.userId, user?.id])
+
+  // 선택된 가게가 변경될 때 통계 데이터 가져오기
+  useEffect(() => {
+    if (selectedStore?.storeId) {
+      fetchOverallStatistics(selectedStore.storeId)
+    }
+  }, [selectedStore])
+
+  // 가게 선택 시 전역 상태 업데이트
   const handleStoreSelect = (store: Store) => {
-    setSelected(store)
-    // URL에 가게 정보를 포함하여 각 페이지로 이동할 수 있도록 설정
-    // accountName을 사용하여 URL 구성
-    const accountName = store.storeName.replace(/\s+/g, '').toLowerCase()
-    router.push(`/owner/dashboard?storeId=${store.storeId}&accountName=${accountName}`)
+    setSelectedStore(store)
   }
 
   if (loading) {
@@ -136,46 +172,38 @@ export default function OwnerHome({
     )
   }
 
-  // 가게가 없는 경우 (로딩이 완료되고 가게가 정말 없는 경우만)
-  if (!loading && stores.length === 0) {
-    return (
-      <div className="min-h-screen bg-white">
-        <main className="mx-auto w-full max-w-[626px] px-4 py-8">
-          <div className="flex h-64 flex-col items-center justify-center">
-            <div className="mb-4 text-lg text-gray-600">등록된 가게가 없습니다</div>
-            <div className="mb-4 text-sm text-gray-500 text-center">
-              가게를 등록해야 QR 인식하기 기능을 사용할 수 있습니다.
-            </div>
-            <button 
-              onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 transition-colors"
-            >
-              첫 번째 가게 등록하기
-            </button>
-          </div>
-        </main>
-        
-        {/* 매장 등록 모달 */}
-        <StoreRegisterModal 
-          isOpen={isStoreRegisterModalOpen}
-          onClose={() => setIsStoreRegisterModalOpen(false)}
-        />
-      </div>
-    )
-  }
+  // 가게가 없는 경우 샘플 가게 "SSAFY" 추가
+  const displayStores = stores.length === 0 && !loading ? [
+    {
+      storeId: -1,
+      storeName: "SSAFY",
+      address: "서울시 강남구 테헤란로 212",
+      phoneNumber: "02-1234-5678",
+      merchantId: -1,
+      category: "교육",
+      storeStatus: "ACTIVE" as const,
+      description: "샘플 매장입니다. 실제 매장을 등록해보세요!",
+      createdAt: new Date().toISOString(),
+      imgUrl: "",
+      id: "-1",
+      name: "SSAFY",
+      ownerId: "",
+      phone: "02-1234-5678"
+    }
+  ] : stores
 
   return (
     <div className="min-h-screen bg-white">
       <main className="mx-auto w-full max-w-[626px] px-4 py-8">
         <div className="top-8 mb-6 flex justify-center sm:mb-8">
           <div className="flex h-[97px] w-[347px] items-start justify-center gap-1 pl-px">
-            {stores.map((s, index) => (
+            {displayStores.map((s, index) => (
               <button
                 key={s.storeId}
                 onClick={() => handleStoreSelect(s)}
                 className={[
-                  'flex h-24 w-24 flex-shrink-0 flex-col items-center justify-center rounded-full border border-black text-center cursor-pointer transition-colors',
-                  selected?.storeId === s.storeId
+                  'flex h-24 w-24 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-full border border-black text-center transition-colors',
+                  selectedStore?.storeId === s.storeId
                     ? 'bg-black text-white'
                     : 'bg-keeping-beige text-black hover:bg-gray-100',
                 ].join(' ')}
@@ -187,9 +215,9 @@ export default function OwnerHome({
             ))}
 
             {/* 매장 추가 버튼 */}
-            <button 
+            <button
               onClick={() => setIsStoreRegisterModalOpen(true)}
-              className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border border-black bg-keeping-beige hover:bg-gray-100 transition-colors cursor-pointer"
+              className="bg-keeping-beige flex h-24 w-24 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-black transition-colors hover:bg-gray-100"
             >
               <svg
                 width={21}
@@ -220,117 +248,162 @@ export default function OwnerHome({
         {/* 메인 컨텐츠 */}
         <div className="flex w-full flex-col items-center justify-between">
           <div className="h-[551px] self-stretch">
-            {/* 페이지 타이틀 - 매장이 선택되었을 때만 표시 */}
-            {selected && (
-              <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
-                {selected.storeName?.replace('\\n', ' ')}
-              </div>
-            )}
+            {/* 페이지 타이틀 */}
+            <div className="font-display mb-6 flex h-[50px] w-[207px] flex-shrink-0 flex-col justify-center text-4xl leading-7 font-extrabold text-black">
+              {selectedStore?.storeName?.replace('\\n', ' ') ||
+                '매장을 선택해주세요'}
+            </div>
 
-            {/* URL 파라미터가 있을 때만 카드 그리드 표시 */}
-            {searchParams.get('storeId') && searchParams.get('accountName') ? (
+            {/* 선택된 매장이 있으면 카드 그리드 표시 */}
+            {selectedStore ? (
               /* 두 열 레이아웃 */
               <div className="grid w-full max-w-[620px] grid-cols-2 gap-6">
-              {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
-              <div className="flex h-full flex-col gap-6">
-                {/* 매출 캘린더 */}
-                <Link 
-                  href={`/owner/calendar?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="bg-keeping-beige flex flex-1 flex-col items-start border border-black p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    매출
-                    <br />
-                    캘린더 &gt;
-                  </div>
-                  <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                    전체 선결제 금액
-                    <br />
-                    이번 달 선결제 금액
-                  </div>
-                </Link>
+                {/* 1열: 매출 캘린더 + QR 인식하기 (세로 스택) */}
+                <div className="flex h-full flex-col gap-6">
+                  {/* 매출 캘린더 */}
+                  <Link
+                    href={`/owner/calendar?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                    className="bg-keeping-beige flex flex-1 cursor-pointer flex-col items-start border border-black p-4 transition-colors hover:bg-gray-50"
+                  >
+                    <div className="mb-4 flex h-[68px] w-[127px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
+                      매출
+                      <br />
+                      캘린더 &gt;
+                    </div>
+                    <div className="flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
+                      {statsLoading ? (
+                        '통계 로딩 중...'
+                      ) : (
+                        <>
+                          <div className="mb-4">
+                            <div className="mb-1 text-sm text-gray-600">
+                              전체 선결제 금액
+                            </div>
+                            <div className="text-xl font-bold">
+                              {(overallStats?.totalSales || 0).toLocaleString()}
+                              원
+                            </div>
+                            {/* 진행률 바 */}
+                            <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
+                              <div
+                                className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                                style={{
+                                  width: `${Math.min(100, ((overallStats?.totalSales || 0) / 10000000) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </Link>
 
-                {/* QR 인식하기 */}
-                {!loading && selected ? (
-                  <Link 
-                    href={`/owner/scan?storeId=${selected.storeId}&accountName=${selected.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                    className="flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  {/* QR 인식하기 */}
+                  <Link
+                    href={`/owner/scan?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                    className="flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
                   >
                     <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
                       QR 인식하기
                     </div>
                   </Link>
-                ) : (
-                  <div className="flex flex-1 flex-col items-start border border-gray-300 bg-gray-100 p-4 cursor-not-allowed opacity-50">
-                    <div className="mb-4 flex h-[68px] w-[162px] flex-col items-start justify-start text-2xl leading-7 font-extrabold text-gray-500">
-                      QR 인식하기
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {loading ? '가게 정보를 불러오는 중...' : '가게를 먼저 등록해주세요'}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 2열: 나머지 3개 (세로 스택) */}
-              <div className="flex h-full flex-col gap-6">
-                {/* 매장 관리 */}
-                <Link 
-                  href={`/owner/manage?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    매장 관리
-                  </div>
-                </Link>
-
-                {/* 설정 */}
-                <div className="bg-keeping-beige relative flex flex-1 flex-col items-start border border-black p-4">
-                  <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                    설정
-                  </div>
                 </div>
 
-                {/* 알림 */}
-                <Link 
-                  href={`/owner/notification?storeId=${selected?.storeId}&accountName=${selected?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
-                  className="relative flex flex-1 flex-col items-start border border-black bg-white p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  <div className="flex w-full items-start justify-between">
-                    <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
-                      알림
+                {/* 2열: 나머지 3개 (세로 스택) */}
+                <div className="flex h-full flex-col gap-6">
+                  {/* 매장 관리 */}
+                  <Link
+                    href={`/owner/manage?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                    className="relative flex min-w-0 flex-1 cursor-pointer flex-col items-start overflow-hidden border border-black bg-white p-4 transition-colors hover:bg-gray-50"
+                  >
+                    <div className="flex h-[68px] w-full flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
+                      매장 관리
                     </div>
-                    <svg
-                      width={18}
-                      height={19}
-                      viewBox="0 0 18 19"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M7.55664 16.8867C7.70293 17.1401 7.91332 17.3504 8.16668 17.4967C8.42003 17.643 8.70743 17.72 8.99997 17.72C9.29252 17.72 9.57991 17.643 9.83327 17.4967C10.0866 17.3504 10.297 17.1401 10.4433 16.8867"
-                        stroke="black"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M1.71821 12.1587C1.60935 12.278 1.53751 12.4264 1.51143 12.5858C1.48534 12.7452 1.50615 12.9088 1.5713 13.0565C1.63646 13.2043 1.74316 13.33 1.87843 13.4183C2.01369 13.5065 2.1717 13.5536 2.33321 13.5537H15.6665C15.828 13.5538 15.9861 13.5069 16.1214 13.4188C16.2568 13.3307 16.3636 13.2052 16.429 13.0575C16.4943 12.9098 16.5153 12.7463 16.4894 12.5869C16.4635 12.4275 16.3919 12.279 16.2832 12.1595C15.1749 11.017 13.9999 9.80288 13.9999 6.05371C13.9999 4.72763 13.4731 3.45586 12.5354 2.51818C11.5977 1.5805 10.326 1.05371 8.99988 1.05371C7.6738 1.05371 6.40203 1.5805 5.46435 2.51818C4.52666 3.45586 3.99988 4.72763 3.99988 6.05371C3.99988 9.80288 2.82405 11.017 1.71821 12.1587Z"
-                        stroke="black"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  <div className="mt-2 flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
-                    읽지 않은 알림
-                    <br />
-                    {unreadCount}건
-                  </div>
-                </Link>
+                    <div className="flex min-w-0 flex-1 flex-col justify-center text-[17px] leading-7 break-words whitespace-normal text-black">
+                      {statsLoading ? (
+                        '통계 로딩 중...'
+                      ) : (
+                        <>
+                          <div className="mb-2">
+                            <div className="text-sm text-gray-600">
+                              총 주문수
+                            </div>
+                            <div className="text-lg font-bold">
+                              {(
+                                overallStats?.totalOrders || 0
+                              ).toLocaleString()}
+                              건
+                            </div>
+                          </div>
+
+                          <div className="mb-2">
+                            <div className="text-sm text-gray-600">
+                              평균 주문금액
+                            </div>
+                            <div className="text-lg font-bold">
+                              {(
+                                overallStats?.averageOrderValue || 0
+                              ).toLocaleString()}
+                              원
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-gray-600">
+                              총 고객수
+                            </div>
+                            <div className="text-lg font-bold">
+                              {(
+                                overallStats?.totalCustomers || 0
+                              ).toLocaleString()}
+                              명
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* 알림 */}
+                  <Link
+                    href={`/owner/notification?storeId=${selectedStore?.storeId}&accountName=${selectedStore?.storeName?.replace(/\s+/g, '').toLowerCase()}`}
+                    className="relative flex flex-1 cursor-pointer flex-col items-start border border-black bg-white p-4 transition-colors hover:bg-gray-50"
+                  >
+                    <div className="flex w-full items-start justify-between">
+                      <div className="flex h-[68px] w-[127px] flex-shrink-0 flex-col items-start justify-start text-2xl leading-7 font-extrabold text-black">
+                        알림
+                      </div>
+                      <svg
+                        width={18}
+                        height={19}
+                        viewBox="0 0 18 19"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M7.55664 16.8867C7.70293 17.1401 7.91332 17.3504 8.16668 17.4967C8.42003 17.643 8.70743 17.72 8.99997 17.72C9.29252 17.72 9.57991 17.643 9.83327 17.4967C10.0866 17.3504 10.297 17.1401 10.4433 16.8867"
+                          stroke="black"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M1.71821 12.1587C1.60935 12.278 1.53751 12.4264 1.51143 12.5858C1.48534 12.7452 1.50615 12.9088 1.5713 13.0565C1.63646 13.2043 1.74316 13.33 1.87843 13.4183C2.01369 13.5065 2.1717 13.5536 2.33321 13.5537H15.6665C15.828 13.5538 15.9861 13.5069 16.1214 13.4188C16.2568 13.3307 16.3636 13.2052 16.429 13.0575C16.4943 12.9098 16.5153 12.7463 16.4894 12.5869C16.4635 12.4275 16.3919 12.279 16.2832 12.1595C15.1749 11.017 13.9999 9.80288 13.9999 6.05371C13.9999 4.72763 13.4731 3.45586 12.5354 2.51818C11.5977 1.5805 10.326 1.05371 8.99988 1.05371C7.6738 1.05371 6.40203 1.5805 5.46435 2.51818C4.52666 3.45586 3.99988 4.72763 3.99988 6.05371C3.99988 9.80288 2.82405 11.017 1.71821 12.1587Z"
+                          stroke="black"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-2 flex flex-1 flex-col justify-center text-[17px] leading-7 text-black">
+                      읽지 않은 알림
+                      <br />
+                      {unreadCount}건
+                    </div>
+                  </Link>
+                </div>
               </div>
-            </div>
             ) : (
               /* 매장이 선택되지 않았을 때 표시할 메시지 */
               <div className="flex h-64 w-full items-center justify-center">
@@ -344,9 +417,9 @@ export default function OwnerHome({
           </div>
         </div>
       </main>
-      
+
       {/* 매장 등록 모달 */}
-      <StoreRegisterModal 
+      <StoreRegisterModal
         isOpen={isStoreRegisterModalOpen}
         onClose={() => setIsStoreRegisterModalOpen(false)}
       />

@@ -1,1 +1,182 @@
-if(!self.define){let e,s={};const a=(a,c)=>(a=new URL(a+".js",c).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didn’t register its module`);return e}));self.define=(c,i)=>{const n=e||("document"in self?document.currentScript.src:"")||location.href;if(s[n])return;let t={};const r=e=>a(e,n),o={module:{uri:n},exports:t,require:r};s[n]=Promise.all(c.map(e=>o[e]||r(e))).then(e=>(i(...e),t))}}define(["./workbox-e9849328"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/app-build-manifest.json",revision:"ad29b7e77057d7ebebc2ebabb27f6120"},{url:"/_next/static/YNO-XO7S5yN6H6SWYhdfX/_buildManifest.js",revision:"bb79a5e842cad93b44146e7f40a9d752"},{url:"/_next/static/YNO-XO7S5yN6H6SWYhdfX/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/1130.949d3a8e6d109413.js",revision:"949d3a8e6d109413"},{url:"/_next/static/chunks/1269.e5e5d58a38d46522.js",revision:"e5e5d58a38d46522"},{url:"/_next/static/chunks/1999.bed54fb5849e6e51.js",revision:"bed54fb5849e6e51"},{url:"/_next/static/chunks/2017-23bb53d4bab55ddb.js",revision:"23bb53d4bab55ddb"},{url:"/_next/static/chunks/36bdf2a9-f36be944c3346f85.js",revision:"f36be944c3346f85"},{url:"/_next/static/chunks/4407-f4cb63aa31f96a9c.js",revision:"f4cb63aa31f96a9c"},{url:"/_next/static/chunks/4430-2a0de3545f4f8abf.js",revision:"2a0de3545f4f8abf"},{url:"/_next/static/chunks/46c813c4-4628bb34c79fea87.js",revision:"4628bb34c79fea87"},{url:"/_next/static/chunks/5734-914c789bc12f9e3d.js",revision:"914c789bc12f9e3d"},{url:"/_next/static/chunks/5998-d0f110744f96a287.js",revision:"d0f110744f96a287"},{url:"/_next/static/chunks/6014-4b9937f04830e9e9.js",revision:"4b9937f04830e9e9"},{url:"/_next/static/chunks/6606-e5b8604a001f4319.js",revision:"e5b8604a001f4319"},{url:"/_next/static/chunks/7374-d2ec7d47850dbf96.js",revision:"d2ec7d47850dbf96"},{url:"/_next/static/chunks/7696.369908e97b3b220f.js",revision:"369908e97b3b220f"},{url:"/_next/static/chunks/7776.356666c48b52d5b2.js",revision:"356666c48b52d5b2"},{url:"/_next/static/chunks/8323.6a299bd1a0d9c714.js",revision:"6a299bd1a0d9c714"},{url:"/_next/static/chunks/8492.c3cf90445544b61d.js",revision:"c3cf90445544b61d"},{url:"/_next/static/chunks/9725-516ea28ae9c26744.js",revision:"516ea28ae9c26744"},{url:"/_next/static/chunks/app/_not-found/page-f49be56d1c6e3226.js",revision:"f49be56d1c6e3226"},{url:"/_next/static/chunks/app/api/auth/logout/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/auth/refresh/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/auth/session-info/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/auth/signup/customer/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/auth/signup/owner/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/otp/request/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/api/otp/verify/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/auth/callback/page-c6e92ea572d16d10.js",revision:"c6e92ea572d16d10"},{url:"/_next/static/chunks/app/customer/groupSettings/page-9c441177ab577414.js",revision:"9c441177ab577414"},{url:"/_next/static/chunks/app/customer/groupWallet/page-5f2130f741b26c0f.js",revision:"5f2130f741b26c0f"},{url:"/_next/static/chunks/app/customer/home/page-e9e6a891b90989cf.js",revision:"e9e6a891b90989cf"},{url:"/_next/static/chunks/app/customer/list/page-66ce7541f9783e1f.js",revision:"66ce7541f9783e1f"},{url:"/_next/static/chunks/app/customer/login/page-68fdb548041e6aaa.js",revision:"68fdb548041e6aaa"},{url:"/_next/static/chunks/app/customer/myPage/page-3bfb29810090dd69.js",revision:"3bfb29810090dd69"},{url:"/_next/static/chunks/app/customer/myWallet/page-58c6386927bf9468.js",revision:"58c6386927bf9468"},{url:"/_next/static/chunks/app/customer/notification/page-58ca6672e9878ccb.js",revision:"58ca6672e9878ccb"},{url:"/_next/static/chunks/app/customer/register/page-7431e6c5dbd43aec.js",revision:"7431e6c5dbd43aec"},{url:"/_next/static/chunks/app/customer/register/step1/page-c753f75a43c889f4.js",revision:"c753f75a43c889f4"},{url:"/_next/static/chunks/app/customer/register/step2/page-67d79fa824f25696.js",revision:"67d79fa824f25696"},{url:"/_next/static/chunks/app/customer/store/%5Bid%5D/page-739a43cf6d185f73.js",revision:"739a43cf6d185f73"},{url:"/_next/static/chunks/app/keeping-pass/page-3e39ea10d5ab712f.js",revision:"3e39ea10d5ab712f"},{url:"/_next/static/chunks/app/layout-c0523ea99081b5ae.js",revision:"c0523ea99081b5ae"},{url:"/_next/static/chunks/app/manifest.webmanifest/route-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/owner/calendar/layout-c21d843bedfe0374.js",revision:"c21d843bedfe0374"},{url:"/_next/static/chunks/app/owner/calendar/page-61e3f49cd6fba6c5.js",revision:"61e3f49cd6fba6c5"},{url:"/_next/static/chunks/app/owner/dashboard/page-6efe87070c91a267.js",revision:"6efe87070c91a267"},{url:"/_next/static/chunks/app/owner/login/page-834fc0c8ef0a29ca.js",revision:"834fc0c8ef0a29ca"},{url:"/_next/static/chunks/app/owner/manage/page-acbd29435e3ba1e9.js",revision:"acbd29435e3ba1e9"},{url:"/_next/static/chunks/app/owner/notification/page-f3a2835f66a03f3f.js",revision:"f3a2835f66a03f3f"},{url:"/_next/static/chunks/app/owner/register/layout-1848b4b33baf3d25.js",revision:"1848b4b33baf3d25"},{url:"/_next/static/chunks/app/owner/register/step1/page-fec7892a627a190d.js",revision:"fec7892a627a190d"},{url:"/_next/static/chunks/app/owner/register/step2/page-4879441194fe30e9.js",revision:"4879441194fe30e9"},{url:"/_next/static/chunks/app/owner/register/step3/page-75f2b57db46f658b.js",revision:"75f2b57db46f658b"},{url:"/_next/static/chunks/app/owner/scan/page-d021b3509c320638.js",revision:"d021b3509c320638"},{url:"/_next/static/chunks/app/page-82d621c6a0d85631.js",revision:"82d621c6a0d85631"},{url:"/_next/static/chunks/framework-b6985ff77a14c8a1.js",revision:"b6985ff77a14c8a1"},{url:"/_next/static/chunks/main-80711ed55e586d28.js",revision:"80711ed55e586d28"},{url:"/_next/static/chunks/main-app-b5360b4d4885c9dd.js",revision:"b5360b4d4885c9dd"},{url:"/_next/static/chunks/pages/_app-add2ed5903446ae2.js",revision:"add2ed5903446ae2"},{url:"/_next/static/chunks/pages/_error-0f0b936d07246b5f.js",revision:"0f0b936d07246b5f"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-8c8eff4e336bbff2.js",revision:"8c8eff4e336bbff2"},{url:"/_next/static/css/42ff4d7a22e26ed5.css",revision:"42ff4d7a22e26ed5"},{url:"/_next/static/media/Tenada.bed188b4.ttf",revision:"bed188b4"},{url:"/back.svg",revision:"fe6604d7bdf5858079589641c55a2d8a"},{url:"/customer.png",revision:"e798c7151c116216b4a82d2c1ff7ada8"},{url:"/file.svg",revision:"d09f95206c3fa0bb9bd9fefabfd0ea71"},{url:"/firebase-messaging-sw.js",revision:"6136bacc75fb230f40f1148c4ec5f4c7"},{url:"/fonts/NanumSquareNeo-bRg.ttf",revision:"8e204e046fce31563177dd08b27ce94b"},{url:"/fonts/Tenada.ttf",revision:"0ba8366fb06b6b4c2fe9d6b83ac85bcf"},{url:"/google-icon.png",revision:"7c746516188be93894ef2ed313746f98"},{url:"/home/card/nocards.svg",revision:"5e0795ed1b93913a72a12d51b38cb7d9"},{url:"/home/category/food.svg",revision:"34deee247f6bb858f01b327502cf3d14"},{url:"/home/category/life.svg",revision:"3cc316d54ac3ba6c3081ad11031a9804"},{url:"/home/category/shadow.svg",revision:"718d48dec90a36884fc897204dc6a112"},{url:"/home/food/asian.svg",revision:"69546b56f45f33c22483566a16ede2ec"},{url:"/home/food/cafe.svg",revision:"df66a82dde7394f3d0354a4cb50a630b"},{url:"/home/food/chinese.svg",revision:"ae2f2c35b46c363895600c8f89a87622"},{url:"/home/food/fastfood.svg",revision:"e2e370e5f3939ddce1d3b998fa403533"},{url:"/home/food/grocery.svg",revision:"fc2b2c1e23525d9202e672fb150c2fe9"},{url:"/home/food/japanese.svg",revision:"149aaf4b52f647cff9c146b9c780c5ce"},{url:"/home/food/korean.svg",revision:"a53d324739832f6c625dae6ea7044faa"},{url:"/home/food/mealkit.svg",revision:"8d38d113a6477b9386412e9746efd922"},{url:"/home/food/streetFood.svg",revision:"5aec11df37ec2f325aff12d6c538bf2e"},{url:"/home/food/western.svg",revision:"3e2f9175eedd0d039942753c184bf0f6"},{url:"/home/life/alcohol.svg",revision:"7a0b44460b4388dfc186e865625416b1"},{url:"/home/life/beauty.svg",revision:"f9a44f747a6bafef6b397847db62fcd2"},{url:"/home/life/car.svg",revision:"cd6f2e0acff157d1e1c61f424d87a59d"},{url:"/home/life/class.svg",revision:"4622910ee787fc83d3f3577955b73efc"},{url:"/home/life/entertainment.svg",revision:"b05c3b5af8dd14052a949f29515f7123"},{url:"/home/life/flower.svg",revision:"e146d5548c4ab83598d4faac6e3eb17b"},{url:"/home/life/hair.svg",revision:"c877deb459d1119c3f8cf546f7a7db1f"},{url:"/home/life/items.svg",revision:"2766b875a59eaf3baf0bc1d6e9dafcf8"},{url:"/home/life/pet.svg",revision:"c04cc0d4c8fc9c58612cbb72b34cb044"},{url:"/home/life/sports.svg",revision:"3838b8dcbcccc2b2ef822bf00eecb0bd"},{url:"/home/searchbar/search.svg",revision:"0b7602c83fd7678526bea5a7e69435d0"},{url:"/icons/badge-group.svg",revision:"02adf9ab601fe37433e63844e5def7cd"},{url:"/icons/badge-personal.svg",revision:"6ecdddeba33d680fc5831a6f03894755"},{url:"/icons/bell.svg",revision:"b0365dca3ed61c5f6833c220311d6eac"},{url:"/icons/main_customer.svg",revision:"0eb45f791b8823ed1f438f6fb9b9efa8"},{url:"/icons/main_owner.svg",revision:"c46baff6008c26e07be161e0419c8d78"},{url:"/icons/qr.png",revision:"f6fee719ad2bf27a2343508e0319895d"},{url:"/kakao-icon.png",revision:"39b4ca4b89af015a90c77b5b769f3c63"},{url:"/manifest.json",revision:"10f163cbd35ab6af9daf95200a1f4810"},{url:"/next.svg",revision:"8e061864f388b47f33a1c3780831193e"},{url:"/offline.html",revision:"4446b9b6d833e925f0d527f4ae21b603"},{url:"/owner.png",revision:"0705806569d31e610496e57b97ecd29c"},{url:"/radio.svg",revision:"b27b330eef93513cea30ba5967f7c6b7"},{url:"/store/ownerIntro.svg",revision:"55495e35b99f1013f72378f2e026ea8b"},{url:"/wallet/group.svg",revision:"4fe0a71ee42d2f75b495566cd60b417f"},{url:"/wallet/groupIntro.svg",revision:"f4499cfea2640866a68a40a8b5f817c5"},{url:"/wallet/inputbox.svg",revision:"6fd03f1005d4a373619c625f8db4a4f6"}],{ignoreURLParametersMatching:[]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({request:e,response:s,event:a,state:c})=>s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;const s=e.pathname;return!s.startsWith("/api/auth/")&&!!s.startsWith("/api/")},new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;return!e.pathname.startsWith("/api/")},new e.NetworkFirst({cacheName:"others",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>!(self.origin===e.origin),new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
+// KEEPING PWA Service Worker
+const CACHE_NAME = 'keeping-cache-v1'
+const STATIC_CACHE_NAME = 'keeping-static-v1'
+
+// 캐시할 정적 파일들
+const STATIC_FILES = [
+  '/',
+  '/manifest.json',
+  '/offline.html',
+  '/icons/qr.png',
+  '/kakao-icon.png',
+  '/customer.png',
+  '/owner.png'
+]
+
+// Service Worker 설치
+self.addEventListener('install', (event) => {
+  console.log('Service Worker 설치 중...')
+
+  event.waitUntil(
+    caches.open(STATIC_CACHE_NAME)
+      .then((cache) => {
+        console.log('정적 파일 캐시 중...')
+        return cache.addAll(STATIC_FILES)
+      })
+      .catch((error) => {
+        console.error('캐시 설치 실패:', error)
+      })
+  )
+
+  // 새 Service Worker를 즉시 활성화
+  self.skipWaiting()
+})
+
+// Service Worker 활성화
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker 활성화 중...')
+
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // 이전 버전 캐시 삭제
+          if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE_NAME) {
+            console.log('이전 캐시 삭제:', cacheName)
+            return caches.delete(cacheName)
+          }
+        })
+      )
+    })
+  )
+
+  // 모든 클라이언트에서 즉시 제어권 가져오기
+  self.clients.claim()
+})
+
+// 네트워크 요청 가로채기
+self.addEventListener('fetch', (event) => {
+  const { request } = event
+  const url = new URL(request.url)
+
+  // 같은 origin 요청만 처리
+  if (url.origin !== self.location.origin) {
+    return
+  }
+
+  // API 요청은 항상 네트워크 우선
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request)
+        .catch(() => {
+          // API 요청 실패 시 오프라인 페이지
+          return caches.match('/offline.html')
+        })
+    )
+    return
+  }
+
+  // 정적 파일은 캐시 우선
+  event.respondWith(
+    caches.match(request)
+      .then((response) => {
+        if (response) {
+          return response
+        }
+
+        // 캐시에 없으면 네트워크에서 가져오기
+        return fetch(request)
+          .then((response) => {
+            // 응답이 유효하지 않으면 그대로 반환
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response
+            }
+
+            // 응답을 복사해서 캐시에 저장
+            const responseToCache = response.clone()
+
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(request, responseToCache)
+              })
+
+            return response
+          })
+          .catch(() => {
+            // 네트워크 실패 시 오프라인 페이지
+            return caches.match('/offline.html')
+          })
+      })
+  )
+})
+
+// 푸시 알림 처리
+self.addEventListener('push', (event) => {
+  console.log('푸시 알림 수신:', event)
+
+  const options = {
+    body: '새로운 알림이 있습니다.',
+    icon: '/icons/qr.png',
+    badge: '/icons/qr.png',
+    vibrate: [200, 100, 200],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
+      {
+        action: 'explore',
+        title: '확인하기',
+        icon: '/icons/qr.png'
+      },
+      {
+        action: 'close',
+        title: '닫기',
+        icon: '/icons/qr.png'
+      }
+    ]
+  }
+
+  if (event.data) {
+    try {
+      const data = event.data.json()
+      options.body = data.body || data.message || options.body
+      options.title = data.title || 'KEEPING'
+    } catch (e) {
+      console.error('푸시 데이터 파싱 실패:', e)
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification('KEEPING', options)
+  )
+})
+
+// 알림 클릭 처리
+self.addEventListener('notificationclick', (event) => {
+  console.log('알림 클릭:', event)
+
+  event.notification.close()
+
+  if (event.action === 'close') {
+    return
+  }
+
+  // 알림 클릭 시 앱 열기
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' })
+      .then((clientList) => {
+        // 이미 열린 창이 있으면 포커스
+        for (const client of clientList) {
+          if (client.url === '/' && 'focus' in client) {
+            return client.focus()
+          }
+        }
+
+        // 새 창 열기
+        if (self.clients.openWindow) {
+          return self.clients.openWindow('/')
+        }
+      })
+  )
+})

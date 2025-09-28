@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
-import React from "react";
+import type { Metadata } from 'next'
+import React from 'react'
 
-import ConditionalLayout from "@/components/ConditionalLayout";
-import { UserProvider } from "@/contexts/UserContext";
-import "./globals.css";
+import ConditionalLayout from '@/components/ConditionalLayout'
+import AuthProvider from '@/providers/AuthProvider'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Keeping",
-  description: "선결제 디지털 플랫폼",
-};
+  title: 'Keeping',
+  description: '선결제 디지털 플랫폼',
+}
 
 export default function RootLayout({
   children,
@@ -32,18 +32,60 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         {/* 다음 우편번호 API */}
-        <script 
+        <script
           src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
           async
         ></script>
+
+        {/* Service Worker 등록 (Production 환경에서만) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  // 개발 모드에서는 기존 서비스 워커 해제
+                  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    console.log('개발 모드: 기존 Service Worker 해제');
+                    navigator.serviceWorker.getRegistrations()
+                      .then(function(registrations) {
+                        registrations.forEach(function(registration) {
+                          registration.unregister()
+                            .then(function() {
+                              console.log('Service Worker 해제됨:', registration.scope);
+                            });
+                        });
+                      });
+                    return;
+                  }
+
+                  // Production 환경에서만 등록
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('Service Worker 등록 성공:', registration.scope);
+                    })
+                    .catch(function(error) {
+                      console.log('Service Worker 등록 실패:', error);
+                    });
+
+                  // Firebase Messaging Service Worker 등록
+                  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                    .then(function(registration) {
+                      console.log('FCM Service Worker 등록 성공:', registration.scope);
+                    })
+                    .catch(function(error) {
+                      console.log('FCM Service Worker 등록 실패:', error);
+                    });
+                });
+              }
+            `
+          }}
+        />
       </head>
-      <body className="antialiased bg-white text-black">
-        <UserProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
-        </UserProvider>
+      <body className="bg-white text-black antialiased">
+        <AuthProvider>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }

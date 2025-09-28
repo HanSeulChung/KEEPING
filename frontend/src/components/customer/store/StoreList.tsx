@@ -1,6 +1,7 @@
 'use client'
 import { apiConfig, endpoints } from '@/api/config'
-import { useUser } from '@/contexts/UserContext'
+import { useAuthStore } from '@/store/useAuthStore'
+
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -22,11 +23,11 @@ interface StoreListProps {
 export const StoreList = ({ type, initialCategory }: StoreListProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading: userLoading, error: userError } = useUser()
   const [selectedCategory, setSelectedCategory] = useState(
     initialCategory || (type === 'food' ? '한식' : '헤어')
   )
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const { user, loading: userLoading, error: userError } = useAuthStore()
 
   // 사용자 정보 디버깅
   console.log('StoreList 사용자 정보:', {

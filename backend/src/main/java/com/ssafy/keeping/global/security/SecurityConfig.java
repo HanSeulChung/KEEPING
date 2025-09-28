@@ -46,7 +46,9 @@ public class SecurityConfig {
             "/s3/**",
             "/owners/stores/**",
             "/api/v1/stores/**",
-            "/ocr/*"
+            "/ocr/*",
+            "/customer/register/**",
+            "/owners/register/**"
     };
 
     public static final String[] TEMP_ALLOW_URLS = {
@@ -55,7 +57,8 @@ public class SecurityConfig {
             "/api/v1/stores/**",
             "/wallets/**",
             "/owners/*/stores/*/charge-bonus",
-            "/owners/*/stores/*/charge-bonus/*"
+            "/owners/*/stores/*/charge-bonus/*",
+            "/api/notifications/subscribe/**" // SSE 엔드포인트 명시적 허용
     };
 
     private final ClientRegistrationRepository clientRegistrationRepository;

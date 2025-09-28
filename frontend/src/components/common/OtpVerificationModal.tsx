@@ -1,5 +1,6 @@
 'use client'
 
+import { buildURL } from '@/api/config'
 import { useOtpAuth } from '@/hooks/useOtpAuth'
 import { useEffect, useState } from 'react'
 
@@ -74,6 +75,30 @@ const OtpVerificationModal = ({
       genderDigit,
       userRole,
     })
+
+    // regSessionId 사전 확보 (세션 쿠키 기반)
+    try {
+      const existing =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('regSessionId')
+          : null
+      if (!existing) {
+        const res = await fetch(buildURL('/auth/session-info'), {
+          method: 'GET',
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}))
+          const id = json?.data
+          if (id) {
+            try {
+              localStorage.setItem('regSessionId', String(id))
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+
     const success = await requestOtpCode(
       name,
       phoneNumber,

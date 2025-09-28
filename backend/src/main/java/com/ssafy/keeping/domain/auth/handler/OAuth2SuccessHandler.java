@@ -99,7 +99,11 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 프론트로 리다이렉트
             String redirectUrl = "";
+<<<<<<< HEAD
             redirectUrl = UserRole.OWNER.equals(role) ? feBaseUrl + "/owner/dashboard" : feBaseUrl + "/customer/home";
+=======
+            redirectUrl = "/auth/callback";
+>>>>>>> 20f2d351ed16edaae32f02f76a0cf2af31e59309
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
             response.sendRedirect(redirectUrl);
 

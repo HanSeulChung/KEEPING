@@ -8,7 +8,7 @@ import QRModal from './home/QRmodal'
 import PointManagementModal from './PointManagementModal'
 
 import { buildURL } from '@/api/config'
-import { useUser } from '@/contexts/UserContext'
+import { useAuthStore } from '@/store/useAuthStore'
 
 // 타입 정의
 interface Group {
@@ -1270,7 +1270,7 @@ const MemberListModal = ({
 
 // 메인 컴포넌트
 export const GroupWallet = () => {
-  const { user } = useUser()
+  const { user } = useAuthStore()
   const [selectedCard, setSelectedCard] = useState<number>(2)
   const [activeTab, setActiveTab] = useState<keyof typeof TAB_CONFIG>('history')
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null)
@@ -1747,7 +1747,6 @@ export const GroupWallet = () => {
 
       const result = await response.json()
       console.log('그룹 탈퇴 성공 응답:', result)
-
       setLeaveAlertMessage('그룹에서 성공적으로 탈퇴했습니다.')
       setIsLeaveAlertOpen(true)
 
@@ -1792,7 +1791,6 @@ export const GroupWallet = () => {
 
       // 모달 닫기
       setIsGroupCreateModalOpen(false)
-
       // 성공 알림 표시
       setIsSuccessAlertOpen(true)
     } catch (error) {
@@ -2007,7 +2005,6 @@ export const GroupWallet = () => {
                     </svg>
                   </button>
                 </div>
-
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -2218,6 +2215,7 @@ export const GroupWallet = () => {
         isOpen={isLeaveAlertOpen}
         onClose={() => setIsLeaveAlertOpen(false)}
         message={leaveAlertMessage}
+        title=""
         onConfirm={() => {
           if (leaveAlertMessage === '그룹에서 성공적으로 탈퇴했습니다.') {
             // 성공 시에만 페이지 새로고침
@@ -2229,6 +2227,7 @@ export const GroupWallet = () => {
       {/* 그룹 나가기 확인 */}
       <Alert
         isOpen={isLeaveConfirmOpen}
+        title=""
         onClose={() => setIsLeaveConfirmOpen(false)}
         message="정말로 이 그룹에서 나가시겠습니까?"
         confirmText="확인"

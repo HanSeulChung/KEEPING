@@ -4,11 +4,11 @@ import React, { createContext, ReactNode, useContext, useState } from 'react'
 
 // 사업자 정보 타입
 export interface BusinessInfo {
-  businessNumber: string     // 사업자등록번호 (숫자만)
-  openingDate: string       // 개업일자 (YYYYMMDD)
+  businessNumber: string // 사업자등록번호 (숫자만)
+  openingDate: string // 개업일자 (YYYYMMDD)
   representativeName: string // 대표자명
-  verified: boolean         // 인증 완료 여부
-  verificationData?: any    // 정부 API 응답 데이터
+  verified: boolean // 인증 완료 여부
+  verificationData?: any // 정부 API 응답 데이터
 }
 
 // 점주 등록 전체 데이터 타입
@@ -38,38 +38,49 @@ interface RegistrationContextType {
 }
 
 // Context 생성
-const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined)
+const RegistrationContext = createContext<RegistrationContextType | undefined>(
+  undefined
+)
 
 // Provider 컴포넌트
-export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [registrationData, setRegistrationData] = useState<OwnerRegistrationData>(() => {
-    // 초기화 시 localStorage에서 데이터 불러오기
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('registration-data')
-        return saved ? JSON.parse(saved) : {}
-      } catch (error) {
-        console.error('Failed to load registration data from localStorage:', error)
-        return {}
+export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [registrationData, setRegistrationData] =
+    useState<OwnerRegistrationData>(() => {
+      // 초기화 시 localStorage에서 데이터 불러오기
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem('registration-data')
+          return saved ? JSON.parse(saved) : {}
+        } catch (error) {
+          console.error(
+            'Failed to load registration data from localStorage:',
+            error
+          )
+          return {}
+        }
       }
-    }
-    return {}
-  })
+      return {}
+    })
 
   // 사업자 정보 설정
   const setBusinessInfo = (businessInfo: BusinessInfo) => {
     const newData = {
       ...registrationData,
-      businessInfo
+      businessInfo,
     }
     setRegistrationData(newData)
-    
+
     // localStorage에 저장
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('registration-data', JSON.stringify(newData))
       } catch (error) {
-        console.error('Failed to save registration data to localStorage:', error)
+        console.error(
+          'Failed to save registration data to localStorage:',
+          error
+        )
       }
     }
   }
@@ -77,13 +88,16 @@ export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // 전체 데이터 초기화
   const resetRegistration = () => {
     setRegistrationData({})
-    
+
     // localStorage에서도 제거
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('registration-data')
       } catch (error) {
-        console.error('Failed to remove registration data from localStorage:', error)
+        console.error(
+          'Failed to remove registration data from localStorage:',
+          error
+        )
       }
     }
   }
@@ -106,7 +120,7 @@ export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ childr
     registrationData,
     setBusinessInfo,
     resetRegistration,
-    isStepCompleted
+    isStepCompleted,
   }
 
   return (
@@ -120,7 +134,9 @@ export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ childr
 export const useRegistration = (): RegistrationContextType => {
   const context = useContext(RegistrationContext)
   if (context === undefined) {
-    throw new Error('useRegistration must be used within a RegistrationProvider')
+    throw new Error(
+      'useRegistration must be used within a RegistrationProvider'
+    )
   }
   return context
 }

@@ -1,19 +1,21 @@
 'use client'
-import { useUser } from '@/contexts/UserContext'
+
+import { useAuthStore } from '@/store/useAuthStore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function Page() {
   const [isFoodActive, setIsFoodActive] = useState(true)
-  const { user, loading, error } = useUser()
+
   const router = useRouter()
-  console.log('홈페이지 - useUser 상태:', { user, loading, error })
 
   const handleCategoryClick = (category: string) => {
     const type = isFoodActive ? 'food' : 'life'
     router.push(`/customer/list?type=${type}&category=${category}`)
   }
 
+  const { user, loading, error } = useAuthStore()
+  console.log('홈페이지 - useUser 상태:', { user, loading, error })
   if (loading) {
     return (
       <div className="mx-auto flex max-w-7xl flex-col items-center px-4 py-6">

@@ -1,6 +1,6 @@
 'use client'
 import { buildURL } from '@/api/config'
-import { useUser } from '@/contexts/UserContext'
+import { useAuthStore } from '@/store/useAuthStore'
 import { useEffect, useState } from 'react'
 
 // 카드 정보 타입 정의
@@ -40,7 +40,7 @@ export const PaymentModal = ({
   const [isProcessing, setIsProcessing] = useState(false)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
 
-  const { user, loading, error } = useUser()
+  const { user, loading, error } = useAuthStore()
 
   // 카드 정보 조회 함수
   const fetchCreditCard = async (): Promise<CreditCard> => {
@@ -67,6 +67,7 @@ export const PaymentModal = ({
         method: 'POST',
         headers,
         credentials: 'include',
+        body: JSON.stringify({}),
       })
 
       console.log(
@@ -158,8 +159,13 @@ export const PaymentModal = ({
         paymentBalance: amount,
       }
 
-      // 헤더 정보 생성 및 로그 출력
-      const idempotencyKey = generateUUID()
+      const sessionKey = `payment_${storeId}_${amount}_${selectedCard.cardNo}`
+      let idempotencyKey = sessionStorage.getItem(sessionKey)
+      if (!idempotencyKey) {
+        idempotencyKey = generateUUID()
+        sessionStorage.setItem(sessionKey, idempotencyKey)
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
