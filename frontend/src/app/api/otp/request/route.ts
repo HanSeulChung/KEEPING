@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     let response: Response | null = null
     let lastError: any = null
-    let tried: string[] = []
+    const tried: string[] = []
     for (const p of candidates) {
       try {
         tried.push(p)

@@ -44,7 +44,7 @@ export default [
 
       /* 일반 규칙 */
       "prefer-const": "error",
-      "no-console": "warn", // 개발 중 console.log 허용, 배포 전에 쉽게 잡기
+      "no-console": "off", // console.log 허용 (개발 중 디버깅용)
       "no-debugger": "error",
 
       /* Next.js 권고 완화 */
