@@ -81,11 +81,8 @@ export const getFcmToken = async (): Promise<string | null> => {
     return null
   }
 
-  // VAPID 키 가져오기 (환경 변수 우선, 없으면 하드코딩된 값 사용)
-  const vapidKey =
-    process.env.NEXT_PUBLIC_VAPID_KEY ||
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-    VAPID_KEY
+  // VAPID 키 하드코딩 사용
+  const vapidKey = 'BFqS2cYcLd7EkOb_vgyhAnkSKyTkWEs4XwDrphIaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0XOs8aKw0xLStpJgpU='
 
   // vapidKey 타입 검증 추가
   console.log('vapidKey type:', typeof vapidKey, 'value:', vapidKey)
