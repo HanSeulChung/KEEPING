@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 
 import { notificationApi } from '@/api/notificationApi'
+import { usePaymentState } from '@/hooks/usePaymentState'
 import { generateIdempotencyKey } from '@/utils/idempotency'
 
 interface PaymentApprovalModalProps {
@@ -44,6 +45,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   pointInfo,
   paymentType = 'PAYMENT',
 }) => {
+  const { updatePaymentStatus, clearPaymentIntent } = usePaymentState()
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -196,6 +198,9 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         setRequestInProgress(false) // 요청 완료 시 플래그 초기화
         setError('✅ 결제가 성공적으로 승인되었습니다!')
 
+        // 결제 상태를 APPROVED로 업데이트
+        updatePaymentStatus('APPROVED')
+
         // 점주에게 승인 알림 전송
         if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
           // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
@@ -218,6 +223,8 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
 
         // 바로 모달 닫기 (결제 성공 시)
         setTimeout(() => {
+          // 결제 완료 후 상태 정리
+          clearPaymentIntent()
           onClose()
         }, 1000)
       } else {
@@ -276,6 +283,9 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     setError('')
     setPinAttempts(0)
     setIsBlocked(false)
+
+    // 취소 시에도 결제 상태 정리
+    clearPaymentIntent()
     onClose()
   }
 

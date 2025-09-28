@@ -2,6 +2,7 @@
 
 import { apiConfig } from '@/api/config'
 import { Alert } from '@/components/ui/Alert'
+import { useOwnerPaymentState } from '@/hooks/useOwnerPaymentState'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 
@@ -29,6 +30,7 @@ interface SelectedMenu {
 function QRIntentPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { addPaymentIntent } = useOwnerPaymentState()
   const [menus, setMenus] = useState<Menu[]>([])
   const [selectedMenus, setSelectedMenus] = useState<SelectedMenu[]>([])
   const [isLoadingMenus, setIsLoadingMenus] = useState(false)
@@ -290,6 +292,38 @@ function QRIntentPageContent() {
 
       const result = await response.json()
       console.log('결제 요청 성공:', result)
+
+      // 결제 의도를 활성 결제 목록에 추가
+      if (result.success && result.data) {
+        const paymentData = result.data
+
+        // 고객 정보 추출 (QR 데이터에서)
+        const customerName = qrData.m || '고객' // m 파라미터가 고객명일 수도 있음
+
+        addPaymentIntent({
+          intentId: paymentData.intentId,
+          intentPublicId: paymentData.intentId, // 서버에서 intentPublicId를 별도로 제공하지 않는 경우
+          customerId: paymentData.customerId || 0,
+          customerName: customerName,
+          amount: paymentData.amount || selectedMenus.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+          status: paymentData.status || 'PENDING',
+          createdAt: paymentData.createdAt || new Date().toISOString(),
+          expiresAt: paymentData.expiresAt || new Date(Date.now() + 3 * 60 * 1000).toISOString(), // 3분 후 만료
+          items: selectedMenus.map(item => ({
+            menuId: item.menuId,
+            name: item.menuName,
+            unitPrice: item.price,
+            quantity: item.quantity,
+            lineTotal: item.price * item.quantity
+          }))
+        })
+
+        console.log('💰 결제 의도가 활성 목록에 추가됨:', {
+          intentId: paymentData.intentId,
+          customerName,
+          amount: paymentData.amount
+        })
+      }
 
       setAlertMessage('결제 요청이 성공적으로 생성되었습니다!')
       setAlertType('success')

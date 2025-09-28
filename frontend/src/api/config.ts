@@ -147,6 +147,8 @@ export const endpoints = {
     qrPay: '/payments/qr',
     // 그룹 결제
     groupPay: '/payments/group',
+    // 결제 의도 조회
+    intent: '/payments/intent/{intentPublicId}',
   },
   // QR 코드 관련 API
   qr: {

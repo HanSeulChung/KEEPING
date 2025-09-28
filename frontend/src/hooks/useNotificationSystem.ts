@@ -19,6 +19,7 @@ import {
   requestNotificationPermission,
   setupForegroundMessageListener,
 } from '@/lib/firebaseConfig'
+import { usePaymentState } from '@/hooks/usePaymentState'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   NotificationCategory,
@@ -99,6 +100,7 @@ interface UseNotificationSystemReturn {
 
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const { user } = useAuthStore()
+  const { setPaymentIntent } = usePaymentState()
   const [notifications, setNotifications] = useState<NotificationData[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
@@ -667,6 +669,32 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           }
 
           const notification: NotificationData = convertNotificationData(data)
+
+          // 고객이고 결제 요청 알림인 경우 intentPublicId 저장
+          if (getUserRole() === 'CUSTOMER' && notification.type === 'PAYMENT_REQUEST') {
+            const intentPublicId = data.publicId || data.intentPublicId || data.intentId
+
+            if (intentPublicId) {
+              // 결제 상태 관리 훅에 저장
+              setPaymentIntent(
+                intentPublicId,
+                {
+                  storeName: data.storeName || notification.data?.storeName || '매장',
+                  amount: data.amount || notification.data?.amount || 0,
+                  customerName: data.customerName || notification.data?.customerName || '고객',
+                  items: data.items || [] // 주문 상세 정보가 있다면
+                },
+                data.intentId // 실제 intentId가 별도로 있다면
+              )
+
+              console.log('💳 결제 의도 저장됨:', {
+                intentPublicId,
+                storeName: data.storeName,
+                amount: data.amount
+              })
+            }
+          }
+
           setNotifications(prev => {
             const next = [notification, ...prev]
             return next.length > 200 ? next.slice(0, 200) : next
