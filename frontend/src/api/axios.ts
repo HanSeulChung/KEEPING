@@ -56,6 +56,25 @@ apiClient.interceptors.request.use(
   }
 )
 
+// 토큰 갱신 중복 요청 방지를 위한 플래그
+let isRefreshing = false
+let failedQueue: Array<{
+  resolve: (value: any) => void
+  reject: (error: any) => void
+}> = []
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error)
+    } else {
+      resolve(token)
+    }
+  })
+
+  failedQueue = []
+}
+
 // 응답 인터셉터 - 토큰 만료 시 자동 갱신
 apiClient.interceptors.response.use(
   response => {
@@ -66,7 +85,22 @@ apiClient.interceptors.response.use(
 
     // 401 에러이고 아직 재시도하지 않은 경우
     if (error.response?.status === 401 && !(originalRequest as any)._retry) {
+      if (isRefreshing) {
+        // 이미 갱신 중이면 대기열에 추가
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return apiClient(originalRequest)
+          })
+          .catch(err => {
+            return Promise.reject(err)
+          })
+      }
+
       ;(originalRequest as any)._retry = true
+      isRefreshing = true
 
       try {
         // 백엔드의 /auth/refresh는 HttpOnly 쿠키 기반으로 처리되고,
@@ -106,12 +140,18 @@ apiClient.interceptors.response.use(
           } catch {}
 
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+
+          // 대기열에 있는 요청들 처리
+          processQueue(null, newAccessToken)
+
           return apiClient(originalRequest)
         }
 
         // 토큰 갱신 실패 시 에러 처리
         throw new Error('Token refresh failed')
       } catch (refreshError) {
+        // 대기열에 있는 요청들 실패 처리
+        processQueue(refreshError, null)
         // 개발 환경에서는 강제 로그아웃/리다이렉트 하지 않음
         if (process.env.NODE_ENV !== 'development') {
           try {
@@ -133,6 +173,8 @@ apiClient.interceptors.response.use(
           }
         }
         return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
       }
     }
 

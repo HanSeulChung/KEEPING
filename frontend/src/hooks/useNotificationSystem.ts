@@ -277,17 +277,20 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     expiresAt: 0,
   })
 
-  // 토큰 유효성 검사 (7일 생존 기간 기준)
+  // 토큰 유효성 검사 (7일 토큰용 - 6일로 제한)
   const isTokenValid = useCallback((token: string | null): boolean => {
     if (!token) return false
 
     const now = Date.now()
     const tokenAge = now - tokenCache.current.timestamp
-    const maxAge = 7 * 24 * 60 * 60 * 1000 // 7일 (밀리초)
+    const maxAge = 6 * 24 * 60 * 60 * 1000 // 6일 (1일 여유)
 
-    // 토큰이 7일 이내이고 아직 만료되지 않았으면 유효
+    // 토큰이 6일 이내이고 아직 만료되지 않았으면 유효
     return tokenAge < maxAge && now < tokenCache.current.expiresAt
   }, [])
+
+  // SSE 토큰 갱신 중복 방지 플래그
+  const sseRefreshingRef = useRef(false)
 
   // 최적화된 토큰 갱신 함수
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
@@ -298,6 +301,29 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         return tokenCache.current.token
       }
 
+      // 이미 갱신 중이면 대기
+      if (sseRefreshingRef.current) {
+        console.log('[SSE] 토큰 갱신 대기 중...')
+        return new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (
+              tokenCache.current.token &&
+              isTokenValid(tokenCache.current.token)
+            ) {
+              clearInterval(checkInterval)
+              resolve(tokenCache.current.token)
+            }
+          }, 100)
+
+          // 5초 후 타임아웃
+          setTimeout(() => {
+            clearInterval(checkInterval)
+            resolve(null)
+          }, 5000)
+        })
+      }
+
+      sseRefreshingRef.current = true
       console.log('[SSE] accessToken 갱신 시도')
       const refreshResponse = await fetch(buildURL('/auth/refresh'), {
         method: 'POST',
@@ -310,7 +336,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         const newAccessToken = refreshData.data?.accessToken
         if (newAccessToken) {
           const now = Date.now()
-          const expiresAt = now + 7 * 24 * 60 * 60 * 1000 // 7일 후 만료
+          const expiresAt = now + 6 * 24 * 60 * 60 * 1000 // 6일 후 만료 (1일 여유)
 
           // 토큰 캐시 업데이트
           tokenCache.current = {
@@ -333,6 +359,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     } catch (error) {
       console.error('[SSE] accessToken 갱신 실패:', error)
       return null
+    } finally {
+      sseRefreshingRef.current = false
     }
   }, [isTokenValid])
 

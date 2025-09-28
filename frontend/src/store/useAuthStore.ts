@@ -28,6 +28,22 @@ const deleteCookie = (name: string) => {
 // ------------------------------------------------------------
 // Types
 // ------------------------------------------------------------
+
+// 토큰 만료 시간 체크 함수 (7일 토큰용)
+const isTokenExpired = (token: string): boolean => {
+  try {
+    // JWT 토큰 디코딩 (payload 부분만)
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const exp = payload.exp
+    if (!exp) return false // exp가 없으면 만료되지 않은 것으로 간주
+
+    // 현재 시간과 비교 (1시간 여유를 둠 - 7일 토큰이므로)
+    const now = Math.floor(Date.now() / 1000)
+    return exp < now + 3600 // 1시간 전에 만료 예정이면 true
+  } catch {
+    return false // 파싱 실패 시 만료되지 않은 것으로 간주
+  }
+}
 export type AuthUser = {
   id?: number | string
   userId?: number
@@ -78,12 +94,25 @@ export const useAuthStore = create<AuthState>()(
       // Token helpers
       // --------------------------------------------------------
       getAccessToken: () => {
-        if (memoryAccessToken) return memoryAccessToken
+        if (memoryAccessToken) {
+          // 토큰 만료 시간 체크
+          if (isTokenExpired(memoryAccessToken)) {
+            memoryAccessToken = null
+            return null
+          }
+          return memoryAccessToken
+        }
         try {
           if (typeof window !== 'undefined') {
             const token = localStorage.getItem('accessToken')
-            if (token) memoryAccessToken = token
-            return token
+            if (token) {
+              if (isTokenExpired(token)) {
+                localStorage.removeItem('accessToken')
+                return null
+              }
+              memoryAccessToken = token
+              return token
+            }
           }
         } catch {}
         return null
@@ -195,11 +224,15 @@ export const useAuthStore = create<AuthState>()(
           let token: string | null = null
           for (const name of candidates) {
             token = getCookie(name)
-            if (token) break
+            if (token && !isTokenExpired(token)) break
+            token = null // 만료된 토큰은 무시
           }
           if (!token && typeof window !== 'undefined') {
             try {
-              token = localStorage.getItem('accessToken')
+              const localToken = localStorage.getItem('accessToken')
+              if (localToken && !isTokenExpired(localToken)) {
+                token = localToken
+              }
             } catch {}
           }
 
@@ -212,7 +245,10 @@ export const useAuthStore = create<AuthState>()(
               .then(() => get().fetchCurrentUser())
               .catch(() => {
                 console.warn('Token validation failed during initialization')
-                get().logout()
+                // 개발 환경이 아닐 때만 로그아웃
+                if (process.env.NODE_ENV !== 'development') {
+                  get().logout()
+                }
               })
           } else {
             set({ isLoggedIn: false, user: null })
