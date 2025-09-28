@@ -406,11 +406,12 @@ public class GroupService {
 
     @Transactional
     public GroupDisbandResponseDto disbandGroup(Long groupId, Long leaderId) {
-        Group group = validGroup(groupId);
+        validGroup(groupId);
         GroupMember me = validGroupMember(groupId, leaderId);
         if (!me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
 
         Wallet gw = validGroupWallet(groupId);
+        Long walletId = gw.getWalletId();
         List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
 
         Map<Long, Long> refundedByMember = walletService.settleAllMembersShare(groupId, memberIds); // 변경
@@ -424,8 +425,8 @@ public class GroupService {
         lotRepository.deleteByWalletId(gw.getWalletId());
         balanceRepository.deleteByWalletId(gw.getWalletId());
         groupMemberRepository.deleteByGroupId(groupId);
-        walletRepository.delete(gw);
-        groupRepository.delete(group);
+        walletRepository.deleteById(walletId);
+        groupRepository.deleteById(groupId);
 
         afterCommit(() -> refundedByMember.forEach((cid, amt) ->
                 notificationService.sendToCustomer(
