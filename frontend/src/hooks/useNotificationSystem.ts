@@ -82,6 +82,10 @@ interface UseNotificationSystemReturn {
     amount: number
     isApproved: boolean
   }) => Promise<void>
+  toasts: NotificationData[]
+  addToast: (notification: NotificationData) => void
+  removeToast: (id: number) => void
+  handleToastClick: (notification: NotificationData) => void
   getNotificationCategory: (type: NotificationType) => NotificationCategory
   getNotificationIcon: (type: NotificationType) => string
 }
@@ -851,6 +855,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }>({
     isOpen: false,
   })
+  const [toasts, setToasts] = useState<NotificationData[]>([])
 
   // 결제 승인 모달 열기
   const showPaymentApprovalModal = useCallback(
@@ -877,64 +882,94 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }, [])
 
   // 점주에게 결제 결과 알림 전송
-  const notifyOwnerPaymentResult = useCallback(async (result: {
-    intentPublicId: string
-    storeName: string
-    customerName: string
-    amount: number
-    isApproved: boolean
-  }) => {
-    try {
-      // 점주에게 결제 결과 알림 전송 API 호출
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'}/notifications/owner/payment-result`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify({
-          intentPublicId: result.intentPublicId,
-          storeName: result.storeName,
-          customerName: result.customerName,
-          amount: result.amount,
-          isApproved: result.isApproved,
-          timestamp: new Date().toISOString()
-        })
-      })
-
-      if (response.ok) {
-        console.log('점주에게 결제 결과 알림 전송 성공')
-      } else {
-        console.error('점주에게 결제 결과 알림 전송 실패:', response.status)
-      }
-    } catch (error) {
-      console.error('점주에게 결제 결과 알림 전송 오류:', error)
-    }
-  }, [])
-
-  // 토스트 알림 표시 함수
-  const showToastNotification = useCallback(
-    (notification: NotificationData) => {
-      // window.showToast가 정의되어 있는지 확인
-      if (typeof window !== 'undefined' && (window as any).showToast) {
-        (window as any).showToast({
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          duration: notification.type === 'PAYMENT_REQUEST' ? 8000 : 5000,
-          onClick: () => {
-            // 토스트 클릭 시 알림 읽음 처리 및 알림 페이지로 이동
-            markAsRead(notification.id)
-            const userRole = getUserRole()
-            const target = userRole === 'OWNER' ? '/owner/notification' : '/customer/notification'
-            if (typeof window !== 'undefined') {
-              window.location.href = target
-            }
+  const notifyOwnerPaymentResult = useCallback(
+    async (result: {
+      intentPublicId: string
+      storeName: string
+      customerName: string
+      amount: number
+      isApproved: boolean
+    }) => {
+      try {
+        // 점주에게 결제 결과 알림 전송 API 호출
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'}/notifications/owner/payment-result`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify({
+              intentPublicId: result.intentPublicId,
+              storeName: result.storeName,
+              customerName: result.customerName,
+              amount: result.amount,
+              isApproved: result.isApproved,
+              timestamp: new Date().toISOString(),
+            }),
           }
-        })
+        )
+
+        if (response.ok) {
+          console.log('점주에게 결제 결과 알림 전송 성공')
+        } else {
+          console.error('점주에게 결제 결과 알림 전송 실패:', response.status)
+        }
+      } catch (error) {
+        console.error('점주에게 결제 결과 알림 전송 오류:', error)
       }
     },
-    [markAsRead, getUserRole]
+    []
+  )
+
+  // 토스트 알림 제거
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id))
+  }, [])
+
+  // 토스트 알림 추가
+  const addToast = useCallback(
+    (notification: NotificationData) => {
+      setToasts(prev => [...prev, notification])
+
+      // 자동 제거 (PAYMENT_REQUEST는 8초, 나머지는 5초)
+      const duration = notification.type === 'PAYMENT_REQUEST' ? 8000 : 5000
+      setTimeout(() => {
+        removeToast(notification.id)
+      }, duration)
+    },
+    [removeToast]
+  )
+
+  // 토스트 클릭 처리
+  const handleToastClick = useCallback(
+    (notification: NotificationData) => {
+      // 알림 읽음 처리
+      markAsRead(notification.id)
+
+      // 특별한 알림 타입 처리
+      if (notification.type === 'PAYMENT_REQUEST') {
+        showPaymentApprovalModal({
+          intentPublicId: notification.data?.intentPublicId,
+          customerName: notification.data?.customerName,
+          pointInfo: notification.data?.pointInfo,
+          amount: notification.data?.amount,
+          storeName: notification.data?.storeName,
+        })
+      } else {
+        // 일반 알림은 알림 페이지로 이동
+        const userRole = getUserRole()
+        const target =
+          userRole === 'OWNER'
+            ? '/owner/notification'
+            : '/customer/notification'
+        if (typeof window !== 'undefined') {
+          window.location.href = target
+        }
+      }
+    },
+    [markAsRead, showPaymentApprovalModal, getUserRole]
   )
 
   // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
@@ -943,7 +978,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       const userRole = getUserRole()
 
       // 먼저 토스트 알림 표시
-      showToastNotification(notification)
+      addToast(notification)
 
       // 알림 타입에 따른 기본 설정
       const getModalConfig = (type: NotificationType) => {
@@ -1005,7 +1040,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     },
     [
       getUserRole,
-      showToastNotification,
+      addToast,
       showModalNotification,
       markAsRead,
       hideModalNotification,
@@ -1111,6 +1146,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     isPermissionGranted,
     modalNotification,
     paymentApprovalModal,
+    toasts,
     requestPermission,
     markAsRead,
     markAllAsRead,
@@ -1120,6 +1156,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     showPaymentApprovalModal,
     hidePaymentApprovalModal,
     notifyOwnerPaymentResult,
+    addToast,
+    removeToast,
+    handleToastClick,
     getNotificationCategory,
     getNotificationIcon,
   }
