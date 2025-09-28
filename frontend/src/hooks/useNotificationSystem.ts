@@ -50,16 +50,6 @@ interface UseNotificationSystemReturn {
   isConnected: boolean
   isPermissionGranted: boolean
   modalNotification: ModalNotificationState
-  paymentApprovalModal: {
-    isOpen: boolean
-    data?: {
-      intentPublicId?: string
-      customerName?: string
-      pointInfo?: string
-      amount?: number
-      storeName?: string
-    }
-  }
   requestPermission: () => Promise<boolean>
   markAsRead: (id: number) => void
   markAllAsRead: () => void
@@ -70,18 +60,6 @@ interface UseNotificationSystemReturn {
     notification: Omit<ModalNotificationState, 'isOpen'>
   ) => void
   hideModalNotification: () => void
-  showPaymentApprovalModal: (data: {
-    intentPublicId?: string
-    customerName?: string
-    amount: number
-    storeName?: string
-    items: Array<{
-      name: string
-      quantity: number
-      price: number
-    }>
-  }) => void
-  hidePaymentApprovalModal: () => void
   notifyOwnerPaymentResult: (result: {
     intentPublicId: string
     storeName: string
@@ -1050,45 +1028,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     })
   }, [])
 
-  // 결제 승인 모달을 위한 상태
-  const [paymentApprovalModal, setPaymentApprovalModal] = useState<{
-    isOpen: boolean
-    data?: {
-      intentPublicId?: string
-      customerName?: string
-      pointInfo?: string
-      amount?: number
-      storeName?: string
-    }
-  }>({
-    isOpen: false,
-  })
   const [toasts, setToasts] = useState<NotificationData[]>([])
-
-  // 결제 승인 모달 열기
-  const showPaymentApprovalModal = useCallback(
-    (data: {
-      intentPublicId?: string
-      customerName?: string
-      pointInfo?: string
-      amount?: number
-      storeName?: string
-    }) => {
-      console.log('🚀 PaymentApprovalModal 열기:', data)
-      setPaymentApprovalModal({
-        isOpen: true,
-        data,
-      })
-    },
-    []
-  )
-
-  // 결제 승인 모달 닫기
-  const hidePaymentApprovalModal = useCallback(() => {
-    setPaymentApprovalModal({
-      isOpen: false,
-    })
-  }, [])
 
   // 점주에게 결제 결과 알림 전송
   const notifyOwnerPaymentResult = useCallback(
@@ -1213,14 +1153,14 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           items: notification.data?.items || [],
         }
 
-        // 결제 승인 모달만 열기 (토스트 없음)
-        showPaymentApprovalModal(paymentData)
+        // 결제 요청 알림을 토스트로 표시
+        addToast(notification)
       } else {
         // 일반 알림은 토스트만 표시
         addToast(notification)
       }
     },
-    [getUserRole, addToast, showPaymentApprovalModal]
+    [getUserRole, addToast]
   )
 
   const addNotification = useCallback(
@@ -1367,7 +1307,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     isConnected: isConnected && isOnline,
     isPermissionGranted,
     modalNotification,
-    paymentApprovalModal,
     toasts,
     fcmToken,
     isFcmInitialized,
@@ -1377,8 +1316,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     addNotification,
     showModalNotification,
     hideModalNotification,
-    showPaymentApprovalModal,
-    hidePaymentApprovalModal,
     notifyOwnerPaymentResult,
     addToast,
     removeToast,

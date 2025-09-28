@@ -2,9 +2,7 @@
 
 import Header from '@/components/common/Header'
 import Navigation from '@/components/common/Navigation'
-import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import ToastContainer from '@/components/common/ToastContainer'
-import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import SWRegister from '@/providers/SWRegister'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePathname } from 'next/navigation'
@@ -20,10 +18,6 @@ export default function ConditionalLayout({
 }: ConditionalLayoutProps) {
   const pathname = usePathname()
   const { isOpen } = useSidebarStore()
-
-  // 알림 시스템 훅 (전역 결제 승인 모달용)
-  const { paymentApprovalModal, hidePaymentApprovalModal } =
-    useNotificationSystem()
 
   // 네비게이션을 숨겨야 하는 페이지들 (로그인 전 페이지들)
   const hideNavigationPages = ['/', '/owner/login', '/customer/login']
@@ -51,18 +45,6 @@ export default function ConditionalLayout({
 
       {/* 토스트 알림 컨테이너 */}
       <ToastContainer />
-
-      {/* 전역 결제 승인 모달 - 고객이 어느 페이지에 있든 표시 */}
-      {paymentApprovalModal.isOpen && paymentApprovalModal.data && (
-        <PaymentApprovalModal
-          isOpen={paymentApprovalModal.isOpen}
-          onClose={hidePaymentApprovalModal}
-          intentId={paymentApprovalModal.data.intentPublicId}
-          storeName={paymentApprovalModal.data.storeName}
-          amount={paymentApprovalModal.data.amount}
-          customerName={paymentApprovalModal.data.customerName}
-        />
-      )}
 
       <SWRegister />
     </PwaProvider>

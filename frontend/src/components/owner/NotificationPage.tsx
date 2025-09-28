@@ -1,5 +1,6 @@
 'use client'
 
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getNotificationIcon } from '@/types/notification'
@@ -16,16 +17,24 @@ type NotificationSetting = {
 const NotificationPage = () => {
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  const {
-    notifications,
-    markAsRead,
-    markAllAsRead,
-    unreadCount,
-    isConnected,
-    showPaymentApprovalModal,
-    paymentApprovalModal,
-    hidePaymentApprovalModal,
-  } = useNotificationSystem()
+  const { notifications, markAsRead, markAllAsRead, unreadCount, isConnected } =
+    useNotificationSystem()
+
+  // 결제 승인 모달 상태
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    data?: {
+      intentPublicId?: string
+      customerName?: string
+      amount?: number
+      storeName?: string
+      items?: Array<{
+        name: string
+        quantity: number
+        price: number
+      }>
+    }
+  }>({ isOpen: false })
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
     { id: 'PAYMENT_CATEGORY', name: '결제/정산 알림', enabled: true },
@@ -168,13 +177,16 @@ const NotificationPage = () => {
       notification.type === 'PAYMENT_REQUEST' &&
       isPaymentValid(notification.timestamp)
     ) {
-      showPaymentApprovalModal({
-        intentPublicId:
-          notification.data?.intentId || notification.data?.intentPublicId,
-        customerName: notification.data?.customerName || '고객',
-        amount: notification.data?.amount || 0,
-        storeName: notification.data?.storeName || '매장',
-        items: notification.data?.items || [],
+      setPaymentModal({
+        isOpen: true,
+        data: {
+          intentPublicId:
+            notification.data?.intentId || notification.data?.intentPublicId,
+          customerName: notification.data?.customerName || '고객',
+          amount: notification.data?.amount || 0,
+          storeName: notification.data?.storeName || '매장',
+          items: notification.data?.items || [],
+        },
       })
     }
   }
@@ -522,6 +534,19 @@ const NotificationPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 결제 승인 모달 */}
+      {paymentModal.isOpen && paymentModal.data && (
+        <PaymentApprovalModal
+          isOpen={paymentModal.isOpen}
+          onClose={() => setPaymentModal({ isOpen: false })}
+          intentId={paymentModal.data.intentPublicId}
+          storeName={paymentModal.data.storeName}
+          amount={paymentModal.data.amount}
+          customerName={paymentModal.data.customerName}
+          items={paymentModal.data.items}
+        />
       )}
     </div>
   )
