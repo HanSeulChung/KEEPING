@@ -56,10 +56,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     return null
   })
   const sseAbortControllerRef = useRef<AbortController | null>(null)
+  const sseConnectingRef = useRef(false)
   const isVisibleRef = useRef(true)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
+  const seenEventKeysRef = useRef<Set<string>>(new Set())
 
   // 역할/식별자 보조 함수들 (숫자 id 강제)
   const getUserRole = useCallback((): 'OWNER' | 'CUSTOMER' => {
@@ -232,7 +234,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // SSE 연결 (최적화된 토큰 관리)
   const connectSSE = useCallback(async () => {
-    if (sseAbortControllerRef.current || !isOnline) return
+    if (sseAbortControllerRef.current || sseConnectingRef.current || !isOnline)
+      return
 
     const userId = getUserNumericId()
     if (!userId) return
@@ -262,6 +265,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
     const controller = new AbortController()
     sseAbortControllerRef.current = controller
+    sseConnectingRef.current = true
 
     // 최적화된 헤더 설정
     const headers: Record<string, string> = {
@@ -384,8 +388,31 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
           if (data.type === 'connection') return
 
+          // 중복 방지 키 계산 (notificationId 우선, 그 다음 transactionUniqueNo)
+          const dedupeKey = String(
+            data?.notificationId ??
+              data?.transactionUniqueNo ??
+              `${data?.notificationType || ''}-${data?.createdAt || ''}`
+          )
+          if (seenEventKeysRef.current.has(dedupeKey)) {
+            return
+          }
+          seenEventKeysRef.current.add(dedupeKey)
+          // 메모리 관리: 너무 커지지 않도록 앞부분 정리
+          if (seenEventKeysRef.current.size > 500) {
+            const it = seenEventKeysRef.current.values()
+            for (let i = 0; i < 200; i++) {
+              const v = it.next()
+              if (v.done) break
+              seenEventKeysRef.current.delete(v.value)
+            }
+          }
+
           const notification: NotificationData = convertNotificationData(data)
-          setNotifications(prev => [notification, ...prev])
+          setNotifications(prev => {
+            const next = [notification, ...prev]
+            return next.length > 200 ? next.slice(0, 200) : next
+          })
 
           // 백그라운드에서는 브라우저 알림 표시하지 않음 (FCM이 처리)
           if (
@@ -403,14 +430,18 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         console.warn('[SSE] error', error)
         setIsConnected(false)
       },
-    }).catch(error => {
-      if (controller.signal.aborted) {
-        console.log('[SSE] disconnected')
-        return
-      }
-      console.error('[SSE] connection failed', error)
-      setIsConnected(false)
     })
+      .catch(error => {
+        if (controller.signal.aborted) {
+          console.log('[SSE] disconnected')
+          return
+        }
+        console.error('[SSE] connection failed', error)
+        setIsConnected(false)
+      })
+      .finally(() => {
+        sseConnectingRef.current = false
+      })
   }, [getUserNumericId, getUserRole, isOnline])
 
   const disconnectSSE = useCallback(() => {
@@ -567,7 +598,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           tag: `${notification.type}-${notification.id}`,
           requireInteraction: config.requireInteraction,
           silent: false,
-          // vibrate: config.vibrate || [200, 100, 200], // TypeScript에서 지원하지 않음
           data: {
             type: notification.type,
             category: config.category || 'default',
@@ -582,6 +612,14 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         window.focus()
         browserNotification.close()
         markAsRead(notification.id)
+        try {
+          const role = (useAuthStore.getState().user?.role || 'OWNER') as
+            | 'OWNER'
+            | 'CUSTOMER'
+          const target =
+            role === 'OWNER' ? '/owner/notification' : '/customer/notification'
+          window.location.href = target
+        } catch {}
       }
 
       // 타입별 다른 시간 후 자동 닫기
@@ -746,6 +784,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     setNotifications(prev =>
       prev.map(notification => ({ ...notification, isRead: true }))
     )
+    // 배지 동기화 이벤트 (선택)
+    try {
+      if (typeof window !== 'undefined') {
+        const ev = new CustomEvent('notifications:update', {
+          detail: { unreadCount: 0 },
+        })
+        window.dispatchEvent(ev)
+      }
+    } catch {}
     await Promise.all(
       unreadNotifications.map(async notification => {
         if (isOwner) {
