@@ -871,7 +871,7 @@ const CancelModal = ({
               카드번호
             </label>
             <input
-              type="text"
+              type="password"
               value={cardNo}
               onChange={e => setCardNo(e.target.value)}
               placeholder="카드번호를 입력하세요"
@@ -886,7 +886,7 @@ const CancelModal = ({
               CVC
             </label>
             <input
-              type="text"
+              type="password"
               value={cvc}
               onChange={e => setCvc(e.target.value)}
               placeholder="CVC를 입력하세요"
