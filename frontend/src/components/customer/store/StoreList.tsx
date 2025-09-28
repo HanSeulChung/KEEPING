@@ -461,19 +461,17 @@ export const StoreList = ({ type, initialCategory }: StoreListProps) => {
                 className="mr-4 h-[3.75rem] w-[3.75rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-full bg-gray-200"
                 onClick={() => handleStoreClick(store.id)}
               >
-                {store.image ? (
-                  <img
-                    src={
-                      Array.isArray(store.image) ? store.image[0] : store.image
-                    }
-                    alt={store.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
-                    이미지 없음
-                  </div>
-                )}
+                <img
+                  src={
+                    store.image
+                      ? Array.isArray(store.image)
+                        ? store.image[0]
+                        : store.image
+                      : 'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/storeBasicImage.jpg'
+                  }
+                  alt={store.name}
+                  className="h-full w-full object-cover"
+                />
               </div>
 
               {/* 가게 정보 */}

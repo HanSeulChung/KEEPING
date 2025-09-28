@@ -363,19 +363,14 @@ const StoreManage = () => {
                 >
                   <div className="flex items-center gap-4">
                     {/* 이미지 */}
-                    {item.imgUrl ? (
-                      <img
-                        src={item.imgUrl}
-                        alt={item.menuName}
-                        className="h-16 w-16 flex-shrink-0 rounded-[15px] object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[15px] bg-gray-100">
-                        <span className="text-xs text-gray-400">
-                          이미지 없음
-                        </span>
-                      </div>
-                    )}
+                    <img
+                      src={
+                        item.imgUrl ||
+                        'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/menuBasicImage.jpg'
+                      }
+                      alt={item.menuName}
+                      className="h-16 w-16 flex-shrink-0 rounded-[15px] object-cover"
+                    />
 
                     {/* 메뉴명과 카테고리 */}
                     <div className="flex-1">

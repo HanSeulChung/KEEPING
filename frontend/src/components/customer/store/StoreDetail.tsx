@@ -127,17 +127,14 @@ const MenuItem = ({ menu }: { menu: MenuItemData }) => {
   return (
     <div className="mb-4 flex h-[70px] w-full max-w-[380px] items-center rounded-[5px] bg-[#f8f8f8] p-3 md:max-w-none">
       <div className="mr-3 h-[54px] w-[54px] flex-shrink-0 rounded bg-gray-300">
-        {menu.imgUrl ? (
-          <img
-            src={menu.imgUrl}
-            alt={menu.menuName}
-            className="h-full w-full rounded object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
-            이미지 없음
-          </div>
-        )}
+        <img
+          src={
+            menu.imgUrl ||
+            'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/menuBasicImage.jpg'
+          }
+          alt={menu.menuName}
+          className="h-full w-full rounded object-cover"
+        />
       </div>
       <div className="flex-1">
         <div className="flex items-center justify-between">
@@ -173,19 +170,14 @@ const StoreImageAndInfo = ({
     <div className="relative mb-6 pt-4">
       {/* 가게 사진 */}
       <div className="relative h-[200px] w-full overflow-hidden rounded-lg">
-        {storeData.imageUrl ? (
-          <img
-            src={storeData.imageUrl}
-            alt={storeData.storeName}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gray-200">
-            <div className="text-center text-gray-500">
-              <div className="font-jalnan text-lg">이미지 없음</div>
-            </div>
-          </div>
-        )}
+        <img
+          src={
+            storeData.imageUrl ||
+            'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/storeBasicImage.jpg'
+          }
+          alt={storeData.storeName}
+          className="h-full w-full object-cover"
+        />
       </div>
 
       {/* 가게 정보 카드 (사진 아래에 배치) */}
