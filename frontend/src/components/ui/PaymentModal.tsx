@@ -66,6 +66,7 @@ export const PaymentModal = ({
         method: 'POST',
         headers,
         credentials: 'include',
+        body: JSON.stringify({}),
       })
 
       console.log(
@@ -157,7 +158,6 @@ export const PaymentModal = ({
         paymentBalance: amount,
       }
 
-      // 세션 기반 멱등성 키 생성 (뒤로가기 시에도 동일한 키 유지)
       const sessionKey = `payment_${storeId}_${amount}_${selectedCard.cardNo}`
       let idempotencyKey = sessionStorage.getItem(sessionKey)
       if (!idempotencyKey) {
