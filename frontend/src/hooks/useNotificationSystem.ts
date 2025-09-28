@@ -1145,6 +1145,28 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }
 
+  // 거절 알림 이벤트 리스너 추가
+  useEffect(() => {
+    const handleOwnerPaymentResult = (event: CustomEvent) => {
+      const { storeName, amount, customerName, success } = event.detail
+      
+      // notifyOwnerPaymentResult 함수 호출 (객체 형태로 전달)
+      notifyOwnerPaymentResult({
+        intentPublicId: '', // 거절 시에는 intentPublicId가 없을 수 있음
+        storeName,
+        customerName,
+        amount,
+        isApproved: success
+      })
+    }
+
+    window.addEventListener('notifyOwnerPaymentResult', handleOwnerPaymentResult as EventListener)
+    
+    return () => {
+      window.removeEventListener('notifyOwnerPaymentResult', handleOwnerPaymentResult as EventListener)
+    }
+  }, [])
+
   useEffect(() => {
     const initializeNotificationSystem = async () => {
       if (typeof window !== 'undefined' && user?.id && isOnline) {

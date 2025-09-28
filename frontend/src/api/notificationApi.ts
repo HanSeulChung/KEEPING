@@ -163,6 +163,36 @@ export const notificationApi = {
         return false
       }
     },
+
+    // 결제 요청 거절
+    rejectPayment: async (
+      intentId: number | string,
+      idempotencyKey?: string
+    ): Promise<boolean> => {
+      try {
+        // idempotencyKey가 제공되지 않은 경우에만 생성
+        const finalIdempotencyKey =
+          idempotencyKey ||
+          generateIdempotencyKey({
+            action: 'payment_reject',
+            data: {
+              intentId: String(intentId),
+            },
+          })
+
+        const headers = {
+          'Idempotency-Key': finalIdempotencyKey,
+        } as any
+        const res = await apiClient.post(
+          `/payments/${intentId}/reject`,
+          {},
+          { headers }
+        )
+        return res.status >= 200 && res.status < 300
+      } catch (error) {
+        return false
+      }
+    },
   },
 
   // 점주용 API

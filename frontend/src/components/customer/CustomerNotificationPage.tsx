@@ -1,10 +1,11 @@
 'use client'
 
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
 import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
 
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
@@ -13,7 +14,7 @@ const CustomerNotificationPage = () => {
     notifications,
     markAsRead,
     markAllAsRead,
-    unreadCount,
+    unreadCount: _unreadCount,
     paymentApprovalModal,
     hidePaymentApprovalModal,
   } = useNotificationSystem()
@@ -41,7 +42,10 @@ const CustomerNotificationPage = () => {
   // SSE에서 자동으로 결제 승인 모달이 처리되므로 이 함수는 더 이상 필요하지 않음
 
   // 알림 클릭 처리 (읽음 처리만)
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: {
+    id: number
+    isRead: boolean
+  }) => {
     // SSE에서 자동으로 모달이 처리되므로 읽음 처리만 수행
     markAsRead(notification.id)
   }
@@ -77,7 +81,18 @@ const CustomerNotificationPage = () => {
 
   // 알림 타입별 UI 아이콘 컴포넌트 (이모지 대신 UI 아이콘 사용)
   const getNotificationIconComponent = (type: string) => {
-    const iconEmoji = getNotificationIcon(type as any)
+    const iconEmoji = getNotificationIcon(
+      type as
+        | 'PAYMENT_REQUEST'
+        | 'PAYMENT_COMPLETED'
+        | 'POINT_CHARGED'
+        | 'POINT_USED'
+        | 'ORDER_RECEIVED'
+        | 'CUSTOMER_ARRIVED'
+        | 'STORE_INFO_UPDATED'
+        | 'GROUP_INVITATION'
+        | 'GENERAL'
+    )
 
     // 타입별 배경색 설정
     let bgColor = 'bg-gray-100'
@@ -262,7 +277,7 @@ const CustomerNotificationPage = () => {
         ) : (
           <>
             <div className="space-y-2">
-              {currentNotifications.map((notification, index) => (
+              {currentNotifications.map((notification, _index) => (
                 <div
                   key={notification.id}
                   className={`rounded-lg border border-gray-200 p-4 transition-colors active:bg-gray-50 ${
@@ -365,7 +380,7 @@ const CustomerNotificationPage = () => {
             // URL에서 모달 파라미터 제거
             router.push('/customer/notification')
           }}
-          intentPublicId={
+          intentId={
             paymentApprovalModal.data?.intentPublicId ||
             paymentModalData?.intentPublicId
           }

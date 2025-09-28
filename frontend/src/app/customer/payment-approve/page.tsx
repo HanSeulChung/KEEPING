@@ -1,8 +1,9 @@
 'use client'
 
-import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
+
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 
 function PaymentApproveInner() {
   const router = useRouter()
@@ -150,7 +151,7 @@ function PaymentApproveInner() {
       <PaymentApprovalModal
         isOpen={isModalOpen}
         onClose={handleModalClose}
-        intentPublicId={intentPublicId}
+        intentId={intentPublicId}
         storeName={storeName ? decodeURIComponent(storeName) : undefined}
         amount={amount ? parseInt(amount) : undefined}
         customerName={
