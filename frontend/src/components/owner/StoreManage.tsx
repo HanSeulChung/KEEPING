@@ -363,19 +363,14 @@ const StoreManage = () => {
                 >
                   <div className="flex items-center gap-4">
                     {/* 이미지 */}
-                    {item.imgUrl ? (
-                      <img
-                        src={item.imgUrl}
-                        alt={item.menuName}
-                        className="h-16 w-16 flex-shrink-0 rounded-[15px] object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[15px] bg-gray-100">
-                        <span className="text-xs text-gray-400">
-                          이미지 없음
-                        </span>
-                      </div>
-                    )}
+                    <img
+                      src={
+                        item.imgUrl ||
+                        'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/menuBasicImage.jpg'
+                      }
+                      alt={item.menuName}
+                      className="h-16 w-16 flex-shrink-0 rounded-[15px] object-cover"
+                    />
 
                     {/* 메뉴명과 카테고리 */}
                     <div className="flex-1">
@@ -662,8 +657,24 @@ const MenuAddModal = ({
       const formData = new FormData()
       formData.append('menuName', manualMenu.name.trim())
       formData.append('categoryId', manualMenu.categoryId.toString())
-      if (manualMenu.imgFile) {
-        formData.append('imgFile', manualMenu.imgFile)
+      // 이미지 처리: 이미지가 없으면 기본 이미지 사용
+      let imageFile = manualMenu.imgFile
+      if (!imageFile) {
+        try {
+          const response = await fetch(
+            'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/menuBasicImage.jpg'
+          )
+          const blob = await response.blob()
+          imageFile = new File([blob], 'menuBasicImage.jpg', {
+            type: 'image/jpeg',
+          })
+        } catch (error) {
+          console.warn('기본 이미지 로드 실패:', error)
+        }
+      }
+
+      if (imageFile) {
+        formData.append('imgFile', imageFile)
       }
       if (manualMenu.price)
         formData.append('price', manualMenu.price.toString())
@@ -692,9 +703,24 @@ const MenuAddModal = ({
   }
 
   const handleOcrSubmit = async (menu: MenuData, index: number) => {
-    if (!menu.categoryId || !menu.imgFile) {
-      alert('카테고리와 이미지는 필수입니다.')
+    if (!menu.categoryId) {
+      alert('카테고리는 필수입니다.')
       return
+    }
+
+    let imageFile = menu.imgFile
+    if (!imageFile) {
+      try {
+        const response = await fetch(
+          'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/storeBasicImage.jpg'
+        )
+        const blob = await response.blob()
+        imageFile = new File([blob], 'menuBasicImage.jpg', {
+          type: 'image/jpeg',
+        })
+      } catch (error) {
+        console.warn('기본 이미지 로드 실패:', error)
+      }
     }
 
     const menuData = {
@@ -703,7 +729,7 @@ const MenuAddModal = ({
       price: menu.price || 0,
       categoryId: menu.categoryId,
       storeId: parseInt(storeId!),
-      image: menu.imgFile,
+      image: imageFile,
     }
 
     const success = await addMenu(parseInt(storeId!), menuData)

@@ -63,10 +63,25 @@ export const createMenu = async (
       formData.append('description', menuData.description.trim())
     }
 
-    if (menuData.image) {
-      formData.append('imgFile', menuData.image) // API 명세에 따라 'imgFile' 사용
+    // 이미지 처리: 이미지가 없으면 기본 이미지 사용
+    let imageFile = menuData.image
+    if (!imageFile) {
+      // 기본 이미지를 File 객체로 변환
+      try {
+        const response = await fetch(
+          'https://aws-bucket-keeping-509.s3.ap-southeast-2.amazonaws.com/storeBasicImage.jpg'
+        )
+        const blob = await response.blob()
+        imageFile = new File([blob], 'menuBasicImage.jpg', {
+          type: 'image/jpeg',
+        })
+      } catch (error) {
+        console.warn('기본 이미지 로드 실패:', error)
+      }
+    }
 
-      // storeId 추가
+    if (imageFile) {
+      formData.append('imgFile', imageFile) // API 명세에 따라 'imgFile' 사용
       formData.append('storeId', menuData.storeId.toString())
     }
 
