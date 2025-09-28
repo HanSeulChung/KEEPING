@@ -36,27 +36,27 @@ if (messaging) {
   messaging.onBackgroundMessage(payload => {
     console.log('백그라운드 메시지 수신:', payload)
 
-    // 알림 내용 구성 (민감한 정보 보호)
     const notificationType = payload.data?.type
     const storeName = payload.data?.storeName || payload.data?.storeNameKr
     const amount = payload.data?.amount || payload.data?.price
-    const customerName = payload.data?.customerName || payload.data?.receiverName
+    const customerName =
+      payload.data?.customerName || payload.data?.receiverName
     const groupName = payload.data?.groupName
 
     // 민감한 정보 마스킹 함수
-    const maskStoreName = (name) => {
+    const maskStoreName = name => {
       if (!name) return '매장'
       if (name.length <= 2) return name
       return name.substring(0, 2) + '*'.repeat(Math.max(1, name.length - 2))
     }
 
-    const maskCustomerName = (name) => {
+    const maskCustomerName = name => {
       if (!name) return '고객'
       if (name.length <= 1) return name
       return name.substring(0, 1) + '*'.repeat(name.length - 1)
     }
 
-    const formatAmount = (amount) => {
+    const formatAmount = amount => {
       if (!amount) return ''
       const num = parseInt(amount)
       if (num >= 100000) {
@@ -75,37 +75,42 @@ if (messaging) {
     switch (notificationType) {
       case 'PAYMENT_APPROVED':
         notificationTitle = '💳 결제 승인됨'
-        notificationBody = storeName 
+        notificationBody = storeName
           ? `${maskStoreName(storeName)}에서 ${amount ? formatAmount(amount) : '결제'} 승인`
           : '결제가 승인되었습니다'
         break
       case 'PAYMENT_REQUEST':
         notificationTitle = '💰 결제 요청'
-        notificationBody = storeName 
+        notificationBody = storeName
           ? `${maskStoreName(storeName)}에서 ${amount ? formatAmount(amount) : '결제'} 요청`
           : '결제 요청이 있습니다'
         break
       case 'POINT_CHARGE':
         notificationTitle = '💎 포인트 충전'
-        notificationBody = amount 
+        notificationBody = amount
           ? `${formatAmount(amount)}이 충전되었습니다`
           : '포인트가 충전되었습니다'
         break
       case 'GROUP_PAYMENT_APPROVED':
         notificationTitle = '👥 그룹 결제 승인'
-        notificationBody = groupName && storeName
-          ? `[${groupName}] ${maskStoreName(storeName)}에서 ${amount ? formatAmount(amount) : '결제'} 승인`
-          : '그룹 결제가 승인되었습니다'
+        notificationBody =
+          groupName && storeName
+            ? `[${groupName}] ${maskStoreName(storeName)}에서 ${amount ? formatAmount(amount) : '결제'} 승인`
+            : '그룹 결제가 승인되었습니다'
         break
       case 'GROUP_INVITATION':
         notificationTitle = '👥 그룹 초대'
-        notificationBody = groupName 
+        notificationBody = groupName
           ? `[${groupName}] 그룹에 초대되었습니다`
           : '새로운 그룹에 초대되었습니다'
         break
       default:
-        notificationTitle = payload.notification?.title || payload.data?.title || 'KEEPING 알림'
-        notificationBody = payload.notification?.body || payload.data?.body || '새로운 알림이 있습니다'
+        notificationTitle =
+          payload.notification?.title || payload.data?.title || 'KEEPING 알림'
+        notificationBody =
+          payload.notification?.body ||
+          payload.data?.body ||
+          '새로운 알림이 있습니다'
     }
 
     // 알림 타입별 아이콘, 배지, 색상 설정
@@ -113,9 +118,16 @@ if (messaging) {
     let badge = '/icons/badge-personal.svg'
     let category = 'default'
     let color = '#000000'
-    
+
     // 결제 관련 알림
-    if (['PAYMENT_APPROVED', 'PAYMENT_REQUEST', 'PAYMENT_CANCELED', 'SETTLEMENT_COMPLETED'].includes(notificationType)) {
+    if (
+      [
+        'PAYMENT_APPROVED',
+        'PAYMENT_REQUEST',
+        'PAYMENT_CANCELED',
+        'SETTLEMENT_COMPLETED',
+      ].includes(notificationType)
+    ) {
       icon = '/icons/qr.png'
       badge = '/icons/badge-personal.svg'
       category = 'payment'
@@ -127,15 +139,19 @@ if (messaging) {
       }
     }
     // 포인트 관련 알림
-    else if (['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(notificationType)) {
-      icon = '/icons/qr.png'
+    else if (
+      ['POINT_CHARGE', 'PERSONAL_POINT_USE', 'POINT_CANCELED'].includes(
+        notificationType
+      )
+    ) {
+      icon = '/icons/logo_owner+cust.png'
       badge = '/icons/badge-personal.svg'
       category = 'point'
       color = '#8b5cf6' // 보라색 - 포인트
     }
     // 그룹 관련 알림
     else if (notificationType?.includes('GROUP_')) {
-      icon = '/icons/qr.png'
+      icon = '/icons/logo_owner+cust.png'
       badge = '/icons/badge-group.svg'
       category = 'group'
       color = '#06b6d4' // 청록색 - 그룹
@@ -157,20 +173,16 @@ if (messaging) {
 
     // 사용자 타입에 따른 이동 경로 설정
     let clickAction = '/notifications'
-    if (payload.data?.userType === 'owner' || payload.data?.receiverType === 'OWNER') {
+    if (
+      payload.data?.userType === 'owner' ||
+      payload.data?.receiverType === 'OWNER'
+    ) {
       clickAction = '/owner/notification'
-    } else if (payload.data?.userType === 'customer' || payload.data?.receiverType === 'CUSTOMER') {
+    } else if (
+      payload.data?.userType === 'customer' ||
+      payload.data?.receiverType === 'CUSTOMER'
+    ) {
       clickAction = '/customer/notification'
-    }
-
-    // 알림 타입별 진동 패턴 설정
-    let vibratePattern = [200, 100, 200] // 기본 진동
-    if (category === 'payment') {
-      vibratePattern = [300, 100, 300, 100, 300] // 결제 알림 - 긴 진동
-    } else if (category === 'group') {
-      vibratePattern = [200, 100, 200, 100, 200] // 그룹 알림 - 중간 진동
-    } else if (category === 'point') {
-      vibratePattern = [150, 50, 150] // 포인트 알림 - 짧은 진동
     }
 
     const notificationOptions = {
@@ -192,7 +204,9 @@ if (messaging) {
         // 원본 데이터는 제거하여 보안 강화
       },
       actions: getNotificationActions(notificationType, category),
-      requireInteraction: ['PAYMENT_REQUEST', 'GROUP_INVITATION'].includes(notificationType), // 중요한 알림만 상호작용 요구
+      requireInteraction: ['PAYMENT_REQUEST', 'GROUP_INVITATION'].includes(
+        notificationType
+      ), // 중요한 알림만 상호작용 요구
       silent: false,
       vibrate: vibratePattern,
       timestamp: Date.now(),
@@ -251,7 +265,11 @@ if (messaging) {
       return baseActions
     }
 
-    console.log('백그라운드 알림 표시:', { notificationTitle, notificationBody, notificationOptions })
+    console.log('백그라운드 알림 표시:', {
+      notificationTitle,
+      notificationBody,
+      notificationOptions,
+    })
     self.registration.showNotification(notificationTitle, notificationOptions)
   })
 } else {
@@ -266,6 +284,9 @@ self.addEventListener('notificationclick', event => {
   console.log('알림 데이터:', event.notification.data)
 
   event.notification.close()
+
+  // 알림 데이터는 여러 분기에서 사용되므로 최상단에서 추출
+  const notificationData = event.notification.data || {}
 
   if (event.action === 'dismiss') {
     // 닫기 버튼 클릭 시 아무것도 하지 않음
@@ -293,9 +314,13 @@ self.addEventListener('notificationclick', event => {
     )
   }
 
-  if (event.action === 'view' || event.action === 'approve' || event.action === 'accept' || !event.action) {
+  if (
+    event.action === 'view' ||
+    event.action === 'approve' ||
+    event.action === 'accept' ||
+    !event.action
+  ) {
     // 확인하기 버튼 또는 알림 본체 클릭
-    const notificationData = event.notification.data || {}
     const targetUrl = notificationData.clickAction || '/owner/notification'
     const storeName = notificationData.storeName
     const amount = notificationData.amount
@@ -323,7 +348,7 @@ self.addEventListener('notificationclick', event => {
                 amount: amount,
                 notificationType: notificationType,
               }
-              
+
               client.postMessage(messageData)
               return client.focus().then(() => {
                 // URL 이동

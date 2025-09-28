@@ -63,6 +63,49 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const maxReconnectAttempts = 5
   const seenEventKeysRef = useRef<Set<string>>(new Set())
 
+  // 알림 시스템 상태 관리
+  const [notificationStrategy, setNotificationStrategy] = useState<
+    'SSE' | 'FCM'
+  >('SSE')
+  const sseFailureCountRef = useRef(0)
+  const maxSSEFailures = 3
+
+  // 디바이스 타입 감지
+  const getDeviceType = useCallback((): 'mobile' | 'desktop' => {
+    if (typeof window === 'undefined') return 'desktop'
+    return window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent)
+      ? 'mobile'
+      : 'desktop'
+  }, [])
+
+  // 알림 전략 결정 로직
+  const determineNotificationStrategy = useCallback((): 'SSE' | 'FCM' => {
+    const deviceType = getDeviceType()
+
+    // 1. 백그라운드면 FCM 우선
+    if (!isVisibleRef.current) {
+      return 'FCM'
+    }
+
+    // 2. 오프라인이면 FCM (캐시된 메시지)
+    if (!isOnline) {
+      return 'FCM'
+    }
+
+    // 3. SSE 연결 실패가 많으면 FCM으로 전환
+    if (sseFailureCountRef.current >= maxSSEFailures) {
+      return 'FCM'
+    }
+
+    // 4. 모바일 디바이스면 FCM 우선 (배터리 최적화)
+    if (deviceType === 'mobile') {
+      return 'FCM'
+    }
+
+    // 5. 기본값: SSE (실시간성이 더 좋음)
+    return 'SSE'
+  }, [isOnline, getDeviceType])
+
   // 역할/식별자 보조 함수들 (숫자 id 강제)
   const getUserRole = useCallback((): 'OWNER' | 'CUSTOMER' => {
     return (user?.role === 'CUSTOMER' ? 'CUSTOMER' : 'OWNER') as
@@ -90,6 +133,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         receiverType: backendData.receiverType,
         receiverId: backendData.receiverId,
         receiverName: backendData.receiverName,
+        // 결제 의도 식별자(public_id)
+        intentId:
+          backendData.publicId ||
+          backendData.intentId ||
+          backendData.paymentIntentId ||
+          null,
       },
     }
   }
@@ -196,23 +245,46 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     }
   }, [])
 
+  // 알림 전략 업데이트 함수
+  const updateNotificationStrategy = useCallback(() => {
+    const newStrategy = determineNotificationStrategy()
+    if (newStrategy !== notificationStrategy) {
+      console.log(
+        `[NOTIFICATION] 전략 변경: ${notificationStrategy} -> ${newStrategy}`
+      )
+      setNotificationStrategy(newStrategy)
+
+      // 전략 변경 시 기존 연결 정리 및 새 연결 설정
+      if (newStrategy === 'SSE') {
+        // FCM에서 SSE로 전환
+        disconnectSSE()
+        setTimeout(() => connectSSE().catch(console.error), 500)
+      } else {
+        // SSE에서 FCM으로 전환
+        disconnectSSE()
+        registerFCM().catch(console.error)
+      }
+    }
+  }, [determineNotificationStrategy, notificationStrategy])
+
   // 앱 가시성 상태 감지
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const handleVisibilityChange = () => {
+      const wasVisible = isVisibleRef.current
       isVisibleRef.current = !document.hidden
-      if (isVisibleRef.current && isOnline) {
-        connectSSE().catch(console.error)
-      } else {
-        disconnectSSE()
+
+      // 가시성 변경 시 전략 재평가
+      if (wasVisible !== isVisibleRef.current) {
+        updateNotificationStrategy()
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () =>
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [isOnline])
+  }, [updateNotificationStrategy])
 
   // 토큰 캐시 초기화 (컴포넌트 마운트 시)
   useEffect(() => {
@@ -237,6 +309,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     if (sseAbortControllerRef.current || sseConnectingRef.current || !isOnline)
       return
 
+    // 현재 전략이 FCM이면 SSE 연결하지 않음
+    if (notificationStrategy === 'FCM') {
+      console.log('[SSE] 현재 FCM 모드 - SSE 연결 생략')
+      return
+    }
+
     const userId = getUserNumericId()
     if (!userId) return
 
@@ -244,6 +322,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     const accessToken = await refreshAccessToken()
     if (!accessToken) {
       console.warn('[SSE] 유효한 토큰을 가져올 수 없어 연결 중단')
+      sseFailureCountRef.current++
+      updateNotificationStrategy()
       return
     }
 
@@ -608,6 +688,19 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
         }
       )
 
+      // 포그라운드 진동 보조 (일부 브라우저는 NotificationOptions.vibrate를 무시)
+      try {
+        if (
+          navigator &&
+          'vibrate' in navigator &&
+          Array.isArray(config.vibrate)
+        ) {
+          // 진동은 사용자 제스처 이후 컨텍스트에서만 동작할 수 있음(브라우저별)
+          // 실패해도 앱 흐름에 영향 없도록 try/catch 유지
+          ;(navigator as any).vibrate(config.vibrate)
+        }
+      } catch {}
+
       browserNotification.onclick = () => {
         window.focus()
         browserNotification.close()
@@ -760,9 +853,13 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (!userId) return
       const isOwner = getUserRole() === 'OWNER'
       if (isOwner) {
-        await apiClient.put(`/api/notifications/owner/${userId}/${id}/read`)
+        await apiClient.put(
+          `/api/notifications/owner/${userId}/mark-read/${id}`
+        )
       } else {
-        await apiClient.put(`/api/notifications/customer/${userId}/${id}/read`)
+        await apiClient.put(
+          `/api/notifications/customer/${userId}/mark-read/${id}`
+        )
       }
       setNotifications(prev =>
         prev.map(notification =>
@@ -797,11 +894,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       unreadNotifications.map(async notification => {
         if (isOwner) {
           await apiClient.put(
-            `/api/notifications/owner/${userId}/${notification.id}/read`
+            `/api/notifications/owner/${userId}/mark-read/${notification.id}`
           )
         } else {
           await apiClient.put(
-            `/api/notifications/customer/${userId}/${notification.id}/read`
+            `/api/notifications/customer/${userId}/mark-read/${notification.id}`
           )
         }
       })
@@ -820,12 +917,25 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       }
       setNotifications(prev => [newNotification, ...prev])
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(newNotification.title, {
+        const n = new Notification(newNotification.title, {
           body: newNotification.message,
           icon: '/icons/logo_owner+cust.png',
           badge: '/icons/logo_owner+cust.png',
           tag: String(newNotification.id),
+          data: newNotification,
         })
+        n.onclick = () => {
+          try {
+            const role = (useAuthStore.getState().user?.role || 'OWNER') as
+              | 'OWNER'
+              | 'CUSTOMER'
+            const target =
+              role === 'OWNER'
+                ? '/owner/notification'
+                : '/customer/notification'
+            window.location.href = target
+          } catch {}
+        }
       }
     },
     []
@@ -851,12 +961,10 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           setIsPermissionGranted(Notification.permission === 'granted')
         }
 
-        // 권한 미부여 시 권한 요청 및 FCM 등록 (백그라운드 알림 보장)
-        if ('Notification' in window && Notification.permission !== 'granted') {
-          try {
-            await registerFCM()
-          } catch {}
-        }
+        // FCM 등록 보장: 권한 상태와 무관하게 시도(내부에서 중복 등록 방지)
+        try {
+          await registerFCM()
+        } catch {}
 
         // 알림 목록 로드
         fetchNotifications()

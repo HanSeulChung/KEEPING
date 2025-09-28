@@ -56,13 +56,6 @@ export const PaymentModal = ({
         }
       }
 
-      console.log('카드 정보 조회 요청:', {
-        url: buildURL('/customers/me/card'),
-        method: 'POST',
-        headers,
-        credentials: 'include',
-      })
-
       const response = await fetch(buildURL('/customers/me/card'), {
         method: 'POST',
         headers,
@@ -70,20 +63,12 @@ export const PaymentModal = ({
         body: JSON.stringify({}),
       })
 
-      console.log(
-        '카드 정보 조회 응답 상태:',
-        response.status,
-        response.statusText
-      )
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('카드 정보 조회 실패 - 응답 텍스트:', errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data: CreditCardResponse = await response.json()
-      console.log('카드 정보 조회 응답 데이터:', data)
 
       if (data.success && data.data) {
         return data.data
@@ -91,7 +76,6 @@ export const PaymentModal = ({
         throw new Error(data.message || '카드 정보를 찾을 수 없습니다.')
       }
     } catch (error) {
-      console.error('카드 정보 조회 실패:', error)
       throw error
     }
   }
@@ -108,7 +92,6 @@ export const PaymentModal = ({
           setCreditCard(card)
           setSelectedCard(card)
         } catch (error) {
-          console.error('카드 정보 로드 실패:', error)
           setCardsError('카드 정보를 불러오는데 실패했습니다.')
         } finally {
           setCardsLoading(false)
@@ -147,7 +130,6 @@ export const PaymentModal = ({
 
     try {
       // 로그인 상태 확인
-      console.log('로그인 상태:', { user, loading, error })
 
       if (!user) {
         throw new Error('로그인이 필요합니다.')
@@ -198,12 +180,10 @@ export const PaymentModal = ({
       }
 
       const result = await response.json()
-      console.log('결제 성공:', result)
 
       // 성공 시 결제 완료 상태로 변경
       setIsPaymentComplete(true)
     } catch (error) {
-      console.error('결제 실패:', error)
       alert(
         error instanceof Error
           ? error.message
