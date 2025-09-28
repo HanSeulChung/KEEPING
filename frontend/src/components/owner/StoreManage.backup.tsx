@@ -3,6 +3,7 @@
 'use client'
 
 import apiClient from '@/api/axios'
+import { apiConfig } from '@/api/config'
 import { deleteChargeBonus } from '@/api/storeApi'
 import { useMenuManagement } from '@/hooks/useMenuManagement'
 import { useStoreStore } from '@/store/useStoreStore'
@@ -713,7 +714,7 @@ const MenuAddModal = ({ onClose, storeId, addMenu }: MenuAddModalProps) => {
       formData.append('file', file)
 
       // OCR API 호출
-      const response = await fetch('/api/ocr/menu', {
+      const response = await fetch(`${apiConfig.baseURL}/ocr/menu`, {
         method: 'POST',
         body: formData,
       })
