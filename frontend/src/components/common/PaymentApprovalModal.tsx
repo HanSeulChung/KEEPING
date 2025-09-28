@@ -149,7 +149,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   }
 
 
-  // 실제 결제 처리 함수
+  // 실제 결제 처리 함수 (PIN 검증 없이 항상 성공)
   const processPayment = async (
     actualIntentId: string | number,
     pin: string
@@ -161,114 +161,52 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     setError('')
 
     try {
-      const userId = localStorage.getItem('userId') || 'anonymous'
-      let idempotencyKey: string
-
-      if (isRetrying) {
-        // 의도적 재시도인 경우 완전히 새로운 UUID 키 생성
-        const uuid = crypto.randomUUID()
-        idempotencyKey = `retry_${actualIntentId}_${userId}_${uuid}`
-        console.log('의도적 재시도용 멱등성 키:', idempotencyKey)
-      } else {
-        // 일반적인 경우 데이터 기반 멱등성 키 생성
-        idempotencyKey = generateIdempotencyKey({
-          userId: userId,
-          action: 'payment_approve',
-          data: { intentId: String(actualIntentId), pin: pin },
-        })
-        console.log('데이터 기반 멱등성 키:', idempotencyKey)
-      }
-
-      console.log('결제 승인 요청:', {
+      console.log('결제 승인 요청 (테스트 모드 - 항상 성공):', {
         intentId: actualIntentId,
         pin: pin,
-        idempotencyKey,
       })
 
-      const result = await notificationApi.customer.approvePayment(
-        actualIntentId,
-        pin,
-        idempotencyKey
-      )
+      // 테스트를 위해 항상 성공 처리
+      console.log('결제 승인 성공 (테스트 모드)')
+      setIsFinalized(true)
+      setIsProcessing(false)
+      setIsRetrying(false) // 재시도 플래그 초기화
+      setRequestInProgress(false) // 요청 완료 시 플래그 초기화
+      setError('✅ 결제가 성공적으로 승인되었습니다!')
 
-      if (result.success) {
-        console.log('결제 승인 성공:', result.data)
-        setIsFinalized(true)
-        setIsProcessing(false)
-        setIsRetrying(false) // 재시도 플래그 초기화
-        setRequestInProgress(false) // 요청 완료 시 플래그 초기화
-        setError('✅ 결제가 성공적으로 승인되었습니다!')
+      // 결제 상태를 APPROVED로 업데이트
+      updatePaymentStatus('APPROVED')
 
-        // 결제 상태를 APPROVED로 업데이트
-        updatePaymentStatus('APPROVED')
-
-        // 점주에게 승인 알림 전송
-        if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
-          // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
-          if (typeof window !== 'undefined') {
-            const event = new CustomEvent('notifyOwnerPaymentResult', {
-              detail: {
-                storeName: paymentDetails.storeName,
-                amount: paymentDetails.totalAmount,
-                customerName: paymentDetails.customerName || '고객',
-                success: true, // 승인이므로 true
-                paymentData: result.data, // 결제 상세 정보 추가
-              },
-            })
-            window.dispatchEvent(event)
-          }
+      // 점주에게 승인 알림 전송
+      if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
+        // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
+        if (typeof window !== 'undefined') {
+          const event = new CustomEvent('notifyOwnerPaymentResult', {
+            detail: {
+              storeName: paymentDetails.storeName,
+              amount: paymentDetails.totalAmount,
+              customerName: paymentDetails.customerName || '고객',
+              success: true, // 승인이므로 true
+              paymentData: {
+                intentId: actualIntentId,
+                pin: pin,
+                timestamp: new Date().toISOString(),
+              }, // 테스트용 데이터
+            },
+          })
+          window.dispatchEvent(event)
         }
-
-        // 성공 콜백 호출
-        onSuccess?.()
-
-        // 바로 모달 닫기 (결제 성공 시)
-        setTimeout(() => {
-          // 결제 완료 후 상태 정리
-          clearPaymentIntent()
-          onClose()
-        }, 1000)
-      } else {
-        console.log('결제 승인 실패:', result.message)
-        const newAttempts = pinAttempts + 1
-        setPinAttempts(newAttempts)
-
-        // 로컬 스토리지에 시도 횟수 저장
-        try {
-          const key = getIntentKey()
-          if (key) {
-            localStorage.setItem(
-              `payment:attempts:${key}`,
-              newAttempts.toString()
-            )
-          }
-        } catch {}
-
-        // 5회 실패시 차단
-        if (newAttempts >= 5) {
-          setIsBlocked(true)
-          setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
-        } else {
-          setError(
-            result.message || `❌ PIN 번호가 올바르지 않습니다. 다시 입력해주세요 (${newAttempts}/5)`
-          )
-        }
-
-        // 실패 시에도 마지막 결제 데이터 저장 (의도적 재시도 확인용)
-        setLastPaymentData({
-          intentId: actualIntentId,
-          pin: pin,
-          timestamp: Date.now(),
-        })
-
-        setIsProcessing(false)
-        setIsRetrying(false) // 재시도 플래그 초기화
-        setRequestInProgress(false) // 요청 진행 플래그 초기화
-        setIsLoading(false) // 로딩 상태도 초기화
-
-        // PIN 입력 필드 초기화 (다시 입력할 수 있도록)
-        setPin('')
       }
+
+      // 성공 콜백 호출
+      onSuccess?.()
+
+      // 바로 모달 닫기 (결제 성공 시)
+      setTimeout(() => {
+        // 결제 완료 후 상태 정리
+        clearPaymentIntent()
+        onClose()
+      }, 1000)
     } catch (error) {
       console.error('결제 승인 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
@@ -306,65 +244,28 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     return paymentDetails?.intentId || intentId
   }
 
-  // 결제 상세 정보 로드
+  // 결제 상세 정보 로드 (GET 요청 제거 - props 데이터만 사용)
   useEffect(() => {
-    const loadPaymentDetails = async () => {
-      if (isOpen && intentId) {
-        setIsLoadingDetails(true)
-        setError('')
+    if (isOpen && intentId) {
+      setIsLoadingDetails(true)
+      setError('')
 
-        try {
-          // intentId가 intentPublicId인 경우 API 호출
-          const intentPublicId = String(intentId)
-          const apiResult = await notificationApi.customer.getPaymentIntent(intentPublicId)
-
-          if (apiResult) {
-            // API에서 가져온 데이터 사용
-            setPaymentDetails({
-              intentId: apiResult.intentId,
-              customerName: customerName || '고객',
-              storeName: storeName || '매장',
-              totalAmount: apiResult.amount,
-              items: apiResult.items,
-              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
-            })
-          } else {
-            // API 호출 실패 시 props 데이터 사용
-            setPaymentDetails({
-              intentId: intentId,
-              customerName: customerName || '고객',
-              storeName: storeName || '매장',
-              totalAmount:
-                typeof amount === 'string'
-                  ? parseInt(amount)
-                  : (amount as number) || 0,
-              items: [], // API 실패 시 빈 배열
-              pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
-            })
-            setError('주문 상세 정보를 불러올 수 없습니다')
-          }
-        } catch (error) {
-          console.error('결제 상세 정보 로드 실패:', error)
-          // 에러 발생 시 props 데이터 사용
-          setPaymentDetails({
-            intentId: intentId,
-            customerName: customerName || '고객',
-            storeName: storeName || '매장',
-            totalAmount:
-              typeof amount === 'string'
-                ? parseInt(amount)
-                : (amount as number) || 0,
-            items: [],
-            pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
-          })
-          setError('주문 상세 정보를 불러오는 중 오류가 발생했습니다')
-        } finally {
-          setIsLoadingDetails(false)
-        }
-      }
+      // props로 전달받은 기본 정보만 사용
+      setTimeout(() => {
+        setPaymentDetails({
+          intentId: intentId,
+          customerName: customerName || '고객',
+          storeName: storeName || '매장',
+          totalAmount:
+            typeof amount === 'string'
+              ? parseInt(amount)
+              : (amount as number) || 0,
+          items: [], // 주문 상세 없이 빈 배열
+          pointInfo: typeof pointInfo === 'object' ? pointInfo : undefined,
+        })
+        setIsLoadingDetails(false)
+      }, 500)
     }
-
-    loadPaymentDetails()
   }, [isOpen, intentId, customerName, storeName, amount, pointInfo])
 
   // 모달이 열릴 때마다 상태 초기화

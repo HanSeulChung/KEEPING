@@ -112,7 +112,7 @@ export const notificationApi = {
       return eventSource
     },
 
-    // 결제 상세 정보 조회 (public API - 인증 불필요)
+    // 결제 상세 정보 조회
     getPaymentIntent: async (intentPublicId: string): Promise<{
       intentId: string
       storeId: number
@@ -134,19 +134,19 @@ export const notificationApi = {
       }>
     } | null> => {
       try {
-        const response = await fetch(`/api/payments/intent/${intentPublicId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
+        console.log('결제 상세 정보 조회 시작:', intentPublicId)
 
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data) {
-            return result.data
-          }
+        const response = await apiClient.get(
+          `/payments/intent/${intentPublicId}`
+        )
+
+        console.log('결제 상세 정보 응답:', response.data)
+
+        if (response.data?.success && response.data?.data) {
+          return response.data.data
         }
+
+        console.warn('결제 상세 정보 없음:', response.data)
         return null
       } catch (error) {
         console.error('결제 정보 조회 실패:', error)
