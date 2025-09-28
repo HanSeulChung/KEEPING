@@ -358,8 +358,8 @@ public class GroupService {
         GroupMember target = validGroupMember(groupId, targetCustomerId);
         if (target.isLeader()) throw new CustomException(ErrorCode.BAD_REQUEST);
 
-        long remain = walletService.getMemberSharedBalance(group, targetCustomerId);
-        if (remain > 0L) walletService.settleShareToIndividual(group, targetCustomerId);
+        long remain = walletService.getMemberSharedBalance(groupId, targetCustomerId); // 변경
+        if (remain > 0L) walletService.settleShareToIndividual(groupId, targetCustomerId); // 변경
 
         String groupName = group.getGroupName();
         String targetName = target.getUser().getName();
@@ -387,7 +387,7 @@ public class GroupService {
         GroupMember me = validGroupMember(groupId, customerId);
         if (me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
 
-        long refunded = walletService.settleShareToIndividual(group, customerId);
+        long refunded = walletService.settleShareToIndividual(groupId, customerId); // 변경
         groupMemberRepository.delete(me);
 
         long indivBalance = walletService.getTotalIndividualBalance(customerId);
@@ -406,14 +406,15 @@ public class GroupService {
 
     @Transactional
     public GroupDisbandResponseDto disbandGroup(Long groupId, Long leaderId) {
-        Group group = validGroup(groupId);
+        validGroup(groupId);
         GroupMember me = validGroupMember(groupId, leaderId);
         if (!me.isLeader()) throw new CustomException(ErrorCode.ONLY_GROUP_LEADER);
 
         Wallet gw = validGroupWallet(groupId);
+        Long walletId = gw.getWalletId();
         List<Long> memberIds = groupMemberRepository.findMemberIdsByGroupId(groupId);
 
-        Map<Long, Long> refundedByMember = walletService.settleAllMembersShare(group, memberIds);
+        Map<Long, Long> refundedByMember = walletService.settleAllMembersShare(groupId, memberIds); // 변경
         long totalRefunded = refundedByMember.values().stream().mapToLong(Long::longValue).sum();
 
         long remain = balanceRepository.sumByWalletIdForUpdate(gw.getWalletId()).orElse(0L);
@@ -424,8 +425,8 @@ public class GroupService {
         lotRepository.deleteByWalletId(gw.getWalletId());
         balanceRepository.deleteByWalletId(gw.getWalletId());
         groupMemberRepository.deleteByGroupId(groupId);
-        walletRepository.delete(gw);
-        groupRepository.delete(group);
+        walletRepository.deleteById(walletId);
+        groupRepository.deleteById(groupId);
 
         afterCommit(() -> refundedByMember.forEach((cid, amt) ->
                 notificationService.sendToCustomer(

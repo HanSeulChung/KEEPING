@@ -81,11 +81,11 @@ export const getFcmToken = async (): Promise<string | null> => {
     return null
   }
 
-  // VAPID 키 가져오기 (환경 변수 우선, 없으면 하드코딩된 값 사용)
-  const vapidKey =
-    process.env.NEXT_PUBLIC_VAPID_KEY ||
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-    VAPID_KEY
+  // VAPID 키 하드코딩 사용
+  const vapidKey = 'BFqS2cYcLd7EkOb_vgyhAnkSKyTkWEs4XwDrphIaYwGPoPpS5Fh3JGDbrpSqGFNM3nvME0XOs8aKw0xLStpJgpU='
+
+  // vapidKey 타입 검증 추가
+  console.log('vapidKey type:', typeof vapidKey, 'value:', vapidKey)
 
   if (!vapidKey) {
     console.error('VAPID 키가 설정되지 않았습니다')
@@ -103,12 +103,15 @@ export const getFcmToken = async (): Promise<string | null> => {
     return null
   }
 
+  // VAPID 키를 확실히 문자열로 변환 (객체인 경우 방지)
+  const vapidKeyString = typeof vapidKey === 'string' ? vapidKey : String(vapidKey)
+
   // VAPID 키 형식 검증
-  if (vapidKey.length !== 88) {
+  if (vapidKeyString.length !== 88) {
     console.error('잘못된 VAPID 키 형식:', {
-      length: vapidKey.length,
+      length: vapidKeyString.length,
       expected: 88,
-      preview: vapidKey.substring(0, 20) + '...',
+      preview: vapidKeyString.substring(0, 20) + '...',
     })
     console.error('올바른 VAPID Public Key를 Firebase 콘솔에서 확인하세요')
     return null
@@ -186,7 +189,7 @@ export const getFcmToken = async (): Promise<string | null> => {
       attempts++
       try {
         token = await getToken(messaging, {
-          vapidKey,
+          vapidKey: vapidKeyString,
           serviceWorkerRegistration: registration,
         })
 
