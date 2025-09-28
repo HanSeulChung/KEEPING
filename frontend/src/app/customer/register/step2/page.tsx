@@ -1,6 +1,7 @@
 'use client'
 
 import { authApi } from '@/api/authApi'
+import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -10,6 +11,7 @@ const CustomerPinSetup = () => {
   const [pinNumber, setPinNumber] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errors, setErrors] = useState({
     pinNumber: false,
     confirmPin: false,
@@ -105,10 +107,8 @@ const CustomerPinSetup = () => {
         console.warn('사용자 정보 재조회 실패:', meError)
       }
 
-      alert('회원가입이 완료되었습니다!')
-
-      // 홈페이지로 이동
-      router.push('/customer/home')
+      // 성공 모달 표시
+      setShowSuccessModal(true)
     } catch (error) {
       console.error('회원가입 실패:', error)
       alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.')
@@ -119,6 +119,11 @@ const CustomerPinSetup = () => {
 
   const handleBack = () => {
     router.push('/customer/register/step1')
+  }
+
+  const handleLoginRedirect = () => {
+    setShowSuccessModal(false)
+    router.push('/customer/login')
   }
 
   return (
@@ -210,6 +215,48 @@ const CustomerPinSetup = () => {
           </span>
         </button>
       </div>
+
+      {/* 회원가입 성공 모달 */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="회원가입 완료"
+      >
+        <div className="p-6 text-center">
+          <div className="mb-4">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <svg
+                width={32}
+                height={32}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h2 className="font-jalnan mb-2 text-xl font-bold text-black">
+              회원가입 완료!
+            </h2>
+            <p className="font-nanum-square-round-eb text-gray-600">
+              회원가입이 성공적으로 완료되었습니다.
+            </p>
+          </div>
+
+          <button
+            onClick={handleLoginRedirect}
+            className="font-jalnan w-full rounded-lg bg-[#ffc800] px-6 py-3 text-lg font-bold text-white transition-colors hover:bg-[#e6b400]"
+          >
+            로그인하기
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

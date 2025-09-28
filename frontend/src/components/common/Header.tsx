@@ -167,7 +167,7 @@ export default function Header({ title }: HeaderProps = {}) {
   return (
     <div className="mx-auto flex h-[3.75rem] w-full max-w-[412px] items-center justify-between px-4 md:h-[4.5rem] md:max-w-none md:px-8">
       {/* 왼쪽: 뒤로가기 버튼 (모바일) / 메뉴 버튼 (데스크톱) */}
-      <div className="flex w-[60px] justify-start">
+      <div className="flex w-[80px] justify-start">
         <button
           onClick={() => {
             if (isDesktop) {
@@ -247,12 +247,12 @@ export default function Header({ title }: HeaderProps = {}) {
       </div>
 
       {/* 오른쪽: 알림 + 로그인/로그아웃 */}
-      <div className="flex w-[60px] justify-end gap-4">
+      <div className="flex w-[80px] justify-end">
         {/* 로그인 상태일 때만 알림 버튼 표시 */}
         {isLoggedIn && (
           <button
             onClick={handleNotificationClick}
-            className="relative flex items-center justify-center"
+            className="relative -mr-2 flex items-center justify-center"
             aria-label="알림"
           >
             <svg

@@ -99,11 +99,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             // 프론트로 리다이렉트
             String redirectUrl = "";
-<<<<<<< HEAD
-            redirectUrl = UserRole.OWNER.equals(role) ? feBaseUrl + "/owner/dashboard" : feBaseUrl + "/customer/home";
-=======
             redirectUrl = "/auth/callback";
->>>>>>> 20f2d351ed16edaae32f02f76a0cf2af31e59309
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
             response.sendRedirect(redirectUrl);
 
@@ -134,7 +130,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             response.addCookie(regCookie);
 
             if(role.equals(UserRole.CUSTOMER)){
-                response.sendRedirect(feBaseUrl + "/customer/register/step1");
+                response.sendRedirect("/customer/register/step1");
             }
             else {
                 response.sendRedirect("/owner/register/step1");

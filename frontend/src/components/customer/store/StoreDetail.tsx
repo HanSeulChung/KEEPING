@@ -53,6 +53,7 @@ interface MenuItemData {
   soldOut: boolean
   imgUrl: string
   description: string
+  price: number
 }
 
 // 검색바 컴포넌트
@@ -143,8 +144,13 @@ const MenuItem = ({ menu }: { menu: MenuItemData }) => {
         />
       </div>
       <div className="flex-1">
-        <div className="font-nanum-square-round-eb mb-1 text-lg leading-[140%] text-black">
-          {menu.menuName}
+        <div className="flex items-center justify-between">
+          <div className="font-nanum-square-round-eb mb-1 text-lg leading-[140%] text-black">
+            {menu.menuName}
+          </div>
+          <div className="font-nanum-square-round-eb text-lg font-bold text-[#ffc800]">
+            {menu.price.toLocaleString()}원
+          </div>
         </div>
         <div className="font-nanum-square-round-eb text-sm leading-[140%] font-extrabold text-[#99a1af]">
           {menu.description}
@@ -184,13 +190,13 @@ const StoreImageAndInfo = ({
       <div className="mx-4 mt-4 rounded-[20px] border border-gray-200 bg-white px-8 py-6 shadow-lg md:mx-8 md:px-12 md:py-8">
         <div className="text-center">
           {/* 가게 이름과 하트 버튼 */}
-          <div className="mb-2 flex items-center justify-center gap-3">
-            <div className="font-jalnan text-lg leading-[140%] text-black md:text-xl">
+          <div className="relative mb-2 flex items-center justify-center">
+            <div className="font-jalnan text-xl leading-[140%] text-black md:text-2xl">
               {storeData.storeName}
             </div>
             <button
               onClick={() => onToggleLike(storeData.storeId)}
-              className="flex items-center justify-center"
+              className="absolute -top-3 right-0 flex items-center justify-center"
               aria-label={storeData.isLiked ? '찜하기 취소' : '찜하기'}
             >
               <svg
