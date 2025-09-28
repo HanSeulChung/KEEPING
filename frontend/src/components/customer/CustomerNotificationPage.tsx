@@ -370,53 +370,6 @@ const CustomerNotificationPage = () => {
         )}
       </div>
 
-      {/* 결제 승인 모달 - URL 파라미터 또는 SSE 알림으로 팝업 */}
-      {(paymentApprovalModal.isOpen && paymentApprovalModal.data) ||
-      paymentModalData ? (
-        <PaymentApprovalModal
-          isOpen={paymentApprovalModal.isOpen || !!paymentModalData}
-          onClose={() => {
-            hidePaymentApprovalModal()
-            // URL에서 모달 파라미터 제거
-            router.push('/customer/notification')
-          }}
-          intentId={
-            paymentApprovalModal.data?.intentPublicId ||
-            paymentModalData?.intentPublicId
-          }
-          storeName={
-            paymentApprovalModal.data?.storeName || paymentModalData?.storeName
-          }
-          amount={paymentApprovalModal.data?.amount || paymentModalData?.amount}
-          customerName={
-            paymentApprovalModal.data?.customerName ||
-            paymentModalData?.customerName
-          }
-          pointInfo={
-            paymentApprovalModal.data?.pointInfo || paymentModalData?.pointInfo
-              ? {
-                  currentPoints: 0,
-                  usedPoints: 0,
-                  remainingPoints: 0,
-                  ...(typeof (
-                    paymentApprovalModal.data?.pointInfo ||
-                    paymentModalData?.pointInfo
-                  ) === 'object'
-                    ? paymentApprovalModal.data?.pointInfo ||
-                      paymentModalData?.pointInfo
-                    : {}),
-                }
-              : undefined
-          }
-          paymentType="PAYMENT"
-          onSuccess={() => {
-            console.log('결제 승인 완료')
-            hidePaymentApprovalModal()
-            // URL에서 모달 파라미터 제거
-            router.push('/customer/notification')
-          }}
-        />
-      ) : null}
     </div>
   )
 }

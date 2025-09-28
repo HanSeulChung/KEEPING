@@ -319,7 +319,9 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         try {
           console.log('🔍 결제 상세 정보 조회 시작:', intentId)
 
-          const paymentData = await notificationApi.customer.getPaymentIntent(intentId as string)
+          const paymentData = await notificationApi.customer.getPaymentIntent(
+            intentId as string
+          )
 
           if (paymentData) {
             console.log('✅ 결제 상세 정보 조회 성공:', paymentData)
@@ -347,16 +349,22 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       const fallbackToStoredData = () => {
         const storedPayment = currentPayment
         const finalIntentId = storedPayment?.intentPublicId || intentId
-        const finalCustomerName = storedPayment?.storeInfo?.customerName || customerName || '고객'
-        const finalStoreName = storedPayment?.storeInfo?.storeName || storeName || '매장'
-        const finalAmount = storedPayment?.storeInfo?.amount ||
-          (typeof amount === 'string' ? parseInt(amount) : (amount as number)) || 0
+        const finalCustomerName =
+          storedPayment?.storeInfo?.customerName || customerName || '고객'
+        const finalStoreName =
+          storedPayment?.storeInfo?.storeName || storeName || '매장'
+        const finalAmount =
+          storedPayment?.storeInfo?.amount ||
+          (typeof amount === 'string'
+            ? parseInt(amount)
+            : (amount as number)) ||
+          0
 
         console.log('🔄 폴백 데이터 사용:', {
           stored: !!storedPayment,
           intentId: finalIntentId,
           storeName: finalStoreName,
-          amount: finalAmount
+          amount: finalAmount,
         })
 
         setPaymentDetails({
@@ -371,7 +379,15 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
 
       loadPaymentDetails()
     }
-  }, [isOpen, intentId, customerName, storeName, amount, pointInfo, currentPayment])
+  }, [
+    isOpen,
+    intentId,
+    customerName,
+    storeName,
+    amount,
+    pointInfo,
+    currentPayment,
+  ])
 
   // 모달이 열릴 때마다 상태 초기화
   useEffect(() => {
