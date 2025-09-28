@@ -16,14 +16,8 @@ type NotificationSetting = {
 const NotificationPage = () => {
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  const {
-    notifications,
-    markAsRead,
-    markAllAsRead,
-    unreadCount,
-    fcmToken,
-    isConnected,
-  } = useNotificationSystem()
+  const { notifications, markAsRead, markAllAsRead, unreadCount, isConnected } =
+    useNotificationSystem()
 
   const [settings, setSettings] = useState<NotificationSetting[]>([
     { id: 'PAYMENT_CATEGORY', name: '결제/정산 알림', enabled: true },
@@ -265,7 +259,10 @@ const NotificationPage = () => {
             // 스켈레톤 로딩
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse rounded-[15px] border border-gray-200 p-4">
+                <div
+                  key={i}
+                  className="animate-pulse rounded-[15px] border border-gray-200 p-4"
+                >
                   <div className="flex items-start gap-3">
                     <div className="h-8 w-8 rounded-full bg-gray-200"></div>
                     <div className="flex-1">

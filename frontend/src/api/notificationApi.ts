@@ -112,9 +112,7 @@ export const notificationApi = {
     },
 
     // 결제 상세 정보 조회 (public API - 인증 불필요)
-    getPaymentIntent: async (
-      intentPublicId: string
-    ): Promise<any | null> => {
+    getPaymentIntent: async (intentPublicId: string): Promise<any | null> => {
       try {
         const response = await fetch(`/api/payments/intent/${intentPublicId}`, {
           method: 'GET',
@@ -137,13 +135,20 @@ export const notificationApi = {
     // 결제 요청 승인
     approvePayment: async (
       intentId: number | string,
-      pin: string
+      pin: string,
+      idempotencyKey?: string
     ): Promise<boolean> => {
       try {
         const headers = {
-          'Idempotency-Key': generateIdempotencyKey({
-            action: 'payment_approve',
-          }),
+          'Idempotency-Key':
+            idempotencyKey ||
+            generateIdempotencyKey({
+              action: 'payment_approve',
+              data: {
+                intentId: String(intentId),
+                pin: pin,
+              },
+            }),
         } as any
         const res = await apiClient.post(
           `/payments/${intentId}/approve`,

@@ -130,53 +130,27 @@ export const getFcmToken = async (): Promise<string | null> => {
 
     const { getToken } = await import('firebase/messaging')
 
-    // 서비스워커 등록을 더 안정적으로 처리 (중복 등록 방지)
+    // 서비스워커 등록 (단순화)
     let registration: ServiceWorkerRegistration | undefined
     try {
-      // 1. 모든 등록된 서비스워커 확인
-      const registrations = await navigator.serviceWorker.getRegistrations()
+      registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/'
+      })
 
-      // 2. firebase-messaging-sw.js가 이미 등록되어 있는지 확인
-      const firebaseSW = registrations.find(
-        reg =>
-          reg.scope.includes('firebase-messaging-sw') ||
-          reg.active?.scriptURL.includes('firebase-messaging-sw.js')
-      )
-
-      if (firebaseSW) {
-        registration = firebaseSW
-        console.log('[FCM] 기존 firebase-messaging-sw.js 사용')
-      } else {
-        // 3. 다른 서비스워커들 정리 (충돌 방지)
-        for (const reg of registrations) {
-          if (!reg.active?.scriptURL.includes('firebase-messaging-sw.js')) {
-            try {
-              await reg.unregister()
-              console.log('[FCM] 불필요한 서비스워커 해제:', reg.scope)
-            } catch {}
-          }
-        }
-
-        // 4. firebase-messaging-sw.js 새로 등록
-        try {
-          registration = await navigator.serviceWorker.register(
-            '/firebase-messaging-sw.js',
-            {
-              scope: '/',
+      // 서비스워커가 활성화될 때까지 대기
+      if (registration.installing) {
+        await new Promise((resolve) => {
+          registration!.installing!.addEventListener('statechange', () => {
+            if (registration!.installing!.state === 'activated') {
+              resolve(void 0)
             }
-          )
-          await registration.update()
-          console.log('[FCM] firebase-messaging-sw.js 새로 등록됨')
-        } catch (registerError) {
-          console.warn(
-            '[FCM] firebase-messaging-sw.js 등록 실패:',
-            registerError
-          )
-          return null
-        }
+          })
+        })
       }
+
+      console.log('[FCM] Service Worker 등록 성공:', registration.scope)
     } catch (swError) {
-      console.warn('[FCM] Service Worker 처리 실패:', swError)
+      console.warn('[FCM] Service Worker 등록 실패:', swError)
       return null
     }
 

@@ -58,6 +58,8 @@ export default function PaymentApprovalModal({
   )
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [isFinalized, setIsFinalized] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false) // 중복 요청 방지
+  const [processedKeys, setProcessedKeys] = useState<Set<string>>(new Set()) // 처리된 키 추적
 
   // intent 식별 키 생성 (publicId 우선, 없으면 intentId)
   const getIntentKey = () => {
@@ -114,12 +116,18 @@ export default function PaymentApprovalModal({
   }
 
   const handleApprove = async () => {
-    if (isFinalized) return
+    // 중복 요청 방지
+    if (isFinalized || isProcessing || isLoading) {
+      console.log('이미 처리 중이거나 완료된 요청입니다')
+      return
+    }
+
     if (pin.length !== 6) {
       setError('PIN 번호는 6자리를 입력해주세요')
       return
     }
 
+    setIsProcessing(true)
     setIsLoading(true)
     setError('')
 
@@ -132,17 +140,48 @@ export default function PaymentApprovalModal({
         return
       }
 
+      // 멱등성 키 생성 (결제 ID + 사용자 ID + 고유 세션 ID)
+      const userId = localStorage.getItem('userId') || 'anonymous'
+      const sessionId =
+        localStorage.getItem('sessionId') ||
+        `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      // 세션 ID가 없으면 생성해서 저장
+      if (!localStorage.getItem('sessionId')) {
+        localStorage.setItem('sessionId', sessionId)
+      }
+
+      // 멱등성 키: 결제ID_사용자ID_세션ID (동일한 결제에 대해 항상 같은 키)
+      const idempotencyKey = `payment_${actualIntentId}_${userId}_${sessionId}`
+
+      // 이미 처리된 키인지 확인
+      if (processedKeys.has(idempotencyKey)) {
+        console.log('이미 처리된 요청입니다:', idempotencyKey)
+        setError('이미 처리된 요청입니다')
+        setIsProcessing(false)
+        return
+      }
+
+      // 처리 중인 키로 표시
+      setProcessedKeys(prev => new Set(prev).add(idempotencyKey))
+
       const success = await notificationApi.customer.approvePayment(
         actualIntentId,
-        pin
+        pin,
+        idempotencyKey // Idempotency Key 전달
       )
+
       if (success) {
         // 결제 승인 완료 플래그 저장 (로컬)
         try {
           const key = getIntentKey()
           if (key) localStorage.setItem(`payment:finalized:${key}`, 'true')
         } catch {}
+
+        // 즉시 UI 상태 변경 (중복 요청 방지)
         setIsFinalized(true)
+        setIsProcessing(false)
+
         onSuccess?.()
         onClose()
         setPin('')
@@ -161,10 +200,12 @@ export default function PaymentApprovalModal({
         }
       } else {
         setError('결제 승인에 실패했습니다. PIN 번호를 확인해주세요')
+        setIsProcessing(false)
       }
     } catch (error) {
       console.error('결제 승인 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
+      setIsProcessing(false)
     } finally {
       setIsLoading(false)
     }
@@ -408,12 +449,14 @@ export default function PaymentApprovalModal({
           </button>
           <button
             onClick={handleApprove}
-            disabled={isLoading || pin.length !== 6 || isFinalized}
+            disabled={
+              isLoading || isProcessing || pin.length !== 6 || isFinalized
+            }
             className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             {isFinalized
               ? '이미 승인됨'
-              : isLoading
+              : isLoading || isProcessing
                 ? '승인 중...'
                 : '승인하기'}
           </button>

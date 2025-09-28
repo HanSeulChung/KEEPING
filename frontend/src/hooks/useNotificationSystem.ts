@@ -2,17 +2,19 @@
 
 import apiClient from '@/api/axios'
 import { apiConfig, buildURL } from '@/api/config'
-import {
-  deleteFCMToken,
-  registerCustomerFCMToken,
-  registerOwnerFCMToken,
-} from '@/api/fcmApi'
+// FCM API 비활성화 - SSE만 사용
+// import {
+//   deleteFCMToken,
+//   registerCustomerFCMToken,
+//   registerOwnerFCMToken,
+// } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
-import {
-  getFcmToken,
-  requestNotificationPermission,
-  setupForegroundMessageListener,
-} from '@/lib/firebase'
+// FCM 기능 비활성화 - SSE만 사용
+// import {
+//   getFcmToken,
+//   requestNotificationPermission,
+//   setupForegroundMessageListener,
+// } from '@/lib/firebase'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   NotificationCategory,
@@ -44,18 +46,42 @@ interface UseNotificationSystemReturn {
   unreadCount: number
   isConnected: boolean
   isPermissionGranted: boolean
-  fcmToken: string | null
   modalNotification: ModalNotificationState
+  paymentApprovalModal: {
+    isOpen: boolean
+    data?: {
+      intentPublicId?: string
+      customerName?: string
+      pointInfo?: string
+      amount?: number
+      storeName?: string
+    }
+  }
   requestPermission: () => Promise<boolean>
   markAsRead: (id: number) => void
   markAllAsRead: () => void
   addNotification: (
     notification: Omit<NotificationData, 'id' | 'timestamp' | 'isRead'>
   ) => void
-  showModalNotification: (notification: Omit<ModalNotificationState, 'isOpen'>) => void
+  showModalNotification: (
+    notification: Omit<ModalNotificationState, 'isOpen'>
+  ) => void
   hideModalNotification: () => void
-  registerFCM: () => Promise<boolean>
-  unregisterFCM: () => Promise<void>
+  showPaymentApprovalModal: (data: {
+    intentPublicId?: string
+    customerName?: string
+    pointInfo?: string
+    amount?: number
+    storeName?: string
+  }) => void
+  hidePaymentApprovalModal: () => void
+  notifyOwnerPaymentResult: (result: {
+    intentPublicId: string
+    storeName: string
+    customerName: string
+    amount: number
+    isApproved: boolean
+  }) => Promise<void>
   getNotificationCategory: (type: NotificationType) => NotificationCategory
   getNotificationIcon: (type: NotificationType) => string
 }
@@ -66,16 +92,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [isPermissionGranted, setIsPermissionGranted] = useState(false)
-  const [modalNotification, setModalNotification] = useState<ModalNotificationState>({
-    isOpen: false,
-  })
+  const [modalNotification, setModalNotification] =
+    useState<ModalNotificationState>({
+      isOpen: false,
+    })
   const [isOnline, setIsOnline] = useState(true)
-  const [fcmToken, setFcmToken] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('fcmToken')
-    }
-    return null
-  })
+  // FCM 토큰 제거 - SSE만 사용
   const sseAbortControllerRef = useRef<AbortController | null>(null)
   const sseConnectingRef = useRef(false)
   const isVisibleRef = useRef(true)
@@ -84,10 +106,8 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   const maxReconnectAttempts = 5
   const seenEventKeysRef = useRef<Set<string>>(new Set())
 
-  // 알림 시스템 상태 관리
-  const [notificationStrategy, setNotificationStrategy] = useState<
-    'SSE' | 'FCM'
-  >('SSE')
+  // SSE만 사용 - FCM 제거
+  const [notificationStrategy, setNotificationStrategy] = useState<'SSE'>('SSE')
   const sseFailureCountRef = useRef(0)
   const maxSSEFailures = 3
 
@@ -99,33 +119,11 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       : 'desktop'
   }, [])
 
-  // 알림 전략 결정 로직
-  const determineNotificationStrategy = useCallback((): 'SSE' | 'FCM' => {
-    const deviceType = getDeviceType()
-
-    // 1. 백그라운드면 FCM 우선
-    if (!isVisibleRef.current) {
-      return 'FCM'
-    }
-
-    // 2. 오프라인이면 FCM (캐시된 메시지)
-    if (!isOnline) {
-      return 'FCM'
-    }
-
-    // 3. SSE 연결 실패가 많으면 FCM으로 전환
-    if (sseFailureCountRef.current >= maxSSEFailures) {
-      return 'FCM'
-    }
-
-    // 4. 모바일 디바이스면 FCM 우선 (배터리 최적화)
-    if (deviceType === 'mobile') {
-      return 'FCM'
-    }
-
-    // 5. 기본값: SSE (실시간성이 더 좋음)
+  // SSE만 사용 - 전략 결정 로직 단순화
+  const determineNotificationStrategy = useCallback((): 'SSE' => {
+    // 항상 SSE 사용
     return 'SSE'
-  }, [isOnline, getDeviceType])
+  }, [])
 
   // 역할/식별자 보조 함수들 (숫자 id 강제)
   const getUserRole = useCallback((): 'OWNER' | 'CUSTOMER' => {
@@ -275,15 +273,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       )
       setNotificationStrategy(newStrategy)
 
-      // 전략 변경 시 기존 연결 정리 및 새 연결 설정
+      // SSE만 사용 - 전략 변경 없음
       if (newStrategy === 'SSE') {
-        // FCM에서 SSE로 전환
-        disconnectSSE()
-        setTimeout(() => connectSSE().catch(console.error), 500)
-      } else {
-        // SSE에서 FCM으로 전환
-        disconnectSSE()
-        registerFCM().catch(console.error)
+        // SSE 연결 유지
+        if (!isConnected) {
+          connectSSE().catch(console.error)
+        }
       }
     }
   }, [determineNotificationStrategy, notificationStrategy])
@@ -347,11 +342,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     if (sseAbortControllerRef.current || sseConnectingRef.current || !isOnline)
       return
 
-    // 현재 전략이 FCM이면 SSE 연결하지 않음
-    if (notificationStrategy === 'FCM') {
-      console.log('[SSE] 현재 FCM 모드 - SSE 연결 생략')
-      return
-    }
+    // SSE만 사용 - 항상 연결 시도
 
     const userId = getUserNumericId()
     if (!userId) return
@@ -760,81 +751,17 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }
 
   const requestPermission = async (): Promise<boolean> => {
-    const granted = await requestNotificationPermission()
-    setIsPermissionGranted(granted)
-    return granted
-  }
-
-  const registerFCM = async (): Promise<boolean> => {
-    try {
-      if (!user?.id) return false
-      const hasPermission = await requestPermission()
-      if (!hasPermission) return false
-
-      // Firebase SDK로 FCM 토큰 발급
-      const token = await getFcmToken()
-      if (!token) {
-        console.log('[FCM] Firebase에서 토큰을 가져올 수 없습니다.')
-        return false
-      }
-
-      // 이미 등록된 토큰인지 확인 (성능 최적화)
-      const storedToken = localStorage.getItem('fcmToken')
-      const isTokenRegistered = localStorage.getItem(`fcmRegistered_${user.id}`)
-
-      if (storedToken === token && isTokenRegistered === 'true') {
-        console.log('[FCM] 이미 등록된 토큰 - 건너뜀')
-        setFcmToken(token)
-        return true
-      }
-
-      // FCM 토큰을 state와 localStorage에 저장
-      setFcmToken(token)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fcmToken', token)
-      }
-
-      const isOwner = (user.role || 'OWNER') === 'OWNER'
-      const ownerId = user.ownerId || user.id
-      const customerId = user.userId || user.id
-
-      try {
-        // 백엔드에 토큰 등록
-        if (isOwner && ownerId) {
-          await registerOwnerFCMToken(Number(ownerId), token)
-        } else if (!isOwner && customerId) {
-          await registerCustomerFCMToken(Number(customerId), token)
-        }
-
-        // 등록 성공 시 플래그 저장
-        localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-      } catch (registrationError: any) {
-        // 409 에러는 이미 등록된 상태이므로 성공으로 처리
-        if (registrationError?.response?.status === 409) {
-          console.log('이미 등록된 토큰 - 정상 처리')
-          localStorage.setItem(`fcmRegistered_${user.id}`, 'true')
-        } else {
-          throw registrationError
-        }
-      }
-      return true
-    } catch (error) {
-      console.error('[FCM] 등록 실패:', error)
-      return false
+    // 브라우저 알림 권한 요청 (FCM 없이)
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission()
+      const granted = permission === 'granted'
+      setIsPermissionGranted(granted)
+      return granted
     }
+    return false
   }
 
-  const unregisterFCM = async (): Promise<void> => {
-    try {
-      if (user?.id && fcmToken) {
-        await deleteFCMToken(fcmToken)
-        setFcmToken(null)
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('fcmToken')
-        }
-      }
-    } catch {}
-  }
+  // FCM 함수들 제거 - SSE만 사용
 
   // PWA 서비스 워커는 firebase-messaging-sw.js로 통합됨
   // 중복 등록 방지를 위해 별도 등록 제거
@@ -844,13 +771,9 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       if (!userId) return
       const isOwner = getUserRole() === 'OWNER'
       if (isOwner) {
-        await apiClient.put(
-          `/api/notifications/owner/${userId}/${id}/read`
-        )
+        await apiClient.put(`/api/notifications/owner/${userId}/${id}/read`)
       } else {
-        await apiClient.put(
-          `/api/notifications/customer/${userId}/${id}/read`
-        )
+        await apiClient.put(`/api/notifications/customer/${userId}/${id}/read`)
       }
       setNotifications(prev =>
         prev.map(notification =>
@@ -899,12 +822,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }, [getUserNumericId, getUserRole, notifications])
 
   // 모달 알림 관련 함수들
-  const showModalNotification = useCallback((notification: Omit<ModalNotificationState, 'isOpen'>) => {
-    setModalNotification({
-      ...notification,
-      isOpen: true,
-    })
-  }, [])
+  const showModalNotification = useCallback(
+    (notification: Omit<ModalNotificationState, 'isOpen'>) => {
+      setModalNotification({
+        ...notification,
+        isOpen: true,
+      })
+    },
+    []
+  )
 
   const hideModalNotification = useCallback(() => {
     setModalNotification({
@@ -912,62 +838,170 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     })
   }, [])
 
-  // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
-  const showInPageModal = useCallback((notification: NotificationData) => {
-    const userRole = getUserRole()
-
-    // 알림 타입에 따른 기본 설정
-    const getModalConfig = (type: NotificationType) => {
-      switch (type) {
-        case 'PAYMENT_REQUEST':
-          return {
-            title: '결제 요청',
-            confirmText: '확인',
-            autoCloseTime: 8000,
-          }
-        case 'PAYMENT_COMPLETED':
-          return {
-            title: '결제 완료',
-            confirmText: '확인',
-            autoCloseTime: 5000,
-          }
-        case 'PAYMENT_CANCELED':
-          return {
-            title: '결제 취소',
-            confirmText: '확인',
-            autoCloseTime: 5000,
-          }
-        case 'STORE_INFO_UPDATED':
-          return {
-            title: '매장 정보 수정이 완료되었습니다!',
-            confirmText: '확인',
-            autoCloseTime: 5000,
-          }
-        default:
-          return {
-            title: notification.title,
-            confirmText: '확인',
-            autoCloseTime: 5000,
-          }
-      }
+  // 결제 승인 모달을 위한 상태
+  const [paymentApprovalModal, setPaymentApprovalModal] = useState<{
+    isOpen: boolean
+    data?: {
+      intentPublicId?: string
+      customerName?: string
+      pointInfo?: string
+      amount?: number
+      storeName?: string
     }
+  }>({
+    isOpen: false,
+  })
 
-    const modalConfig = getModalConfig(notification.type)
+  // 결제 승인 모달 열기
+  const showPaymentApprovalModal = useCallback(
+    (data: {
+      intentPublicId?: string
+      customerName?: string
+      pointInfo?: string
+      amount?: number
+      storeName?: string
+    }) => {
+      setPaymentApprovalModal({
+        isOpen: true,
+        data,
+      })
+    },
+    []
+  )
 
-    showModalNotification({
-      type: notification.type,
-      title: modalConfig.title,
-      message: notification.message,
-      showConfirmButton: true,
-      showCancelButton: false,
-      confirmText: modalConfig.confirmText,
-      autoCloseTime: modalConfig.autoCloseTime,
-      onConfirm: () => {
-        markAsRead(notification.id)
-        hideModalNotification()
-      },
+  // 결제 승인 모달 닫기
+  const hidePaymentApprovalModal = useCallback(() => {
+    setPaymentApprovalModal({
+      isOpen: false,
     })
-  }, [getUserRole, showModalNotification, markAsRead, hideModalNotification])
+  }, [])
+
+  // 점주에게 결제 결과 알림 전송
+  const notifyOwnerPaymentResult = useCallback(async (result: {
+    intentPublicId: string
+    storeName: string
+    customerName: string
+    amount: number
+    isApproved: boolean
+  }) => {
+    try {
+      // 점주에게 결제 결과 알림 전송 API 호출
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://j13a509.p.ssafy.io/api'}/notifications/owner/payment-result`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify({
+          intentPublicId: result.intentPublicId,
+          storeName: result.storeName,
+          customerName: result.customerName,
+          amount: result.amount,
+          isApproved: result.isApproved,
+          timestamp: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        console.log('점주에게 결제 결과 알림 전송 성공')
+      } else {
+        console.error('점주에게 결제 결과 알림 전송 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('점주에게 결제 결과 알림 전송 오류:', error)
+    }
+  }, [])
+
+  // 인페이지 모달 알림 표시 함수 (브라우저 알림 대신)
+  const showInPageModal = useCallback(
+    (notification: NotificationData) => {
+      const userRole = getUserRole()
+
+      // 알림 타입에 따른 기본 설정
+      const getModalConfig = (type: NotificationType) => {
+        switch (type) {
+          case 'PAYMENT_REQUEST':
+            return {
+              title: '결제 요청',
+              confirmText: '승인하기',
+              cancelText: '거절',
+              autoCloseTime: 8000,
+            }
+          case 'PAYMENT_COMPLETED':
+            return {
+              title: '결제 완료',
+              confirmText: '확인',
+              autoCloseTime: 5000,
+            }
+          case 'PAYMENT_CANCELED':
+            return {
+              title: '결제 취소',
+              confirmText: '확인',
+              autoCloseTime: 5000,
+            }
+          case 'STORE_INFO_UPDATED':
+            return {
+              title: '매장 정보 수정이 완료되었습니다!',
+              confirmText: '확인',
+              autoCloseTime: 5000,
+            }
+          default:
+            return {
+              title: notification.title,
+              confirmText: '확인',
+              autoCloseTime: 5000,
+            }
+        }
+      }
+
+      const modalConfig = getModalConfig(notification.type)
+
+      // PAYMENT_REQUEST인 경우 결제 승인 모달 열기
+      if (notification.type === 'PAYMENT_REQUEST') {
+        // 결제 승인 모달을 위한 데이터 추출
+        const paymentData = {
+          intentPublicId:
+            notification.data?.intentPublicId || notification.data?.intentId,
+          customerName: notification.data?.customerName || '고객',
+          pointInfo: notification.data?.pointInfo || '포인트 정보 없음',
+          amount: notification.data?.amount || 0,
+          storeName: notification.data?.storeName || '매장',
+        }
+
+        // 결제 승인 모달 열기
+        showPaymentApprovalModal(paymentData)
+      } else {
+        // 일반 알림 모달
+        showModalNotification({
+          type: notification.type,
+          title: modalConfig.title,
+          message: notification.message,
+          showConfirmButton: true,
+          showCancelButton: !!modalConfig.cancelText,
+          confirmText: modalConfig.confirmText,
+          cancelText: modalConfig.cancelText,
+          autoCloseTime: modalConfig.autoCloseTime,
+          onConfirm: () => {
+            markAsRead(notification.id)
+            hideModalNotification()
+          },
+          onCancel: modalConfig.cancelText
+            ? () => {
+                markAsRead(notification.id)
+                hideModalNotification()
+              }
+            : undefined,
+        })
+      }
+    },
+    [
+      getUserRole,
+      showModalNotification,
+      markAsRead,
+      hideModalNotification,
+      showPaymentApprovalModal,
+    ]
+  )
 
   const addNotification = useCallback(
     (
@@ -1039,45 +1073,24 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           setIsPermissionGranted(Notification.permission === 'granted')
         }
 
-        // FCM 등록 보장: 권한 상태와 무관하게 시도(내부에서 중복 등록 방지)
-        try {
-          await registerFCM()
-        } catch {}
-
         // 알림 목록 로드
         await fetchNotifications()
 
         // 읽지 않은 알림 개수 초기 조회 (한 번만)
         await fetchUnreadCount()
 
-        // SSE 연결 시도 (포그라운드 실시간 알림용)
+        // SSE 연결 시도 (실시간 알림용)
         try {
           await connectSSE()
-          console.log('[NOTIFICATION] SSE 연결 성공 (포그라운드용)')
+          console.log('[NOTIFICATION] SSE 연결 성공')
         } catch (error) {
           console.warn('[NOTIFICATION] SSE 연결 실패:', error)
         }
-
-        // FCM도 항상 등록 (백그라운드 알림용)
-        try {
-          const fcmSuccess = await registerFCM()
-          if (fcmSuccess) {
-            console.log('[NOTIFICATION] FCM 등록 성공 (백그라운드용)')
-          } else {
-            console.warn('[NOTIFICATION] FCM 등록 실패 - 토큰 발급 불가')
-          }
-        } catch (error) {
-          console.warn('[NOTIFICATION] FCM 등록 실패:', error)
-        }
-
-        // 포그라운드 메시지 리스너 설정
-        await setupForegroundMessageListener()
       }
     }
     initializeNotificationSystem()
     return () => {
       disconnectSSE()
-      unregisterFCM()
     }
   }, [user?.id, isOnline, connectSSE, disconnectSSE])
 
@@ -1086,16 +1099,17 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     unreadCount,
     isConnected: isConnected && isOnline,
     isPermissionGranted,
-    fcmToken,
     modalNotification,
+    paymentApprovalModal,
     requestPermission,
     markAsRead,
     markAllAsRead,
     addNotification,
     showModalNotification,
     hideModalNotification,
-    registerFCM,
-    unregisterFCM,
+    showPaymentApprovalModal,
+    hidePaymentApprovalModal,
+    notifyOwnerPaymentResult,
     getNotificationCategory,
     getNotificationIcon,
   }
