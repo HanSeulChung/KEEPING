@@ -16,6 +16,8 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* iOS 홈화면 아이콘 */}
+        <link rel="apple-touch-icon" href="/icons/logo_owner+cust.png" />
         {/* 폰트 preload로 로딩 최적화 */}
         <link
           rel="preload"
@@ -45,14 +47,11 @@ export default function RootLayout({
                 window.addEventListener('load', function() {
                   // 개발 모드에서는 기존 서비스 워커 해제
                   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                    console.log('개발 모드: 기존 Service Worker 해제');
                     navigator.serviceWorker.getRegistrations()
                       .then(function(registrations) {
                         registrations.forEach(function(registration) {
                           registration.unregister()
-                            .then(function() {
-                              console.log('Service Worker 해제됨:', registration.scope);
-                            });
+                            .then(function() {});
                         });
                       });
                     return;
@@ -60,12 +59,8 @@ export default function RootLayout({
 
                   // Production 환경에서만 등록
                   navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('Service Worker 등록 성공:', registration.scope);
-                    })
-                    .catch(function(error) {
-                      console.log('Service Worker 등록 실패:', error);
-                    });
+                    .then(function(registration) {})
+                    .catch(function(error) {});
 
                   // Firebase Messaging Service Worker 등록
                   navigator.serviceWorker.register('/firebase-messaging-sw.js')
@@ -77,7 +72,7 @@ export default function RootLayout({
                     });
                 });
               }
-            `
+            `,
           }}
         />
       </head>

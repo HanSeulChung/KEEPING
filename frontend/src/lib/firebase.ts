@@ -64,8 +64,9 @@ export const getFirebaseAnalytics = async () => {
   return analytics
 }
 
-// VAPID Key for FCM
-const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_KEY
+// VAPID Key for FCM (두 환경변수 모두 지원)
+const VAPID_KEY =
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_KEY
 
 // FCM 토큰 발급 함수 (개발 환경에서 에러 처리 개선)
 export const getFcmToken = async (): Promise<string | null> => {
@@ -95,7 +96,7 @@ export const getFcmToken = async (): Promise<string | null> => {
       if (process.env.NODE_ENV === 'development') {
         console.log('개발 환경: FCM 토큰 없음 (무시됨)')
       } else {
-        console.warn('토큰을 가져올 수 없음 ❌')
+        console.warn('토큰을 가져올 수 없음 ❌ (VAPID_KEY 확인)')
       }
       return null
     }

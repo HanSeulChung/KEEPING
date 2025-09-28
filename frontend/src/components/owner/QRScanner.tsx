@@ -14,8 +14,6 @@ export default function QRScanner() {
   const [error, setError] = useState<string | null>(null)
   const [scannedData, setScannedData] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [manualInput, setManualInput] = useState('')
-  const [showManualInput, setShowManualInput] = useState(false)
   const [isAuthChecked, setIsAuthChecked] = useState(false)
 
   const accessToken = useMemo(
@@ -26,7 +24,6 @@ export default function QRScanner() {
     []
   )
 
-  // 인증 상태 확인 - 더 관대한 방식
   useEffect(() => {
     const checkAuth = () => {
       if (typeof window !== 'undefined') {
@@ -457,14 +454,7 @@ export default function QRScanner() {
     setScannedData(null)
   }
 
-  // 수동 입력 처리
-  const handleManualInput = () => {
-    if (manualInput.trim()) {
-      setScannedData(manualInput.trim())
-      setShowManualInput(false)
-      setManualInput('')
-    }
-  }
+  //
 
   // 컴포넌트 언마운트 시 QrScanner 정리
   useEffect(() => {
@@ -635,12 +625,6 @@ export default function QRScanner() {
                     >
                       🔄 다시 시도
                     </button>
-                    <button
-                      onClick={() => setShowManualInput(true)}
-                      className="rounded bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
-                    >
-                      ✏️ QR 코드 직접 입력
-                    </button>
                   </div>
                 </div>
               )}
@@ -665,12 +649,6 @@ export default function QRScanner() {
                   >
                     📷 카메라로 QR 스캔하기
                   </button>
-                  <button
-                    onClick={() => setShowManualInput(true)}
-                    className="w-full rounded-lg bg-gray-600 px-6 py-3 text-lg font-bold text-white hover:bg-gray-700"
-                  >
-                    ✏️ QR 코드 직접 입력
-                  </button>
                 </div>
               )}
 
@@ -688,43 +666,7 @@ export default function QRScanner() {
         </div>
       </div>
 
-      {/* 수동 입력 모달 */}
-      {showManualInput && (
-        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h3 className="mb-4 text-lg font-bold">수동으로 QR 코드 입력</h3>
-            <p className="mb-4 text-sm text-gray-600">
-              QR 코드를 스캔할 수 없는 경우, QR 코드의 내용을 직접 입력해주세요.
-            </p>
-            <input
-              type="text"
-              value={manualInput}
-              onChange={e => setManualInput(e.target.value)}
-              placeholder="QR 코드 내용을 입력하세요"
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-              autoFocus
-            />
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={handleManualInput}
-                disabled={!manualInput.trim()}
-                className="flex-1 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                확인
-              </button>
-              <button
-                onClick={() => {
-                  setShowManualInput(false)
-                  setManualInput('')
-                }}
-                className="flex-1 rounded bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* */}
     </>
   )
 }

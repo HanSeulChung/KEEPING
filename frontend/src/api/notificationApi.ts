@@ -1,4 +1,5 @@
 import { NotificationAPI } from '@/types/api'
+import { generateIdempotencyKey } from '@/utils/idempotency'
 import apiClient from './axios'
 
 // 알림 관련 API 함수들
@@ -8,11 +9,6 @@ export const notificationApi = {
     // 읽지 않은 알림 개수 조회
     getUnreadCount: async (customerId: number): Promise<number> => {
       try {
-        console.log(
-          '고객 읽지 않은 알림 개수 조회 시작 - customerId:',
-          customerId
-        )
-
         if (!customerId || isNaN(customerId) || customerId <= 0) {
           console.warn('유효하지 않은 customerId:', customerId)
           return 0
@@ -25,15 +21,8 @@ export const notificationApi = {
           data: number
         }>(`/api/notifications/customer/${customerId}/unread-count`)
 
-        console.log('고객 읽지 않은 알림 개수 조회 성공:', response.data)
         return response.data.data || 0
       } catch (error: any) {
-        console.error('고객 읽지 않은 알림 개수 조회 실패:', {
-          customerId,
-          error: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-        })
         return 0
       }
     },
@@ -45,15 +34,6 @@ export const notificationApi = {
       size: number = 20
     ): Promise<NotificationAPI.NotificationResponseDto[]> => {
       try {
-        console.log(
-          '고객 알림 목록 조회 시작 - customerId:',
-          customerId,
-          'page:',
-          page,
-          'size:',
-          size
-        )
-
         if (!customerId || isNaN(customerId) || customerId <= 0) {
           console.warn('유효하지 않은 customerId:', customerId)
           return []
@@ -74,15 +54,8 @@ export const notificationApi = {
           `/api/notifications/customer/${customerId}?page=${page}&size=${size}`
         )
 
-        console.log('고객 알림 목록 조회 성공:', response.data)
         return response.data.data?.content || []
       } catch (error: any) {
-        console.error('고객 알림 목록 조회 실패:', {
-          customerId,
-          error: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-        })
         return []
       }
     },
@@ -111,7 +84,6 @@ export const notificationApi = {
 
         return response.data.data?.content || []
       } catch (error) {
-        console.error('고객 읽지 않은 알림 조회 실패:', error)
         return []
       }
     },
@@ -127,7 +99,6 @@ export const notificationApi = {
         )
         return true
       } catch (error) {
-        console.error('고객 알림 읽음 처리 실패:', error)
         return false
       }
     },
@@ -139,6 +110,28 @@ export const notificationApi = {
       )
       return eventSource
     },
+
+    // 결제 요청 승인
+    approvePayment: async (
+      intentId: number | string,
+      pin: string
+    ): Promise<boolean> => {
+      try {
+        const headers = {
+          'Idempotency-Key': generateIdempotencyKey({
+            action: 'payment_approve',
+          }),
+        } as any
+        const res = await apiClient.post(
+          `/payments/${intentId}/approve`,
+          { pin },
+          { headers }
+        )
+        return res.status >= 200 && res.status < 300
+      } catch (error) {
+        return false
+      }
+    },
   },
 
   // 점주용 API
@@ -146,8 +139,6 @@ export const notificationApi = {
     // 읽지 않은 알림 개수 조회
     getUnreadCount: async (ownerId: number): Promise<number> => {
       try {
-        console.log('점주 읽지 않은 알림 개수 조회 시작 - ownerId:', ownerId)
-
         if (!ownerId || isNaN(ownerId) || ownerId <= 0) {
           console.warn('유효하지 않은 ownerId:', ownerId)
           return 0
@@ -160,15 +151,8 @@ export const notificationApi = {
           data: number
         }>(`/api/notifications/owner/${ownerId}/unread-count`)
 
-        console.log('점주 읽지 않은 알림 개수 조회 성공:', response.data)
         return response.data.data || 0
       } catch (error: any) {
-        console.error('점주 읽지 않은 알림 개수 조회 실패:', {
-          ownerId,
-          error: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-        })
         return 0
       }
     },
@@ -180,15 +164,6 @@ export const notificationApi = {
       size: number = 20
     ): Promise<NotificationAPI.NotificationResponseDto[]> => {
       try {
-        console.log(
-          '점주 알림 목록 조회 시작 - ownerId:',
-          ownerId,
-          'page:',
-          page,
-          'size:',
-          size
-        )
-
         if (!ownerId || isNaN(ownerId) || ownerId <= 0) {
           console.warn('유효하지 않은 ownerId:', ownerId)
           return []
@@ -209,16 +184,8 @@ export const notificationApi = {
           }
         }>(`/api/notifications/owner/${ownerId}?page=${page}&size=${size}`)
 
-        console.log('점주 알림 목록 조회 성공:', response.data)
         return response.data.data?.content || []
       } catch (error: any) {
-        console.error('점주 알림 목록 조회 실패:', {
-          ownerId,
-          error: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-        })
-
         // 에러 발생 시 더미 데이터 사용하지 않음
         return []
       }
@@ -248,7 +215,6 @@ export const notificationApi = {
 
         return response.data.data?.content || []
       } catch (error) {
-        console.error('점주 읽지 않은 알림 조회 실패:', error)
         return []
       }
     },
@@ -264,7 +230,6 @@ export const notificationApi = {
         )
         return true
       } catch (error) {
-        console.error('점주 알림 읽음 처리 실패:', error)
         return false
       }
     },
