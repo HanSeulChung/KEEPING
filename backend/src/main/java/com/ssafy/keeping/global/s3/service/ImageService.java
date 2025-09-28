@@ -58,7 +58,18 @@ public class ImageService {
         return getPublicUrl(fileName);
     }
 
-    public String uploadImage(MultipartFile image) {
+    public String uploadImage(MultipartFile image, String kindOfImage) {
+        // 파일이 없을때 기본 basic 이미지 url로 반환
+        if (image.isEmpty() || image == null) {
+
+            String basicImageFileName =
+                    "store".equals(kindOfImage.toLowerCase()) ?
+                            "storeBasicImage.jpg"
+                            : "menuBasicImage.jpg";
+
+            return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, amazonS3.getRegionName(), basicImageFileName);
+        }
+
         String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
 
         // 메타데이터 설정

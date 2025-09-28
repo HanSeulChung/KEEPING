@@ -63,7 +63,7 @@ public class StoreService {
 
 
         // 이미지 파일
-        String imgUrl = imageService.uploadImage((requestDto.getImgFile()));
+        String imgUrl = imageService.uploadImage((requestDto.getImgFile()), "store");
         if(imgUrl == null || imgUrl.isEmpty()) {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }

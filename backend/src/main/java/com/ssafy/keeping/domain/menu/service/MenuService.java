@@ -70,7 +70,7 @@ public class MenuService {
             throw new CustomException(ErrorCode.DUPLICATE_RESOURCE);
 
         // 이미지 url 수정
-        String imgUrl = imageService.uploadImage(requestDto.getImgFile());
+        String imgUrl = imageService.uploadImage(requestDto.getImgFile(), "menu");
         if(imgUrl == null || imgUrl.isEmpty()) {
             throw new CustomException(ErrorCode.IMAGE_UPLOAD_ERROR);
         }
