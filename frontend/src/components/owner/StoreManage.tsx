@@ -448,7 +448,7 @@ const StoreManage = () => {
             setEditingMenu(null)
           }}
           title="메뉴 수정"
-          height="h-[500px]"
+          height="h-[600px]"
           variant="owner"
         >
           <MenuEditModal
@@ -1402,7 +1402,7 @@ const MenuEditModal = ({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="max-h-[60vh] space-y-4 overflow-auto px-1">
+      <div className="flex-1 space-y-4 overflow-y-auto px-1">
         <div>
           <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
             메뉴명 *
