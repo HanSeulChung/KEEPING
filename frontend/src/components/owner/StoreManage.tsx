@@ -6,6 +6,7 @@ import { useMenuManagement } from '@/hooks/useMenuManagement'
 import { useStoreStore } from '@/store/useStoreStore'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { Modal } from '../ui/Modal'
 import ChargeBonusManagement from './ChargeBonusManagement'
 import ImageUploadModal from './ImageUploadModal'
 
@@ -148,82 +149,80 @@ const StoreManage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-center gap-4">
-          <h1 className="font-['Tenada'] text-3xl font-extrabold text-black sm:text-4xl">
-            {accountName || selectedStore?.storeName || '매장'} 관리
+    <div className="min-h-screen bg-[#F6FCFF]">
+      <div className="mx-auto w-full max-w-4xl bg-white">
+        {/* 상단 헤더 */}
+        <div className="flex w-full items-center bg-[#76d4ff] px-4 py-3">
+          <h1 className="font-jalnan text-xl leading-[140%] text-white">
+            매장 관리
           </h1>
-          <div className="h-8 w-8">
-            <svg
-              width={31}
-              height={31}
-              viewBox="0 0 31 31"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12.0625 28L11.5625 24C11.2917 23.8958 11.0365 23.7708 10.7969 23.625C10.5573 23.4792 10.3229 23.3229 10.0938 23.1562L6.375 24.7188L2.9375 18.7812L6.15625 16.3438C6.13542 16.1979 6.125 16.0573 6.125 15.9219V15.0781C6.125 14.9427 6.13542 14.8021 6.15625 14.6562L2.9375 12.2188L6.375 6.28125L10.0938 7.84375C10.3229 7.67708 10.5625 7.52083 10.8125 7.375C11.0625 7.22917 11.3125 7.10417 11.5625 7L12.0625 3H18.9375L19.4375 7C19.7083 7.10417 19.9635 7.22917 20.2031 7.375C20.4427 7.52083 20.6771 7.67708 20.9062 7.84375L24.625 6.28125L28.0625 12.2188L24.8438 14.6562C24.8646 14.8021 24.875 14.9427 24.875 15.0781V15.9219C24.875 16.0573 24.8542 16.1979 24.8125 16.3438L28.0312 18.7812L24.5938 24.7188L20.9062 23.1562C20.6771 23.3229 20.4375 23.4792 20.1875 23.625C19.9375 23.7708 19.6875 23.8958 19.4375 24L18.9375 28H12.0625ZM15.5625 19.875C16.7708 19.875 17.8021 19.4479 18.6562 18.5938C19.5104 17.7396 19.9375 16.7083 19.9375 15.5C19.9375 14.2917 19.5104 13.2604 18.6562 12.4062C17.8021 11.5521 16.7708 11.125 15.5625 11.125C14.3333 11.125 13.2969 11.5521 12.4531 12.4062C11.6094 13.2604 11.1875 14.2917 11.1875 15.5C11.1875 16.7083 11.6094 17.7396 12.4531 18.5938C13.2969 19.4479 14.3333 19.875 15.5625 19.875Z"
-                fill="#1D1B20"
-              />
-            </svg>
-          </div>
         </div>
 
         {/* 가게 이미지 */}
-        <div className="mb-6 flex justify-center">
-          <div className="flex h-48 w-full max-w-md items-center justify-center overflow-hidden border border-black bg-gray-100">
-            <img
-              src={selectedStore?.imgUrl || '/owner.png'}
-              alt={selectedStore?.storeName || '가게 이미지'}
-              className="h-full w-full object-cover"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-                e.currentTarget.parentElement!.innerHTML = `
-                  <div class="flex h-full w-full items-center justify-center">
-                    <span class="font-['nanumsquare'] text-gray-500 text-center">
-                      ${selectedStore?.storeName || '가게'}<br/>이미지
-                    </span>
-                  </div>
-                `
-              }}
-            />
+        <div className="mb-6 flex justify-center px-4 pt-6">
+          <div className="relative">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+              <img
+                src={selectedStore?.imgUrl || '/owner.png'}
+                alt={selectedStore?.storeName || '가게 이미지'}
+                className="h-full w-full object-cover"
+                onError={e => {
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.parentElement!.innerHTML = `
+                    <div class="flex h-full w-full items-center justify-center">
+                      <span class="font-jalnan text-gray-500 text-center text-sm">
+                        ${selectedStore?.storeName || '가게'}<br/>이미지
+                      </span>
+                    </div>
+                  `
+                }}
+              />
+            </div>
+            <button
+              onClick={() => setShowImageModal(true)}
+              className="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#76d4ff] text-white"
+            >
+              <svg
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 4V20M20 12H4"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* 가게 이미지 변경하기 버튼 */}
-        <div className="mb-6 flex justify-center">
-          <button
-            onClick={() => setShowImageModal(true)}
-            className="border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold transition-colors hover:bg-gray-50"
-          >
-            가게 이미지 변경하기
-          </button>
-        </div>
-
         {/* 매장 정보 */}
-        <div className="mb-6 flex justify-center">
-          {/* 매장 기본 정보 */}
-          <div className="w-full max-w-md border border-black bg-white p-4">
-            <h3 className="mb-3 font-['nanumsquare'] text-lg font-bold text-black">
+        <div className="mb-6 px-4">
+          <div className="rounded-[20px] bg-white p-4 shadow-sm">
+            <h3 className="font-jalnan mb-4 text-lg leading-[140%] text-black">
               매장 정보
             </h3>
             <div className="space-y-3">
               {/* 첫 번째 줄: 매장명 + 카테고리 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between">
-                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-600">
                     매장명
                   </span>
-                  <span className="font-['nanumsquare'] text-sm font-medium">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-black">
                     {selectedStore?.storeName || '정보 없음'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-600">
                     카테고리
                   </span>
-                  <span className="font-['nanumsquare'] text-sm font-medium">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-black">
                     {selectedStore?.category || '정보 없음'}
                   </span>
                 </div>
@@ -232,18 +231,18 @@ const StoreManage = () => {
               {/* 두 번째 줄: 등록 메뉴 + 찜 개수 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between">
-                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-600">
                     등록 메뉴
                   </span>
-                  <span className="font-['nanumsquare'] text-sm font-medium">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-black">
                     {menus.length}개
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-600">
                     찜 개수
                   </span>
-                  <span className="font-['nanumsquare'] text-sm font-medium text-red-500">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-red-500">
                     {favoriteLoading
                       ? '로딩...'
                       : `${favoriteCount.toLocaleString()}개`}
@@ -254,10 +253,10 @@ const StoreManage = () => {
               {/* 세 번째 줄: 운영 상태 (혼자) */}
               <div className="flex justify-center">
                 <div className="flex w-48 justify-between">
-                  <span className="font-['nanumsquare'] text-sm text-gray-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-600">
                     운영 상태
                   </span>
-                  <span className="font-['nanumsquare'] text-sm font-medium text-green-600">
+                  <span className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-green-600">
                     운영중
                   </span>
                 </div>
@@ -266,90 +265,50 @@ const StoreManage = () => {
           </div>
         </div>
 
-        {/* 탭 아이콘들 */}
-        <div className="mb-6 flex items-center justify-center gap-4">
-          <button
-            onClick={() => setActiveTab('charge')}
-            className={`flex items-center gap-2 ${
-              activeTab === 'charge' ? 'opacity-100' : 'opacity-60'
-            }`}
-          >
-            <svg
-              width={18}
-              height={18}
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="9.5"
-                cy="9.25586"
-                r="7.5"
-                fill={activeTab === 'charge' ? '#FFDB69' : 'white'}
-                stroke="black"
-              />
-              <path
-                d="M12.5 2.25586C12.5 2.25586 8.3247 3.16111 6.17521 4.8372C3.93077 6.58733 2.01267 10.6457 2.01267 10.6457"
-                stroke="black"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="font-['nanumsquare'] text-xs font-extrabold text-black">
-              충전 금액
-            </span>
-          </button>
+        {/* 탭 네비게이션 */}
+        <div className="mb-6 flex w-full items-center justify-center gap-4 px-4">
           <button
             onClick={() => setActiveTab('menu')}
-            className={`flex items-center gap-2 ${
-              activeTab === 'menu' ? 'opacity-100' : 'opacity-60'
+            className={`flex items-center justify-center rounded-[15px] px-6 py-3 ${
+              activeTab === 'menu'
+                ? 'bg-[#76d4ff] text-white'
+                : 'bg-gray-100 text-gray-600'
             }`}
           >
-            <svg
-              width={18}
-              height={18}
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="9.19653"
-                cy="9.25586"
-                r="7.5"
-                fill={activeTab === 'menu' ? '#FFDB69' : 'white'}
-                stroke="black"
-              />
-              <path
-                d="M12.1965 2.25586C12.1965 2.25586 8.02123 3.16111 5.87174 4.8372C3.6273 6.58733 1.70921 10.6457 1.70921 10.6457"
-                stroke="black"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="font-['nanumsquare'] text-xs font-extrabold text-black">
-              메뉴
-            </span>
+            <span className="font-jalnan text-sm leading-[140%]">메뉴</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('charge')}
+            className={`flex items-center justify-center rounded-[15px] px-6 py-3 ${
+              activeTab === 'charge'
+                ? 'bg-[#76d4ff] text-white'
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            <span className="font-jalnan text-sm leading-[140%]">충전금액</span>
           </button>
           {activeTab === 'menu' && (
             <button
               onClick={() => setShowMenuAddModal(true)}
-              className="border border-black bg-white px-4 py-2 font-['nanumsquare'] text-sm transition-colors hover:bg-gray-50"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#76d4ff] text-white"
             >
-              +
+              <span className="font-jalnan text-lg leading-[140%]">+</span>
             </button>
           )}
         </div>
 
         {/* 메뉴 탭 내용 */}
         {activeTab === 'menu' && (
-          <div className="mb-6 space-y-4">
+          <div className="mb-6 space-y-4 px-4">
             {loading ? (
               <div className="py-8 text-center">
-                <div className="font-['nanumsquare'] text-lg">
+                <div className="font-nanum-square-round-eb text-lg leading-[140%] font-bold text-gray-600">
                   메뉴를 불러오는 중...
                 </div>
               </div>
             ) : error ? (
               <div className="py-8 text-center">
-                <div className="mb-4 font-['nanumsquare'] text-red-500">
+                <div className="font-nanum-square-round-eb mb-4 text-red-500">
                   {error}
                 </div>
                 <button
@@ -357,30 +316,33 @@ const StoreManage = () => {
                     clearError()
                     if (storeId) fetchMenus(parseInt(storeId))
                   }}
-                  className="rounded bg-gray-800 px-4 py-2 text-white transition-colors hover:bg-gray-700"
+                  className="font-jalnan rounded-[15px] bg-[#76d4ff] px-4 py-2 text-sm leading-[140%] text-white transition-colors hover:bg-[#5bb3e6]"
                 >
                   다시 시도
                 </button>
               </div>
             ) : menus.length === 0 ? (
               <div className="py-8 text-center">
-                <div className="font-['nanumsquare'] text-gray-500">
+                <div className="font-nanum-square-round-eb text-gray-500">
                   등록된 메뉴가 없습니다
                 </div>
               </div>
             ) : (
               menus.map(item => (
-                <div key={item.menuId} className="border border-black p-4">
+                <div
+                  key={item.menuId}
+                  className="rounded-[20px] bg-white p-4 shadow-sm"
+                >
                   <div className="flex items-center gap-4">
                     {/* 이미지 */}
                     {item.imgUrl ? (
                       <img
                         src={item.imgUrl}
                         alt={item.menuName}
-                        className="h-20 w-20 flex-shrink-0 rounded border border-gray-300 object-cover"
+                        className="h-16 w-16 flex-shrink-0 rounded-[15px] object-cover"
                       />
                     ) : (
-                      <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-100">
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[15px] bg-gray-100">
                         <span className="text-xs text-gray-400">
                           이미지 없음
                         </span>
@@ -389,10 +351,10 @@ const StoreManage = () => {
 
                     {/* 메뉴명과 카테고리 */}
                     <div className="flex-1">
-                      <h3 className="mb-1 font-['nanumsquare'] text-lg text-black">
+                      <h3 className="font-jalnan mb-1 text-base leading-[140%] text-black">
                         {item.menuName}
                       </h3>
-                      <span className="rounded bg-gray-100 px-2 py-1 font-['nanumsquare'] text-sm text-gray-500">
+                      <span className="font-nanum-square-round-eb rounded-[10px] bg-[#f0f0f0] px-2 py-1 text-xs leading-[140%] font-bold text-gray-600">
                         {item.categoryName}
                       </span>
                     </div>
@@ -401,7 +363,7 @@ const StoreManage = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditMenu(item.menuId)}
-                        className="rounded bg-gray-100 px-3 py-1 font-['Inter'] text-xs text-black transition-colors hover:bg-gray-200"
+                        className="font-nanum-square-round-eb rounded-[10px] bg-[#6caeff] px-3 py-1 text-xs leading-[140%] font-bold text-white transition-colors hover:bg-[#5a9de6]"
                       >
                         수정
                       </button>
@@ -409,7 +371,7 @@ const StoreManage = () => {
                         onClick={() =>
                           handleDeleteMenu(item.menuId, item.menuName)
                         }
-                        className="rounded bg-red-50 px-3 py-1 font-['Inter'] text-xs text-red-500 transition-colors hover:bg-red-100"
+                        className="font-nanum-square-round-eb rounded-[10px] bg-[#ff6f6f] px-3 py-1 text-xs leading-[140%] font-bold text-white transition-colors hover:bg-[#e65a5a]"
                       >
                         삭제
                       </button>
@@ -422,34 +384,57 @@ const StoreManage = () => {
         )}
 
         {/* 충전금액 탭 내용 */}
-        {activeTab === 'charge' && <ChargeBonusManagement storeId={storeId} />}
+        {activeTab === 'charge' && (
+          <div className="px-4">
+            <ChargeBonusManagement storeId={storeId} />
+          </div>
+        )}
       </div>
 
       {/* 메뉴 추가 모달 */}
       {showMenuAddModal && (
-        <MenuAddModal
+        <Modal
+          isOpen={showMenuAddModal}
           onClose={() => setShowMenuAddModal(false)}
-          storeId={storeId}
-          addMenu={addMenu}
-          fetchMenus={() => fetchMenus(parseInt(storeId!))}
-        />
+          title="메뉴 추가"
+          height="h-[700px]"
+          variant="owner"
+        >
+          <MenuAddModal
+            onClose={() => setShowMenuAddModal(false)}
+            storeId={storeId}
+            addMenu={addMenu}
+            fetchMenus={() => fetchMenus(parseInt(storeId!))}
+          />
+        </Modal>
       )}
 
       {/* 메뉴 수정 모달 */}
       {showMenuEditModal && editingMenu && (
-        <MenuEditModal
+        <Modal
+          isOpen={showMenuEditModal}
           onClose={() => {
             setShowMenuEditModal(false)
             setEditingMenu(null)
           }}
-          storeId={storeId}
-          menu={editingMenu}
-          onUpdate={() => {
-            if (storeId) {
-              fetchMenus(parseInt(storeId))
-            }
-          }}
-        />
+          title="메뉴 수정"
+          height="h-[500px]"
+          variant="owner"
+        >
+          <MenuEditModal
+            onClose={() => {
+              setShowMenuEditModal(false)
+              setEditingMenu(null)
+            }}
+            storeId={storeId}
+            menu={editingMenu}
+            onUpdate={() => {
+              if (storeId) {
+                fetchMenus(parseInt(storeId))
+              }
+            }}
+          />
+        </Modal>
       )}
 
       {/* 이미지 업로드 모달 */}
@@ -703,498 +688,235 @@ const MenuAddModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-['Tenada'] text-lg font-extrabold text-black">
-            메뉴 추가
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
-        </div>
-
-        {!addMethod && (
-          <div className="space-y-4">
-            {categories.length === 0 && (
-              <div className="mb-4 rounded border border-yellow-200 bg-yellow-50 p-4">
-                <p className="text-center font-['nanumsquare'] text-yellow-800">
-                  메뉴를 추가하려면 먼저 카테고리를 생성해야 합니다.
-                </p>
-              </div>
-            )}
-
-            <p className="text-center font-['nanumsquare'] text-gray-600">
-              {categories.length === 0
-                ? '카테고리를 먼저 생성하거나 메뉴를 추가하세요'
-                : '메뉴를 추가하는 방법을 선택하세요'}
-            </p>
-
-            <div className="grid grid-cols-3 gap-4">
-              <button
-                onClick={() => setAddMethod('category')}
-                className="flex flex-col items-center gap-3 rounded-lg border border-black p-6 transition-colors hover:bg-gray-50"
-              >
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 6H20M4 12H20M4 18H20"
-                    stroke="black"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="font-['nanumsquare'] text-sm font-bold">
-                  카테고리 관리
-                </span>
-                <span className="text-center font-['nanumsquare'] text-xs text-gray-500">
-                  메뉴 카테고리를
-                  <br />
-                  생성하고 관리
-                </span>
-              </button>
-              <button
-                onClick={() =>
-                  categories.length > 0
-                    ? setAddMethod('ocr')
-                    : alert('카테고리를 먼저 생성하세요.')
-                }
-                className={`flex flex-col items-center gap-3 rounded-lg border border-black p-6 transition-colors ${categories.length > 0 ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-50'}`}
-              >
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-                    stroke="black"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="font-['nanumsquare'] text-sm font-bold">
-                  OCR 스캔
-                </span>
-                <span className="text-center font-['nanumsquare'] text-xs text-gray-500">
-                  메뉴판 사진을 촬영하여
-                  <br />
-                  자동으로 메뉴 정보 추출
-                </span>
-              </button>
-              <button
-                onClick={() =>
-                  categories.length > 0
-                    ? setAddMethod('manual')
-                    : alert('카테고리를 먼저 생성하세요.')
-                }
-                className={`flex flex-col items-center gap-3 rounded-lg border border-black p-6 transition-colors ${categories.length > 0 ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-50'}`}
-              >
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 4V20M20 12H4"
-                    stroke="black"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="font-['nanumsquare'] text-sm font-bold">
-                  수동 등록
-                </span>
-                <span className="text-center font-['nanumsquare'] text-xs text-gray-500">
-                  메뉴 정보를 직접 입력하여
-                  <br />
-                  하나씩 등록
-                </span>
-              </button>
+    <div className="h-full w-full">
+      {!addMethod && (
+        <div className="space-y-4">
+          {categories.length === 0 && (
+            <div className="mb-4 rounded-[10px] border border-blue-200 bg-blue-50 p-4">
+              <p className="font-nanum-square-round-eb text-center text-blue-800">
+                메뉴를 추가하려면 먼저 카테고리를 생성해야 합니다.
+              </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 카테고리 관리 */}
-        {addMethod === 'category' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAddMethod(null)}
-                className="text-gray-500 hover:text-gray-700"
+          <p className="font-nanum-square-round-eb text-center text-gray-600">
+            {categories.length === 0
+              ? '카테고리를 먼저 생성하거나 메뉴를 추가하세요'
+              : '메뉴를 추가하는 방법을 선택하세요'}
+          </p>
+
+          <div className="grid grid-cols-3 gap-4">
+            <button
+              onClick={() => setAddMethod('category')}
+              className="flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors hover:bg-blue-50"
+            >
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                ← 뒤로
-              </button>
-              <h4 className="font-['nanumsquare'] text-lg font-bold">
-                카테고리 관리
-              </h4>
-            </div>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newCategoryName}
-                  onChange={e => setNewCategoryName(e.target.value)}
-                  placeholder="새 카테고리 이름"
-                  className="flex-1 rounded border border-gray-300 px-3 py-2"
-                  onKeyPress={e => e.key === 'Enter' && handleCreateCategory()}
+                <path
+                  d="M4 6H20M4 12H20M4 18H20"
+                  stroke="#76d4ff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
-                <button
-                  onClick={handleCreateCategory}
-                  className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white hover:bg-gray-800"
-                >
-                  추가
-                </button>
-              </div>
-              <div className="space-y-2">
-                <h5 className="font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  현재 카테고리 ({categories.length}개)
-                </h5>
-                {categories.length === 0 ? (
-                  <p className="py-4 text-center font-['nanumsquare'] text-sm text-gray-500">
-                    등록된 카테고리가 없습니다
-                  </p>
-                ) : (
-                  <div className="max-h-48 space-y-2 overflow-y-auto">
-                    {categories.map(category => (
-                      <div
-                        key={category.categoryId}
-                        className="flex items-center justify-between rounded border border-gray-200 p-2"
-                      >
-                        <span className="font-['nanumsquare'] text-sm">
-                          {category.categoryName}
-                        </span>
-                        <button
-                          onClick={() =>
-                            handleDeleteCategory(category.categoryId)
-                          }
-                          className="rounded px-2 py-1 font-['nanumsquare'] text-xs text-red-500 transition-colors hover:bg-red-50"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* OCR 스캔 */}
-        {addMethod === 'ocr' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAddMethod(null)}
-                className="text-gray-500 hover:text-gray-700"
+              </svg>
+              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
+                카테고리 관리
+              </span>
+              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+                메뉴 카테고리를
+                <br />
+                생성하고 관리
+              </span>
+            </button>
+            <button
+              onClick={() =>
+                categories.length > 0
+                  ? setAddMethod('ocr')
+                  : alert('카테고리를 먼저 생성하세요.')
+              }
+              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
+            >
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                ← 뒤로
-              </button>
-              <h4 className="font-['nanumsquare'] text-lg font-bold">
+                <path
+                  d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                  stroke="#76d4ff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
                 OCR 스캔
-              </h4>
+              </span>
+              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+                메뉴판 사진을 촬영하여
+                <br />
+                자동으로 메뉴 정보 추출
+              </span>
+            </button>
+            <button
+              onClick={() =>
+                categories.length > 0
+                  ? setAddMethod('manual')
+                  : alert('카테고리를 먼저 생성하세요.')
+              }
+              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
+            >
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 4V20M20 12H4"
+                  stroke="#76d4ff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
+                수동 등록
+              </span>
+              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+                메뉴 정보를 직접 입력하여
+                <br />
+                하나씩 등록
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 카테고리 관리 */}
+      {addMethod === 'category' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddMethod(null)}
+              className="text-[#76d4ff] hover:text-[#5bb3e6]"
+            >
+              <svg
+                width={25}
+                height={25}
+                viewBox="0 0 25 25"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.9 12.1095L15.5384 16.6708L14.1502 18.0825L8.10006 12.133L14.0495 6.0829L15.4612 7.47111L10.9 12.1095Z"
+                  fill="#76d4ff"
+                  stroke="#76d4ff"
+                  strokeWidth={2}
+                />
+              </svg>
+            </button>
+            <h4 className="font-jalnan text-lg leading-[140%] text-[#76d4ff]">
+              카테고리 관리
+            </h4>
+          </div>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                placeholder="새 카테고리 이름"
+                className="font-nanum-square-round-eb flex-1 rounded-[10px] border border-gray-300 px-3 py-2"
+                onKeyPress={e => e.key === 'Enter' && handleCreateCategory()}
+              />
+              <button
+                onClick={handleCreateCategory}
+                className="font-jalnan rounded-[10px] bg-[#76d4ff] px-4 py-2 text-sm leading-[140%] text-white hover:bg-[#5bb3e6]"
+              >
+                추가
+              </button>
             </div>
-
-            {!ocrImage && (
-              <div className="flex h-48 w-full items-center justify-center border border-dashed border-gray-300 bg-gray-50">
-                <label className="cursor-pointer rounded-lg border border-black bg-white px-4 py-2 font-['nanumsquare'] text-xs font-bold text-black transition-colors hover:bg-gray-100">
-                  메뉴판 사진 선택
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        // 파일 크기 검증 (1MB = 1048576 bytes)
-                        const maxFileSize = 1048576 // 1MB
-                        if (file.size > maxFileSize) {
-                          alert(
-                            '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
-                              (file.size / 1024 / 1024).toFixed(2) +
-                              'MB'
-                          )
-                          // 파일 입력 초기화
-                          e.target.value = ''
-                          return
-                        }
-                        handleOcrUpload(file)
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-            )}
-
-            {isProcessing && (
-              <div className="py-8 text-center">
-                <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-black"></div>
-                <p className="font-['nanumsquare'] text-gray-600">
-                  메뉴 정보를 인식하는 중...
+            <div className="space-y-2">
+              <h5 className="font-nanum-square-round-eb text-sm leading-[140%] font-bold text-gray-700">
+                현재 카테고리 ({categories.length}개)
+              </h5>
+              {categories.length === 0 ? (
+                <p className="font-nanum-square-round-eb py-4 text-center text-sm leading-[140%] text-gray-500">
+                  등록된 카테고리가 없습니다
                 </p>
-              </div>
-            )}
-
-            {ocrResults.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-md font-['nanumsquare'] font-bold">
-                    인식된 메뉴 ({ocrResults.length}개)
-                  </h5>
-                  <p className="font-['nanumsquare'] text-xs text-gray-500">
-                    각 메뉴를 개별로 등록하세요
-                  </p>
-                </div>
-                <div className="max-h-64 space-y-3 overflow-y-auto">
-                  {ocrResults.map((menu, index) => (
+              ) : (
+                <div className="max-h-48 space-y-2 overflow-y-auto">
+                  {categories.map(category => (
                     <div
-                      key={`ocr-${index}`}
-                      className="rounded border border-gray-200 p-3"
+                      key={category.categoryId}
+                      className="flex items-center justify-between rounded-[10px] border border-gray-200 p-2"
                     >
-                      <div className="mb-3 grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                            메뉴명
-                          </label>
-                          <input
-                            type="text"
-                            value={menu.name}
-                            onChange={e =>
-                              handleOcrResultChange(
-                                index,
-                                'name',
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                            가격
-                          </label>
-                          <input
-                            type="number"
-                            value={menu.price}
-                            onChange={e =>
-                              handleOcrResultChange(
-                                index,
-                                'price',
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                            카테고리 *
-                          </label>
-                          <select
-                            value={menu.categoryId || ''}
-                            onChange={e =>
-                              handleOcrResultChange(
-                                index,
-                                'categoryId',
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                          >
-                            <option value="">카테고리 선택</option>
-                            {categories.map(cat => (
-                              <option
-                                key={`ocr-cat-${cat.categoryId}`}
-                                value={cat.categoryId}
-                              >
-                                {cat.categoryName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                            설명
-                          </label>
-                          <input
-                            type="text"
-                            value={menu.description}
-                            onChange={e =>
-                              handleOcrResultChange(
-                                index,
-                                'description',
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <label className="mb-1 block font-['nanumsquare'] text-xs text-gray-600">
-                          이미지 *
-                        </label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => {
-                            const file = e.target.files?.[0]
-                            if (file) {
-                              // 파일 크기 검증 (1MB = 1048576 bytes)
-                              const maxFileSize = 1048576 // 1MB
-                              if (file.size > maxFileSize) {
-                                alert(
-                                  '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
-                                    (file.size / 1024 / 1024).toFixed(2) +
-                                    'MB'
-                                )
-                                // 파일 입력 초기화
-                                e.target.value = ''
-                                return
-                              }
-                            }
-                            handleOcrResultChange(index, 'imgFile', file)
-                          }}
-                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                      </div>
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => handleOcrSubmit(menu, index)}
-                          className="rounded bg-black px-3 py-1 font-['nanumsquare'] text-xs font-bold text-white transition-colors hover:bg-gray-800"
-                        >
-                          이 메뉴 등록
-                        </button>
-                      </div>
+                      <span className="font-nanum-square-round-eb text-sm leading-[140%]">
+                        {category.categoryName}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleDeleteCategory(category.categoryId)
+                        }
+                        className="font-nanum-square-round-eb rounded-[10px] px-2 py-1 text-xs leading-[140%] text-red-500 transition-colors hover:bg-red-50"
+                      >
+                        삭제
+                      </button>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <button
-                    onClick={() => {
-                      setOcrImage(null)
-                      setOcrResults([])
-                    }}
-                    className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
-                  >
-                    다시 스캔
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 수동 등록 */}
-        {addMethod === 'manual' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAddMethod(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ← 뒤로
-              </button>
-              <h4 className="font-['nanumsquare'] text-lg font-bold">
-                수동 등록
-              </h4>
+              )}
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  메뉴명 *
-                </label>
-                <input
-                  type="text"
-                  value={manualMenu.name}
-                  onChange={e =>
-                    setManualMenu({ ...manualMenu, name: e.target.value })
-                  }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                  placeholder="메뉴명을 입력하세요"
+          </div>
+        </div>
+      )}
+
+      {/* OCR 스캔 */}
+      {addMethod === 'ocr' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddMethod(null)}
+              className="text-[#76d4ff] hover:text-[#5bb3e6]"
+            >
+              <svg
+                width={25}
+                height={25}
+                viewBox="0 0 25 25"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.9 12.1095L15.5384 16.6708L14.1502 18.0825L8.10006 12.133L14.0495 6.0829L15.4612 7.47111L10.9 12.1095Z"
+                  fill="#76d4ff"
+                  stroke="#76d4ff"
+                  strokeWidth={2}
                 />
-              </div>
-              <div>
-                <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  가격
-                </label>
-                <input
-                  type="number"
-                  value={manualMenu.price || ''}
-                  onChange={e =>
-                    setManualMenu({
-                      ...manualMenu,
-                      price: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                  placeholder="가격을 입력하세요"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  카테고리 *
-                </label>
-                <select
-                  value={manualMenu.categoryId || ''}
-                  onChange={e =>
-                    setManualMenu({
-                      ...manualMenu,
-                      categoryId: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  <option value="">카테고리를 선택하세요</option>
-                  {categories.map(cat => (
-                    <option
-                      key={`manual-cat-${cat.categoryId}`}
-                      value={cat.categoryId}
-                    >
-                      {cat.categoryName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  설명
-                </label>
-                <textarea
-                  value={manualMenu.description}
-                  onChange={e =>
-                    setManualMenu({
-                      ...manualMenu,
-                      description: e.target.value,
-                    })
-                  }
-                  className="h-20 w-full resize-none rounded border border-gray-300 px-3 py-2"
-                  placeholder="메뉴 설명을 입력하세요"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-                  이미지 *
-                </label>
+              </svg>
+            </button>
+            <h4 className="font-jalnan text-lg leading-[140%] text-[#76d4ff]">
+              OCR 스캔
+            </h4>
+          </div>
+
+          {!ocrImage && (
+            <div className="flex h-48 w-full items-center justify-center border border-dashed border-gray-300 bg-gray-50">
+              <label className="font-jalnan cursor-pointer rounded-[10px] border border-[#76d4ff] bg-white px-4 py-2 text-xs leading-[140%] text-[#76d4ff] transition-colors hover:bg-blue-50">
+                메뉴판 사진 선택
                 <input
                   type="file"
                   accept="image/*"
+                  className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (file) {
@@ -1210,30 +932,314 @@ const MenuAddModal = ({
                         e.target.value = ''
                         return
                       }
+                      handleOcrUpload(file)
                     }
-                    setManualMenu({ ...manualMenu, imgFile: file || null })
                   }}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
                 />
+              </label>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="py-8 text-center">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[#76d4ff]"></div>
+              <p className="font-nanum-square-round-eb text-gray-600">
+                메뉴 정보를 인식하는 중...
+              </p>
+            </div>
+          )}
+
+          {ocrResults.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h5 className="font-jalnan text-md leading-[140%] text-[#76d4ff]">
+                  인식된 메뉴 ({ocrResults.length}개)
+                </h5>
+                <p className="font-nanum-square-round-eb text-xs leading-[140%] text-gray-500">
+                  각 메뉴를 개별로 등록하세요
+                </p>
+              </div>
+              <div className="max-h-64 space-y-3 overflow-y-auto">
+                {ocrResults.map((menu, index) => (
+                  <div
+                    key={`ocr-${index}`}
+                    className="rounded-[10px] border border-gray-200 p-3"
+                  >
+                    <div className="mb-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-nanum-square-round-eb mb-1 block text-xs leading-[140%] text-gray-600">
+                          메뉴명
+                        </label>
+                        <input
+                          type="text"
+                          value={menu.name}
+                          onChange={e =>
+                            handleOcrResultChange(index, 'name', e.target.value)
+                          }
+                          className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-2 py-1 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-nanum-square-round-eb mb-1 block text-xs leading-[140%] text-gray-600">
+                          가격
+                        </label>
+                        <input
+                          type="number"
+                          value={menu.price}
+                          onChange={e =>
+                            handleOcrResultChange(
+                              index,
+                              'price',
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-2 py-1 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-nanum-square-round-eb mb-1 block text-xs leading-[140%] text-gray-600">
+                          카테고리 *
+                        </label>
+                        <select
+                          value={menu.categoryId || ''}
+                          onChange={e =>
+                            handleOcrResultChange(
+                              index,
+                              'categoryId',
+                              parseInt(e.target.value)
+                            )
+                          }
+                          className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-2 py-1 text-sm"
+                        >
+                          <option value="">카테고리 선택</option>
+                          {categories.map(cat => (
+                            <option
+                              key={`ocr-cat-${cat.categoryId}`}
+                              value={cat.categoryId}
+                            >
+                              {cat.categoryName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-nanum-square-round-eb mb-1 block text-xs leading-[140%] text-gray-600">
+                          설명
+                        </label>
+                        <input
+                          type="text"
+                          value={menu.description}
+                          onChange={e =>
+                            handleOcrResultChange(
+                              index,
+                              'description',
+                              e.target.value
+                            )
+                          }
+                          className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-2 py-1 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <label className="font-nanum-square-round-eb mb-1 block text-xs leading-[140%] text-gray-600">
+                        이미지 *
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            // 파일 크기 검증 (1MB = 1048576 bytes)
+                            const maxFileSize = 1048576 // 1MB
+                            if (file.size > maxFileSize) {
+                              alert(
+                                '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                                  (file.size / 1024 / 1024).toFixed(2) +
+                                  'MB'
+                              )
+                              // 파일 입력 초기화
+                              e.target.value = ''
+                              return
+                            }
+                          }
+                          handleOcrResultChange(index, 'imgFile', file)
+                        }}
+                        className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleOcrSubmit(menu, index)}
+                        className="font-jalnan rounded-[10px] bg-[#76d4ff] px-3 py-1 text-xs leading-[140%] text-white transition-colors hover:bg-[#5bb3e6]"
+                      >
+                        이 메뉴 등록
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  onClick={() => {
+                    setOcrImage(null)
+                    setOcrResults([])
+                  }}
+                  className="font-nanum-square-round-eb rounded-[10px] bg-gray-200 px-4 py-2 text-sm leading-[140%] font-bold transition-colors hover:bg-gray-300"
+                >
+                  다시 스캔
+                </button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                onClick={onClose}
-                className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
+          )}
+        </div>
+      )}
+
+      {/* 수동 등록 */}
+      {addMethod === 'manual' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddMethod(null)}
+              className="text-[#76d4ff] hover:text-[#5bb3e6]"
+            >
+              <svg
+                width={25}
+                height={25}
+                viewBox="0 0 25 25"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                취소
-              </button>
-              <button
-                onClick={handleManualSubmit}
-                className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                <path
+                  d="M10.9 12.1095L15.5384 16.6708L14.1502 18.0825L8.10006 12.133L14.0495 6.0829L15.4612 7.47111L10.9 12.1095Z"
+                  fill="#76d4ff"
+                  stroke="#76d4ff"
+                  strokeWidth={2}
+                />
+              </svg>
+            </button>
+            <h4 className="font-jalnan text-lg leading-[140%] text-[#76d4ff]">
+              수동 등록
+            </h4>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+                메뉴명 *
+              </label>
+              <input
+                type="text"
+                value={manualMenu.name}
+                onChange={e =>
+                  setManualMenu({ ...manualMenu, name: e.target.value })
+                }
+                className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-3 py-2"
+                placeholder="메뉴명을 입력하세요"
+              />
+            </div>
+            <div>
+              <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+                가격
+              </label>
+              <input
+                type="number"
+                value={manualMenu.price || ''}
+                onChange={e =>
+                  setManualMenu({
+                    ...manualMenu,
+                    price: parseInt(e.target.value) || 0,
+                  })
+                }
+                className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-3 py-2"
+                placeholder="가격을 입력하세요"
+              />
+            </div>
+            <div>
+              <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+                카테고리 *
+              </label>
+              <select
+                value={manualMenu.categoryId || ''}
+                onChange={e =>
+                  setManualMenu({
+                    ...manualMenu,
+                    categoryId: parseInt(e.target.value),
+                  })
+                }
+                className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-3 py-2"
               >
-                메뉴 추가
-              </button>
+                <option value="">카테고리를 선택하세요</option>
+                {categories.map(cat => (
+                  <option
+                    key={`manual-cat-${cat.categoryId}`}
+                    value={cat.categoryId}
+                  >
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+                설명
+              </label>
+              <textarea
+                value={manualMenu.description}
+                onChange={e =>
+                  setManualMenu({
+                    ...manualMenu,
+                    description: e.target.value,
+                  })
+                }
+                className="font-nanum-square-round-eb h-20 w-full resize-none rounded-[10px] border border-gray-300 px-3 py-2"
+                placeholder="메뉴 설명을 입력하세요"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
+                이미지 *
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    // 파일 크기 검증 (1MB = 1048576 bytes)
+                    const maxFileSize = 1048576 // 1MB
+                    if (file.size > maxFileSize) {
+                      alert(
+                        '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                          (file.size / 1024 / 1024).toFixed(2) +
+                          'MB'
+                      )
+                      // 파일 입력 초기화
+                      e.target.value = ''
+                      return
+                    }
+                  }
+                  setManualMenu({ ...manualMenu, imgFile: file || null })
+                }}
+                className="font-nanum-square-round-eb w-full rounded-[10px] border border-gray-300 px-3 py-2 text-sm"
+              />
             </div>
           </div>
-        )}
-      </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <button
+              onClick={onClose}
+              className="font-nanum-square-round-eb rounded-[10px] bg-gray-200 px-4 py-2 text-sm leading-[140%] font-bold transition-colors hover:bg-gray-300"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleManualSubmit}
+              className="font-jalnan rounded-[10px] bg-[#76d4ff] px-4 py-2 text-sm leading-[140%] text-white transition-colors hover:bg-[#5bb3e6]"
+            >
+              메뉴 추가
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1334,134 +1340,118 @@ const MenuEditModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-['Tenada'] text-lg font-extrabold text-black">
-            메뉴 수정
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
+    <div className="h-full w-full">
+      <div className="space-y-4">
+        <div>
+          <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+            메뉴명 *
+          </label>
+          <input
+            type="text"
+            value={editedMenu.menuName}
+            onChange={e =>
+              setEditedMenu({ ...editedMenu, menuName: e.target.value })
+            }
+            className="w-full rounded-[10px] border border-gray-300 px-3 py-2"
+            placeholder="메뉴명을 입력하세요"
+          />
         </div>
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              메뉴명 *
-            </label>
-            <input
-              type="text"
-              value={editedMenu.menuName}
-              onChange={e =>
-                setEditedMenu({ ...editedMenu, menuName: e.target.value })
-              }
-              className="w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="메뉴명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              가격
-            </label>
-            <input
-              type="number"
-              value={editedMenu.price || ''}
-              onChange={e =>
-                setEditedMenu({
-                  ...editedMenu,
-                  price: parseInt(e.target.value) || 0,
-                })
-              }
-              className="w-full rounded border border-gray-300 px-3 py-2"
-              placeholder="가격을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              카테고리 *
-            </label>
-            <select
-              value={editedMenu.categoryId || ''}
-              onChange={e =>
-                setEditedMenu({
-                  ...editedMenu,
-                  categoryId: parseInt(e.target.value),
-                })
-              }
-              className="w-full rounded border border-gray-300 px-3 py-2"
-            >
-              <option value="">카테고리를 선택하세요</option>
-              {categories.map(cat => (
-                <option
-                  key={`edit-cat-${cat.categoryId}`}
-                  value={cat.categoryId}
-                >
-                  {cat.categoryName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              설명
-            </label>
-            <textarea
-              value={editedMenu.description}
-              onChange={e =>
-                setEditedMenu({ ...editedMenu, description: e.target.value })
-              }
-              className="h-20 w-full resize-none rounded border border-gray-300 px-3 py-2"
-              placeholder="메뉴 설명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block font-['nanumsquare'] text-sm font-bold text-gray-700">
-              이미지
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={e => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  // 파일 크기 검증 (1MB = 1048576 bytes)
-                  const maxFileSize = 1048576 // 1MB
-                  if (file.size > maxFileSize) {
-                    alert(
-                      '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
-                        (file.size / 1024 / 1024).toFixed(2) +
-                        'MB'
-                    )
-                    // 파일 입력 초기화
-                    e.target.value = ''
-                    return
-                  }
+        <div>
+          <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+            가격
+          </label>
+          <input
+            type="number"
+            value={editedMenu.price || ''}
+            onChange={e =>
+              setEditedMenu({
+                ...editedMenu,
+                price: parseInt(e.target.value) || 0,
+              })
+            }
+            className="w-full rounded-[10px] border border-gray-300 px-3 py-2"
+            placeholder="가격을 입력하세요"
+          />
+        </div>
+        <div>
+          <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+            카테고리 *
+          </label>
+          <select
+            value={editedMenu.categoryId || ''}
+            onChange={e =>
+              setEditedMenu({
+                ...editedMenu,
+                categoryId: parseInt(e.target.value),
+              })
+            }
+            className="w-full rounded-[10px] border border-gray-300 px-3 py-2"
+          >
+            <option value="">카테고리를 선택하세요</option>
+            {categories.map(cat => (
+              <option key={`edit-cat-${cat.categoryId}`} value={cat.categoryId}>
+                {cat.categoryName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+            설명
+          </label>
+          <textarea
+            value={editedMenu.description}
+            onChange={e =>
+              setEditedMenu({ ...editedMenu, description: e.target.value })
+            }
+            className="h-20 w-full resize-none rounded-[10px] border border-gray-300 px-3 py-2"
+            placeholder="메뉴 설명을 입력하세요"
+          />
+        </div>
+        <div>
+          <label className="font-nanum-square-round-eb mb-2 block text-sm leading-[140%] font-bold text-gray-700">
+            이미지
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) {
+                // 파일 크기 검증 (1MB = 1048576 bytes)
+                const maxFileSize = 1048576 // 1MB
+                if (file.size > maxFileSize) {
+                  alert(
+                    '이미지 파일 크기는 1MB 이하여야 합니다.\n현재 파일 크기: ' +
+                      (file.size / 1024 / 1024).toFixed(2) +
+                      'MB'
+                  )
+                  // 파일 입력 초기화
+                  e.target.value = ''
+                  return
                 }
-                setEditedMenu({ ...editedMenu, imgFile: file || null })
-              }}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
+              }
+              setEditedMenu({ ...editedMenu, imgFile: file || null })
+            }}
+            className="w-full rounded-[10px] border border-gray-300 px-3 py-2 text-sm"
+          />
         </div>
-        <div className="flex justify-end gap-2 pt-6">
-          <button
-            onClick={onClose}
-            className="rounded bg-gray-200 px-4 py-2 font-['nanumsquare'] text-sm font-bold transition-colors hover:bg-gray-300"
-            disabled={isUpdating}
-          >
-            취소
-          </button>
-          <button
-            onClick={handleUpdate}
-            className="rounded bg-black px-4 py-2 font-['nanumsquare'] text-sm font-bold text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
-            disabled={isUpdating}
-          >
-            {isUpdating ? '수정 중...' : '수정하기'}
-          </button>
-        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-6">
+        <button
+          onClick={onClose}
+          className="font-nanum-square-round-eb rounded-[10px] bg-gray-200 px-4 py-2 text-sm leading-[140%] font-bold transition-colors hover:bg-gray-300"
+          disabled={isUpdating}
+        >
+          취소
+        </button>
+        <button
+          onClick={handleUpdate}
+          className="font-jalnan rounded-[10px] bg-[#76d4ff] px-4 py-2 text-sm leading-[140%] text-white transition-colors hover:bg-[#5bb3e6] disabled:opacity-50"
+          disabled={isUpdating}
+        >
+          {isUpdating ? '수정 중...' : '수정하기'}
+        </button>
       </div>
     </div>
   )
