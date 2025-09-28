@@ -40,22 +40,31 @@ export const generateIdempotencyKey = (options: IdempotencyOptions): string => {
     storeId = '',
     action,
     data = {},
-    expiryMinutes = 30
+    expiryMinutes = 30,
   } = options
 
-  // 멱등키 생성을 위한 데이터 정규화
+  // 멱등키 생성을 위한 데이터 정규화 (순수 데이터 기반)
   const normalizedData = {
     userId: String(userId),
     storeId: String(storeId),
     action,
     data: JSON.stringify(data, Object.keys(data).sort()), // 키 순서 정렬로 일관성 보장
-    timestamp: Math.floor(Date.now() / (1000 * 60 * expiryMinutes)) // 시간 기반 그룹핑
+    // timestamp 제거: 순수 데이터 기반으로만 멱등성 키 생성
   }
 
   const hashInput = JSON.stringify(normalizedData)
   const hash = CryptoJS.SHA256(hashInput).toString(CryptoJS.enc.Hex)
 
-  return `idem_${action}_${hash.substring(0, 16)}`
+  // UUID v4 형식으로 변환 (8-4-4-4-12 패턴)
+  const uuid = [
+    hash.substring(0, 8),
+    hash.substring(8, 12),
+    hash.substring(12, 16),
+    hash.substring(16, 20),
+    hash.substring(20, 32),
+  ].join('-')
+
+  return `idem_${action}_${uuid}`
 }
 
 /**
@@ -73,7 +82,7 @@ export const requestStateManager = {
       const storageKey = STORAGE_PREFIX + idempotencyKey
       const dataWithExpiry = {
         ...state,
-        expiresAt: Date.now() + STORAGE_EXPIRY_MS
+        expiresAt: Date.now() + STORAGE_EXPIRY_MS,
       }
       localStorage.setItem(storageKey, JSON.stringify(dataWithExpiry))
     } catch (error) {
@@ -104,7 +113,7 @@ export const requestStateManager = {
         timestamp: data.timestamp,
         result: data.result,
         error: data.error,
-        idempotencyKey: data.idempotencyKey
+        idempotencyKey: data.idempotencyKey,
       }
     } catch (error) {
       console.warn('Failed to get request state:', error)
@@ -151,7 +160,7 @@ export const requestStateManager = {
     } catch (error) {
       console.warn('Failed to cleanup expired states:', error)
     }
-  }
+  },
 }
 
 /**
@@ -170,7 +179,12 @@ const pendingRequests = new Map<string, Promise<any>>()
 export const executeIdempotentRequest = async <T = any>(
   options: IdempotentRequestOptions<T>
 ): Promise<T> => {
-  const { idempotencyKey, requestFn, skipIfPending = true, retryOnError = true } = options
+  const {
+    idempotencyKey,
+    requestFn,
+    skipIfPending = true,
+    retryOnError = true,
+  } = options
 
   // 1. 기존 상태 확인
   const existingState = requestStateManager.getRequestState(idempotencyKey)
@@ -193,7 +207,9 @@ export const executeIdempotentRequest = async <T = any>(
 
   // 4. 에러 상태인 경우 재시도 여부 확인
   if (existingState?.status === 'error' && !retryOnError) {
-    throw new Error(`Previous request failed: ${existingState.error?.message || 'Unknown error'}`)
+    throw new Error(
+      `Previous request failed: ${existingState.error?.message || 'Unknown error'}`
+    )
   }
 
   // 5. 새로운 요청 실행
@@ -203,7 +219,7 @@ export const executeIdempotentRequest = async <T = any>(
       const pendingState: RequestState = {
         status: 'pending',
         timestamp: Date.now(),
-        idempotencyKey
+        idempotencyKey,
       }
       requestStateManager.saveRequestState(idempotencyKey, pendingState)
 
@@ -215,7 +231,7 @@ export const executeIdempotentRequest = async <T = any>(
         status: 'success',
         timestamp: Date.now(),
         result,
-        idempotencyKey
+        idempotencyKey,
       }
       requestStateManager.saveRequestState(idempotencyKey, successState)
 
@@ -225,8 +241,11 @@ export const executeIdempotentRequest = async <T = any>(
       const errorState: RequestState = {
         status: 'error',
         timestamp: Date.now(),
-        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
-        idempotencyKey
+        error:
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : error,
+        idempotencyKey,
       }
       requestStateManager.saveRequestState(idempotencyKey, errorState)
 

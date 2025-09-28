@@ -1,6 +1,7 @@
 'use client'
 
 import { notificationApi } from '@/api/notificationApi'
+import { generateIdempotencyKey } from '@/utils/idempotency'
 import { useEffect, useState } from 'react'
 
 interface PaymentApprovalModalProps {
@@ -59,9 +60,18 @@ export default function PaymentApprovalModal({
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [isFinalized, setIsFinalized] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false) // 중복 요청 방지
-  const [processedKeys, setProcessedKeys] = useState<Set<string>>(new Set()) // 처리된 키 추적
+  // processedKeys 제거: 타임스탬프 기반 키 사용으로 중복 체크 불필요
   const [pinAttempts, setPinAttempts] = useState(0) // PIN 시도 횟수
   const [isBlocked, setIsBlocked] = useState(false) // PIN 입력 차단 상태
+  const [showRetryModal, setShowRetryModal] = useState(false) // 의도적 재시도 확인 모달
+  const [isRetrying, setIsRetrying] = useState(false) // 의도적 재시도 플래그
+  const [lastPaymentData, setLastPaymentData] = useState<{
+    intentId: string | number
+    pin: string
+    timestamp: number
+  } | null>(null) // 마지막 결제 데이터
+  const [requestInProgress, setRequestInProgress] = useState(false) // 요청 진행 중 플래그
+  const [lastRequestTime, setLastRequestTime] = useState(0) // 마지막 요청 시간
 
   // intent 식별 키 생성 (publicId 우선, 없으면 intentId)
   const getIntentKey = () => {
@@ -133,6 +143,43 @@ export default function PaymentApprovalModal({
     }
   }
 
+  // 의도적 재시도 확인 함수
+  const checkForRetry = (
+    actualIntentId: string | number,
+    pin: string
+  ): boolean => {
+    if (!lastPaymentData) return false
+
+    // 같은 결제 정보인지 확인 (intentId와 pin이 같으면)
+    const isSamePayment =
+      lastPaymentData.intentId === actualIntentId && lastPaymentData.pin === pin
+
+    // 5분 이내의 같은 결제인지 확인
+    const isRecentPayment =
+      Date.now() - lastPaymentData.timestamp < 5 * 60 * 1000
+
+    return isSamePayment && isRecentPayment
+  }
+
+  // 의도적 재시도 확인 모달 핸들러
+  const handleRetryConfirm = async () => {
+    setShowRetryModal(false)
+
+    // 의도적 재시도 플래그 설정
+    setIsRetrying(true)
+
+    // 새로운 멱등성 키로 재시도
+    const actualIntentId = paymentDetails?.intentId || intentId
+    if (actualIntentId) {
+      await processPayment(actualIntentId, pin)
+    }
+  }
+
+  const handleRetryCancel = () => {
+    setShowRetryModal(false)
+    setPin('') // PIN 초기화
+  }
+
   const handleApprove = async () => {
     // 차단 상태 확인
     if (isBlocked) {
@@ -140,9 +187,17 @@ export default function PaymentApprovalModal({
       return
     }
 
-    // 중복 요청 방지
-    if (isFinalized || isProcessing || isLoading) {
+    // 강화된 중복 요청 방지
+    if (isFinalized || isProcessing || isLoading || requestInProgress) {
       console.log('이미 처리 중이거나 완료된 요청입니다')
+      return
+    }
+
+    // 연속 클릭 방지 (1초 이내 중복 클릭 차단)
+    const now = Date.now()
+    if (now - lastRequestTime < 1000) {
+      console.log('너무 빠른 연속 클릭입니다. 잠시 후 다시 시도해주세요.')
+      setError('너무 빠른 연속 클릭입니다. 잠시 후 다시 시도해주세요.')
       return
     }
 
@@ -151,48 +206,65 @@ export default function PaymentApprovalModal({
       return
     }
 
+    // intentPublicId가 있으면 paymentDetails에서 실제 intentId 사용
+    const actualIntentId = paymentDetails?.intentId || intentId
+
+    if (!actualIntentId) {
+      setError('결제 정보가 없습니다')
+      return
+    }
+
+    // 의도적 재시도 확인
+    if (checkForRetry(actualIntentId, pin)) {
+      setShowRetryModal(true)
+      return
+    }
+
+    // 정상 결제 진행
+    await processPayment(actualIntentId, pin)
+  }
+
+  // 실제 결제 처리 함수
+  const processPayment = async (
+    actualIntentId: string | number,
+    pin: string
+  ) => {
+    // 중복 요청 방지 플래그 설정
+    setRequestInProgress(true)
+    setLastRequestTime(Date.now())
     setIsProcessing(true)
     setIsLoading(true)
     setError('')
 
     try {
-      // intentPublicId가 있으면 paymentDetails에서 실제 intentId 사용
-      const actualIntentId = paymentDetails?.intentId || intentId
-
-      if (!actualIntentId) {
-        setError('결제 정보가 없습니다')
-        return
-      }
-
-      // 멱등성 키 생성 (결제 ID + 사용자 ID + 고유 세션 ID)
+      // 멱등성 키 생성
       const userId = localStorage.getItem('userId') || 'anonymous'
-      const sessionId =
-        localStorage.getItem('sessionId') ||
-        `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      let idempotencyKey: string
 
-      // 세션 ID가 없으면 생성해서 저장
-      if (!localStorage.getItem('sessionId')) {
-        localStorage.setItem('sessionId', sessionId)
+      if (isRetrying) {
+        // 의도적 재시도: UUID v4 형식으로 완전히 새로운 키 생성
+        const uuid = crypto.randomUUID()
+        idempotencyKey = `retry_${actualIntentId}_${userId}_${uuid}`
+        console.log('의도적 재시도용 멱등성 키:', idempotencyKey)
+      } else {
+        // 일반 요청: 데이터 기반 멱등성 키 생성 (시간 무관)
+        idempotencyKey = generateIdempotencyKey({
+          userId: userId,
+          action: 'payment_approve',
+          data: {
+            intentId: String(actualIntentId),
+            pin: pin,
+          },
+        })
+        console.log('데이터 기반 멱등성 키:', idempotencyKey)
       }
 
-      // 멱등성 키: 결제ID_사용자ID_세션ID (동일한 결제에 대해 항상 같은 키)
-      const idempotencyKey = `payment_${actualIntentId}_${userId}_${sessionId}`
-
-      // 이미 처리된 키인지 확인
-      if (processedKeys.has(idempotencyKey)) {
-        console.log('이미 처리된 요청입니다:', idempotencyKey)
-        setError('이미 처리된 요청입니다')
-        setIsProcessing(false)
-        return
-      }
-
-      // 처리 중인 키로 표시
-      setProcessedKeys(prev => new Set(prev).add(idempotencyKey))
+      console.log('생성된 멱등성 키:', idempotencyKey)
 
       const success = await notificationApi.customer.approvePayment(
         actualIntentId,
         pin,
-        idempotencyKey // Idempotency Key 전달
+        idempotencyKey // 생성된 멱등성 키 전달
       )
 
       if (success) {
@@ -202,9 +274,18 @@ export default function PaymentApprovalModal({
           if (key) localStorage.setItem(`payment:finalized:${key}`, 'true')
         } catch {}
 
+        // 마지막 결제 데이터 저장 (의도적 재시도 확인용)
+        setLastPaymentData({
+          intentId: actualIntentId,
+          pin: pin,
+          timestamp: Date.now(),
+        })
+
         // 즉시 UI 상태 변경 (중복 요청 방지)
         setIsFinalized(true)
         setIsProcessing(false)
+        setIsRetrying(false) // 재시도 플래그 초기화
+        setRequestInProgress(false) // 요청 진행 플래그 초기화
 
         onSuccess?.()
         onClose()
@@ -238,7 +319,10 @@ export default function PaymentApprovalModal({
         try {
           const key = getIntentKey()
           if (key) {
-            localStorage.setItem(`payment:attempts:${key}`, newAttempts.toString())
+            localStorage.setItem(
+              `payment:attempts:${key}`,
+              newAttempts.toString()
+            )
           }
         } catch {}
 
@@ -247,14 +331,27 @@ export default function PaymentApprovalModal({
           setIsBlocked(true)
           setError('PIN 번호를 5회 잘못 입력하여 결제가 차단되었습니다.')
         } else {
-          setError(`결제 승인에 실패했습니다. PIN 번호를 확인해주세요 (${newAttempts}/5)`)
+          setError(
+            `결제 승인에 실패했습니다. PIN 번호를 확인해주세요 (${newAttempts}/5)`
+          )
         }
+
+        // 실패 시에도 마지막 결제 데이터 저장 (의도적 재시도 확인용)
+        setLastPaymentData({
+          intentId: actualIntentId,
+          pin: pin,
+          timestamp: Date.now(),
+        })
+
         setIsProcessing(false)
+        setIsRetrying(false) // 재시도 플래그 초기화
+        setRequestInProgress(false) // 요청 진행 플래그 초기화
       }
     } catch (error) {
       console.error('결제 승인 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
       setIsProcessing(false)
+      setRequestInProgress(false) // 요청 진행 플래그 초기화
     } finally {
       setIsLoading(false)
     }
@@ -506,7 +603,12 @@ export default function PaymentApprovalModal({
           <button
             onClick={handleApprove}
             disabled={
-              isLoading || isProcessing || pin.length !== 6 || isFinalized || isBlocked
+              isLoading ||
+              isProcessing ||
+              requestInProgress ||
+              pin.length !== 6 ||
+              isFinalized ||
+              isBlocked
             }
             className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
@@ -527,6 +629,54 @@ export default function PaymentApprovalModal({
           </p>
         </div>
       </div>
+
+      {/* 의도적 재시도 확인 모달 */}
+      {showRetryModal && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
+                <svg
+                  className="h-6 w-6 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                이전과 같은 결제를 다시 진행하시겠습니까?
+              </h3>
+              <p className="mt-2 text-sm text-gray-600">
+                동일한 결제 정보로 최근에 시도한 기록이 있습니다.
+                <br />
+                다시 진행하려면 '네'를 선택해주세요.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleRetryCancel}
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:outline-none"
+              >
+                아니오
+              </button>
+              <button
+                onClick={handleRetryConfirm}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              >
+                네, 다시 진행
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

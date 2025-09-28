@@ -507,10 +507,26 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
               data?.transactionUniqueNo ??
               `${data?.notificationType || ''}-${data?.createdAt || ''}`
           )
+
+          // 중복 체크
           if (seenEventKeysRef.current.has(dedupeKey)) {
+            console.log('[SSE] 중복 알림 무시:', dedupeKey)
             return
           }
+
+          // 추가 중복 체크: 같은 타입의 알림이 최근 5초 내에 왔는지 확인
+          const now = Date.now()
+          const recentKey = `recent-${data?.notificationType}-${data?.receiverId || 'unknown'}`
+          const lastTime = localStorage.getItem(recentKey)
+
+          if (lastTime && now - parseInt(lastTime) < 5000) {
+            console.log('[SSE] 최근 중복 알림 무시:', recentKey)
+            return
+          }
+
+          // 중복 방지 키 저장
           seenEventKeysRef.current.add(dedupeKey)
+          localStorage.setItem(recentKey, now.toString())
           // 메모리 관리: 너무 커지지 않도록 앞부분 정리
           if (seenEventKeysRef.current.size > 500) {
             const it = seenEventKeysRef.current.values()

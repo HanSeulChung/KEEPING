@@ -70,6 +70,37 @@ function QRIntentPageContent() {
     }
   }, [searchParams])
 
+  // 페이지 언마운트 시 새로고침 (모바일 알림 문제 해결)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // 페이지를 떠날 때 새로고침하여 알림 상태 동기화
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      // 페이지가 숨겨질 때 (뒤로가기, 다른 앱으로 이동 등) 새로고침
+      if (document.hidden) {
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.reload()
+          }
+        }, 100)
+      }
+    }
+
+    // 이벤트 리스너 등록
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
   // 메뉴 가져오기
   const fetchMenus = async (storeId: string) => {
     try {
@@ -328,33 +359,6 @@ function QRIntentPageContent() {
           <h1 className="font-jalnan text-xl leading-[140%] text-white">
             주문 생성
           </h1>
-        </div>
-
-        {/* QR 정보 표시 */}
-        <div className="mx-4 mt-6 rounded-[20px] border border-[#76d4ff] bg-white p-4 shadow-sm">
-          <h2 className="font-jalnan mb-3 text-lg font-extrabold text-[#76d4ff]">
-            QR 정보
-          </h2>
-          <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-            <div>
-              <span className="font-nanum-square-round-eb font-bold text-gray-700">
-                Version:
-              </span>{' '}
-              {qrData.v || 'N/A'}
-            </div>
-            <div>
-              <span className="font-nanum-square-round-eb font-bold text-gray-700">
-                Token:
-              </span>{' '}
-              {qrData.t || 'N/A'}
-            </div>
-            <div>
-              <span className="font-nanum-square-round-eb font-bold text-gray-700">
-                Method:
-              </span>{' '}
-              {qrData.m || 'N/A'}
-            </div>
-          </div>
         </div>
 
         <div className="mx-4 mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

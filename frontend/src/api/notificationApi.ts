@@ -139,16 +139,19 @@ export const notificationApi = {
       idempotencyKey?: string
     ): Promise<boolean> => {
       try {
+        // idempotencyKey가 제공되지 않은 경우에만 생성
+        const finalIdempotencyKey =
+          idempotencyKey ||
+          generateIdempotencyKey({
+            action: 'payment_approve',
+            data: {
+              intentId: String(intentId),
+              pin: pin,
+            },
+          })
+
         const headers = {
-          'Idempotency-Key':
-            idempotencyKey ||
-            generateIdempotencyKey({
-              action: 'payment_approve',
-              data: {
-                intentId: String(intentId),
-                pin: pin,
-              },
-            }),
+          'Idempotency-Key': finalIdempotencyKey,
         } as any
         const res = await apiClient.post(
           `/payments/${intentId}/approve`,
