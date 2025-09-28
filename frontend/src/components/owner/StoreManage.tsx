@@ -128,39 +128,40 @@ const StoreManage = () => {
     try {
       console.log('이미지 업로드:', selectedImage)
 
-      // 실제 API 호출
+      // 실제 API 호출 - /owners/stores/{storeId} 엔드포인트 사용
       const formData = new FormData()
-      formData.append('images', selectedImage)
+      formData.append('imgFile', selectedImage)
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/stores/${storeId}`,
+      const response = await apiClient.patch(
+        `/owners/stores/${storeId}`,
+        formData,
         {
-          method: 'PATCH',
-          body: formData,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'multipart/form-data',
           },
         }
       )
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (response.data.success) {
+        alert('가게 이미지가 업로드되었습니다.')
+        // 매장 정보 새로고침
+        if (storeId) {
+          fetchStores()
+        }
+        setShowImageModal(false)
+        setSelectedImage(null)
+      } else {
+        alert(
+          `이미지 업로드 실패: ${response.data.message || '알 수 없는 오류'}`
+        )
       }
-
-      const result = await response.json()
-      console.log('이미지 업로드 성공:', result)
-
-      // 매장 정보 다시 불러오기
-      if (storeId) {
-        fetchStores()
-      }
-
-      alert('이미지 업로드가 완료되었습니다.')
-      setShowImageModal(false)
-      setSelectedImage(null)
-    } catch (error) {
-      console.error('이미지 업로드 실패:', error)
-      alert('이미지 업로드에 실패했습니다.')
+    } catch (error: any) {
+      console.error('이미지 업로드 오류:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        '이미지 업로드 중 오류가 발생했습니다.'
+      alert(`이미지 업로드 실패: ${errorMessage}`)
     } finally {
       setIsImageUploading(false)
     }
@@ -766,10 +767,10 @@ const MenuAddModal = ({
               : '메뉴를 추가하는 방법을 선택하세요'}
           </p>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             <button
               onClick={() => setAddMethod('category')}
-              className="flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors hover:bg-blue-50"
+              className="flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-6 transition-colors hover:bg-blue-50"
             >
               <svg
                 width="32"
@@ -786,10 +787,10 @@ const MenuAddModal = ({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
+              <span className="font-jalnan text-base leading-[140%] text-[#76d4ff]">
                 카테고리 관리
               </span>
-              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+              <span className="font-nanum-square-round-eb text-center text-sm leading-[140%] font-bold text-gray-500">
                 메뉴 카테고리를
                 <br />
                 생성하고 관리
@@ -801,7 +802,7 @@ const MenuAddModal = ({
                   ? setAddMethod('ocr')
                   : alert('카테고리를 먼저 생성하세요.')
               }
-              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
+              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-6 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
             >
               <svg
                 width="32"
@@ -818,10 +819,10 @@ const MenuAddModal = ({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
+              <span className="font-jalnan text-base leading-[140%] text-[#76d4ff]">
                 OCR 스캔
               </span>
-              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+              <span className="font-nanum-square-round-eb text-center text-sm leading-[140%] font-bold text-gray-500">
                 메뉴판 사진을 촬영하여
                 <br />
                 자동으로 메뉴 정보 추출
@@ -833,7 +834,7 @@ const MenuAddModal = ({
                   ? setAddMethod('manual')
                   : alert('카테고리를 먼저 생성하세요.')
               }
-              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-4 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
+              className={`flex flex-col items-center gap-3 rounded-[15px] border border-[#76d4ff] bg-white p-6 transition-colors ${categories.length > 0 ? 'hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
             >
               <svg
                 width="32"
@@ -850,10 +851,10 @@ const MenuAddModal = ({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="font-jalnan text-sm leading-[140%] text-[#76d4ff]">
+              <span className="font-jalnan text-base leading-[140%] text-[#76d4ff]">
                 수동 등록
               </span>
-              <span className="font-nanum-square-round-eb text-center text-xs leading-[140%] font-bold text-gray-500">
+              <span className="font-nanum-square-round-eb text-center text-sm leading-[140%] font-bold text-gray-500">
                 메뉴 정보를 직접 입력하여
                 <br />
                 하나씩 등록
