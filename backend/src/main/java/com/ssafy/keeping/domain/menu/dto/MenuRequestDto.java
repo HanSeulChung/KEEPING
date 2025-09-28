@@ -3,6 +3,7 @@ package com.ssafy.keeping.domain.menu.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Null;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,5 +20,6 @@ public class MenuRequestDto {
     @Min(1000)
     private int price;
     private String description;
+    @Null
     private MultipartFile imgFile;
 }
