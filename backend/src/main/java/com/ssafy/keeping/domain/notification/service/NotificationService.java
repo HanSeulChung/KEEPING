@@ -111,6 +111,7 @@ public class NotificationService {
      * @param notificationType 알림 타입
      * @param content 알림 내용
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sendToCustomer(Long customerId, NotificationType notificationType, String content) {
         try {
             // 입력 값 검증
