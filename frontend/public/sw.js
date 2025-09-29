@@ -1,6 +1,6 @@
 // KEEPING PWA Service Worker
-const CACHE_NAME = 'keeping-cache-v4'
-const STATIC_CACHE_NAME = 'keeping-static-v4'
+const CACHE_NAME = 'keeping-cache-v5'
+const STATIC_CACHE_NAME = 'keeping-static-v5'
 
 // 캐시할 정적 파일들
 const STATIC_FILES = [
@@ -22,7 +22,7 @@ const STATIC_FILES = [
 
 // Service Worker 설치
 self.addEventListener('install', event => {
-  console.log('Service Worker v4 설치 중...')
+  console.log('Service Worker v5 설치 중...')
 
   event.waitUntil(
     caches
@@ -42,13 +42,13 @@ self.addEventListener('install', event => {
 
 // Service Worker 활성화
 self.addEventListener('activate', event => {
-  console.log('Service Worker v4 활성화 중...')
+  console.log('Service Worker v5 활성화 중...')
 
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // 이전 버전 캐시 삭제 (v3 이하 모든 버전)
+          // 이전 버전 캐시 삭제 (v4 이하 모든 버전)
           if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE_NAME) {
             console.log('이전 캐시 삭제:', cacheName)
             return caches.delete(cacheName)
@@ -66,8 +66,8 @@ self.addEventListener('activate', event => {
     clients.forEach(client => {
       client.postMessage({
         type: 'SW_UPDATED',
-        version: 'v4',
-        message: 'KEEPING 앱이 업데이트되었습니다!',
+        version: 'v5',
+        message: 'KEEPING 앱이 업데이트되었습니다! (중복 결제 방지 기능 추가)',
       })
     })
   })

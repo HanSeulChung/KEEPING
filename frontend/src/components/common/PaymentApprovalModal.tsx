@@ -157,6 +157,22 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       // 결제 상태를 APPROVED로 업데이트
       updatePaymentStatus('APPROVED')
 
+      // 승인된 결제 ID를 localStorage에 저장
+      const currentIntentId = paymentDetails?.intentId || intentId
+      if (currentIntentId) {
+        const approvedPayments = JSON.parse(
+          localStorage.getItem('approvedPayments') || '[]'
+        )
+        if (!approvedPayments.includes(String(currentIntentId))) {
+          approvedPayments.push(String(currentIntentId))
+          localStorage.setItem(
+            'approvedPayments',
+            JSON.stringify(approvedPayments)
+          )
+          console.log('💾 승인된 결제 ID 저장:', currentIntentId)
+        }
+      }
+
       // 점주에게 승인 알림 전송 (하드코딩)
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('notifyOwnerPaymentResult', {
@@ -182,11 +198,14 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       // 성공 콜백 호출
       onSuccess?.()
 
-      // 바로 모달 닫기 (결제 성공 시)
+      // 즉시 모달 닫기 (결제 성공 시)
+      clearPaymentIntent()
+      onClose()
+
+      // 고객 홈으로 이동
       setTimeout(() => {
-        clearPaymentIntent()
-        onClose()
-      }, 1000)
+        router.push('/customer/home')
+      }, 500)
     } catch (error) {
       console.error('하드코딩 결제 처리 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
@@ -346,16 +365,8 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     // 모달 닫기
     onClose()
 
-    // 사용자 타입에 따라 대시보드로 이동
-    const userType = localStorage.getItem('userType')
-    if (userType === 'OWNER') {
-      router.push('/owner/dashboard')
-    } else if (userType === 'CUSTOMER') {
-      router.push('/customer/home')
-    } else {
-      // 기본값으로 홈페이지로 이동
-      router.push('/')
-    }
+    // 고객 홈으로 이동
+    router.push('/customer/home')
   }
 
   const formatAmount = (amount: string | number | undefined) => {
@@ -443,9 +454,32 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     }
   }, [isOpen, intentId, storeName, amount, currentPayment])
 
-  // 모달이 열릴 때마다 상태 초기화
+  // 모달이 열릴 때마다 상태 초기화 및 승인 여부 확인
   useEffect(() => {
     if (isOpen) {
+      // 이미 승인된 결제인지 확인
+      const currentIntentId = paymentDetails?.intentId || intentId
+      if (currentIntentId) {
+        const approvedPayments = JSON.parse(
+          localStorage.getItem('approvedPayments') || '[]'
+        )
+        const isAlreadyApproved = approvedPayments.includes(
+          String(currentIntentId)
+        )
+
+        if (isAlreadyApproved) {
+          console.log('🚫 이미 승인된 결제입니다:', currentIntentId)
+          setError('이미 승인된 결제입니다.')
+          setIsFinalized(true)
+          // 3초 후 자동으로 모달 닫기
+          setTimeout(() => {
+            onClose()
+            router.push('/customer/home')
+          }, 3000)
+          return
+        }
+      }
+
       setPin('')
       setError('')
       setIsFinalized(false)
@@ -455,7 +489,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       setRequestInProgress(false)
       setLastRequestTime(0)
     }
-  }, [isOpen])
+  }, [isOpen, paymentDetails?.intentId, intentId, onClose, router])
 
   if (!isOpen) return null
 
