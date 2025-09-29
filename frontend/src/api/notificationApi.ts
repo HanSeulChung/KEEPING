@@ -140,7 +140,7 @@ export const notificationApi = {
         console.log('결제 상세 정보 조회 시작:', intentPublicId)
 
         const response = await apiClient.get(
-          `/payments/intent/${intentPublicId}`
+          `/api/payments/intent/${intentPublicId}`
         )
 
         console.log('결제 상세 정보 응답:', response.data)
@@ -427,7 +427,7 @@ export const notificationApi = {
     getPaymentIntent: async (intentPublicId: string) => {
       try {
         console.log('🔍 결제 의도 조회 요청:', intentPublicId)
-        const url = endpoints.payments.intent.replace(
+        const url = endpoints.payments.intentDetail.replace(
           '{intentPublicId}',
           intentPublicId
         )

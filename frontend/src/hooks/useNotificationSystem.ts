@@ -702,6 +702,34 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             getUserRole() === 'CUSTOMER'
           ) {
             console.log('🚨 결제 요청 모달 강제 표시')
+
+            // 중복 모달 방지: 이미 결제 모달이 열려있는지 확인
+            const isPaymentModalOpen =
+              localStorage.getItem('paymentModalOpen') === 'true'
+
+            if (!isPaymentModalOpen) {
+              // 전역 이벤트 발생으로 ConditionalLayout에서 모달 표시
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('paymentModalOpen', 'true')
+
+                const paymentModalEvent = new CustomEvent('showPaymentModal', {
+                  detail: {
+                    intentPublicId:
+                      notification.data?.intentPublicId ||
+                      notification.data?.intentId,
+                    customerName: notification.data?.customerName || '고객',
+                    amount: notification.data?.amount || 0,
+                    storeName: notification.data?.storeName || '매장',
+                    items: notification.data?.items || [],
+                  },
+                })
+                window.dispatchEvent(paymentModalEvent)
+              }
+            } else {
+              console.log('🚫 결제 모달이 이미 열려있어 중복 표시 방지')
+            }
+
+            // 토스트는 항상 표시 (사용자가 놓칠 수 있으므로)
             showInPageModal(notification)
           } else if (isVisibleRef.current) {
             // 일반 알림은 포그라운드에서만 모달로 표시
@@ -1106,26 +1134,31 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
       if (typeof window !== 'undefined') {
         if (notification.type === 'PAYMENT_REQUEST') {
-          // 결제 승인 모달을 위한 URL 파라미터 추가
-          const params = new URLSearchParams()
-          params.set('modal', 'payment-request')
-          if (notification.data?.intentPublicId) {
-            params.set('intentId', notification.data.intentPublicId)
-          }
-          if (notification.data?.customerName) {
-            params.set('customerName', notification.data.customerName)
-          }
-          if (notification.data?.amount) {
-            params.set('amount', notification.data.amount.toString())
-          }
-          if (notification.data?.storeName) {
-            params.set('storeName', notification.data.storeName)
-          }
-          // pointInfo 제거됨
+          // 토스트 클릭 시 바로 결제 승인 모달 열기
+          console.log('💰 토스트 클릭으로 결제 승인 모달 열기')
 
-          const url = `${basePath}?${params.toString()}`
-          console.log('💰 결제 승인 모달 URL로 이동:', url)
-          window.location.href = url
+          // 중복 모달 방지: 이미 결제 모달이 열려있는지 확인
+          const isPaymentModalOpen =
+            localStorage.getItem('paymentModalOpen') === 'true'
+
+          if (!isPaymentModalOpen) {
+            localStorage.setItem('paymentModalOpen', 'true')
+
+            const paymentModalEvent = new CustomEvent('showPaymentModal', {
+              detail: {
+                intentPublicId:
+                  notification.data?.intentPublicId ||
+                  notification.data?.intentId,
+                customerName: notification.data?.customerName || '고객',
+                amount: notification.data?.amount || 0,
+                storeName: notification.data?.storeName || '매장',
+                items: notification.data?.items || [],
+              },
+            })
+            window.dispatchEvent(paymentModalEvent)
+          } else {
+            console.log('🚫 결제 모달이 이미 열려있어 토스트 클릭 무시')
+          }
         } else {
           // 일반 알림은 알림 페이지로 이동
           console.log('📋 알림 페이지로 이동:', basePath)

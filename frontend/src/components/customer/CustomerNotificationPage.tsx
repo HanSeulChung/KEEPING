@@ -1,10 +1,10 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-
+import PaymentApprovalModal from '@/components/common/PaymentApprovalModal'
 import { useNotificationSystem } from '@/hooks/useNotificationSystem'
 import { getNotificationIcon } from '@/types/notification'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const CustomerNotificationPage = () => {
   const searchParams = useSearchParams()
@@ -16,13 +16,54 @@ const CustomerNotificationPage = () => {
     unreadCount: _unreadCount,
   } = useNotificationSystem()
 
-  // 알림 클릭 처리 (읽음 처리만)
+  // 결제 승인 모달 상태
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    data?: {
+      intentPublicId?: string
+      customerName?: string
+      amount?: number
+      storeName?: string
+      items?: Array<{
+        name: string
+        quantity: number
+        price: number
+      }>
+    }
+  }>({ isOpen: false })
+
+  // 알림 클릭 처리
   const handleNotificationClick = (notification: {
     id: number
     isRead: boolean
+    type: string
+    data?: any
+    timestamp: string
   }) => {
-    // SSE에서 자동으로 모달이 처리되므로 읽음 처리만 수행
+    // 읽음 처리
     markAsRead(notification.id)
+
+    // PAYMENT_REQUEST 타입이고 10분 이내인 경우 결제 모달 열기
+    if (notification.type === 'PAYMENT_REQUEST') {
+      const notificationTime = new Date(notification.timestamp).getTime()
+      const currentTime = Date.now()
+      const timeDiff = currentTime - notificationTime
+      const isPaymentValid = timeDiff <= 10 * 60 * 1000 // 10분
+
+      if (isPaymentValid) {
+        setPaymentModal({
+          isOpen: true,
+          data: {
+            intentPublicId:
+              notification.data?.intentId || notification.data?.intentPublicId,
+            customerName: notification.data?.customerName || '고객',
+            amount: notification.data?.amount || 0,
+            storeName: notification.data?.storeName || '매장',
+            items: notification.data?.items || [],
+          },
+        })
+      }
+    }
   }
 
   const [loading, setLoading] = useState(true)
@@ -344,6 +385,19 @@ const CustomerNotificationPage = () => {
           </>
         )}
       </div>
+
+      {/* 결제 승인 모달 */}
+      {paymentModal.isOpen && paymentModal.data && (
+        <PaymentApprovalModal
+          isOpen={paymentModal.isOpen}
+          onClose={() => setPaymentModal({ isOpen: false })}
+          intentId={paymentModal.data.intentPublicId}
+          storeName={paymentModal.data.storeName}
+          amount={paymentModal.data.amount}
+          customerName={paymentModal.data.customerName}
+          items={paymentModal.data.items}
+        />
+      )}
     </div>
   )
 }

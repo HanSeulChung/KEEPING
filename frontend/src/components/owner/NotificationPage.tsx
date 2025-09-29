@@ -544,7 +544,6 @@ const NotificationPage = () => {
           intentId={paymentModal.data.intentPublicId}
           storeName={paymentModal.data.storeName}
           amount={paymentModal.data.amount}
-          customerName={paymentModal.data.customerName}
           items={paymentModal.data.items}
         />
       )}

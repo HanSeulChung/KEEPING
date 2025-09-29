@@ -24,9 +24,7 @@ interface PaymentApprovalModalProps {
 
 interface PaymentDetails {
   intentId: string | number
-  customerName: string
   storeName: string
-  totalAmount: number
   items: Array<{
     menuId?: number
     menuName?: string
@@ -43,7 +41,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
   onClose,
   onSuccess,
   intentId,
-  customerName,
   amount,
   storeName,
   items = [],
@@ -206,14 +203,15 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         updatePaymentStatus('APPROVED')
 
         // 점주에게 승인 알림 전송
-        if (paymentDetails?.storeName && paymentDetails?.totalAmount) {
+        if (paymentDetails?.storeName && (amount || 0)) {
           // useNotificationSystem의 notifyOwnerPaymentResult 함수 호출
           if (typeof window !== 'undefined') {
             const event = new CustomEvent('notifyOwnerPaymentResult', {
               detail: {
                 storeName: paymentDetails.storeName,
-                amount: paymentDetails.totalAmount,
-                customerName: paymentDetails.customerName || '고객',
+                amount:
+                  typeof amount === 'string' ? parseInt(amount) : amount || 0,
+                customerName: '고객',
                 success: true, // 승인이므로 true
                 paymentData: result.data, // 결제 상세 정보 추가
               },
@@ -327,9 +325,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
             console.log('✅ 결제 상세 정보 조회 성공:', paymentData)
             setPaymentDetails({
               intentId: paymentData.intentId, // 실제 intentId 사용
-              customerName: customerName || '고객',
               storeName: storeName || '매장',
-              totalAmount: paymentData.amount || 0,
               items: paymentData.items || [],
             })
           } else {
@@ -348,29 +344,18 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
       const fallbackToStoredData = () => {
         const storedPayment = currentPayment
         const finalIntentId = storedPayment?.intentPublicId || intentId
-        const finalCustomerName =
-          storedPayment?.storeInfo?.customerName || customerName || '고객'
         const finalStoreName =
           storedPayment?.storeInfo?.storeName || storeName || '매장'
-        const finalAmount =
-          storedPayment?.storeInfo?.amount ||
-          (typeof amount === 'string'
-            ? parseInt(amount)
-            : (amount as number)) ||
-          0
 
         console.log('🔄 폴백 데이터 사용:', {
           stored: !!storedPayment,
           intentId: finalIntentId,
           storeName: finalStoreName,
-          amount: finalAmount,
         })
 
         setPaymentDetails({
           intentId: finalIntentId,
-          customerName: finalCustomerName,
           storeName: finalStoreName,
-          totalAmount: finalAmount,
           items: (storedPayment?.storeInfo?.items || items || []).map(item => ({
             menuId: (item as any).menuId,
             menuName: (item as any).menuName || (item as any).name,
@@ -393,7 +378,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
 
       loadPaymentDetails()
     }
-  }, [isOpen, intentId, customerName, storeName, amount, currentPayment])
+  }, [isOpen, intentId, storeName, amount, currentPayment])
 
   // 모달이 열릴 때마다 상태 초기화
   useEffect(() => {
@@ -463,7 +448,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
               <div className="px-6 py-4">
                 {/* 총 금액만 표시 */}
                 <div className="mb-6 space-y-3">
-                  {(paymentDetails?.totalAmount || amount) && (
+                  {amount && (
                     <div className="flex items-center justify-between py-2">
                       <span className="font-nanum-square-round-eb text-[0.9375rem] leading-[140%] font-extrabold text-gray-500">
                         {paymentType === 'CANCEL'
@@ -477,7 +462,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
                             : 'text-[#76d4ff]'
                         }`}
                       >
-                        {formatAmount(paymentDetails?.totalAmount || amount)}원
+                        {formatAmount(amount)}원
                       </span>
                     </div>
                   )}
