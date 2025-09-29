@@ -141,13 +141,9 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
     setError('')
 
     try {
-      console.log('🚀 하드코딩 결제 승인 시작')
-
-      // 2초 대기 (실제 API 호출하는 것처럼 보이게)
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // 무조건 성공 처리
-      console.log('✅ 하드코딩 결제 승인 성공')
       setIsFinalized(true)
       setIsProcessing(false)
       setIsRetrying(false)
@@ -169,7 +165,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
             'approvedPayments',
             JSON.stringify(approvedPayments)
           )
-          console.log('💾 승인된 결제 ID 저장:', currentIntentId)
         }
       }
 
@@ -207,7 +202,7 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         router.push('/customer/home')
       }, 500)
     } catch (error) {
-      console.error('하드코딩 결제 처리 오류:', error)
+      console.error('결제 처리 오류:', error)
       setError('결제 승인 중 오류가 발생했습니다')
       setIsProcessing(false)
       setIsRetrying(false)
@@ -303,7 +298,6 @@ const PaymentApprovalModal: React.FC<PaymentApprovalModalProps> = ({
         const newAttempts = pinAttempts + 1
         setPinAttempts(newAttempts)
 
-        // 로컬 스토리지에 시도 횟수 저장
         try {
           const key = getIntentKey()
           if (key) {

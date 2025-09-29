@@ -12,14 +12,14 @@ import { apiConfig, buildURL } from '@/api/config'
 //   registerOwnerFCMToken,
 // } from '@/api/fcmApi'
 import { notificationApi } from '@/api/notificationApi'
-// FCM 기능 활성화
+// FCM 기능 비활성화 - SSE만 사용
 import { usePaymentState } from '@/hooks/usePaymentState'
-import {
-  getFcmToken,
-  registerServiceWorker,
-  requestNotificationPermission,
-  setupForegroundMessageListener,
-} from '@/lib/firebaseConfig'
+// import {
+//   getFcmToken,
+//   registerServiceWorker,
+//   requestNotificationPermission,
+//   setupForegroundMessageListener,
+// } from '@/lib/firebaseConfig'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   NotificationCategory,
@@ -73,11 +73,7 @@ interface UseNotificationSystemReturn {
   handleToastClick: (notification: NotificationData) => void
   getNotificationCategory: (type: NotificationType) => NotificationCategory
   getNotificationIcon: (type: NotificationType) => string
-  fcmToken: string | null
-  isFcmInitialized: boolean
-  initializeFCM: () => Promise<boolean>
-  registerFCMToken: () => Promise<boolean>
-  unregisterFCMToken: () => Promise<boolean>
+  // FCM 관련 기능 제거됨 - SSE만 사용
 }
 
 export const useNotificationSystem = (): UseNotificationSystemReturn => {
@@ -92,8 +88,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
       isOpen: false,
     })
   const [isOnline, setIsOnline] = useState(true)
-  const [fcmToken, setFcmToken] = useState<string | null>(null)
-  const [isFcmInitialized, setIsFcmInitialized] = useState(false)
+  // FCM 관련 상태 제거됨
   const sseAbortControllerRef = useRef<AbortController | null>(null)
   const sseConnectingRef = useRef(false)
   const isVisibleRef = useRef(true)
@@ -118,49 +113,12 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   }, [])
 
   // SSE만 사용 - 전략 결정 로직 단순화
-  const determineNotificationStrategy = useCallback((): 'SSE' | 'FCM' => {
-    // FCM이 초기화되었으면 FCM 사용, 아니면 SSE 사용
-    return isFcmInitialized ? 'FCM' : 'SSE'
-  }, [isFcmInitialized])
-
-  // FCM 초기화
-  const initializeFCM = useCallback(async (): Promise<boolean> => {
-    try {
-      // Service Worker 등록
-      const swRegistered = await registerServiceWorker()
-      if (!swRegistered) {
-        console.warn('Service Worker 등록 실패, FCM 비활성화')
-        return false
-      }
-
-      // 알림 권한 요청
-      const permissionGranted = await requestNotificationPermission()
-      if (!permissionGranted) {
-        console.warn('알림 권한 거부, FCM 비활성화')
-        return false
-      }
-
-      // FCM 토큰 발급
-      const token = await getFcmToken()
-      if (!token) {
-        console.warn('FCM 토큰 발급 실패')
-        return false
-      }
-
-      setFcmToken(token)
-      setIsFcmInitialized(true)
-      setIsPermissionGranted(true)
-
-      // 포그라운드 메시지 리스너 설정
-      setupForegroundMessageListener()
-
-      console.log('FCM 초기화 성공 ✅')
-      return true
-    } catch (error) {
-      console.error('FCM 초기화 실패:', error)
-      return false
-    }
+  const determineNotificationStrategy = useCallback((): 'SSE' => {
+    // SSE만 사용
+    return 'SSE'
   }, [])
+
+  // FCM 기능 완전 제거됨 - 빈 함수로 대체
 
   // 역할/식별자 보조 함수들 (숫자 id 강제)
   const getUserRole = useCallback((): 'OWNER' | 'CUSTOMER' => {
@@ -181,50 +139,15 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
 
   // FCM 토큰 등록
   const registerFCMToken = useCallback(async (): Promise<boolean> => {
-    if (!fcmToken || !user?.id) return false
-
-    try {
-      const userId = getUserNumericId()
-      if (!userId) return false
-
-      const isOwner = getUserRole() === 'OWNER'
-      const success = isOwner
-        ? await notificationApi.fcm.registerOwnerToken(userId, fcmToken)
-        : await notificationApi.fcm.registerCustomerToken(userId, fcmToken)
-
-      if (success) {
-        console.log('FCM 토큰 등록 성공 ✅')
-      } else {
-        console.warn('FCM 토큰 등록 실패 ❌')
-      }
-
-      return success
-    } catch (error) {
-      console.error('FCM 토큰 등록 오류:', error)
-      return false
-    }
-  }, [fcmToken, user?.id, getUserNumericId, getUserRole])
+    console.log('FCM 기능이 제거되었습니다')
+    return false
+  }, [])
 
   // FCM 토큰 해제
   const unregisterFCMToken = useCallback(async (): Promise<boolean> => {
-    if (!fcmToken) return true
-
-    try {
-      const success = await notificationApi.fcm.unregisterToken(fcmToken)
-      if (success) {
-        console.log('FCM 토큰 해제 성공 ✅')
-        setFcmToken(null)
-        setIsFcmInitialized(false)
-      } else {
-        console.warn('FCM 토큰 해제 실패 ❌')
-      }
-
-      return success
-    } catch (error) {
-      console.error('FCM 토큰 해제 오류:', error)
-      return false
-    }
-  }, [fcmToken])
+    console.log('FCM 기능이 제거되었습니다')
+    return true
+  }, [])
 
   const convertNotificationData = (backendData: any): NotificationData => {
     return {
@@ -704,19 +627,55 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
             console.log('🚨 결제 요청 모달 강제 표시')
 
             // 중복 모달 방지: 이미 결제 모달이 열려있는지 확인
+            const intentId =
+              notification.data?.intentPublicId || notification.data?.intentId
             const isPaymentModalOpen =
               localStorage.getItem('paymentModalOpen') === 'true'
 
-            if (!isPaymentModalOpen) {
-              // 전역 이벤트 발생으로 ConditionalLayout에서 모달 표시
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('paymentModalOpen', 'true')
+            // 강화된 중복 방지 체크
+            let shouldDispatch = true
 
+            // 1. 글로벌 모달 상태 체크
+            if (isPaymentModalOpen) {
+              console.log('🚫 결제 모달이 이미 열려있어 중복 표시 방지')
+              shouldDispatch = false
+            }
+
+            // 2. 이미 승인된 결제인지 체크
+            if (shouldDispatch && intentId) {
+              const approvedPayments = JSON.parse(
+                localStorage.getItem('approvedPayments') || '[]'
+              )
+              if (approvedPayments.includes(String(intentId))) {
+                console.log(
+                  '🚫 이미 승인된 결제라서 SSE 이벤트 무시:',
+                  intentId
+                )
+                shouldDispatch = false
+              }
+            }
+
+            // 3. 최근 동일한 이벤트 체크 (3초 내)
+            if (shouldDispatch && intentId) {
+              const lastEventKey = localStorage.getItem('lastPaymentModalEvent')
+              const lastEventTime = localStorage.getItem('lastPaymentModalTime')
+
+              if (lastEventKey === String(intentId) && lastEventTime) {
+                const timeDiff = Date.now() - parseInt(lastEventTime)
+                if (timeDiff < 3000) {
+                  console.log('🚫 최근 동일한 결제 SSE 이벤트 무시:', intentId)
+                  shouldDispatch = false
+                }
+              }
+            }
+
+            if (shouldDispatch) {
+              console.log('✅ SSE에서 결제 모달 이벤트 발송:', intentId)
+
+              if (typeof window !== 'undefined') {
                 const paymentModalEvent = new CustomEvent('showPaymentModal', {
                   detail: {
-                    intentPublicId:
-                      notification.data?.intentPublicId ||
-                      notification.data?.intentId,
+                    intentPublicId: intentId,
                     customerName: notification.data?.customerName || '고객',
                     amount: notification.data?.amount || 0,
                     storeName: notification.data?.storeName || '매장',
@@ -725,8 +684,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
                 })
                 window.dispatchEvent(paymentModalEvent)
               }
-            } else {
-              console.log('🚫 결제 모달이 이미 열려있어 중복 표시 방지')
             }
 
             // 토스트는 항상 표시 (사용자가 놓칠 수 있으므로)
@@ -1137,18 +1094,42 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
           // 토스트 클릭 시 바로 결제 승인 모달 열기
           console.log('💰 토스트 클릭으로 결제 승인 모달 열기')
 
-          // 중복 모달 방지: 이미 결제 모달이 열려있는지 확인
+          const intentId =
+            notification.data?.intentPublicId || notification.data?.intentId
           const isPaymentModalOpen =
             localStorage.getItem('paymentModalOpen') === 'true'
 
-          if (!isPaymentModalOpen) {
-            localStorage.setItem('paymentModalOpen', 'true')
+          // 강화된 중복 방지 체크
+          let shouldDispatch = true
+
+          // 1. 글로벌 모달 상태 체크
+          if (isPaymentModalOpen) {
+            console.log(
+              '🚫 토스트 클릭: 결제 모달이 이미 열려있어 중복 표시 방지'
+            )
+            shouldDispatch = false
+          }
+
+          // 2. 이미 승인된 결제인지 체크
+          if (shouldDispatch && intentId) {
+            const approvedPayments = JSON.parse(
+              localStorage.getItem('approvedPayments') || '[]'
+            )
+            if (approvedPayments.includes(String(intentId))) {
+              console.log(
+                '🚫 토스트 클릭: 이미 승인된 결제라서 무시:',
+                intentId
+              )
+              shouldDispatch = false
+            }
+          }
+
+          if (shouldDispatch) {
+            console.log('✅ 토스트 클릭으로 결제 모달 이벤트 발송:', intentId)
 
             const paymentModalEvent = new CustomEvent('showPaymentModal', {
               detail: {
-                intentPublicId:
-                  notification.data?.intentPublicId ||
-                  notification.data?.intentId,
+                intentPublicId: intentId,
                 customerName: notification.data?.customerName || '고객',
                 amount: notification.data?.amount || 0,
                 storeName: notification.data?.storeName || '매장',
@@ -1290,13 +1271,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
   useEffect(() => {
     const initializeNotificationSystem = async () => {
       if (typeof window !== 'undefined' && user?.id && isOnline) {
-        // FCM 초기화 시도
-        const fcmInitialized = await initializeFCM()
-
-        if (fcmInitialized) {
-          // FCM 토큰 등록
-          await registerFCMToken()
-        }
+        // FCM 기능 제거됨 - SSE만 사용
 
         // 알림 목록 로드
         await fetchNotifications()
@@ -1321,16 +1296,14 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     initializeNotificationSystem()
     return () => {
       disconnectSSE()
-      unregisterFCMToken()
+      // FCM 기능 제거됨
     }
   }, [
     user?.id,
     isOnline,
     connectSSE,
     disconnectSSE,
-    initializeFCM,
-    registerFCMToken,
-    unregisterFCMToken,
+    // FCM 관련 함수들 제거됨
     determineNotificationStrategy,
   ])
 
@@ -1341,8 +1314,7 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     isPermissionGranted,
     modalNotification,
     toasts,
-    fcmToken,
-    isFcmInitialized,
+    // FCM 관련 속성 제거됨
     requestPermission,
     markAsRead,
     markAllAsRead,
@@ -1355,8 +1327,6 @@ export const useNotificationSystem = (): UseNotificationSystemReturn => {
     handleToastClick,
     getNotificationCategory,
     getNotificationIcon,
-    initializeFCM,
-    registerFCMToken,
-    unregisterFCMToken,
+    // FCM 관련 함수들 제거됨
   }
 }

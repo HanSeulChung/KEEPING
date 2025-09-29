@@ -51,20 +51,64 @@ export default function ConditionalLayout({
   const isCustomerPage =
     pathname.startsWith('/customer') && !hideNavigationPages.includes(pathname)
 
-  // 실시간 결제 승인 모달 이벤트 감지
+  // 강화된 중복 방지 결제 승인 모달 이벤트 감지
   useEffect(() => {
     if (!isCustomerPage) return
 
     const handlePaymentModal = (event: CustomEvent) => {
-      console.log('🎯 결제 모달 이벤트 수신:', event.detail)
+      const intentId = event.detail?.intentPublicId || event.detail?.intentId
+      console.log('🎯 결제 모달 이벤트 수신:', {
+        intentId,
+        detail: event.detail,
+      })
 
-      if (!customerPaymentModal.isOpen) {
-        setCustomerPaymentModal({
-          isOpen: true,
-          data: event.detail,
-        })
-        // 모달 열림 상태 저장
-        localStorage.setItem('paymentModalOpen', 'true')
+      // 1. 이미 모달이 열려있으면 무시
+      if (customerPaymentModal.isOpen) {
+        console.log('🚫 결제 모달이 이미 열려있어 무시합니다')
+        return
+      }
+
+      // 2. localStorage 글로벌 체크 - 중복 방지
+      const isModalOpen = localStorage.getItem('paymentModalOpen')
+      if (isModalOpen === 'true') {
+        console.log('🚫 결제 모달이 이미 다른 곳에서 열려있어 무시합니다')
+        return
+      }
+
+      // 3. 같은 결제 ID로 이미 처리된 경우 무시
+      if (intentId) {
+        const approvedPayments = JSON.parse(
+          localStorage.getItem('approvedPayments') || '[]'
+        )
+        if (approvedPayments.includes(String(intentId))) {
+          console.log('🚫 이미 승인된 결제라서 무시합니다:', intentId)
+          return
+        }
+      }
+
+      // 4. 최근 동일한 이벤트 무시 (3초 내 중복)
+      const lastEventKey = localStorage.getItem('lastPaymentModalEvent')
+      const lastEventTime = localStorage.getItem('lastPaymentModalTime')
+
+      if (lastEventKey && lastEventTime && intentId) {
+        const timeDiff = Date.now() - parseInt(lastEventTime)
+        if (timeDiff < 3000 && lastEventKey === String(intentId)) {
+          console.log('🚫 최근 동일한 결제 요청이라서 무시합니다:', intentId)
+          return
+        }
+      }
+
+      console.log('✅ 결제 모달 열기 승인됨')
+      setCustomerPaymentModal({
+        isOpen: true,
+        data: event.detail,
+      })
+
+      // 중복 방지 플래그들 설정
+      localStorage.setItem('paymentModalOpen', 'true')
+      if (intentId) {
+        localStorage.setItem('lastPaymentModalEvent', String(intentId))
+        localStorage.setItem('lastPaymentModalTime', Date.now().toString())
       }
     }
 
@@ -81,41 +125,7 @@ export default function ConditionalLayout({
     }
   }, [isCustomerPage, customerPaymentModal.isOpen])
 
-  // 기존 알림 기반 모달 표시 (폴백용)
-  useEffect(() => {
-    if (!isCustomerPage || customerPaymentModal.isOpen) return
-
-    const latestPaymentRequest = notifications
-      .filter(n => n.type === 'PAYMENT_REQUEST' && !n.isRead)
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )[0]
-
-    if (latestPaymentRequest) {
-      const notificationTime = new Date(
-        latestPaymentRequest.timestamp
-      ).getTime()
-      const currentTime = Date.now()
-      const timeDiff = currentTime - notificationTime
-      const isPaymentValid = timeDiff <= 10 * 60 * 1000 // 10분
-
-      if (isPaymentValid) {
-        setCustomerPaymentModal({
-          isOpen: true,
-          data: {
-            intentPublicId:
-              latestPaymentRequest.data?.intentId ||
-              latestPaymentRequest.data?.intentPublicId,
-            customerName: latestPaymentRequest.data?.customerName || '고객',
-            amount: latestPaymentRequest.data?.amount || 0,
-            storeName: latestPaymentRequest.data?.storeName || '매장',
-            items: latestPaymentRequest.data?.items || [],
-          },
-        })
-      }
-    }
-  }, [notifications, isCustomerPage, customerPaymentModal.isOpen])
+  // 폴백 로직 제거 - SSE 이벤트만 사용하여 중복 모달 방지
 
   return (
     <PwaProvider>
